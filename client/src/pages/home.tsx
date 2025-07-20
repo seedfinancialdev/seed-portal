@@ -170,17 +170,38 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, [form]);
 
-  const loadQuoteIntoForm = (quote: Quote) => {
+  const loadQuoteIntoForm = async (quote: Quote) => {
     if (hasUnsavedChanges) {
-      if (!confirm("You have unsaved changes. Do you want to save the current quote before loading a new one?")) {
+      const shouldSave = confirm("You have unsaved changes. Do you want to save the current quote before loading a new one?");
+      if (shouldSave && isCalculated) {
+        // Save current form data first, then proceed to load the new quote
+        try {
+          await new Promise((resolve) => {
+            createQuoteMutation.mutate(form.getValues(), {
+              onSuccess: resolve,
+              onError: resolve, // Still proceed even if save fails
+            });
+          });
+        } catch (error) {
+          console.error('Failed to save current quote:', error);
+        }
+      } else if (shouldSave) {
+        // If not calculated, don't proceed
+        toast({
+          title: "Cannot Save",
+          description: "Current form is incomplete. Please complete all fields first.",
+          variant: "destructive",
+        });
         return;
-      }
-      // If user wants to save, trigger save
-      if (isCalculated) {
-        form.handleSubmit(onSubmit)();
+      } else if (!shouldSave) {
+        // User chose not to save, ask for confirmation to discard
+        if (!confirm("Are you sure you want to discard your unsaved changes?")) {
+          return;
+        }
       }
     }
     
+    // Load the selected quote
     setEditingQuoteId(quote.id);
     form.reset({
       contactEmail: quote.contactEmail,
@@ -249,7 +270,8 @@ export default function Home() {
       });
       return;
     }
-    console.log('Calling createQuoteMutation.mutate');
+    
+    console.log('Submitting quote via createQuoteMutation');
     createQuoteMutation.mutate(data);
   };
 
