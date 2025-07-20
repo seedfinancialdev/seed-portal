@@ -64,8 +64,8 @@ function roundToNearest5(num: number): number {
   return Math.round(num / 5) * 5;
 }
 
-function roundToTwoDecimals(num: number): number {
-  return Math.round(num * 100) / 100;
+function roundToNearest25(num: number): number {
+  return Math.ceil(num / 25) * 25;
 }
 
 function calculateFees(data: Partial<FormData>) {
@@ -78,9 +78,9 @@ function calculateFees(data: Partial<FormData>) {
   const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
   
   // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
-  const monthlyFee = roundToNearest5((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  const monthlyFee = Math.round((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
   const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
-  const setupFee = Math.max(monthlyFee, roundToNearest5(monthlyFee * cleanupMultiplier * data.cleanupMonths));
+  const setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * data.cleanupMonths));
   
   return { monthlyFee, setupFee };
 }
@@ -288,11 +288,11 @@ export default function Home() {
     }
     
     const revenueMultiplier = revenueMultipliers[watchedValues.revenueBand as keyof typeof revenueMultipliers] || 1.0;
-    const baseFee = roundToTwoDecimals(baseMonthlyFee * revenueMultiplier);
+    const baseFee = Math.round(baseMonthlyFee * revenueMultiplier);
     const txFee = txSurcharge[watchedValues.monthlyTransactions as keyof typeof txSurcharge] || 0;
     const industryData = industryMultipliers[watchedValues.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
     
-    return { baseFee, txFee, multiplier: roundToTwoDecimals(industryData.monthly) };
+    return { baseFee, txFee, multiplier: industryData.monthly, revenueMultiplier };
   };
 
   const breakdown = getBreakdownValues();
@@ -549,16 +549,20 @@ export default function Home() {
                     </h3>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Base Fee ({watchedValues.revenueBand}):</span>
-                        <span className="font-medium text-gray-800">${breakdown.baseFee.toFixed(2)}</span>
+                        <span className="text-gray-600">Revenue Modifier ({watchedValues.revenueBand}):</span>
+                        <span className="font-medium text-gray-800">{breakdown.revenueMultiplier}x</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Base Fee:</span>
+                        <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Transaction Surcharge ({watchedValues.monthlyTransactions}):</span>
-                        <span className="font-medium text-gray-800">${breakdown.txFee.toFixed(2)}</span>
+                        <span className="font-medium text-gray-800">${breakdown.txFee}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
-                        <span className="font-medium text-gray-800">{breakdown.multiplier.toFixed(2)}x</span>
+                        <span className="font-medium text-gray-800">{breakdown.multiplier}x</span>
                       </div>
                       <div className="flex justify-between border-t pt-2">
                         <span className="text-gray-600">Monthly Fee:</span>
