@@ -28,10 +28,11 @@ Preferred communication style: Simple, everyday language.
 - **Validation**: Zod schemas shared between frontend and backend
 
 ### Data Storage Solutions
-- **Primary Database**: PostgreSQL hosted on Neon Database
+- **Primary Database**: PostgreSQL (configured and connected)
 - **ORM**: Drizzle ORM for type-safe database operations
 - **Migrations**: Drizzle Kit for database schema management
 - **Schema Location**: Shared TypeScript schemas in `/shared/schema.ts`
+- **Storage Implementation**: DatabaseStorage class replacing MemStorage
 
 ## Key Components
 

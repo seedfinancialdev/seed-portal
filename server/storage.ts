@@ -1,4 +1,6 @@
 import { users, quotes, type User, type InsertUser, type Quote, type InsertQuote } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -11,56 +13,41 @@ export interface IStorage {
   getQuote(id: number): Promise<Quote | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private quotes: Map<number, Quote>;
-  private userCurrentId: number;
-  private quoteCurrentId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.quotes = new Map();
-    this.userCurrentId = 1;
-    this.quoteCurrentId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userCurrentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
     return user;
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
-    const id = this.quoteCurrentId++;
-    const quote: Quote = { 
-      ...insertQuote, 
-      id,
-      createdAt: new Date()
-    };
-    this.quotes.set(id, quote);
+    const [quote] = await db
+      .insert(quotes)
+      .values(insertQuote)
+      .returning();
     return quote;
   }
 
   async getQuotesByEmail(email: string): Promise<Quote[]> {
-    return Array.from(this.quotes.values()).filter(
-      (quote) => quote.contactEmail === email
-    );
+    return await db.select().from(quotes).where(eq(quotes.contactEmail, email));
   }
 
   async getQuote(id: number): Promise<Quote | undefined> {
-    return this.quotes.get(id);
+    const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+    return quote || undefined;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
