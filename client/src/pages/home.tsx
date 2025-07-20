@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -162,6 +162,37 @@ export default function Home() {
       });
     },
   });
+
+  // Archive quote mutation
+  const archiveQuoteMutation = useMutation({
+    mutationFn: async (quoteId: number) => {
+      const response = await apiRequest("PATCH", `/api/quotes/${quoteId}/archive`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Quote Archived",
+        description: "Quote has been archived successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      refetchQuotes();
+    },
+    onError: (error) => {
+      console.error('Archive error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to archive quote. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleArchiveQuote = (quoteId: number, contactEmail: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click event
+    if (confirm(`Are you sure you want to archive the quote for ${contactEmail}? This will hide it from the main list but preserve it for auditing.`)) {
+      archiveQuoteMutation.mutate(quoteId);
+    }
+  };
 
   const watchedValues = form.watch();
   const { monthlyFee, setupFee } = calculateFees(watchedValues);
@@ -707,6 +738,7 @@ export default function Home() {
                         </div>
                       </TableHead>
                       <TableHead>Industry</TableHead>
+                      <TableHead className="w-16">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -729,6 +761,18 @@ export default function Home() {
                         <TableCell className="font-semibold">${parseFloat(quote.monthlyFee).toLocaleString()}</TableCell>
                         <TableCell className="font-semibold text-[#e24c00]">${parseFloat(quote.setupFee).toLocaleString()}</TableCell>
                         <TableCell>{quote.industry}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleArchiveQuote(quote.id, quote.contactEmail, e)}
+                            disabled={archiveQuoteMutation.isPending}
+                            className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                            title="Archive Quote"
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

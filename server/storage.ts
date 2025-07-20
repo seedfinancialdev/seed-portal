@@ -1,6 +1,6 @@
 import { users, quotes, type User, type InsertUser, type Quote, type InsertQuote, updateQuoteSchema } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, desc, asc, sql } from "drizzle-orm";
+import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
@@ -13,6 +13,7 @@ export interface IStorage {
   // Quote methods
   createQuote(quote: InsertQuote): Promise<Quote>;
   updateQuote(quote: UpdateQuote): Promise<Quote>;
+  archiveQuote(id: number): Promise<Quote>;
   getQuotesByEmail(email: string): Promise<Quote[]>;
   getQuote(id: number): Promise<Quote | undefined>;
   getAllQuotes(search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]>;
@@ -54,16 +55,31 @@ export class DatabaseStorage implements IStorage {
     return quote;
   }
 
+  async archiveQuote(id: number): Promise<Quote> {
+    const [quote] = await db
+      .update(quotes)
+      .set({ archived: true, updatedAt: new Date() })
+      .where(eq(quotes.id, id))
+      .returning();
+    return quote;
+  }
+
   async getQuotesByEmail(email: string): Promise<Quote[]> {
-    return await db.select().from(quotes).where(eq(quotes.contactEmail, email));
+    return await db.select().from(quotes).where(
+      and(eq(quotes.contactEmail, email), eq(quotes.archived, false))
+    );
   }
 
   async getQuote(id: number): Promise<Quote | undefined> {
-    const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+    const [quote] = await db.select().from(quotes).where(
+      and(eq(quotes.id, id), eq(quotes.archived, false))
+    );
     return quote || undefined;
   }
 
   async getAllQuotes(search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]> {
+    const archivedFilter = eq(quotes.archived, false);
+    
     if (search && sortField && sortOrder) {
       const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
                          sortField === 'updatedAt' ? quotes.updatedAt :
@@ -72,11 +88,11 @@ export class DatabaseStorage implements IStorage {
                          quotes.updatedAt;
       
       return await db.select().from(quotes)
-        .where(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`)
+        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, archivedFilter))
         .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
     } else if (search) {
       return await db.select().from(quotes)
-        .where(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`)
+        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, archivedFilter))
         .orderBy(desc(quotes.updatedAt));
     } else if (sortField && sortOrder) {
       const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
@@ -86,9 +102,12 @@ export class DatabaseStorage implements IStorage {
                          quotes.updatedAt;
       
       return await db.select().from(quotes)
+        .where(archivedFilter)
         .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
     } else {
-      return await db.select().from(quotes).orderBy(desc(quotes.updatedAt));
+      return await db.select().from(quotes)
+        .where(archivedFilter)
+        .orderBy(desc(quotes.updatedAt));
     }
   }
 }

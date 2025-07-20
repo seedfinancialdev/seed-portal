@@ -63,6 +63,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Archive a quote
+  app.patch("/api/quotes/:id/archive", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ message: "Invalid quote ID" });
+        return;
+      }
+      
+      const quote = await storage.archiveQuote(id);
+      res.json(quote);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to archive quote" });
+    }
+  });
+
   // Get a specific quote
   app.get("/api/quotes/:id", async (req, res) => {
     try {
