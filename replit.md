@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Dynamic Pricing Implementation** (July 20, 2025)
+  - Changed "Marketing Agencies" to "Professional Services" in industry dropdown
+  - Moved Transactions field above Revenue Band field for better UX
+  - Replaced flat base fees with dynamic revenue multipliers (0.5x to 7.0x)
+  - Fixed decimal precision issues - all monetary values now display 2 decimal places
+  - Maintained similar pricing levels with smoother transitions between revenue bands
+
 ✓ **Application Startup Issues Fixed** (July 20, 2025)
   - Resolved frontend error with undefined updateQuoteMutation
   - Fixed database connection issues with Neon PostgreSQL

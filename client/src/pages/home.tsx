@@ -64,6 +64,10 @@ function roundToNearest5(num: number): number {
   return Math.round(num / 5) * 5;
 }
 
+function roundToTwoDecimals(num: number): number {
+  return Math.round(num * 100) / 100;
+}
+
 function calculateFees(data: Partial<FormData>) {
   if (!data.revenueBand || !data.monthlyTransactions || !data.industry || !data.cleanupMonths || !data.cleanupComplexity) {
     return { monthlyFee: 0, setupFee: 0 };
@@ -284,11 +288,11 @@ export default function Home() {
     }
     
     const revenueMultiplier = revenueMultipliers[watchedValues.revenueBand as keyof typeof revenueMultipliers] || 1.0;
-    const baseFee = baseMonthlyFee * revenueMultiplier;
+    const baseFee = roundToTwoDecimals(baseMonthlyFee * revenueMultiplier);
     const txFee = txSurcharge[watchedValues.monthlyTransactions as keyof typeof txSurcharge] || 0;
     const industryData = industryMultipliers[watchedValues.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
     
-    return { baseFee, txFee, multiplier: industryData.monthly };
+    return { baseFee, txFee, multiplier: roundToTwoDecimals(industryData.monthly) };
   };
 
   const breakdown = getBreakdownValues();
@@ -546,15 +550,15 @@ export default function Home() {
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Base Fee ({watchedValues.revenueBand}):</span>
-                        <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
+                        <span className="font-medium text-gray-800">${breakdown.baseFee.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Transaction Surcharge ({watchedValues.monthlyTransactions}):</span>
-                        <span className="font-medium text-gray-800">${breakdown.txFee}</span>
+                        <span className="font-medium text-gray-800">${breakdown.txFee.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
-                        <span className="font-medium text-gray-800">{breakdown.multiplier}x</span>
+                        <span className="font-medium text-gray-800">{breakdown.multiplier.toFixed(2)}x</span>
                       </div>
                       <div className="flex justify-between border-t pt-2">
                         <span className="text-gray-600">Monthly Fee:</span>
