@@ -112,20 +112,28 @@ export default function Home() {
 
   const createQuoteMutation = useMutation({
     mutationFn: async (data: FormData) => {
+      console.log('Submitting quote data:', data);
       const fees = calculateFees(data);
+      console.log('Calculated fees:', fees);
+      
       const quoteData = {
         ...data,
         monthlyFee: fees.monthlyFee.toString(),
         setupFee: fees.setupFee.toString(),
       };
       
+      console.log('Final quote data:', quoteData);
+      
       if (editingQuoteId) {
-        return apiRequest("PUT", `/api/quotes/${editingQuoteId}`, quoteData);
+        const response = await apiRequest("PUT", `/api/quotes/${editingQuoteId}`, quoteData);
+        return response.json();
       } else {
-        return apiRequest("POST", "/api/quotes", quoteData);
+        const response = await apiRequest("POST", "/api/quotes", quoteData);
+        return response.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Quote saved successfully:', data);
       toast({
         title: editingQuoteId ? "Quote Updated" : "Quote Saved",
         description: editingQuoteId ? "Your quote has been updated successfully." : "Your quote has been saved successfully.",
@@ -135,7 +143,8 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       refetchQuotes();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Quote save error:', error);
       toast({
         title: "Error",
         description: "Failed to save quote. Please try again.",
@@ -531,8 +540,13 @@ export default function Home() {
                 <div className="pt-6 space-y-3">
                   <div className="flex gap-3">
                     <Button
-                      type="submit"
-                      onClick={form.handleSubmit(onSubmit)}
+                      type="button"
+                      onClick={() => {
+                        console.log('Save button clicked');
+                        console.log('Form values:', form.getValues());
+                        console.log('Form errors:', form.formState.errors);
+                        form.handleSubmit(onSubmit)();
+                      }}
                       disabled={createQuoteMutation.isPending || !isCalculated}
                       className="flex-1 bg-[#253e31] text-white font-semibold py-4 px-6 rounded-lg hover:bg-[#253e31]/90 active:bg-[#253e31]/80 focus:ring-2 focus:ring-[#e24c00] focus:ring-offset-2"
                     >
