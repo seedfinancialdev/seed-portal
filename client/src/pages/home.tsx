@@ -19,8 +19,11 @@ import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
 
-// Extend the schema with validation
-const formSchema = insertQuoteSchema.extend({
+// Create form schema without the calculated fields
+const formSchema = insertQuoteSchema.omit({
+  monthlyFee: true,
+  setupFee: true,
+}).extend({
   contactEmail: z.string().email("Please enter a valid email address"),
   cleanupMonths: z.number().min(currentMonth, `Minimum ${currentMonth} months required (current calendar year)`),
 });
