@@ -38,6 +38,15 @@ const formSchema = insertQuoteSchema.omit({
       path: ["overrideReason"],
     });
   }
+  
+  // If override is not checked, enforce minimum cleanup months
+  if (!data.cleanupOverride && data.cleanupMonths < currentMonth) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Minimum ${currentMonth} months required (current calendar year) unless override is enabled`,
+      path: ["cleanupMonths"],
+    });
+  }
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -46,7 +55,7 @@ type FormData = z.infer<typeof formSchema>;
 const baseMonthlyFee = 150; // Starting base fee (updated to $150/mo)
 
 const revenueMultipliers = {
-  '<$10K': 0.5,
+  '<$10K': 1.0,
   '10K-25K': 1.0,
   '25K-75K': 2.2,
   '75K-250K': 3.5,
@@ -92,8 +101,8 @@ function calculateFees(data: Partial<FormData>) {
   // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
   const monthlyFee = Math.round((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
   
-  // Handle cleanup override - if override is checked, use 0 months for calculation
-  const effectiveCleanupMonths = data.cleanupOverride ? 0 : data.cleanupMonths;
+  // Use the actual cleanup months value (override just allows values below normal minimum)
+  const effectiveCleanupMonths = data.cleanupMonths;
   const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
   const setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
   
@@ -482,11 +491,11 @@ export default function Home() {
                           <Input 
                             type="number"
                             min={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
-                            placeholder={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
+                            max="12"
+                            placeholder={currentMonth.toString()}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                             {...field}
-                            disabled={form.watch("cleanupOverride")}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || (form.watch("cleanupOverride") ? 0 : currentMonth))}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || currentMonth)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -505,10 +514,7 @@ export default function Home() {
                             checked={field.value}
                             onCheckedChange={(checked) => {
                               field.onChange(checked);
-                              if (checked) {
-                                form.setValue("cleanupMonths", 0);
-                              } else {
-                                form.setValue("cleanupMonths", currentMonth);
+                              if (!checked) {
                                 form.setValue("overrideReason", "");
                               }
                             }}
@@ -516,7 +522,7 @@ export default function Home() {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>
-                            Override cleanup months to 0
+                            Allow reduction of cleanup months to any value (including 0)
                           </FormLabel>
                         </div>
                       </FormItem>
