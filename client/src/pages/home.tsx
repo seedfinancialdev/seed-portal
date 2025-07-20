@@ -549,10 +549,6 @@ export default function Home() {
                     </h3>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Revenue Modifier ({watchedValues.revenueBand}):</span>
-                        <span className="font-medium text-gray-800">{breakdown.revenueMultiplier}x</span>
-                      </div>
-                      <div className="flex justify-between">
                         <span className="text-gray-600">Base Fee:</span>
                         <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
                       </div>
@@ -563,6 +559,10 @@ export default function Home() {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
                         <span className="font-medium text-gray-800">{breakdown.multiplier}x</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Revenue Modifier ({watchedValues.revenueBand}):</span>
+                        <span className="font-medium text-gray-800">{breakdown.revenueMultiplier}x</span>
                       </div>
                       <div className="flex justify-between border-t pt-2">
                         <span className="text-gray-600">Monthly Fee:</span>
