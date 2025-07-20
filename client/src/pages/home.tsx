@@ -156,6 +156,8 @@ export default function Home() {
   const watchedValues = form.watch();
   const { monthlyFee, setupFee } = calculateFees(watchedValues);
   const isCalculated = monthlyFee > 0 && setupFee > 0;
+  
+
 
   // Track form changes for unsaved changes detection
   useEffect(() => {
@@ -234,7 +236,9 @@ export default function Home() {
   };
 
   const onSubmit = (data: FormData) => {
+    console.log('onSubmit called with data:', data);
     if (!isCalculated) {
+      console.log('Form not calculated, isCalculated:', isCalculated);
       toast({
         title: "Calculation Required",
         description: "Please fill in all fields to calculate fees before saving.",
@@ -242,6 +246,7 @@ export default function Home() {
       });
       return;
     }
+    console.log('Calling createQuoteMutation.mutate');
     createQuoteMutation.mutate(data);
   };
 
