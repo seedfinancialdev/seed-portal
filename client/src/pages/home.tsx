@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check } from "lucide-react";
-import { insertQuoteSchema } from "@shared/schema";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle } from "lucide-react";
+import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Get current month number (1-12)
@@ -76,6 +78,11 @@ function calculateFees(data: Partial<FormData>) {
 export default function Home() {
   const { toast } = useToast();
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("updatedAt");
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -89,6 +96,20 @@ export default function Home() {
     },
   });
 
+  // Query to fetch all quotes
+  const { data: allQuotes = [], refetch: refetchQuotes } = useQuery<Quote[]>({
+    queryKey: ["/api/quotes", { search: searchTerm, sortField, sortOrder }],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (sortField) params.append('sortField', sortField);
+      if (sortOrder) params.append('sortOrder', sortOrder);
+      
+      return fetch(`/api/quotes?${params.toString()}`)
+        .then(res => res.json());
+    }
+  });
+
   const createQuoteMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const fees = calculateFees(data);
@@ -97,14 +118,22 @@ export default function Home() {
         monthlyFee: fees.monthlyFee.toString(),
         setupFee: fees.setupFee.toString(),
       };
-      return apiRequest("POST", "/api/quotes", quoteData);
+      
+      if (editingQuoteId) {
+        return apiRequest("PUT", `/api/quotes/${editingQuoteId}`, quoteData);
+      } else {
+        return apiRequest("POST", "/api/quotes", quoteData);
+      }
     },
     onSuccess: () => {
       toast({
-        title: "Quote Saved",
-        description: "Your quote has been saved successfully.",
+        title: editingQuoteId ? "Quote Updated" : "Quote Saved",
+        description: editingQuoteId ? "Your quote has been updated successfully." : "Your quote has been saved successfully.",
       });
+      setEditingQuoteId(null);
+      setHasUnsavedChanges(false);
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      refetchQuotes();
     },
     onError: () => {
       toast({
@@ -118,6 +147,64 @@ export default function Home() {
   const watchedValues = form.watch();
   const { monthlyFee, setupFee } = calculateFees(watchedValues);
   const isCalculated = monthlyFee > 0 && setupFee > 0;
+
+  // Track form changes for unsaved changes detection
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      setHasUnsavedChanges(true);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  const loadQuoteIntoForm = (quote: Quote) => {
+    if (hasUnsavedChanges) {
+      if (!confirm("You have unsaved changes. Do you want to save the current quote before loading a new one?")) {
+        return;
+      }
+      // If user wants to save, trigger save
+      if (isCalculated) {
+        form.handleSubmit(onSubmit)();
+      }
+    }
+    
+    setEditingQuoteId(quote.id);
+    form.reset({
+      contactEmail: quote.contactEmail,
+      revenueBand: quote.revenueBand,
+      monthlyTransactions: quote.monthlyTransactions,
+      industry: quote.industry,
+      cleanupMonths: quote.cleanupMonths,
+      cleanupComplexity: quote.cleanupComplexity,
+    });
+    setHasUnsavedChanges(false);
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const resetForm = () => {
+    if (hasUnsavedChanges) {
+      if (!confirm("You have unsaved changes. Are you sure you want to reset the form?")) {
+        return;
+      }
+    }
+    setEditingQuoteId(null);
+    form.reset({
+      contactEmail: "",
+      revenueBand: "",
+      monthlyTransactions: "",
+      industry: "",
+      cleanupMonths: currentMonth,
+      cleanupComplexity: "",
+    });
+    setHasUnsavedChanges(false);
+  };
 
   const copyToClipboard = async (text: string, field: string) => {
     try {
@@ -442,15 +529,46 @@ export default function Home() {
 
                 {/* Action Buttons */}
                 <div className="pt-6 space-y-3">
-                  <Button
-                    type="submit"
-                    onClick={form.handleSubmit(onSubmit)}
-                    disabled={createQuoteMutation.isPending || !isCalculated}
-                    className="w-full bg-[#253e31] text-white font-semibold py-4 px-6 rounded-lg hover:bg-[#253e31]/90 active:bg-[#253e31]/80 focus:ring-2 focus:ring-[#e24c00] focus:ring-offset-2"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {createQuoteMutation.isPending ? 'Saving...' : 'Save Quote'}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      type="submit"
+                      onClick={form.handleSubmit(onSubmit)}
+                      disabled={createQuoteMutation.isPending || !isCalculated}
+                      className="flex-1 bg-[#253e31] text-white font-semibold py-4 px-6 rounded-lg hover:bg-[#253e31]/90 active:bg-[#253e31]/80 focus:ring-2 focus:ring-[#e24c00] focus:ring-offset-2"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {createQuoteMutation.isPending ? 'Saving...' : (editingQuoteId ? 'Update Quote' : 'Save Quote')}
+                    </Button>
+                    
+                    {(editingQuoteId || hasUnsavedChanges) && (
+                      <Button
+                        type="button"
+                        onClick={resetForm}
+                        variant="outline"
+                        className="px-4 py-4 border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        Reset
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {editingQuoteId && (
+                    <Alert>
+                      <Edit className="h-4 w-4" />
+                      <AlertDescription>
+                        Editing existing quote (ID: {editingQuoteId}). Changes will update the original quote.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {hasUnsavedChanges && !editingQuoteId && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        You have unsaved changes. Remember to save your quote before leaving.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   
                   <div className="text-center">
                     <p className="text-xs text-gray-500">
@@ -466,6 +584,103 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quote History Section */}
+        <Card className="bg-white shadow-xl mt-8">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Saved Quotes
+            </CardTitle>
+            <div className="flex items-center gap-4 mt-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by contact email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {allQuotes.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No quotes found. Create your first quote above!</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none"
+                        onClick={() => handleSort('contactEmail')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Contact Email
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none"
+                        onClick={() => handleSort('updatedAt')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Last Updated
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none"
+                        onClick={() => handleSort('monthlyFee')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Monthly Fee
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none"
+                        onClick={() => handleSort('setupFee')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Setup Fee
+                          <ArrowUpDown className="h-4 w-4" />
+                        </div>
+                      </TableHead>
+                      <TableHead>Industry</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allQuotes.map((quote) => (
+                      <TableRow 
+                        key={quote.id} 
+                        className="cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => loadQuoteIntoForm(quote)}
+                      >
+                        <TableCell className="font-medium">{quote.contactEmail}</TableCell>
+                        <TableCell>
+                          {new Date(quote.updatedAt || quote.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })}
+                        </TableCell>
+                        <TableCell className="font-semibold">${parseFloat(quote.monthlyFee).toLocaleString()}</TableCell>
+                        <TableCell className="font-semibold text-[#e24c00]">${parseFloat(quote.setupFee).toLocaleString()}</TableCell>
+                        <TableCell>{quote.industry}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Footer */}
         <div className="text-center mt-8">

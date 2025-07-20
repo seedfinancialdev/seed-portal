@@ -13,12 +13,18 @@ export const quotes = pgTable("quotes", {
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const insertQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
+
+export const updateQuoteSchema = createInsertSchema(quotes).omit({
+  createdAt: true,
+}).partial().required({ id: true });
 
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;
 export type Quote = typeof quotes.$inferSelect;

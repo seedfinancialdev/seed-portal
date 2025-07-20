@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertQuoteSchema } from "@shared/schema";
+import { insertQuoteSchema, updateQuoteSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -20,19 +20,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get quotes by email
+  // Get all quotes with optional search and sort
   app.get("/api/quotes", async (req, res) => {
     try {
       const email = req.query.email as string;
-      if (!email) {
-        res.status(400).json({ message: "Email parameter is required" });
+      const search = req.query.search as string;
+      const sortField = req.query.sortField as string;
+      const sortOrder = req.query.sortOrder as 'asc' | 'desc';
+      
+      if (email) {
+        // Get quotes by specific email
+        const quotes = await storage.getQuotesByEmail(email);
+        res.json(quotes);
+      } else {
+        // Get all quotes with search and sort
+        const quotes = await storage.getAllQuotes(search, sortField, sortOrder);
+        res.json(quotes);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch quotes" });
+    }
+  });
+
+  // Update a quote
+  app.put("/api/quotes/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ message: "Invalid quote ID" });
         return;
       }
       
-      const quotes = await storage.getQuotesByEmail(email);
-      res.json(quotes);
+      const quoteData = updateQuoteSchema.parse({ ...req.body, id });
+      const quote = await storage.updateQuote(quoteData);
+      res.json(quote);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch quotes" });
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid quote data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update quote" });
+      }
     }
   });
 
