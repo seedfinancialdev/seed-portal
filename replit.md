@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Archive Functionality Implemented** (July 20, 2025)
+  - Added archive button to saved quotes with confirmation dialog
+  - Archives preserve all data for auditing (never deleted from database)
+  - Updated database schema with 'archived' boolean field
+  - All queries exclude archived quotes by default for clean interface
+  - New API endpoint: PATCH /api/quotes/:id/archive
+
 ✓ **Production Deployment Completed** (July 20, 2025)
   - Successfully deployed to Replit at seed-bk-calc.replit.app
   - Application is live and accessible via public URL
@@ -58,13 +65,14 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### Database Schema
-- **Quotes Table**: Stores quote information including contact email, revenue band, transaction volume, industry type, cleanup complexity, and calculated fees
+- **Quotes Table**: Stores quote information including contact email, revenue band, transaction volume, industry type, cleanup complexity, calculated fees, and archive status
 - **Users Table**: Basic user management with username and password (legacy/placeholder)
 
 ### API Endpoints
 - `POST /api/quotes` - Create a new quote with pricing calculations
 - `GET /api/quotes?email=<email>` - Retrieve quotes by contact email
 - `GET /api/quotes/:id` - Retrieve a specific quote by ID
+- `PATCH /api/quotes/:id/archive` - Archive a quote (preserves data for auditing)
 
 ### Frontend Components
 - **Home Page**: Quote generation form with real-time pricing calculations
