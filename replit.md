@@ -8,6 +8,14 @@ This is a full-stack web application built with React, TypeScript, Express.js, a
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+✓ **Application Startup Issues Fixed** (July 20, 2025)
+  - Resolved frontend error with undefined updateQuoteMutation
+  - Fixed database connection issues with Neon PostgreSQL
+  - Application now running successfully on port 5000
+  - All quote creation, updates, and pricing calculations working properly
+
 ## System Architecture
 
 ### Frontend Architecture
