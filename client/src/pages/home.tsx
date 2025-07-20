@@ -12,11 +12,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent } from "@/components/ui/card";
+import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
+
+// Get current month number (1-12)
+const currentMonth = new Date().getMonth() + 1;
 
 // Extend the schema with validation
 const formSchema = insertQuoteSchema.extend({
   contactEmail: z.string().email("Please enter a valid email address"),
-  cleanupMonths: z.number().min(1, "Minimum 1 month required"),
+  cleanupMonths: z.number().min(currentMonth, `Minimum ${currentMonth} months required (current calendar year)`),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -40,13 +44,13 @@ const txSurcharge = {
   '2000+': 1600
 };
 
-const complexityMultiplier = {
-  'SaaS': 1.0,
-  'Agencies': 1.1,
-  'Real Estate': 1.05,
-  'E-commerce': 1.15,
-  'Construction': 1.08,
-  'Multi-entity': 1.25
+const industryMultipliers = {
+  'Software/SaaS': { monthly: 1.0, cleanup: 1.0 },
+  'Marketing Agencies': { monthly: 1.25, cleanup: 1.1 },
+  'Real Estate': { monthly: 1.15, cleanup: 1.05 },
+  'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
+  'Construction/Trades': { monthly: 1.20, cleanup: 1.08 },
+  'Multi-entity/Holding Companies': { monthly: 1.50, cleanup: 1.25 }
 };
 
 function roundToNearest5(num: number): number {
@@ -60,10 +64,11 @@ function calculateFees(data: Partial<FormData>) {
 
   const baseFee = baseFees[data.revenueBand as keyof typeof baseFees] || 0;
   const txFee = txSurcharge[data.monthlyTransactions as keyof typeof txSurcharge] || 0;
-  const multiplier = complexityMultiplier[data.industry as keyof typeof complexityMultiplier] || 1;
+  const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
   
-  const monthlyFee = roundToNearest5((baseFee + txFee) * multiplier);
-  const setupFee = Math.max(monthlyFee, monthlyFee * parseFloat(data.cleanupComplexity) * data.cleanupMonths);
+  const monthlyFee = roundToNearest5((baseFee + txFee) * industryData.monthly);
+  const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
+  const setupFee = Math.max(monthlyFee, roundToNearest5(monthlyFee * cleanupMultiplier * data.cleanupMonths));
   
   return { monthlyFee, setupFee };
 }
@@ -79,7 +84,7 @@ export default function Home() {
       revenueBand: "",
       monthlyTransactions: "",
       industry: "",
-      cleanupMonths: 1,
+      cleanupMonths: currentMonth,
       cleanupComplexity: "",
     },
   });
@@ -151,9 +156,9 @@ export default function Home() {
     
     const baseFee = baseFees[watchedValues.revenueBand as keyof typeof baseFees] || 0;
     const txFee = txSurcharge[watchedValues.monthlyTransactions as keyof typeof txSurcharge] || 0;
-    const multiplier = complexityMultiplier[watchedValues.industry as keyof typeof complexityMultiplier] || 1;
+    const industryData = industryMultipliers[watchedValues.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
     
-    return { baseFee, txFee, multiplier };
+    return { baseFee, txFee, multiplier: industryData.monthly };
   };
 
   const breakdown = getBreakdownValues();
@@ -163,9 +168,11 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-            Seed Financial
-          </h1>
+          <img 
+            src={logoPath} 
+            alt="Seed Financial Logo" 
+            className="h-16 mx-auto mb-4"
+          />
           <p className="text-lg text-gray-200">
             Internal Pricing Calculator
           </p>
@@ -269,12 +276,12 @@ export default function Home() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="SaaS">SaaS</SelectItem>
-                            <SelectItem value="Agencies">Agencies</SelectItem>
+                            <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
+                            <SelectItem value="Marketing Agencies">Marketing Agencies</SelectItem>
                             <SelectItem value="Real Estate">Real Estate</SelectItem>
-                            <SelectItem value="E-commerce">E-commerce</SelectItem>
-                            <SelectItem value="Construction">Construction</SelectItem>
-                            <SelectItem value="Multi-entity">Multi-entity</SelectItem>
+                            <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
+                            <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
+                            <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -292,11 +299,11 @@ export default function Home() {
                         <FormControl>
                           <Input 
                             type="number"
-                            min="1"
-                            placeholder="6"
+                            min={currentMonth.toString()}
+                            placeholder={currentMonth.toString()}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || currentMonth)}
                           />
                         </FormControl>
                         <FormMessage />
