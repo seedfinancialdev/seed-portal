@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertQuoteSchema, updateQuoteSchema } from "@shared/schema";
 import { z } from "zod";
+import { sendCleanupOverrideNotification } from "./slack";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new quote
@@ -10,6 +11,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const quoteData = insertQuoteSchema.parse(req.body);
       const quote = await storage.createQuote(quoteData);
+      
+      // Send Slack notification if cleanup override is used
+      if (quoteData.cleanupOverride && quoteData.overrideReason) {
+        try {
+          await sendCleanupOverrideNotification({
+            contactEmail: quoteData.contactEmail,
+            revenueBand: quoteData.revenueBand,
+            monthlyTransactions: quoteData.monthlyTransactions,
+            industry: quoteData.industry,
+            cleanupMonths: quoteData.cleanupMonths,
+            overrideReason: quoteData.overrideReason,
+            monthlyFee: parseFloat(quoteData.monthlyFee),
+            setupFee: parseFloat(quoteData.setupFee)
+          });
+        } catch (slackError) {
+          console.error('Failed to send Slack notification:', slackError);
+          // Don't fail the quote creation if Slack fails
+        }
+      }
+      
       res.json(quote);
     } catch (error) {
       if (error instanceof z.ZodError) {

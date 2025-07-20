@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Get current month number (1-12)
@@ -25,13 +26,24 @@ const formSchema = insertQuoteSchema.omit({
   setupFee: true,
 }).extend({
   contactEmail: z.string().email("Please enter a valid email address"),
-  cleanupMonths: z.number().min(currentMonth, `Minimum ${currentMonth} months required (current calendar year)`),
+  cleanupMonths: z.number().min(0, "Cannot be negative"),
+  cleanupOverride: z.boolean().default(false),
+  overrideReason: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // If cleanup override is checked, require a reason
+  if (data.cleanupOverride && !data.overrideReason) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Override reason is required when cleanup override is enabled",
+      path: ["overrideReason"],
+    });
+  }
 });
 
 type FormData = z.infer<typeof formSchema>;
 
 // Pricing data
-const baseMonthlyFee = 400; // Starting base fee
+const baseMonthlyFee = 150; // Starting base fee (updated to $150/mo)
 
 const revenueMultipliers = {
   '<$10K': 0.5,
@@ -53,11 +65,11 @@ const txSurcharge = {
 
 const industryMultipliers = {
   'Software/SaaS': { monthly: 1.0, cleanup: 1.0 },
-  'Professional Services': { monthly: 1.25, cleanup: 1.1 },
-  'Real Estate': { monthly: 1.15, cleanup: 1.05 },
+  'Professional Services': { monthly: 1.0, cleanup: 1.1 },
+  'Real Estate': { monthly: 1.25, cleanup: 1.05 },
   'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
-  'Construction/Trades': { monthly: 1.20, cleanup: 1.08 },
-  'Multi-entity/Holding Companies': { monthly: 1.50, cleanup: 1.25 }
+  'Construction/Trades': { monthly: 1.5, cleanup: 1.08 },
+  'Multi-entity/Holding Companies': { monthly: 1.35, cleanup: 1.25 }
 };
 
 function roundToNearest5(num: number): number {
@@ -69,7 +81,7 @@ function roundToNearest25(num: number): number {
 }
 
 function calculateFees(data: Partial<FormData>) {
-  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || !data.cleanupMonths || !data.cleanupComplexity) {
+  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined || !data.cleanupComplexity) {
     return { monthlyFee: 0, setupFee: 0 };
   }
 
@@ -79,8 +91,11 @@ function calculateFees(data: Partial<FormData>) {
   
   // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
   const monthlyFee = Math.round((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  
+  // Handle cleanup override - if override is checked, use 0 months for calculation
+  const effectiveCleanupMonths = data.cleanupOverride ? 0 : data.cleanupMonths;
   const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
-  const setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * data.cleanupMonths));
+  const setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
   
   return { monthlyFee, setupFee };
 }
@@ -103,6 +118,8 @@ export default function Home() {
       industry: "",
       cleanupMonths: currentMonth,
       cleanupComplexity: "",
+      cleanupOverride: false,
+      overrideReason: "",
     },
   });
 
@@ -464,17 +481,73 @@ export default function Home() {
                         <FormControl>
                           <Input 
                             type="number"
-                            min={currentMonth.toString()}
-                            placeholder={currentMonth.toString()}
+                            min={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
+                            placeholder={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || currentMonth)}
+                            disabled={form.watch("cleanupOverride")}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || (form.watch("cleanupOverride") ? 0 : currentMonth))}
                           />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Cleanup Override Checkbox */}
+                  <FormField
+                    control={form.control}
+                    name="cleanupOverride"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (checked) {
+                                form.setValue("cleanupMonths", 0);
+                              } else {
+                                form.setValue("cleanupMonths", currentMonth);
+                                form.setValue("overrideReason", "");
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            Override cleanup months to 0
+                          </FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Override Reason */}
+                  {form.watch("cleanupOverride") && (
+                    <FormField
+                      control={form.control}
+                      name="overrideReason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reason</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                <SelectValue placeholder="Select reason for override" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Brand New Business">Brand New Business</SelectItem>
+                              <SelectItem value="Negotiated Rate">Negotiated Rate</SelectItem>
+                              <SelectItem value="Books Confirmed Current">Books Confirmed Current</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   {/* Cleanup Complexity */}
                   <FormField
@@ -490,9 +563,9 @@ export default function Home() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="0.5">Easy (50%)</SelectItem>
-                            <SelectItem value="0.75">Standard (75%)</SelectItem>
-                            <SelectItem value="1.0">Messy AF (100%)</SelectItem>
+                            <SelectItem value="0.5">Clean and Current</SelectItem>
+                            <SelectItem value="0.75">Standard</SelectItem>
+                            <SelectItem value="1.0">Not Done / Years Behind</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

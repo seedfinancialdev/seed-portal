@@ -10,6 +10,8 @@ export const quotes = pgTable("quotes", {
   industry: text("industry").notNull(),
   cleanupMonths: integer("cleanup_months").notNull(),
   cleanupComplexity: decimal("cleanup_complexity", { precision: 3, scale: 2 }).notNull(),
+  cleanupOverride: boolean("cleanup_override").default(false).notNull(),
+  overrideReason: text("override_reason"),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).notNull(),
   archived: boolean("archived").default(false).notNull(),
