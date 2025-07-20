@@ -31,13 +31,15 @@ const formSchema = insertQuoteSchema.omit({
 type FormData = z.infer<typeof formSchema>;
 
 // Pricing data
-const baseFees = {
-  '<$10K': 150,
-  '10K-25K': 300,
-  '25K-75K': 800,
-  '75K-250K': 1200,
-  '250K-1M': 1800,
-  '1M+': 2500
+const baseMonthlyFee = 400; // Starting base fee
+
+const revenueMultipliers = {
+  '<$10K': 0.5,
+  '10K-25K': 1.0,
+  '25K-75K': 2.2,
+  '75K-250K': 3.5,
+  '250K-1M': 5.0,
+  '1M+': 7.0
 };
 
 const txSurcharge = {
@@ -51,7 +53,7 @@ const txSurcharge = {
 
 const industryMultipliers = {
   'Software/SaaS': { monthly: 1.0, cleanup: 1.0 },
-  'Marketing Agencies': { monthly: 1.25, cleanup: 1.1 },
+  'Professional Services': { monthly: 1.25, cleanup: 1.1 },
   'Real Estate': { monthly: 1.15, cleanup: 1.05 },
   'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
   'Construction/Trades': { monthly: 1.20, cleanup: 1.08 },
@@ -67,11 +69,12 @@ function calculateFees(data: Partial<FormData>) {
     return { monthlyFee: 0, setupFee: 0 };
   }
 
-  const baseFee = baseFees[data.revenueBand as keyof typeof baseFees] || 0;
+  const revenueMultiplier = revenueMultipliers[data.revenueBand as keyof typeof revenueMultipliers] || 1.0;
   const txFee = txSurcharge[data.monthlyTransactions as keyof typeof txSurcharge] || 0;
   const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
   
-  const monthlyFee = roundToNearest5((baseFee + txFee) * industryData.monthly);
+  // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
+  const monthlyFee = roundToNearest5((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
   const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
   const setupFee = Math.max(monthlyFee, roundToNearest5(monthlyFee * cleanupMultiplier * data.cleanupMonths));
   
@@ -280,7 +283,8 @@ export default function Home() {
       return null;
     }
     
-    const baseFee = baseFees[watchedValues.revenueBand as keyof typeof baseFees] || 0;
+    const revenueMultiplier = revenueMultipliers[watchedValues.revenueBand as keyof typeof revenueMultipliers] || 1.0;
+    const baseFee = baseMonthlyFee * revenueMultiplier;
     const txFee = txSurcharge[watchedValues.monthlyTransactions as keyof typeof txSurcharge] || 0;
     const industryData = industryMultipliers[watchedValues.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
     
@@ -334,33 +338,6 @@ export default function Home() {
                     )}
                   />
 
-                  {/* Revenue Band */}
-                  <FormField
-                    control={form.control}
-                    name="revenueBand"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly Revenue Band</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                              <SelectValue placeholder="Select revenue band" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="<$10K">&lt;$10K</SelectItem>
-                            <SelectItem value="10K-25K">$10K - $25K</SelectItem>
-                            <SelectItem value="25K-75K">$25K - $75K</SelectItem>
-                            <SelectItem value="75K-250K">$75K - $250K</SelectItem>
-                            <SelectItem value="250K-1M">$250K - $1M</SelectItem>
-                            <SelectItem value="1M+">$1M+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   {/* Monthly Transactions */}
                   <FormField
                     control={form.control}
@@ -388,6 +365,33 @@ export default function Home() {
                     )}
                   />
 
+                  {/* Revenue Band */}
+                  <FormField
+                    control={form.control}
+                    name="revenueBand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monthly Revenue Band</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                              <SelectValue placeholder="Select revenue band" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="<$10K">&lt;$10K</SelectItem>
+                            <SelectItem value="10K-25K">$10K - $25K</SelectItem>
+                            <SelectItem value="25K-75K">$25K - $75K</SelectItem>
+                            <SelectItem value="75K-250K">$75K - $250K</SelectItem>
+                            <SelectItem value="250K-1M">$250K - $1M</SelectItem>
+                            <SelectItem value="1M+">$1M+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Industry */}
                   <FormField
                     control={form.control}
@@ -403,7 +407,7 @@ export default function Home() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
-                            <SelectItem value="Marketing Agencies">Marketing Agencies</SelectItem>
+                            <SelectItem value="Professional Services">Professional Services</SelectItem>
                             <SelectItem value="Real Estate">Real Estate</SelectItem>
                             <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
                             <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
