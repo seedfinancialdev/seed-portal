@@ -111,7 +111,7 @@ export class HubSpotService {
     return response.json();
   }
 
-  async getUserProfile(email: string): Promise<{ firstName?: string; lastName?: string; companyName?: string; companyAddress?: string } | null> {
+  async getUserProfile(email: string): Promise<{ firstName?: string; lastName?: string; companyName?: string; companyAddress?: string; companyAddress2?: string; companyCity?: string; companyState?: string; companyZip?: string; companyCountry?: string } | null> {
     try {
       // Get company branding information
       const brandingInfo = await this.getCompanyBranding();
@@ -127,7 +127,12 @@ export class HubSpotService {
           firstName: owner.firstName,
           lastName: owner.lastName,
           companyName: brandingInfo?.companyName || 'Seed Financial',
-          companyAddress: brandingInfo?.companyAddress || 'Austin, TX'
+          companyAddress: brandingInfo?.companyAddress || 'Austin, TX',
+          companyAddress2: brandingInfo?.companyAddress2,
+          companyCity: brandingInfo?.companyCity,
+          companyState: brandingInfo?.companyState,
+          companyZip: brandingInfo?.companyZip,
+          companyCountry: brandingInfo?.companyCountry
         };
       }
       
@@ -138,7 +143,12 @@ export class HubSpotService {
           firstName: contact.contact.properties?.firstname,
           lastName: contact.contact.properties?.lastname,
           companyName: brandingInfo?.companyName || 'Seed Financial',
-          companyAddress: brandingInfo?.companyAddress || 'Austin, TX'
+          companyAddress: brandingInfo?.companyAddress || 'Austin, TX',
+          companyAddress2: brandingInfo?.companyAddress2,
+          companyCity: brandingInfo?.companyCity,
+          companyState: brandingInfo?.companyState,
+          companyZip: brandingInfo?.companyZip,
+          companyCountry: brandingInfo?.companyCountry
         };
       }
       
@@ -149,15 +159,65 @@ export class HubSpotService {
     }
   }
 
-  async getCompanyBranding(): Promise<{ companyName?: string; companyAddress?: string } | null> {
+  async getCompanyBranding(): Promise<{ companyName?: string; companyAddress?: string; companyAddress2?: string; companyCity?: string; companyState?: string; companyZip?: string; companyCountry?: string } | null> {
     try {
-      // Try to get company information from settings API
+      // Try to get account info first
       const accountInfo = await this.makeRequest('/integrations/v1/me');
       
       if (accountInfo && accountInfo.portalId) {
+        // Search for your own company in HubSpot companies
+        try {
+          const companySearchBody = {
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName: 'domain',
+                    operator: 'EQ',
+                    value: 'seedfinancial.io'
+                  }
+                ]
+              }
+            ],
+            properties: ['name', 'domain', 'address', 'address2', 'city', 'state', 'zip', 'country']
+          };
+
+          const companyResult = await this.makeRequest('/crm/v3/objects/companies/search', {
+            method: 'POST',
+            body: JSON.stringify(companySearchBody)
+          });
+
+          if (companyResult.results && companyResult.results.length > 0) {
+            const company = companyResult.results[0];
+            const props = company.properties;
+            
+            // Build full address string
+            let fullAddress = '';
+            if (props.address) fullAddress += props.address;
+            if (props.address2) fullAddress += (fullAddress ? ', ' : '') + props.address2;
+            if (props.city) fullAddress += (fullAddress ? ', ' : '') + props.city;
+            if (props.state) fullAddress += (fullAddress ? ', ' : '') + props.state;
+            if (props.zip) fullAddress += (fullAddress ? ' ' : '') + props.zip;
+            if (props.country) fullAddress += (fullAddress ? ', ' : '') + props.country;
+            
+            return {
+              companyName: props.name || 'Seed Financial',
+              companyAddress: fullAddress || 'Austin, TX',
+              companyAddress2: props.address2,
+              companyCity: props.city,
+              companyState: props.state,
+              companyZip: props.zip,
+              companyCountry: props.country
+            };
+          }
+        } catch (companyError) {
+          console.log('Could not fetch company details, using defaults:', (companyError as Error).message);
+        }
+        
+        // Fallback to defaults if company not found
         return {
-          companyName: 'Seed Financial', // Use from HubSpot company settings
-          companyAddress: 'Austin, TX' // Use from HubSpot company settings
+          companyName: 'Seed Financial',
+          companyAddress: 'Austin, TX'
         };
       }
       
@@ -303,6 +363,11 @@ Services Include:
           hs_language: 'en',
           hs_sender_company_name: userProfile?.companyName || 'Seed Financial',
           hs_sender_company_address: userProfile?.companyAddress || 'Austin, TX',
+          hs_sender_company_address2: userProfile?.companyAddress2 || '',
+          hs_sender_company_city: userProfile?.companyCity || 'Austin',
+          hs_sender_company_state: userProfile?.companyState || 'TX',
+          hs_sender_company_postal_code: userProfile?.companyZip || '',
+          hs_sender_company_country: userProfile?.companyCountry || 'US',
           hs_sender_firstname: userProfile?.firstName || firstName || 'Jon',
           hs_sender_lastname: userProfile?.lastName || lastName || 'Wells',
           hs_sender_email: userEmail,
