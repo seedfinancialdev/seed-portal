@@ -491,7 +491,7 @@ export default function Home() {
                           <Input 
                             type="number"
                             min={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
-                            max="12"
+                            max="120"
                             placeholder={currentMonth.toString()}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                             {...field}
@@ -522,7 +522,7 @@ export default function Home() {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>
-                            Allow reduction of cleanup months to any value (including 0)
+                            Override Minimum Cleanup
                           </FormLabel>
                         </div>
                       </FormItem>
