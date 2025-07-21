@@ -154,6 +154,7 @@ export class HubSpotService {
           dealstage: '1108547151', // Qualified stage ID in Seed Sales Pipeline
           amount: totalAmount,
           pipeline: '761069086', // Seed Sales Pipeline ID
+          dealtype: 'newbusiness', // Deal Type: New Business
         },
         associations: [
           {
@@ -225,6 +226,13 @@ Services Include:
           hs_status: 'DRAFT',
           hs_expiration_date: expirationDate.toISOString().split('T')[0], // YYYY-MM-DD format
           hs_language: 'en',
+          hs_sender_company_name: 'Seed Financial',
+          hs_sender_company_address: 'Austin, TX',
+          hs_sender_firstname: 'Seed Financial',
+          hs_sender_lastname: 'Team',
+          hs_sender_email: 'hello@seedfinancial.io',
+          hs_esign_enabled: true,
+          hs_payment_enabled: true,
         },
         associations: [
           {
@@ -242,6 +250,9 @@ Services Include:
       });
 
       console.log('Quote created successfully:', result.id);
+      
+      // Add line items to the quote
+      await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
 
       return {
         id: result.id,
@@ -269,8 +280,8 @@ Services Include:
       // Create monthly service line item
       const monthlyLineItem = {
         properties: {
-          name: 'Monthly Bookkeeping Services',
-          description: 'Ongoing monthly bookkeeping and accounting services',
+          name: 'Monthly Bookkeeping (Custom)',
+          description: 'Ongoing monthly bookkeeping and accounting services including bank reconciliation, AP/AR management, financial statement preparation, and QuickBooks maintenance',
           price: monthlyFee.toString(),
           quantity: '12', // 12 months
         },
@@ -293,8 +304,8 @@ Services Include:
       if (setupFee > 0) {
         const setupLineItem = {
           properties: {
-            name: 'One-time Setup and Cleanup Fee',
-            description: 'Initial setup and historical cleanup of accounting records',
+            name: 'Clean-Up / Catch-Up Project',
+            description: 'Initial setup and historical cleanup of accounting records to prepare for ongoing bookkeeping services',
             price: setupFee.toString(),
             quantity: '1',
           },
