@@ -68,3 +68,56 @@
     font-family: 'Open Sans', sans-serif;
   }
 }
+
+@layer components {
+  /* Enhanced card hover effects */
+  .quote-card {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .quote-card:hover {
+    @apply transform -translate-y-1 shadow-2xl;
+  }
+  
+  /* Enhanced table row hover */
+  .quote-table-row {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .quote-table-row:hover {
+    @apply bg-gradient-to-r from-blue-50 to-indigo-50 scale-[1.01] shadow-sm;
+  }
+  
+  /* Gradient text effects */
+  .gradient-text {
+    @apply bg-gradient-to-r from-[#253e31] to-[#75c29a] bg-clip-text text-transparent;
+  }
+  
+  /* Enhanced button styles */
+  .button-shimmer {
+    @apply relative overflow-hidden;
+  }
+  
+  .button-shimmer::before {
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-[-100%] transition-transform duration-700;
+    content: '';
+  }
+  
+  .button-shimmer:hover::before {
+    @apply translate-x-[200%];
+  }
+  
+  /* Pulse animation for status indicators */
+  .status-pulse {
+    @apply animate-pulse;
+  }
+  
+  /* Enhanced form inputs */
+  .enhanced-input {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .enhanced-input:focus {
+    @apply transform scale-[1.02] shadow-lg ring-2 ring-[#e24c00]/20;
+  }
+}

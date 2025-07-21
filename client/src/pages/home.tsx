@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -772,11 +772,19 @@ export default function Home() {
 
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Form Card */}
-          <Card className="bg-gray-50 shadow-xl">
+          <Card className="bg-gray-50 shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-                Quote Details
-              </h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#253e31] to-[#75c29a] rounded-lg">
+                  <Calculator className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Quote Builder
+                  </h2>
+                  <p className="text-sm text-gray-500">Configure your pricing details</p>
+                </div>
+              </div>
               
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -1144,24 +1152,35 @@ export default function Home() {
           </Card>
 
           {/* Results Card */}
-          <Card className="bg-white shadow-xl">
+          <Card className="bg-white shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-                Quote Summary
-              </h2>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Pricing Summary
+                  </h2>
+                  <p className="text-sm text-gray-500">Your calculated quote breakdown</p>
+                </div>
+              </div>
               
               <div className="space-y-6">
                 {/* Monthly Fee */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-600">
-                      Monthly Bookkeeping Fee
-                    </label>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <label className="text-sm font-semibold text-green-800">
+                        Monthly Bookkeeping Fee
+                      </label>
+                    </div>
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-8 px-3 text-xs bg-[#253e31] text-white border-[#253e31] hover:bg-[#253e31]/90"
+                      className="h-8 px-3 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 shadow-sm"
                       onClick={() => copyToClipboard(monthlyFee.toLocaleString(), 'monthly')}
                       disabled={!isCalculated}
                     >
@@ -1173,25 +1192,28 @@ export default function Home() {
                       {copiedField === 'monthly' ? 'Copied!' : 'Copy'}
                     </Button>
                   </div>
-                  <div className="text-3xl font-bold text-gray-800">
+                  <div className="text-4xl font-bold text-green-800 mb-1">
                     {isCalculated ? `$${monthlyFee.toLocaleString()}` : '$0'}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Per month, ongoing
+                  <p className="text-sm text-green-600 font-medium">
+                    Per month, ongoing service
                   </p>
                 </div>
 
                 {/* Setup Fee */}
-                <div className="bg-gray-50 rounded-lg p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm font-medium text-gray-600">
-                      One-time Setup Fee
-                    </label>
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-100 rounded-xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <label className="text-sm font-semibold text-orange-800">
+                        One-time Setup Fee
+                      </label>
+                    </div>
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-8 px-3 text-xs bg-[#253e31] text-white border-[#253e31] hover:bg-[#253e31]/90"
+                      className="h-8 px-3 text-xs bg-orange-600 text-white border-orange-600 hover:bg-orange-700 shadow-sm"
                       onClick={() => copyToClipboard(setupFee.toLocaleString(), 'setup')}
                       disabled={!isCalculated}
                     >
@@ -1203,10 +1225,10 @@ export default function Home() {
                       {copiedField === 'setup' ? 'Copied!' : 'Copy'}
                     </Button>
                   </div>
-                  <div className="text-3xl font-bold text-[#e24c00]">
+                  <div className="text-4xl font-bold text-orange-800 mb-1">
                     {isCalculated ? `$${setupFee.toLocaleString()}` : '$0'}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-orange-600 font-medium">
                     Includes {watchedValues.cleanupMonths || 0} months of cleanup
                   </p>
                 </div>
@@ -1214,9 +1236,12 @@ export default function Home() {
                 {/* Calculation Breakdown */}
                 {breakdown && isCalculated && (
                   <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                      Breakdown
-                    </h3>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                      <h3 className="text-lg font-bold text-gray-800">
+                        Calculation Breakdown
+                      </h3>
+                    </div>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Base Fee:</span>
@@ -1260,7 +1285,7 @@ export default function Home() {
                         form.handleSubmit(onSubmit)();
                       }}
                       disabled={createQuoteMutation.isPending || !isCalculated}
-                      className="flex-1 bg-[#253e31] text-white font-semibold py-4 px-6 rounded-lg hover:bg-[#253e31]/90 active:bg-[#253e31]/80 focus:ring-2 focus:ring-[#e24c00] focus:ring-offset-2"
+                      className="flex-1 bg-[#253e31] text-white font-semibold py-4 px-6 rounded-lg hover:bg-[#253e31]/90 active:bg-[#253e31]/80 focus:ring-2 focus:ring-[#e24c00] focus:ring-offset-2 button-shimmer transition-all duration-300"
                     >
                       <Save className="w-4 h-4 mr-2" />
                       {createQuoteMutation.isPending ? 'Saving...' : (editingQuoteId ? 'Update Quote' : 'Save Quote')}
@@ -1314,7 +1339,7 @@ export default function Home() {
                           updateHubSpotMutation.isPending ||
                           createQuoteMutation.isPending
                         }
-                        className="flex-1 bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-orange-700 active:bg-orange-800 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50"
+                        className="flex-1 bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-orange-700 active:bg-orange-800 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 button-shimmer transition-all duration-300"
                       >
                         <Upload className="w-4 h-4 mr-2" />
                         {pushToHubSpotMutation.isPending || updateHubSpotMutation.isPending || (createQuoteMutation.isPending && !editingQuoteId)
@@ -1354,9 +1379,15 @@ export default function Home() {
                     </Alert>
                   )}
                   
-                  <div className="text-center">
+                  <div className="text-center bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4 border">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                      <p className="text-xs font-medium text-gray-600">
+                        Quote valid for 30 days
+                      </p>
+                    </div>
                     <p className="text-xs text-gray-500">
-                      Quote valid for 30 days • Generated on {new Date().toLocaleDateString('en-US', {
+                      Generated on {new Date().toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric'
@@ -1370,12 +1401,19 @@ export default function Home() {
         </div>
 
         {/* Quote History Section */}
-        <Card className="bg-white shadow-xl mt-8">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Saved Quotes
-            </CardTitle>
+        <Card className="bg-white shadow-xl mt-8 border-0 quote-card">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                <FileText className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-bold text-gray-800">
+                  Saved Quotes
+                </CardTitle>
+                <p className="text-sm text-gray-500 mt-1">Manage and review your quote history</p>
+              </div>
+            </div>
             <div className="flex items-center gap-4 mt-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -1459,7 +1497,7 @@ export default function Home() {
                     {allQuotes.map((quote) => (
                       <TableRow 
                         key={quote.id} 
-                        className="cursor-pointer hover:bg-gray-50 transition-colors"
+                        className="cursor-pointer quote-table-row"
                         onClick={() => loadQuoteIntoForm(quote)}
                       >
                         <TableCell className="font-medium">{quote.contactEmail}</TableCell>
