@@ -1,4 +1,4 @@
-import { users, quotes, type User, type InsertUser, type Quote, type InsertQuote, updateQuoteSchema } from "@shared/schema";
+import { users, quotes, approvalCodes, type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, updateQuoteSchema } from "@shared/schema";
 import { db } from "./db";
 import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
@@ -17,6 +17,11 @@ export interface IStorage {
   getQuotesByEmail(email: string): Promise<Quote[]>;
   getQuote(id: number): Promise<Quote | undefined>;
   getAllQuotes(search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]>;
+  
+  // Approval code methods
+  createApprovalCode(approvalCode: InsertApprovalCode): Promise<ApprovalCode>;
+  validateApprovalCode(code: string, email: string): Promise<boolean>;
+  markApprovalCodeUsed(code: string, email: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -109,6 +114,38 @@ export class DatabaseStorage implements IStorage {
         .where(archivedFilter)
         .orderBy(desc(quotes.updatedAt));
     }
+  }
+
+  async createApprovalCode(insertApprovalCode: InsertApprovalCode): Promise<ApprovalCode> {
+    const [approvalCode] = await db
+      .insert(approvalCodes)
+      .values(insertApprovalCode)
+      .returning();
+    return approvalCode;
+  }
+
+  async validateApprovalCode(code: string, email: string): Promise<boolean> {
+    const [approvalCode] = await db.select().from(approvalCodes).where(
+      and(
+        eq(approvalCodes.code, code),
+        eq(approvalCodes.contactEmail, email),
+        eq(approvalCodes.used, false),
+        sql`${approvalCodes.expiresAt} > NOW()`
+      )
+    );
+    return !!approvalCode;
+  }
+
+  async markApprovalCodeUsed(code: string, email: string): Promise<void> {
+    await db
+      .update(approvalCodes)
+      .set({ used: true })
+      .where(
+        and(
+          eq(approvalCodes.code, code),
+          eq(approvalCodes.contactEmail, email)
+        )
+      );
   }
 }
 

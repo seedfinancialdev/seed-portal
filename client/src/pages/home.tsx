@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Get current month number (1-12)
@@ -39,11 +40,11 @@ const formSchema = insertQuoteSchema.omit({
     });
   }
   
-  // If override is not checked, enforce minimum cleanup months
+  // If override is not checked or not approved, enforce minimum cleanup months
   if (!data.cleanupOverride && data.cleanupMonths < currentMonth) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: `Minimum ${currentMonth} months required (current calendar year) unless override is enabled`,
+      message: `Minimum ${currentMonth} months required (current calendar year) unless override is approved`,
       path: ["cleanupMonths"],
     });
   }
@@ -117,6 +118,13 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<string>("updatedAt");
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Approval system state
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [approvalCode, setApprovalCode] = useState("");
+  const [isApproved, setIsApproved] = useState(false);
+  const [isRequestingApproval, setIsRequestingApproval] = useState(false);
+  const [isValidatingCode, setIsValidatingCode] = useState(false);
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -323,6 +331,95 @@ export default function Home() {
     }
   };
 
+  // Request approval code from server and send Slack notification
+  const requestApproval = async () => {
+    setIsRequestingApproval(true);
+    try {
+      const formData = form.getValues();
+      const fees = calculateFees(formData);
+      
+      const response = await apiRequest("POST", "/api/approval/request", {
+        contactEmail: formData.contactEmail,
+        quoteData: {
+          contactEmail: formData.contactEmail,
+          revenueBand: formData.revenueBand,
+          monthlyTransactions: formData.monthlyTransactions,
+          industry: formData.industry,
+          cleanupMonths: formData.cleanupMonths,
+          overrideReason: formData.overrideReason || "",
+          monthlyFee: fees.monthlyFee,
+          setupFee: fees.setupFee
+        }
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Approval Requested",
+          description: "Check Slack for the approval code.",
+        });
+        setIsApprovalDialogOpen(true);
+      } else {
+        throw new Error('Failed to request approval');
+      }
+    } catch (error) {
+      console.error('Error requesting approval:', error);
+      toast({
+        title: "Request Failed",
+        description: "Failed to request approval. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRequestingApproval(false);
+    }
+  };
+
+  // Validate approval code entered by user
+  const validateApprovalCode = async () => {
+    if (!approvalCode || approvalCode.length !== 4) {
+      toast({
+        title: "Invalid Code",
+        description: "Please enter a 4-digit approval code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsValidatingCode(true);
+    try {
+      const response = await apiRequest("POST", "/api/approval/validate", {
+        code: approvalCode,
+        contactEmail: form.getValues().contactEmail
+      });
+      
+      const result = await response.json();
+      
+      if (result.valid) {
+        setIsApproved(true);
+        setIsApprovalDialogOpen(false);
+        setApprovalCode("");
+        toast({
+          title: "Approval Granted",
+          description: "You can now modify cleanup months.",
+        });
+      } else {
+        toast({
+          title: "Invalid Code",
+          description: result.message || "Please check the code and try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error validating approval code:', error);
+      toast({
+        title: "Validation Failed",
+        description: "Failed to validate code. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidatingCode(false);
+    }
+  };
+
   const onSubmit = (data: FormData) => {
     console.log('onSubmit called with data:', data);
     if (!isCalculated) {
@@ -514,10 +611,11 @@ export default function Home() {
                         <FormControl>
                           <Input 
                             type="number"
-                            min={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
+                            min={(form.watch("cleanupOverride") && isApproved) ? "0" : currentMonth.toString()}
                             max="120"
                             placeholder={currentMonth.toString()}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                            disabled={form.watch("cleanupOverride") && !isApproved}
                             {...field}
                             onChange={(e) => field.onChange(parseInt(e.target.value) || currentMonth)}
                           />
@@ -527,28 +625,52 @@ export default function Home() {
                     )}
                   />
 
-                  {/* Cleanup Override Checkbox */}
+                  {/* Cleanup Override Checkbox with Request Approval Button */}
                   <FormField
                     control={form.control}
                     name="cleanupOverride"
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={(checked) => {
-                              field.onChange(checked);
-                              if (!checked) {
-                                form.setValue("overrideReason", "");
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            Override Minimum Cleanup
-                          </FormLabel>
+                      <FormItem className="flex flex-row items-center justify-between space-y-0">
+                        <div className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                if (!checked) {
+                                  form.setValue("overrideReason", "");
+                                  setIsApproved(false);
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              Override Minimum Cleanup
+                            </FormLabel>
+                          </div>
                         </div>
+                        
+                        {/* Request Approval Button */}
+                        {form.watch("cleanupOverride") && !isApproved && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={requestApproval}
+                            disabled={isRequestingApproval || !form.watch("contactEmail") || !form.watch("overrideReason")}
+                            className="ml-4"
+                          >
+                            {isRequestingApproval ? "Requesting..." : "Request Approval"}
+                          </Button>
+                        )}
+                        
+                        {/* Approval Status */}
+                        {form.watch("cleanupOverride") && isApproved && (
+                          <div className="text-sm text-green-600 font-medium ml-4">
+                            ✓ Approved
+                          </div>
+                        )}
                       </FormItem>
                     )}
                   />
@@ -869,6 +991,62 @@ export default function Home() {
           </p>
         </div>
       </div>
+      
+      {/* Approval Code Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Approval Code</DialogTitle>
+            <DialogDescription>
+              Enter the 4-digit approval code from Slack to unlock cleanup month editing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="approvalCode" className="block text-sm font-medium text-gray-700 mb-2">
+                Approval Code
+              </label>
+              <Input
+                id="approvalCode"
+                type="text"
+                maxLength={4}
+                placeholder="0000"
+                value={approvalCode}
+                onChange={(e) => {
+                  // Only allow numbers
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setApprovalCode(value);
+                }}
+                className="text-center text-2xl tracking-widest font-mono"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && approvalCode.length === 4) {
+                    validateApprovalCode();
+                  }
+                }}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsApprovalDialogOpen(false);
+                  setApprovalCode("");
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={validateApprovalCode}
+                disabled={isValidatingCode || approvalCode.length !== 4}
+                className="flex-1"
+              >
+                {isValidatingCode ? "Validating..." : "Validate Code"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

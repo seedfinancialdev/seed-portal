@@ -46,3 +46,21 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Approval codes for cleanup overrides
+export const approvalCodes = pgTable("approval_codes", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const insertApprovalCodeSchema = createInsertSchema(approvalCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertApprovalCode = z.infer<typeof insertApprovalCodeSchema>;
+export type ApprovalCode = typeof approvalCodes.$inferSelect;

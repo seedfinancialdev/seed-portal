@@ -50,6 +50,7 @@ async function sendCleanupOverrideNotification(quoteData: {
   overrideReason: string;
   monthlyFee: number;
   setupFee: number;
+  approvalCode: string;
 }) {
   if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
     console.log("Slack not configured - cleanup override notification skipped");
@@ -79,7 +80,7 @@ async function sendCleanupOverrideNotification(quoteData: {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: '*An active quote needs a cleanup override approval!*'
+            text: `*Approval Code: ${quoteData.approvalCode}*\n\nAn active quote needs cleanup override approval!`
           }
         },
         {
@@ -132,7 +133,7 @@ async function sendCleanupOverrideNotification(quoteData: {
       const originalChannel = process.env.SLACK_CHANNEL_ID;
       await sendSlackMessage({
         channel: originalChannel,
-        text: `🚨 *Cleanup Override Request*\n\n*Contact:* ${quoteData.contactEmail}\n*Revenue:* ${quoteData.revenueBand}\n*Transactions:* ${quoteData.monthlyTransactions}\n*Industry:* ${quoteData.industry}\n*Cleanup Months:* ${quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}\n*Monthly Fee:* $${quoteData.monthlyFee}\n*Setup Fee:* $${quoteData.setupFee}`
+        text: `🚨 *Cleanup Override Request*\n\n*APPROVAL CODE: ${quoteData.approvalCode}*\n\n*Contact:* ${quoteData.contactEmail}\n*Revenue:* ${quoteData.revenueBand}\n*Transactions:* ${quoteData.monthlyTransactions}\n*Industry:* ${quoteData.industry}\n*Cleanup Months:* ${quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}\n*Monthly Fee:* $${quoteData.monthlyFee}\n*Setup Fee:* $${quoteData.setupFee}`
       });
     } else {
       throw error;
