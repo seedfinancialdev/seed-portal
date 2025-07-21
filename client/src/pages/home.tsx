@@ -1019,11 +1019,21 @@ export default function Home() {
         {/* Service Selection Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Bookkeeping Service */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer">
+          <Card 
+            className={`bg-white/95 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              !showTaaSCard ? 'ring-2 ring-blue-500 shadow-blue-200' : ''
+            }`}
+            onClick={() => {
+              setShowTaaSCard(false);
+              form.setValue('quoteType', 'bookkeeping');
+            }}
+          >
             <CardContent className="p-6">
               <div className="text-center space-y-4">
-                <div className="h-16 w-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto">
-                  <Calculator className="h-8 w-8 text-blue-600" />
+                <div className={`h-16 w-16 rounded-xl flex items-center justify-center mx-auto ${
+                  !showTaaSCard ? 'bg-blue-500 shadow-lg' : 'bg-blue-100'
+                }`}>
+                  <Calculator className={`h-8 w-8 ${!showTaaSCard ? 'text-white' : 'text-blue-600'}`} />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">Bookkeeping</h3>
@@ -1032,8 +1042,10 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="pt-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    Currently Active
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    !showTaaSCard ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {!showTaaSCard ? 'Currently Active' : 'Available'}
                   </span>
                 </div>
               </div>
@@ -1041,11 +1053,36 @@ export default function Home() {
           </Card>
 
           {/* TaaS Service */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer opacity-75">
+          <Card 
+            className={`bg-white/95 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer ${
+              showTaaSCard ? 'ring-2 ring-green-500 shadow-green-200' : ''
+            }`}
+            onClick={() => {
+              if (!showTaaSCard) {
+                // Copy core fields from bookkeeping when switching to TaaS
+                const currentValues = form.getValues();
+                setShowTaaSCard(true);
+                form.setValue('quoteType', 'taas');
+                
+                // Reset TaaS-specific fields to defaults
+                form.setValue('numEntities', 1);
+                form.setValue('statesFiled', 1);
+                form.setValue('internationalFiling', false);
+                form.setValue('numBusinessOwners', 1);
+                form.setValue('include1040s', false);
+                form.setValue('priorYearsUnfiled', 0);
+                form.setValue('alreadyOnSeedBookkeeping', false);
+                form.setValue('entityType', '');
+                form.setValue('bookkeepingQuality', '');
+              }
+            }}
+          >
             <CardContent className="p-6">
               <div className="text-center space-y-4">
-                <div className="h-16 w-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto">
-                  <FileText className="h-8 w-8 text-green-600" />
+                <div className={`h-16 w-16 rounded-xl flex items-center justify-center mx-auto ${
+                  showTaaSCard ? 'bg-green-500 shadow-lg' : 'bg-green-100'
+                }`}>
+                  <FileText className={`h-8 w-8 ${showTaaSCard ? 'text-white' : 'text-green-600'}`} />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-gray-900">TaaS</h3>
@@ -1054,8 +1091,10 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="pt-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                    Coming Soon
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    showTaaSCard ? 'bg-green-500 text-white' : 'bg-green-100 text-green-800'
+                  }`}>
+                    {showTaaSCard ? 'Currently Active' : 'Available'}
                   </span>
                 </div>
               </div>
@@ -1086,8 +1125,9 @@ export default function Home() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Form Card */}
-          <Card className="bg-gray-50 shadow-xl border-0 quote-card">
+          {/* Quote Builder Form Card - Only show when TaaS is not active */}
+          {!showTaaSCard && (
+            <Card className="bg-gray-50 shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#253e31] to-[#75c29a] rounded-lg">
@@ -1465,62 +1505,7 @@ export default function Home() {
               </Form>
             </CardContent>
           </Card>
-
-          {/* Service Selection Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Bookkeeping Card */}
-            <Card 
-              className={`cursor-pointer transition-all duration-300 border-2 ${
-                !showTaaSCard ? 'border-green-500 bg-green-50 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md'
-              }`}
-              onClick={() => {
-                setShowTaaSCard(false);
-                form.setValue('quoteType', 'bookkeeping');
-              }}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-500 text-white rounded-lg">
-                  <Calculator className="h-6 w-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Bookkeeping Services</h3>
-                <p className="text-sm text-gray-600">Monthly bookkeeping and cleanup services</p>
-              </CardContent>
-            </Card>
-
-            {/* TaaS Card */}
-            <Card 
-              className={`cursor-pointer transition-all duration-300 border-2 ${
-                showTaaSCard ? 'border-blue-500 bg-blue-50 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md'
-              }`}
-              onClick={() => {
-                if (!showTaaSCard) {
-                  // Copy core fields from bookkeeping when switching to TaaS
-                  const currentValues = form.getValues();
-                  setShowTaaSCard(true);
-                  form.setValue('quoteType', 'taas');
-                  
-                  // Reset TaaS-specific fields to defaults
-                  form.setValue('numEntities', 1);
-                  form.setValue('statesFiled', 1);
-                  form.setValue('internationalFiling', false);
-                  form.setValue('numBusinessOwners', 1);
-                  form.setValue('include1040s', false);
-                  form.setValue('priorYearsUnfiled', 0);
-                  form.setValue('alreadyOnSeedBookkeeping', false);
-                  form.setValue('entityType', '');
-                  form.setValue('bookkeepingQuality', '');
-                }
-              }}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-blue-500 text-white rounded-lg">
-                  <FileText className="h-6 w-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Tax as a Service (TaaS)</h3>
-                <p className="text-sm text-gray-600">Business tax preparation and filing services</p>
-              </CardContent>
-            </Card>
-          </div>
+          )}
 
           {/* TaaS Form Card */}
           {showTaaSCard && (
