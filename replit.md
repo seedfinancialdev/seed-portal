@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Archive Dialog Issue Fixed** (July 21, 2025)
+  - Replaced browser confirm() dialog with custom AlertDialog component
+  - Added "Don't show this dialog again" checkbox with localStorage persistence
+  - Archive functionality works regardless of user preferences
+  - Added reset button to re-enable confirmations when needed
+  - Prevents browser-specific dialog blocking issues
+
 ✓ **Approval Code Tracking Added** (July 21, 2025)
   - Added 'approvalRequired' database column to track quotes that used approved overrides
   - Visual indicators in quotes table: "Approved" (orange badge), "Override" (gray badge), "Standard" (gray text)
