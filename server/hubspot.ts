@@ -206,7 +206,7 @@ export class HubSpotService {
               console.log('Found Nepal address, forcing correct Seed Financial address');
               return {
                 companyName: 'Seed Financial',
-                companyAddress: '4158 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
+                companyAddress: '4136 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
                 companyAddress2: 'Ste 521',
                 companyCity: 'Marina Del Rey',
                 companyState: 'CA',
@@ -217,7 +217,7 @@ export class HubSpotService {
             
             return {
               companyName: props.name || 'Seed Financial',
-              companyAddress: fullAddress || '4158 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
+              companyAddress: fullAddress || '4136 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
               companyAddress2: props.address2,
               companyCity: props.city,
               companyState: props.state,
@@ -232,7 +232,7 @@ export class HubSpotService {
         // Fallback to correct Seed Financial address
         return {
           companyName: 'Seed Financial',
-          companyAddress: '4158 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
+          companyAddress: '4136 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
           companyAddress2: 'Ste 521',
           companyCity: 'Marina Del Rey',
           companyState: 'CA',
@@ -382,7 +382,7 @@ Services Include:
           hs_expiration_date: expirationDate.toISOString().split('T')[0], // YYYY-MM-DD format
           hs_language: 'en',
           hs_sender_company_name: userProfile?.companyName || 'Seed Financial',
-          hs_sender_company_address: userProfile?.companyAddress || '4158 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
+          hs_sender_company_address: userProfile?.companyAddress || '4136 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
           hs_sender_firstname: userProfile?.firstName || firstName || 'Jon',
           hs_sender_lastname: userProfile?.lastName || lastName || 'Wells',
           hs_sender_email: userEmail,

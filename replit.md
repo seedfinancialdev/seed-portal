@@ -32,11 +32,13 @@ Preferred communication style: Simple, everyday language.
   - Deal Owner properly assigned to the user creating the quote
   - Modern quote creation (legacy templates deprecated by HubSpot)
   - Quote sender information dynamically pulled from HubSpot user profiles and company branding settings
-  - Proper Seed Financial company information in quotes
+  - Proper Seed Financial company information in quotes (4136 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292)
   - E-signature enabled in quotes (payments temporarily disabled for validation)
   - Auto-save quote functionality before pushing to HubSpot
   - Error handling for non-existing contacts with user-friendly messages
   - Line items automatically added using HubSpot product library with association type 67
+  - Line item quantities fixed to 1 for both monthly and cleanup services
+  - Address override system to ensure correct Seed Financial address displays in quotes
   - Successfully tested with live HubSpot API integration
 
 ✓ **Archive Dialog Issue Fixed** (July 21, 2025)
