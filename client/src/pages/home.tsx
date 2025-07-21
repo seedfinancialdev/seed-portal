@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -1414,15 +1414,24 @@ export default function Home() {
                 <p className="text-sm text-gray-500 mt-1">Manage and review your quote history</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 mt-4">
+            <div className="flex items-center gap-4 mt-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search by contact email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                  className="pl-10 pr-10 bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                 />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               {dontShowArchiveDialog && (
                 <Button
@@ -1537,8 +1546,8 @@ export default function Home() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-white text-sm opacity-80">
-            Internal Tool • Seed Financial SDR Team • 
-            <span className="font-medium"> Target: ≤30s quotes with ≥60% margins</span>
+            Internal Tool • Seed Financial Sales Team • 
+            <span className="font-medium">≤30s quotes with ≥60% margins</span>
           </p>
         </div>
       </div>
