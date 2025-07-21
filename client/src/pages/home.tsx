@@ -1617,24 +1617,24 @@ export default function Home() {
                                 <SelectItem value="Consulting">Consulting</SelectItem>
                                 <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
                                 <SelectItem value="Real Estate">Real Estate</SelectItem>
+                                <SelectItem value="Property Management">Property Management</SelectItem>
                                 <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
-                                <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
-                                <SelectItem value="Financial Services">Financial Services</SelectItem>
-                                <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                                <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
                                 <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
-                                <SelectItem value="Food/Hospitality">Food/Hospitality</SelectItem>
+                                <SelectItem value="Manufacturing">Manufacturing</SelectItem>
                                 <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
+                                <SelectItem value="Nonprofit">Nonprofit</SelectItem>
+                                <SelectItem value="Law Firm">Law Firm</SelectItem>
+                                <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
+                                <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
+                                <SelectItem value="Insurance">Insurance</SelectItem>
+                                <SelectItem value="Automotive">Automotive</SelectItem>
+                                <SelectItem value="Education">Education</SelectItem>
                                 <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
-                                <SelectItem value="Beauty/Personal Care">Beauty/Personal Care</SelectItem>
-                                <SelectItem value="Education/Training">Education/Training</SelectItem>
-                                <SelectItem value="Non-Profit">Non-Profit</SelectItem>
-                                <SelectItem value="Photography/Media">Photography/Media</SelectItem>
+                                <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
                                 <SelectItem value="Agriculture">Agriculture</SelectItem>
-                                <SelectItem value="Interior Design">Interior Design</SelectItem>
-                                <SelectItem value="Law Firms">Law Firms</SelectItem>
-                                <SelectItem value="Auto/Automotive">Auto/Automotive</SelectItem>
+                                <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
                                 <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
-                                <SelectItem value="Cannabis/CBD">Cannabis/CBD</SelectItem>
                                 <SelectItem value="Other">Other</SelectItem>
                               </SelectContent>
                             </Select>
@@ -1658,11 +1658,11 @@ export default function Home() {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="<$10K">&lt;$10K</SelectItem>
-                                <SelectItem value="10K-25K">$10K-$25K</SelectItem>
-                                <SelectItem value="25K-75K">$25K-$75K</SelectItem>
-                                <SelectItem value="75K-250K">$75K-$250K</SelectItem>
-                                <SelectItem value="250K-1M">$250K-$1M</SelectItem>
-                                <SelectItem value=">1M">&gt;$1M</SelectItem>
+                                <SelectItem value="10K-25K">$10K - $25K</SelectItem>
+                                <SelectItem value="25K-75K">$25K - $75K</SelectItem>
+                                <SelectItem value="75K-250K">$75K - $250K</SelectItem>
+                                <SelectItem value="250K-1M">$250K - $1M</SelectItem>
+                                <SelectItem value="1M+">$1M+</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
