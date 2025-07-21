@@ -52,9 +52,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onError: (error: Error) => {
+      const errorMessage = error.message;
+      let title = "Login failed";
+      let description = errorMessage;
+      
+      // Provide specific error messages for common cases
+      if (errorMessage.includes("Invalid email or password")) {
+        title = "Access denied";
+        description = "This email address is not authorized to access the quote calculator. Only Seed Financial team members with active HubSpot accounts can log in.";
+      }
+      
       toast({
-        title: "Login failed",
-        description: error.message,
+        title,
+        description,
         variant: "destructive",
       });
     },

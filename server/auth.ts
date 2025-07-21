@@ -71,16 +71,8 @@ export function setupAuth(app: Express) {
               return done(null, false);
             }
 
-            // Pre-approved emails (admin override until HubSpot verification is fully configured)
-            const preApprovedEmails = [
-              'josh@seedfinancial.io',
-              'jon@seedfinancial.io'
-            ];
-            
-            const isPreApproved = preApprovedEmails.includes(email.toLowerCase());
-            
-            // Verify user exists in HubSpot or is pre-approved
-            if (hubSpotService && !isPreApproved) {
+            // Verify user exists in HubSpot
+            if (hubSpotService) {
               try {
                 const hubSpotUserExists = await hubSpotService.verifyUserByEmail(email);
                 if (!hubSpotUserExists) {
@@ -92,10 +84,9 @@ export function setupAuth(app: Express) {
                 console.error(`HubSpot verification failed for ${email}:`, error);
                 return done(null, false);
               }
-            } else if (isPreApproved) {
-              console.log(`Email ${email} is pre-approved`);
             } else {
-              console.log(`Warning: HubSpot verification not available, allowing ${email}`);
+              console.log(`Warning: HubSpot verification not available, denying access for ${email}`);
+              return done(null, false);
             }
 
             // Create user automatically with default password
@@ -110,15 +101,8 @@ export function setupAuth(app: Express) {
             
             console.log(`Successfully created user with ID: ${user.id}`);
           } else {
-            // For existing users, also verify they still exist in HubSpot (unless pre-approved)
-            const preApprovedEmails = [
-              'josh@seedfinancial.io',
-              'jon@seedfinancial.io'
-            ];
-            
-            const isPreApproved = preApprovedEmails.includes(email.toLowerCase());
-            
-            if (hubSpotService && !isPreApproved) {
+            // For existing users, also verify they still exist in HubSpot
+            if (hubSpotService) {
               try {
                 const hubSpotUserExists = await hubSpotService.verifyUserByEmail(email);
                 if (!hubSpotUserExists) {
@@ -129,8 +113,9 @@ export function setupAuth(app: Express) {
                 console.error(`HubSpot verification failed for existing user ${email}:`, error);
                 return done(null, false);
               }
-            } else if (isPreApproved) {
-              console.log(`Existing user ${email} is pre-approved`);
+            } else {
+              console.log(`Warning: HubSpot verification not available, denying access for existing user ${email}`);
+              return done(null, false);
             }
           }
           

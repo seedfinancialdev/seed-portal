@@ -13,7 +13,7 @@ import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address").refine(
     (email) => email.endsWith('@seedfinancial.io'),
-    "Only @seedfinancial.io email addresses are allowed"
+    "Please use your Seed Financial email address (@seedfinancial.io)"
   ),
   password: z.string().min(1, "Password is required"),
 });
