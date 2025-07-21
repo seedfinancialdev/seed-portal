@@ -730,7 +730,7 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="relative mb-12">
+        <div className="relative mb-8">
           {/* User Menu - Top Right */}
           <div className="absolute top-0 right-0">
             <DropdownMenu>
@@ -757,24 +757,76 @@ export default function Home() {
             </DropdownMenu>
           </div>
           
-          {/* Enhanced Logo and Title - Center */}
-          <div className="text-center py-8">
-            <div className="inline-block p-6 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 shadow-2xl mb-6">
-              <img 
-                src={logoPath} 
-                alt="Seed Financial Logo" 
-                className="h-20 mx-auto filter drop-shadow-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-white tracking-tight">
-                Internal Pricing Calculator
-              </h1>
-              <p className="text-lg text-gray-200 opacity-90 font-medium">
-                Generate professional quotes with precision
-              </p>
-            </div>
+          {/* Logo and Title - Center */}
+          <div className="text-center">
+            <img 
+              src={logoPath} 
+              alt="Seed Financial Logo" 
+              className="h-16 mx-auto mb-4"
+            />
+            <p className="text-lg text-gray-200">
+              Internal Pricing Calculator
+            </p>
           </div>
+        </div>
+
+        {/* Dashboard Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Quick Stats */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Quotes</p>
+                  <p className="text-2xl font-bold text-gray-900">{allQuotes.length}</p>
+                </div>
+                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Today's Quotes</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {allQuotes.filter(quote => {
+                      const today = new Date().toDateString();
+                      const quoteDate = new Date(quote.createdAt).toDateString();
+                      return today === quoteDate;
+                    }).length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Average Quote Value */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Avg Monthly Fee</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${allQuotes.length > 0 
+                      ? Math.round(allQuotes.reduce((sum, quote) => sum + parseFloat(quote.monthlyFee), 0) / allQuotes.length).toLocaleString()
+                      : '0'
+                    }
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-orange-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
