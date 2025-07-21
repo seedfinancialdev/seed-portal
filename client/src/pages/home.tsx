@@ -806,6 +806,7 @@ export default function Home() {
                                   setHubspotContact(null);
                                   setLastVerifiedEmail('');
                                   setSearchTerm(""); // Clear search filter when email is cleared
+                                  form.setValue('companyName', ''); // Clear company name when email is cleared
                                 }
                                 
                                 debouncedVerifyEmail(email);
