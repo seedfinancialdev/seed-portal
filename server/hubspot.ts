@@ -267,8 +267,8 @@ Services Include:
 
       console.log('Quote created successfully:', result.id);
       
-      // Note: Line items creation commented out due to API permission requirements
-      // await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
+      // Add line items to the quote
+      await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
 
       return {
         id: result.id,

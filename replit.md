@@ -36,7 +36,7 @@ Preferred communication style: Simple, everyday language.
   - E-signature enabled in quotes (payments temporarily disabled for validation)
   - Auto-save quote functionality before pushing to HubSpot
   - Error handling for non-existing contacts with user-friendly messages
-  - Line items integration planned (requires additional API permissions)
+  - Line items automatically added: "Monthly Bookkeeping (Custom)" and "Clean-Up / Catch-Up Project"
   - Successfully tested with live HubSpot API integration
 
 ✓ **Archive Dialog Issue Fixed** (July 21, 2025)
