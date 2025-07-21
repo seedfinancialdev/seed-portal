@@ -480,6 +480,30 @@ export default function Home() {
                     )}
                   />
 
+                  {/* Cleanup Complexity */}
+                  <FormField
+                    control={form.control}
+                    name="cleanupComplexity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cleanup Complexity</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                              <SelectValue placeholder="Select complexity" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0.5">Clean and Current</SelectItem>
+                            <SelectItem value="0.75">Standard</SelectItem>
+                            <SelectItem value="1.0">Not Done / Years Behind</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Cleanup Months */}
                   <FormField
                     control={form.control}
@@ -554,30 +578,6 @@ export default function Home() {
                       )}
                     />
                   )}
-
-                  {/* Cleanup Complexity */}
-                  <FormField
-                    control={form.control}
-                    name="cleanupComplexity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cleanup Complexity</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                              <SelectValue placeholder="Select complexity" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="0.5">Clean and Current</SelectItem>
-                            <SelectItem value="0.75">Standard</SelectItem>
-                            <SelectItem value="1.0">Not Done / Years Behind</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </form>
               </Form>
             </CardContent>
