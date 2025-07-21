@@ -30,13 +30,13 @@ Preferred communication style: Simple, everyday language.
   - Company Name field with auto-population from HubSpot contact data
   - Deal creation with "New Business" deal type classification
   - Deal Owner properly assigned to the user creating the quote
-  - Quote creation using "Default Modern Quote Template" for professional formatting
-  - Quote sender information dynamically set to actual user (not generic "Seed Financial Team")
+  - Modern quote creation (legacy templates deprecated by HubSpot)
+  - Quote sender properly shows actual user name (Jon Wells) instead of generic team name
   - Proper Seed Financial company information in quotes
   - E-signature enabled in quotes (payments temporarily disabled for validation)
   - Auto-save quote functionality before pushing to HubSpot
   - Error handling for non-existing contacts with user-friendly messages
-  - Line items automatically added: "Monthly Bookkeeping (Custom)" and "Clean-Up / Catch-Up Project"
+  - Line items integration using HubSpot product library for proper quote formatting
   - Successfully tested with live HubSpot API integration
 
 ✓ **Archive Dialog Issue Fixed** (July 21, 2025)

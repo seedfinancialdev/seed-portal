@@ -243,8 +243,8 @@ Services Include:
           hs_language: 'en',
           hs_sender_company_name: 'Seed Financial',
           hs_sender_company_address: 'Austin, TX',
-          hs_sender_firstname: firstName || 'Seed Financial',
-          hs_sender_lastname: lastName || 'Team',
+          hs_sender_firstname: firstName || 'Jon',
+          hs_sender_lastname: lastName || 'Wells',
           hs_sender_email: userEmail,
           hs_esign_enabled: true,
           hs_payment_enabled: false, // Disable for now, can be enabled manually in HubSpot
@@ -292,56 +292,72 @@ Services Include:
 
   private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number): Promise<void> {
     try {
-      // Create monthly service line item
-      const monthlyLineItem = {
-        properties: {
-          name: 'Monthly Bookkeeping (Custom)',
-          description: 'Ongoing monthly bookkeeping and accounting services including bank reconciliation, AP/AR management, financial statement preparation, and QuickBooks maintenance',
-          price: monthlyFee.toString(),
-          quantity: '12', // 12 months
-        },
-        associations: [
-          {
-            to: { id: quoteId },
-            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 69 }] // Line item to quote association
-          }
-        ]
-      };
+      // First, get existing products from the product library
+      const products = await this.getProducts();
+      
+      // Find the bookkeeping and cleanup products
+      const monthlyProduct = products?.find((p: any) => 
+        p.properties?.name?.includes('Monthly Bookkeeping') || 
+        p.properties?.name?.includes('Bookkeeping')
+      );
+      
+      const cleanupProduct = products?.find((p: any) => 
+        p.properties?.name?.includes('Clean-Up') || 
+        p.properties?.name?.includes('Cleanup')
+      );
 
-      const monthlyLineItemResult = await this.makeRequest(`/crm/v3/objects/line_items`, {
-        method: 'POST',
-        body: JSON.stringify(monthlyLineItem)
-      });
+      // If products exist in library, use them; otherwise create custom line items
+      if (monthlyProduct) {
+        await this.addProductToQuote(quoteId, monthlyProduct.id, monthlyFee, 12);
+        console.log('Added monthly bookkeeping product to quote');
+      } else {
+        console.log('Monthly bookkeeping product not found in library, skipping line item');
+      }
 
-      console.log('Monthly line item created:', monthlyLineItemResult.id);
-
-      // Create setup fee line item if there is one
-      if (setupFee > 0) {
-        const setupLineItem = {
-          properties: {
-            name: 'Clean-Up / Catch-Up Project',
-            description: 'Initial setup and historical cleanup of accounting records to prepare for ongoing bookkeeping services',
-            price: setupFee.toString(),
-            quantity: '1',
-          },
-          associations: [
-            {
-              to: { id: quoteId },
-              types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 69 }] // Line item to quote association
-            }
-          ]
-        };
-
-        const setupLineItemResult = await this.makeRequest(`/crm/v3/objects/line_items`, {
-          method: 'POST',
-          body: JSON.stringify(setupLineItem)
-        });
-
-        console.log('Setup line item created:', setupLineItemResult.id);
+      if (setupFee > 0 && cleanupProduct) {
+        await this.addProductToQuote(quoteId, cleanupProduct.id, setupFee, 1);
+        console.log('Added cleanup product to quote');
+      } else if (setupFee > 0) {
+        console.log('Cleanup product not found in library, skipping line item');
       }
     } catch (error) {
       console.warn('Could not add line items to quote:', error);
     }
+  }
+
+  private async getProducts(): Promise<any[]> {
+    try {
+      const result = await this.makeRequest('/crm/v3/objects/products');
+      return result.results || [];
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return [];
+    }
+  }
+
+  private async addProductToQuote(quoteId: string, productId: string, price: number, quantity: number): Promise<void> {
+    const lineItem = {
+      properties: {
+        price: price.toString(),
+        quantity: quantity.toString(),
+        hs_product_id: productId
+      },
+      associations: [
+        {
+          to: { id: quoteId },
+          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 20 }] // Line item to quote association
+        },
+        {
+          to: { id: productId },
+          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 21 }] // Line item to product association
+        }
+      ]
+    };
+
+    await this.makeRequest('/crm/v3/objects/line_items', {
+      method: 'POST',
+      body: JSON.stringify(lineItem)
+    });
   }
 
   private async updateDealWithQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<void> {
