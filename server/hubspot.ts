@@ -357,7 +357,7 @@ Services Include:
       const CLEANUP_PRODUCT_ID = '25683750263'; // Clean-Up / Catch-Up Project
 
       // Try to associate products directly with the quote using associations API
-      await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, monthlyFee, 12);
+      await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, monthlyFee, 1);
       console.log('Associated monthly bookkeeping product with quote');
 
       // Add cleanup product if there's a setup fee
