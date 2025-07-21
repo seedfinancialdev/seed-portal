@@ -884,10 +884,28 @@ export default function Home() {
                           <SelectContent>
                             <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
                             <SelectItem value="Professional Services">Professional Services</SelectItem>
+                            <SelectItem value="Consulting">Consulting</SelectItem>
+                            <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
                             <SelectItem value="Real Estate">Real Estate</SelectItem>
+                            <SelectItem value="Property Management">Property Management</SelectItem>
                             <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
+                            <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
                             <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
+                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                            <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
+                            <SelectItem value="Nonprofit">Nonprofit</SelectItem>
+                            <SelectItem value="Law Firm">Law Firm</SelectItem>
+                            <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
+                            <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
+                            <SelectItem value="Insurance">Insurance</SelectItem>
+                            <SelectItem value="Automotive">Automotive</SelectItem>
+                            <SelectItem value="Education">Education</SelectItem>
+                            <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
+                            <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
+                            <SelectItem value="Agriculture">Agriculture</SelectItem>
+                            <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
                             <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

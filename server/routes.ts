@@ -231,11 +231,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         expiresAt
       });
 
-      // Send Slack notification with approval code
+      // Send Slack notification with approval code including custom override reason
       try {
         await sendCleanupOverrideNotification({
           ...quoteData,
-          approvalCode
+          approvalCode,
+          customOverrideReason: quoteData.customOverrideReason
         });
       } catch (slackError) {
         console.error('Failed to send Slack notification:', slackError);

@@ -48,6 +48,7 @@ async function sendCleanupOverrideNotification(quoteData: {
   industry: string;
   cleanupMonths: number;
   overrideReason: string;
+  customOverrideReason?: string;
   monthlyFee: number;
   setupFee: number;
   approvalCode: string;
@@ -112,6 +113,14 @@ async function sendCleanupOverrideNotification(quoteData: {
             }
           ]
         },
+        // Add custom override reason as a separate section if provided
+        ...(quoteData.overrideReason === "Other" && quoteData.customOverrideReason ? [{
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Custom Override Reason:*\n${quoteData.customOverrideReason}`
+          }
+        } as any] : []),
         {
           type: 'section',
           fields: [
@@ -133,7 +142,7 @@ async function sendCleanupOverrideNotification(quoteData: {
       const originalChannel = process.env.SLACK_CHANNEL_ID;
       await sendSlackMessage({
         channel: originalChannel,
-        text: `🚨 *Cleanup Override Request*\n\n*APPROVAL CODE: ${quoteData.approvalCode}*\n\n*Contact:* ${quoteData.contactEmail}\n*Revenue:* ${quoteData.revenueBand}\n*Transactions:* ${quoteData.monthlyTransactions}\n*Industry:* ${quoteData.industry}\n*Cleanup Months:* ${quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}\n*Monthly Fee:* $${quoteData.monthlyFee}\n*Setup Fee:* $${quoteData.setupFee}`
+        text: `🚨 *Cleanup Override Request*\n\n*APPROVAL CODE: ${quoteData.approvalCode}*\n\n*Contact:* ${quoteData.contactEmail}\n*Revenue:* ${quoteData.revenueBand}\n*Transactions:* ${quoteData.monthlyTransactions}\n*Industry:* ${quoteData.industry}\n*Cleanup Months:* ${quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}${quoteData.overrideReason === "Other" && quoteData.customOverrideReason ? `\n*Custom Reason:* ${quoteData.customOverrideReason}` : ""}\n*Monthly Fee:* $${quoteData.monthlyFee}\n*Setup Fee:* $${quoteData.setupFee}`
       });
     } else {
       throw error;
