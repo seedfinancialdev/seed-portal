@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertQuoteSchema, updateQuoteSchema } from "@shared/schema";
 import { z } from "zod";
 import { sendCleanupOverrideNotification } from "./slack";
+import { hubSpotService } from "./hubspot";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -173,6 +174,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error validating approval code:', error);
       res.status(500).json({ message: "Failed to validate approval code" });
+    }
+  });
+
+  // HubSpot integration endpoints
+  
+  // Verify contact email in HubSpot
+  app.post("/api/hubspot/verify-contact", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        res.status(400).json({ message: "Email is required" });
+        return;
+      }
+
+      if (!hubSpotService) {
+        res.json({ verified: false, error: "HubSpot integration not configured" });
+        return;
+      }
+
+      const result = await hubSpotService.verifyContactByEmail(email);
+      res.json(result);
+    } catch (error) {
+      console.error('Error verifying contact:', error);
+      res.status(500).json({ message: "Failed to verify contact" });
+    }
+  });
+
+  // Push quote to HubSpot (create deal and quote)
+  app.post("/api/hubspot/push-quote", async (req, res) => {
+    try {
+      const { quoteId } = req.body;
+      
+      if (!quoteId) {
+        res.status(400).json({ message: "Quote ID is required" });
+        return;
+      }
+
+      if (!hubSpotService) {
+        res.status(400).json({ message: "HubSpot integration not configured" });
+        return;
+      }
+
+      // Get the quote from database
+      const quote = await storage.getQuote(quoteId);
+      if (!quote) {
+        res.status(404).json({ message: "Quote not found" });
+        return;
+      }
+
+      // First verify the contact exists
+      const contactResult = await hubSpotService.verifyContactByEmail(quote.contactEmail);
+      if (!contactResult.verified || !contactResult.contact) {
+        res.status(400).json({ message: "Contact not found in HubSpot. Please ensure the contact exists before pushing to HubSpot." });
+        return;
+      }
+
+      const contact = contactResult.contact;
+      const companyName = contact.properties.company || quote.companyName || 'Unknown Company';
+
+      // Create deal in HubSpot
+      const deal = await hubSpotService.createDeal(
+        contact.id,
+        companyName,
+        parseFloat(quote.monthlyFee),
+        parseFloat(quote.setupFee)
+      );
+
+      if (!deal) {
+        res.status(500).json({ message: "Failed to create deal in HubSpot" });
+        return;
+      }
+
+      // Create quote/note in HubSpot
+      const hubspotQuote = await hubSpotService.createQuote(
+        deal.id,
+        companyName,
+        parseFloat(quote.monthlyFee),
+        parseFloat(quote.setupFee)
+      );
+
+      if (!hubspotQuote) {
+        res.status(500).json({ message: "Failed to create quote in HubSpot" });
+        return;
+      }
+
+      // Update the quote in our database with HubSpot IDs
+      const updatedQuote = await storage.updateQuote({
+        id: quoteId,
+        hubspotContactId: contact.id,
+        hubspotDealId: deal.id,
+        hubspotQuoteId: hubspotQuote.id,
+        hubspotContactVerified: true,
+        companyName: companyName
+      });
+
+      res.json({
+        success: true,
+        hubspotDealId: deal.id,
+        hubspotQuoteId: hubspotQuote.id,
+        dealName: deal.properties.dealname,
+        message: "Successfully pushed to HubSpot"
+      });
+    } catch (error) {
+      console.error('Error pushing to HubSpot:', error);
+      res.status(500).json({ message: "Failed to push quote to HubSpot" });
+    }
+  });
+
+  // Update existing HubSpot quote
+  app.post("/api/hubspot/update-quote", async (req, res) => {
+    try {
+      const { quoteId } = req.body;
+      
+      if (!quoteId) {
+        res.status(400).json({ message: "Quote ID is required" });
+        return;
+      }
+
+      if (!hubSpotService) {
+        res.status(400).json({ message: "HubSpot integration not configured" });
+        return;
+      }
+
+      // Get the quote from database
+      const quote = await storage.getQuote(quoteId);
+      if (!quote || !quote.hubspotQuoteId) {
+        res.status(404).json({ message: "Quote not found or not linked to HubSpot" });
+        return;
+      }
+
+      const companyName = quote.companyName || 'Unknown Company';
+
+      // Update quote in HubSpot
+      const success = await hubSpotService.updateQuote(
+        quote.hubspotQuoteId,
+        companyName,
+        parseFloat(quote.monthlyFee),
+        parseFloat(quote.setupFee)
+      );
+
+      if (success) {
+        res.json({
+          success: true,
+          message: "Successfully updated quote in HubSpot"
+        });
+      } else {
+        // Quote is no longer active, create a new one
+        res.json({
+          success: false,
+          needsNewQuote: true,
+          message: "Quote is no longer active in HubSpot. A new quote will need to be created."
+        });
+      }
+    } catch (error) {
+      console.error('Error updating HubSpot quote:', error);
+      res.status(500).json({ message: "Failed to update quote in HubSpot" });
     }
   });
 

@@ -16,6 +16,12 @@ export const quotes = pgTable("quotes", {
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).notNull(),
   archived: boolean("archived").default(false).notNull(),
+  // HubSpot integration fields
+  hubspotContactId: text("hubspot_contact_id"),
+  hubspotDealId: text("hubspot_deal_id"),
+  hubspotQuoteId: text("hubspot_quote_id"),
+  hubspotContactVerified: boolean("hubspot_contact_verified").default(false),
+  companyName: text("company_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

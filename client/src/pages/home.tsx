@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -26,11 +26,16 @@ const currentMonth = new Date().getMonth() + 1;
 const formSchema = insertQuoteSchema.omit({
   monthlyFee: true,
   setupFee: true,
+  hubspotContactId: true,
+  hubspotDealId: true,
+  hubspotQuoteId: true,
+  hubspotContactVerified: true,
 }).extend({
   contactEmail: z.string().email("Please enter a valid email address"),
   cleanupMonths: z.number().min(0, "Cannot be negative"),
   cleanupOverride: z.boolean().default(false),
   overrideReason: z.string().optional(),
+  companyName: z.string().optional(),
 }).superRefine((data, ctx) => {
   // If cleanup override is checked, require a reason
   if (data.cleanupOverride && !data.overrideReason) {
@@ -144,6 +149,11 @@ export default function Home() {
     return localStorage.getItem('dontShowArchiveDialog') === 'true';
   });
   
+  // HubSpot integration state
+  const [hubspotVerificationStatus, setHubspotVerificationStatus] = useState<'idle' | 'verifying' | 'verified' | 'not-found'>('idle');
+  const [hubspotContact, setHubspotContact] = useState<any>(null);
+  const [lastVerifiedEmail, setLastVerifiedEmail] = useState('');
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -155,6 +165,7 @@ export default function Home() {
       cleanupComplexity: "",
       cleanupOverride: false,
       overrideReason: "",
+      companyName: "",
     },
   });
 
@@ -266,6 +277,90 @@ export default function Home() {
     setDontShowArchiveDialog(checked);
     localStorage.setItem('dontShowArchiveDialog', checked.toString());
   };
+
+  // HubSpot email verification
+  const verifyHubSpotEmail = async (email: string) => {
+    if (!email || email === lastVerifiedEmail) return;
+    
+    setHubspotVerificationStatus('verifying');
+    setLastVerifiedEmail(email);
+    
+    try {
+      const response = await apiRequest('POST', '/api/hubspot/verify-contact', { email });
+      const result = await response.json();
+      
+      if (result.verified && result.contact) {
+        setHubspotVerificationStatus('verified');
+        setHubspotContact(result.contact);
+        
+        // Auto-fill company name if available
+        if (result.contact.properties.company && !form.getValues('companyName')) {
+          form.setValue('companyName', result.contact.properties.company);
+        }
+      } else {
+        setHubspotVerificationStatus('not-found');
+        setHubspotContact(null);
+      }
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      setHubspotVerificationStatus('not-found');
+      setHubspotContact(null);
+    }
+  };
+
+  // Push to HubSpot mutation
+  const pushToHubSpotMutation = useMutation({
+    mutationFn: async (quoteId: number) => {
+      const response = await apiRequest("POST", "/api/hubspot/push-quote", { quoteId });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Pushed to HubSpot",
+        description: `Deal "${data.dealName}" created successfully in HubSpot.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      refetchQuotes();
+    },
+    onError: (error: any) => {
+      console.error('Push to HubSpot error:', error);
+      toast({
+        title: "HubSpot Error",
+        description: error.message || "Failed to push quote to HubSpot. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update HubSpot quote mutation
+  const updateHubSpotMutation = useMutation({
+    mutationFn: async (quoteId: number) => {
+      const response = await apiRequest("POST", "/api/hubspot/update-quote", { quoteId });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({
+          title: "HubSpot Updated",
+          description: "Quote successfully updated in HubSpot.",
+        });
+      } else if (data.needsNewQuote) {
+        toast({
+          title: "Quote Expired",
+          description: "The HubSpot quote is no longer active. Use 'Push to HubSpot' to create a new quote.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error('Update HubSpot error:', error);
+      toast({
+        title: "HubSpot Error",
+        description: error.message || "Failed to update quote in HubSpot. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const watchedValues = form.watch();
   const { monthlyFee, setupFee } = calculateFees(watchedValues);
@@ -523,14 +618,65 @@ export default function Home() {
                       <FormItem>
                         <FormLabel>Contact Email</FormLabel>
                         <FormControl>
+                          <div className="relative">
+                            <Input 
+                              type="email"
+                              placeholder="client@company.com"
+                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                const email = e.target.value;
+                                if (email && email.includes('@') && email.includes('.')) {
+                                  setTimeout(() => verifyHubSpotEmail(email), 500);
+                                } else {
+                                  setHubspotVerificationStatus('idle');
+                                }
+                              }}
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                              {hubspotVerificationStatus === 'verifying' && (
+                                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                              )}
+                              {hubspotVerificationStatus === 'verified' && (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              )}
+                              {hubspotVerificationStatus === 'not-found' && (
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              )}
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Company Name */}
+                  <FormField
+                    control={form.control}
+                    name="companyName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Name (Optional)</FormLabel>
+                        <FormControl>
                           <Input 
-                            type="email"
-                            placeholder="client@company.com"
+                            placeholder="Company Name"
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                             {...field}
                           />
                         </FormControl>
                         <FormMessage />
+                        {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
+                          <p className="text-xs text-green-600 mt-1">
+                            ✓ Found in HubSpot: {hubspotContact.properties.company}
+                          </p>
+                        )}
+                        {hubspotVerificationStatus === 'not-found' && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            ⚠ Contact not found in HubSpot - quote will be saved but cannot be pushed to HubSpot
+                          </p>
+                        )}
                       </FormItem>
                     )}
                   />
@@ -885,6 +1031,64 @@ export default function Home() {
                       </Button>
                     )}
                   </div>
+                  
+                  {/* HubSpot Integration Button */}
+                  {isCalculated && (
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        onClick={async () => {
+                          // Auto-save the quote first, then push to HubSpot
+                          if (!editingQuoteId && hasUnsavedChanges) {
+                            // Save the quote first
+                            const formData = form.getValues();
+                            try {
+                              await new Promise((resolve, reject) => {
+                                createQuoteMutation.mutate(formData, {
+                                  onSuccess: (savedQuote) => {
+                                    // Now push to HubSpot
+                                    pushToHubSpotMutation.mutate(savedQuote.id);
+                                    resolve(savedQuote);
+                                  },
+                                  onError: reject
+                                });
+                              });
+                            } catch (error) {
+                              console.error('Failed to save quote before pushing to HubSpot:', error);
+                            }
+                          } else if (editingQuoteId) {
+                            // Update existing quote in HubSpot
+                            updateHubSpotMutation.mutate(editingQuoteId);
+                          }
+                        }}
+                        disabled={
+                          !isCalculated || 
+                          hubspotVerificationStatus !== 'verified' || 
+                          pushToHubSpotMutation.isPending || 
+                          updateHubSpotMutation.isPending ||
+                          createQuoteMutation.isPending
+                        }
+                        className="flex-1 bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-orange-700 active:bg-orange-800 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {pushToHubSpotMutation.isPending || updateHubSpotMutation.isPending || (createQuoteMutation.isPending && !editingQuoteId)
+                          ? 'Pushing to HubSpot...' 
+                          : editingQuoteId 
+                            ? 'Update in HubSpot' 
+                            : 'Push to HubSpot'
+                        }
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {hubspotVerificationStatus === 'not-found' && isCalculated && (
+                    <Alert className="border-amber-200 bg-amber-50">
+                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-800">
+                        Contact not found in HubSpot. Please verify the email address or add the contact to HubSpot before pushing.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   
                   {editingQuoteId && (
                     <Alert>
