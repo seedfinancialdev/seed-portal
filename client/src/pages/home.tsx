@@ -465,7 +465,7 @@ export default function Home() {
       monthlyTransactions: quote.monthlyTransactions,
       industry: quote.industry,
       cleanupMonths: quote.cleanupMonths,
-      cleanupComplexity: quote.cleanupComplexity,
+      cleanupComplexity: parseFloat(quote.cleanupComplexity).toString(), // Convert "1.00" to "1"
       cleanupOverride: quote.cleanupOverride || false,
       overrideReason: quote.overrideReason || "",
       companyName: quote.companyName || "",
