@@ -611,9 +611,9 @@ Generated: ${new Date().toLocaleDateString()}`;
 
       if (dealAssociations && dealAssociations.results && dealAssociations.results.length > 0) {
         const dealId = dealAssociations.results[0].toObjectId;
-        const totalAmount = monthlyFee + setupFee;
+        const totalAmount = (monthlyFee * 12) + setupFee;
         
-        console.log(`Updating deal ${dealId} amount to $${totalAmount}`);
+        console.log(`Updating deal ${dealId} amount to $${totalAmount} (Monthly: $${monthlyFee} x 12 + Setup: $${setupFee})`);
         
         // Update the deal amount
         const dealUpdateBody = {
