@@ -56,70 +56,88 @@ async function sendCleanupOverrideNotification(quoteData: {
     return;
   }
 
-  const channel = process.env.SLACK_CHANNEL_ID;
+  // Try both channel ID and channel name formats
+  let channel = process.env.SLACK_CHANNEL_ID;
+  if (!channel.startsWith('C') && !channel.startsWith('#')) {
+    channel = `#${channel}`;
+  }
 
-  await sendSlackMessage({
-    channel,
-    text: "An active quote needs a cleanup override approval!",
-    blocks: [
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: '🚨 Cleanup Override Request'
-        }
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '*An active quote needs a cleanup override approval!*'
-        }
-      },
-      {
-        type: 'section',
-        fields: [
-          {
-            type: 'mrkdwn',
-            text: `*Contact:* ${quoteData.contactEmail}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Revenue Band:* ${quoteData.revenueBand}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Monthly Transactions:* ${quoteData.monthlyTransactions}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Industry:* ${quoteData.industry}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Original Cleanup Months:* ${quoteData.cleanupMonths}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Override Reason:* ${quoteData.overrideReason}`
+  // Try sending the message, with fallback to simple channel ID if channel name fails
+  try {
+    await sendSlackMessage({
+      channel,
+      text: "An active quote needs a cleanup override approval!",
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🚨 Cleanup Override Request'
           }
-        ]
-      },
-      {
-        type: 'section',
-        fields: [
-          {
+        },
+        {
+          type: 'section',
+          text: {
             type: 'mrkdwn',
-            text: `*Monthly Fee:* $${quoteData.monthlyFee}`
-          },
-          {
-            type: 'mrkdwn',
-            text: `*Setup Fee:* $${quoteData.setupFee}`
+            text: '*An active quote needs a cleanup override approval!*'
           }
-        ]
-      }
-    ]
-  });
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Contact:* ${quoteData.contactEmail}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Revenue Band:* ${quoteData.revenueBand}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Monthly Transactions:* ${quoteData.monthlyTransactions}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Industry:* ${quoteData.industry}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Original Cleanup Months:* ${quoteData.cleanupMonths}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Override Reason:* ${quoteData.overrideReason}`
+            }
+          ]
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Monthly Fee:* $${quoteData.monthlyFee}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Setup Fee:* $${quoteData.setupFee}`
+            }
+          ]
+        }
+      ]
+    });
+  } catch (error) {
+    // If channel format with # fails, try with the original channel ID
+    if (channel.startsWith('#')) {
+      const originalChannel = process.env.SLACK_CHANNEL_ID;
+      await sendSlackMessage({
+        channel: originalChannel,
+        text: `🚨 *Cleanup Override Request*\n\n*Contact:* ${quoteData.contactEmail}\n*Revenue:* ${quoteData.revenueBand}\n*Transactions:* ${quoteData.monthlyTransactions}\n*Industry:* ${quoteData.industry}\n*Cleanup Months:* ${quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}\n*Monthly Fee:* $${quoteData.monthlyFee}\n*Setup Fee:* $${quoteData.setupFee}`
+      });
+    } else {
+      throw error;
+    }
+  }
 }
 
 export { sendSlackMessage, sendCleanupOverrideNotification };
