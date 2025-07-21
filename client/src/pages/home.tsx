@@ -730,12 +730,12 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="relative mb-8">
+        <div className="relative mb-12">
           {/* User Menu - Top Right */}
           <div className="absolute top-0 right-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10">
+                <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
                   <User className="h-4 w-4 mr-2" />
                   {user?.email}
                 </Button>
@@ -757,16 +757,23 @@ export default function Home() {
             </DropdownMenu>
           </div>
           
-          {/* Logo and Title - Center */}
-          <div className="text-center">
-            <img 
-              src={logoPath} 
-              alt="Seed Financial Logo" 
-              className="h-16 mx-auto mb-4"
-            />
-            <p className="text-lg text-gray-200">
-              Internal Pricing Calculator
-            </p>
+          {/* Enhanced Logo and Title - Center */}
+          <div className="text-center py-8">
+            <div className="inline-block p-6 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 shadow-2xl mb-6">
+              <img 
+                src={logoPath} 
+                alt="Seed Financial Logo" 
+                className="h-20 mx-auto filter drop-shadow-lg"
+              />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-white tracking-tight">
+                Internal Pricing Calculator
+              </h1>
+              <p className="text-lg text-gray-200 opacity-90 font-medium">
+                Generate professional quotes with precision
+              </p>
+            </div>
           </div>
         </div>
 
