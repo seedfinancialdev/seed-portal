@@ -2,21 +2,29 @@ import { users, quotes, approvalCodes, type User, type InsertUser, type Quote, t
 import { db } from "./db";
 import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
 
+const PostgresSessionStore = connectPg(session);
+
 export interface IStorage {
+  sessionStore: session.Store;
+  
   getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
-  // Quote methods
+  // Quote methods - now filtered by owner
   createQuote(quote: InsertQuote): Promise<Quote>;
   updateQuote(quote: UpdateQuote): Promise<Quote>;
   archiveQuote(id: number): Promise<Quote>;
   getQuotesByEmail(email: string): Promise<Quote[]>;
   getQuote(id: number): Promise<Quote | undefined>;
-  getAllQuotes(search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]>;
+  getAllQuotes(ownerId: number, search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]>;
+  getQuotesByOwner(ownerId: number): Promise<Quote[]>;
   
   // Approval code methods
   createApprovalCode(approvalCode: InsertApprovalCode): Promise<ApprovalCode>;
@@ -25,13 +33,22 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+  }
+
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 
@@ -82,8 +99,10 @@ export class DatabaseStorage implements IStorage {
     return quote || undefined;
   }
 
-  async getAllQuotes(search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]> {
+  async getAllQuotes(ownerId: number, search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]> {
+    const ownerFilter = eq(quotes.ownerId, ownerId);
     const archivedFilter = eq(quotes.archived, false);
+    const baseFilter = and(ownerFilter, archivedFilter);
     
     if (search && sortField && sortOrder) {
       const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
@@ -93,11 +112,11 @@ export class DatabaseStorage implements IStorage {
                          quotes.updatedAt;
       
       return await db.select().from(quotes)
-        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, archivedFilter))
+        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
         .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
     } else if (search) {
       return await db.select().from(quotes)
-        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, archivedFilter))
+        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
         .orderBy(desc(quotes.updatedAt));
     } else if (sortField && sortOrder) {
       const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
@@ -107,13 +126,19 @@ export class DatabaseStorage implements IStorage {
                          quotes.updatedAt;
       
       return await db.select().from(quotes)
-        .where(archivedFilter)
+        .where(baseFilter)
         .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
     } else {
       return await db.select().from(quotes)
-        .where(archivedFilter)
+        .where(baseFilter)
         .orderBy(desc(quotes.updatedAt));
     }
+  }
+
+  async getQuotesByOwner(ownerId: number): Promise<Quote[]> {
+    return await db.select().from(quotes).where(
+      and(eq(quotes.ownerId, ownerId), eq(quotes.archived, false))
+    );
   }
 
   async createApprovalCode(insertApprovalCode: InsertApprovalCode): Promise<ApprovalCode> {

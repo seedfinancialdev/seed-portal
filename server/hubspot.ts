@@ -330,6 +330,42 @@ Generated: ${new Date().toLocaleDateString()}`;
       return false;
     }
   }
+
+  async verifyUser(email: string): Promise<{ exists: boolean; userData?: any }> {
+    try {
+      // Verify this is a @seedfinancial.io email
+      if (!email.endsWith('@seedfinancial.io')) {
+        return { exists: false };
+      }
+
+      const response = await this.makeRequest(`/crm/v3/owners/`, {
+        method: 'GET'
+      });
+
+      if (response.results) {
+        const user = response.results.find((owner: any) => 
+          owner.email?.toLowerCase() === email.toLowerCase()
+        );
+
+        if (user) {
+          return {
+            exists: true,
+            userData: {
+              hubspotUserId: user.id,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+              email: user.email
+            }
+          };
+        }
+      }
+
+      return { exists: false };
+    } catch (error) {
+      console.error('Error verifying user in HubSpot:', error);
+      return { exists: false };
+    }
+  }
 }
 
 // Only create service if token is available

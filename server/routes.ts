@@ -5,6 +5,7 @@ import { insertQuoteSchema, updateQuoteSchema } from "@shared/schema";
 import { z } from "zod";
 import { sendCleanupOverrideNotification } from "./slack";
 import { hubSpotService } from "./hubspot";
+import { setupAuth, requireAuth } from "./auth";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -12,10 +13,16 @@ function generateApprovalCode(): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Create a new quote
-  app.post("/api/quotes", async (req, res) => {
+  // Setup authentication first
+  setupAuth(app);
+
+  // Create a new quote (protected)
+  app.post("/api/quotes", requireAuth, async (req, res) => {
     try {
-      const quoteData = insertQuoteSchema.parse(req.body);
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      const quoteData = insertQuoteSchema.parse({ ...req.body, ownerId: req.user.id });
       const quote = await storage.createQuote(quoteData);
       
       // Note: Slack notifications now only sent during approval request, not quote creation
@@ -30,30 +37,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all quotes with optional search and sort
-  app.get("/api/quotes", async (req, res) => {
+  // Get all quotes with optional search and sort (protected)
+  app.get("/api/quotes", requireAuth, async (req, res) => {
     try {
       const email = req.query.email as string;
       const search = req.query.search as string;
       const sortField = req.query.sortField as string;
       const sortOrder = req.query.sortOrder as 'asc' | 'desc';
       
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
       if (email) {
-        // Get quotes by specific email
+        // Get quotes by specific email (filtered by owner)
         const quotes = await storage.getQuotesByEmail(email);
-        res.json(quotes);
+        // Filter by owner
+        const userQuotes = quotes.filter(quote => quote.ownerId === req.user.id);
+        res.json(userQuotes);
       } else {
-        // Get all quotes with search and sort
-        const quotes = await storage.getAllQuotes(search, sortField, sortOrder);
+        // Get all quotes for the authenticated user
+        const quotes = await storage.getAllQuotes(req.user.id, search, sortField, sortOrder);
         res.json(quotes);
       }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch quotes" });
+    } catch (error: any) {
+      console.error('Error fetching quotes:', error);
+      res.status(500).json({ message: "Failed to fetch quotes", error: error.message });
     }
   });
 
-  // Update a quote
-  app.put("/api/quotes/:id", async (req, res) => {
+  // Update a quote (protected)
+  app.put("/api/quotes/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -73,8 +87,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Archive a quote
-  app.patch("/api/quotes/:id/archive", async (req, res) => {
+  // Archive a quote (protected)
+  app.patch("/api/quotes/:id/archive", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -89,8 +103,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get a specific quote
-  app.get("/api/quotes/:id", async (req, res) => {
+  // Get a specific quote (protected)
+  app.get("/api/quotes/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
