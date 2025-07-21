@@ -618,7 +618,14 @@ export default function Home() {
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                             disabled={form.watch("cleanupOverride") && !isApproved}
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || currentMonth)}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (isNaN(value)) {
+                                field.onChange(form.watch("cleanupOverride") && isApproved ? 0 : currentMonth);
+                              } else {
+                                field.onChange(Math.max(0, value));
+                              }
+                            }}
                           />
                         </FormControl>
                         <FormMessage />
