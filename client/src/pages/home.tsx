@@ -940,7 +940,6 @@ export default function Home() {
                         </div>
                       </TableHead>
                       <TableHead>Industry</TableHead>
-                      <TableHead className="text-center">Override</TableHead>
                       <TableHead className="w-16">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -964,19 +963,6 @@ export default function Home() {
                         <TableCell className="font-semibold">${parseFloat(quote.monthlyFee).toLocaleString()}</TableCell>
                         <TableCell className="font-semibold text-[#e24c00]">${parseFloat(quote.setupFee).toLocaleString()}</TableCell>
                         <TableCell>{quote.industry}</TableCell>
-                        <TableCell className="text-center">
-                          {quote.approvalRequired ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                              Approved
-                            </span>
-                          ) : quote.cleanupOverride ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                              Override
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs">Standard</span>
-                          )}
-                        </TableCell>
                         <TableCell>
                           <Button
                             variant="ghost"
