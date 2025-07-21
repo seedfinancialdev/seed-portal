@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
@@ -37,6 +38,7 @@ const formSchema = insertQuoteSchema.omit({
   cleanupMonths: z.number().min(0, "Cannot be negative"),
   cleanupOverride: z.boolean().default(false),
   overrideReason: z.string().optional(),
+  customOverrideReason: z.string().optional(),
   companyName: z.string().optional(),
 }).superRefine((data, ctx) => {
   // If cleanup override is checked, require a reason
@@ -45,6 +47,15 @@ const formSchema = insertQuoteSchema.omit({
       code: z.ZodIssueCode.custom,
       message: "Override reason is required when cleanup override is enabled",
       path: ["overrideReason"],
+    });
+  }
+  
+  // If "Other" is selected as reason, require custom text
+  if (data.cleanupOverride && data.overrideReason === "Other" && (!data.customOverrideReason || data.customOverrideReason.trim() === "")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Please provide a detailed reason for the override",
+      path: ["customOverrideReason"]
     });
   }
   
@@ -84,10 +95,28 @@ const txSurcharge = {
 const industryMultipliers = {
   'Software/SaaS': { monthly: 1.0, cleanup: 1.0 },
   'Professional Services': { monthly: 1.0, cleanup: 1.1 },
+  'Consulting': { monthly: 1.0, cleanup: 1.05 },
+  'Healthcare/Medical': { monthly: 1.4, cleanup: 1.3 },
   'Real Estate': { monthly: 1.25, cleanup: 1.05 },
+  'Property Management': { monthly: 1.3, cleanup: 1.2 },
   'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
+  'Restaurant/Food Service': { monthly: 1.6, cleanup: 1.4 },
   'Construction/Trades': { monthly: 1.5, cleanup: 1.08 },
-  'Multi-entity/Holding Companies': { monthly: 1.35, cleanup: 1.25 }
+  'Manufacturing': { monthly: 1.45, cleanup: 1.25 },
+  'Transportation/Logistics': { monthly: 1.4, cleanup: 1.2 },
+  'Nonprofit': { monthly: 1.2, cleanup: 1.15 },
+  'Law Firm': { monthly: 1.3, cleanup: 1.35 },
+  'Accounting/Finance': { monthly: 1.1, cleanup: 1.1 },
+  'Marketing/Advertising': { monthly: 1.15, cleanup: 1.1 },
+  'Insurance': { monthly: 1.35, cleanup: 1.25 },
+  'Automotive': { monthly: 1.4, cleanup: 1.2 },
+  'Education': { monthly: 1.25, cleanup: 1.2 },
+  'Fitness/Wellness': { monthly: 1.3, cleanup: 1.15 },
+  'Entertainment/Events': { monthly: 1.5, cleanup: 1.3 },
+  'Agriculture': { monthly: 1.45, cleanup: 1.2 },
+  'Technology/IT Services': { monthly: 1.1, cleanup: 1.05 },
+  'Multi-entity/Holding Companies': { monthly: 1.35, cleanup: 1.25 },
+  'Other': { monthly: 1.2, cleanup: 1.15 }
 };
 
 function roundToNearest5(num: number): number {
@@ -144,6 +173,7 @@ export default function Home() {
   const [isApproved, setIsApproved] = useState(false);
   const [isRequestingApproval, setIsRequestingApproval] = useState(false);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
+  const [customOverrideReason, setCustomOverrideReason] = useState("");
   
   // Archive dialog state
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -176,6 +206,7 @@ export default function Home() {
       cleanupComplexity: "",
       cleanupOverride: false,
       overrideReason: "",
+      customOverrideReason: "",
       companyName: "",
     },
   });
@@ -952,7 +983,12 @@ export default function Home() {
                             size="sm"
                             variant="outline"
                             onClick={requestApproval}
-                            disabled={isRequestingApproval || !form.watch("contactEmail") || !form.watch("overrideReason")}
+                            disabled={
+                              isRequestingApproval || 
+                              !form.watch("contactEmail") || 
+                              !form.watch("overrideReason") ||
+                              (form.watch("overrideReason") === "Other" && (!form.watch("customOverrideReason") || form.watch("customOverrideReason")?.trim() === ""))
+                            }
                             className="ml-4"
                           >
                             {isRequestingApproval ? "Requesting..." : "Request Approval"}
@@ -985,10 +1021,35 @@ export default function Home() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="Brand New Business">Brand New Business</SelectItem>
-                              <SelectItem value="Negotiated Rate">Negotiated Rate</SelectItem>
                               <SelectItem value="Books Confirmed Current">Books Confirmed Current</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {/* Custom reason text field when "Other" is selected */}
+                  {form.watch("cleanupOverride") && form.watch("overrideReason") === "Other" && (
+                    <FormField
+                      control={form.control}
+                      name="customOverrideReason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Please explain the reason for override</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Enter detailed reason for cleanup months override..."
+                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent min-h-[80px]"
+                              {...field}
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                                field.onChange(e);
+                                setCustomOverrideReason(e.target.value);
+                              }}
+                            />
+                          </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}

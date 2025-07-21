@@ -31,10 +31,28 @@ const txSurcharge = {
 const industryMultipliers = {
   'Software/SaaS': { monthly: 1.0, cleanup: 1.0 },
   'Professional Services': { monthly: 1.0, cleanup: 1.1 },
+  'Consulting': { monthly: 1.0, cleanup: 1.05 },
+  'Healthcare/Medical': { monthly: 1.4, cleanup: 1.3 },
   'Real Estate': { monthly: 1.25, cleanup: 1.05 },
+  'Property Management': { monthly: 1.3, cleanup: 1.2 },
   'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
+  'Restaurant/Food Service': { monthly: 1.6, cleanup: 1.4 },
   'Construction/Trades': { monthly: 1.5, cleanup: 1.08 },
-  'Multi-entity/Holding Companies': { monthly: 1.35, cleanup: 1.25 }
+  'Manufacturing': { monthly: 1.45, cleanup: 1.25 },
+  'Transportation/Logistics': { monthly: 1.4, cleanup: 1.2 },
+  'Nonprofit': { monthly: 1.2, cleanup: 1.15 },
+  'Law Firm': { monthly: 1.3, cleanup: 1.35 },
+  'Accounting/Finance': { monthly: 1.1, cleanup: 1.1 },
+  'Marketing/Advertising': { monthly: 1.15, cleanup: 1.1 },
+  'Insurance': { monthly: 1.35, cleanup: 1.25 },
+  'Automotive': { monthly: 1.4, cleanup: 1.2 },
+  'Education': { monthly: 1.25, cleanup: 1.2 },
+  'Fitness/Wellness': { monthly: 1.3, cleanup: 1.15 },
+  'Entertainment/Events': { monthly: 1.5, cleanup: 1.3 },
+  'Agriculture': { monthly: 1.45, cleanup: 1.2 },
+  'Technology/IT Services': { monthly: 1.1, cleanup: 1.05 },
+  'Multi-entity/Holding Companies': { monthly: 1.35, cleanup: 1.25 },
+  'Other': { monthly: 1.2, cleanup: 1.15 }
 };
 
 function roundToNearest25(num: number): number {
