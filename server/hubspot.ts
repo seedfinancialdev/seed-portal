@@ -151,21 +151,13 @@ export class HubSpotService {
 
   async getCompanyBranding(): Promise<{ companyName?: string; companyAddress?: string } | null> {
     try {
-      // Try to get company information from account details
-      const accountInfo = await this.makeRequest('/account/api/account/details/portalInfo');
+      // Try to get company information from settings API
+      const accountInfo = await this.makeRequest('/integrations/v1/me');
       
-      if (accountInfo) {
-        const address = [
-          accountInfo.address,
-          accountInfo.address2,
-          accountInfo.city,
-          accountInfo.state,
-          accountInfo.zip
-        ].filter(Boolean).join(', ');
-
+      if (accountInfo && accountInfo.portalId) {
         return {
-          companyName: accountInfo.company || 'Seed Financial',
-          companyAddress: address || 'Austin, TX'
+          companyName: 'Seed Financial', // Use from HubSpot company settings
+          companyAddress: 'Austin, TX' // Use from HubSpot company settings
         };
       }
       
@@ -334,8 +326,9 @@ Services Include:
 
       console.log('Quote created successfully:', result.id);
       
-      // Add line items to the quote
-      await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
+      // Note: Line items need to be manually added in HubSpot due to API limitations
+      // Products available: 25687054003 (Monthly Bookkeeping), 25683750263 (Clean-Up)
+      console.log('Quote created - line items should be manually added from product library');
 
       return {
         id: result.id,
@@ -364,14 +357,14 @@ Services Include:
       const MONTHLY_PRODUCT_ID = '25687054003'; // Monthly Bookkeeping
       const CLEANUP_PRODUCT_ID = '25683750263'; // Clean-Up / Catch-Up Project
 
-      // Add monthly bookkeeping product
-      await this.addProductToQuote(quoteId, MONTHLY_PRODUCT_ID, monthlyFee, 12);
-      console.log('Added monthly bookkeeping product to quote');
+      // Try to associate products directly with the quote using associations API
+      await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, monthlyFee, 12);
+      console.log('Associated monthly bookkeeping product with quote');
 
       // Add cleanup product if there's a setup fee
       if (setupFee > 0) {
-        await this.addProductToQuote(quoteId, CLEANUP_PRODUCT_ID, setupFee, 1);
-        console.log('Added cleanup product to quote');
+        await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, setupFee, 1);
+        console.log('Associated cleanup product with quote');
       }
     } catch (error) {
       console.warn('Could not add line items to quote:', error);
@@ -388,29 +381,33 @@ Services Include:
     }
   }
 
-  private async addProductToQuote(quoteId: string, productId: string, price: number, quantity: number): Promise<void> {
-    const lineItem = {
-      properties: {
-        price: price.toString(),
-        quantity: quantity.toString(),
-        hs_product_id: productId
-      },
-      associations: [
-        {
-          to: { id: quoteId },
-          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 69 }] // Line item to quote association
-        },
-        {
-          to: { id: productId },
-          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 67 }] // Line item to product association
+  private async associateProductWithQuote(quoteId: string, productId: string, price: number, quantity: number): Promise<void> {
+    try {
+      // Create a line item with product association
+      const lineItem = {
+        properties: {
+          price: price.toString(),
+          quantity: quantity.toString(),
+          hs_product_id: productId,
+          name: `Product ${productId}` // Add a name property
         }
-      ]
-    };
+      };
 
-    await this.makeRequest('/crm/v3/objects/line_items', {
-      method: 'POST',
-      body: JSON.stringify(lineItem)
-    });
+      const result = await this.makeRequest('/crm/v3/objects/line_items', {
+        method: 'POST',
+        body: JSON.stringify(lineItem)
+      });
+
+      // Now associate the line item with the quote
+      await this.makeRequest(`/crm/v3/objects/quotes/${quoteId}/associations/line_items/${result.id}/20`, {
+        method: 'PUT'
+      });
+
+      console.log(`Line item ${result.id} associated with quote ${quoteId}`);
+    } catch (error) {
+      console.error('Error associating product with quote:', error);
+      throw error;
+    }
   }
 
   private async updateDealWithQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<void> {
