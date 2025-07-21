@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Get current month number (1-12)
@@ -136,6 +137,13 @@ export default function Home() {
   const [isRequestingApproval, setIsRequestingApproval] = useState(false);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   
+  // Archive dialog state
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [selectedQuoteForArchive, setSelectedQuoteForArchive] = useState<{id: number, email: string} | null>(null);
+  const [dontShowArchiveDialog, setDontShowArchiveDialog] = useState(() => {
+    return localStorage.getItem('dontShowArchiveDialog') === 'true';
+  });
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -234,9 +242,29 @@ export default function Home() {
 
   const handleArchiveQuote = (quoteId: number, contactEmail: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent row click event
-    if (confirm(`Are you sure you want to archive the quote for ${contactEmail}? This will hide it from the main list but preserve it for auditing.`)) {
+    
+    // If user has chosen to not show the dialog, directly archive
+    if (dontShowArchiveDialog) {
       archiveQuoteMutation.mutate(quoteId);
+      return;
     }
+    
+    // Otherwise, show the custom dialog
+    setSelectedQuoteForArchive({ id: quoteId, email: contactEmail });
+    setArchiveDialogOpen(true);
+  };
+
+  const handleConfirmArchive = () => {
+    if (selectedQuoteForArchive) {
+      archiveQuoteMutation.mutate(selectedQuoteForArchive.id);
+      setArchiveDialogOpen(false);
+      setSelectedQuoteForArchive(null);
+    }
+  };
+
+  const handleArchiveDialogDontShow = (checked: boolean) => {
+    setDontShowArchiveDialog(checked);
+    localStorage.setItem('dontShowArchiveDialog', checked.toString());
   };
 
   const watchedValues = form.watch();
@@ -908,6 +936,23 @@ export default function Home() {
                   className="pl-10 bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                 />
               </div>
+              {dontShowArchiveDialog && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDontShowArchiveDialog(false);
+                    localStorage.removeItem('dontShowArchiveDialog');
+                    toast({
+                      title: "Archive Confirmations Enabled",
+                      description: "Archive confirmation dialogs will now be shown again.",
+                    });
+                  }}
+                  className="text-xs"
+                >
+                  Enable Archive Confirmations
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -1065,6 +1110,48 @@ export default function Home() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Archive Confirmation Dialog */}
+      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive Quote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to archive the quote for {selectedQuoteForArchive?.email}? 
+              This will hide it from the main list but preserve it for auditing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="flex items-center space-x-2 my-4">
+            <Checkbox
+              id="dontShowAgain"
+              checked={dontShowArchiveDialog}
+              onCheckedChange={handleArchiveDialogDontShow}
+            />
+            <label
+              htmlFor="dontShowAgain"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Don't show this dialog again
+            </label>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setArchiveDialogOpen(false);
+              setSelectedQuoteForArchive(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmArchive}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Archive Quote
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
