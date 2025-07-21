@@ -60,9 +60,6 @@ export default function AuthPage() {
         <Card className="bg-white shadow-xl">
           <CardHeader>
             <CardTitle className="text-center text-gray-900">Sign In</CardTitle>
-            <CardDescription className="text-center">
-              Enter your credentials to access the quote calculator
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...loginForm}>
