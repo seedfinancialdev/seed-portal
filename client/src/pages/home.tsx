@@ -157,6 +157,14 @@ export default function Home() {
   const [hubspotContact, setHubspotContact] = useState<any>(null);
   const [lastVerifiedEmail, setLastVerifiedEmail] = useState('');
   
+  // Custom dialog states
+  const [resetConfirmDialog, setResetConfirmDialog] = useState(false);
+  const [discardChangesDialog, setDiscardChangesDialog] = useState(false);
+  const [pendingQuoteToLoad, setPendingQuoteToLoad] = useState<Quote | null>(null);
+  
+  // Debounce state for HubSpot verification
+  const [verificationTimeoutId, setVerificationTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -281,9 +289,14 @@ export default function Home() {
     localStorage.setItem('dontShowArchiveDialog', checked.toString());
   };
 
-  // HubSpot email verification
+  // HubSpot email verification with proper debouncing
   const verifyHubSpotEmail = async (email: string) => {
     if (!email || email === lastVerifiedEmail) return;
+    
+    // Clear any pending verification timeout
+    if (verificationTimeoutId) {
+      clearTimeout(verificationTimeoutId);
+    }
     
     setHubspotVerificationStatus('verifying');
     setLastVerifiedEmail(email);
@@ -309,6 +322,26 @@ export default function Home() {
       setHubspotVerificationStatus('not-found');
       setHubspotContact(null);
     }
+  };
+
+  // Debounced email verification function
+  const debouncedVerifyEmail = (email: string) => {
+    // Clear any existing timeout
+    if (verificationTimeoutId) {
+      clearTimeout(verificationTimeoutId);
+    }
+    
+    // Set verification status to idle while waiting
+    setHubspotVerificationStatus('idle');
+    
+    // Set new timeout
+    const timeoutId = setTimeout(() => {
+      if (email && email.includes('@') && email.includes('.')) {
+        verifyHubSpotEmail(email);
+      }
+    }, 750); // Increased debounce delay to 750ms for better UX
+    
+    setVerificationTimeoutId(timeoutId);
   };
 
   // Push to HubSpot mutation
@@ -379,48 +412,23 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, [form]);
 
+  // Cleanup timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (verificationTimeoutId) {
+        clearTimeout(verificationTimeoutId);
+      }
+    };
+  }, [verificationTimeoutId]);
+
   const loadQuoteIntoForm = async (quote: Quote) => {
     if (hasUnsavedChanges) {
-      const shouldSave = confirm("You have unsaved changes. Do you want to save the current quote before loading a new one?");
-      if (shouldSave && isCalculated) {
-        // Save current form data first, then proceed to load the new quote
-        try {
-          await new Promise((resolve) => {
-            createQuoteMutation.mutate(form.getValues(), {
-              onSuccess: resolve,
-              onError: resolve, // Still proceed even if save fails
-            });
-          });
-        } catch (error) {
-          console.error('Failed to save current quote:', error);
-        }
-      } else if (shouldSave) {
-        // If not calculated, don't proceed
-        toast({
-          title: "Cannot Save",
-          description: "Current form is incomplete. Please complete all fields first.",
-          variant: "destructive",
-        });
-        return;
-      } else if (!shouldSave) {
-        // User chose not to save, ask for confirmation to discard
-        if (!confirm("Are you sure you want to discard your unsaved changes?")) {
-          return;
-        }
-      }
+      setPendingQuoteToLoad(quote);
+      setDiscardChangesDialog(true);
+      return;
     }
     
-    // Load the selected quote
-    setEditingQuoteId(quote.id);
-    form.reset({
-      contactEmail: quote.contactEmail,
-      revenueBand: quote.revenueBand,
-      monthlyTransactions: quote.monthlyTransactions,
-      industry: quote.industry,
-      cleanupMonths: quote.cleanupMonths,
-      cleanupComplexity: quote.cleanupComplexity,
-    });
-    setHasUnsavedChanges(false);
+    doLoadQuote(quote);
   };
 
   const handleSort = (field: string) => {
@@ -434,10 +442,44 @@ export default function Home() {
 
   const resetForm = () => {
     if (hasUnsavedChanges) {
-      if (!confirm("You have unsaved changes. Are you sure you want to reset the form?")) {
-        return;
-      }
+      setResetConfirmDialog(true);
+      return;
     }
+    
+    doResetForm();
+  };
+
+  // Helper function to actually load a quote (used by both direct loading and after dialog confirmation)
+  const doLoadQuote = (quote: Quote) => {
+    setEditingQuoteId(quote.id);
+    form.reset({
+      contactEmail: quote.contactEmail,
+      revenueBand: quote.revenueBand,
+      monthlyTransactions: quote.monthlyTransactions,
+      industry: quote.industry,
+      cleanupMonths: quote.cleanupMonths,
+      cleanupComplexity: quote.cleanupComplexity,
+      cleanupOverride: quote.cleanupOverride || false,
+      overrideReason: quote.overrideReason || "",
+      companyName: quote.companyName || "",
+    });
+    
+    // Reset HubSpot verification state and re-verify if email exists
+    setHubspotVerificationStatus('idle');
+    setHubspotContact(null);
+    setLastVerifiedEmail('');
+    setIsApproved(quote.approvalRequired || false);
+    
+    // Re-verify the email if it exists
+    if (quote.contactEmail) {
+      setTimeout(() => verifyHubSpotEmail(quote.contactEmail), 100);
+    }
+    
+    setHasUnsavedChanges(false);
+  };
+
+  // Helper function to actually reset the form (used by both direct reset and after dialog confirmation)
+  const doResetForm = () => {
     setEditingQuoteId(null);
     form.reset({
       contactEmail: "",
@@ -446,7 +488,17 @@ export default function Home() {
       industry: "",
       cleanupMonths: currentMonth,
       cleanupComplexity: "",
+      cleanupOverride: false,
+      overrideReason: "",
+      companyName: "",
     });
+    
+    // Reset all HubSpot verification state
+    setHubspotVerificationStatus('idle');
+    setHubspotContact(null);
+    setLastVerifiedEmail('');
+    setIsApproved(false);
+    
     setHasUnsavedChanges(false);
   };
 
@@ -659,11 +711,7 @@ export default function Home() {
                               onChange={(e) => {
                                 field.onChange(e);
                                 const email = e.target.value;
-                                if (email && email.includes('@') && email.includes('.')) {
-                                  setTimeout(() => verifyHubSpotEmail(email), 500);
-                                } else {
-                                  setHubspotVerificationStatus('idle');
-                                }
+                                debouncedVerifyEmail(email);
                               }}
                             />
                             <div className="absolute inset-y-0 right-0 flex items-center pr-3">
@@ -1384,6 +1432,57 @@ export default function Home() {
               className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
             >
               Archive Quote
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Confirmation Dialog */}
+      <AlertDialog open={resetConfirmDialog} onOpenChange={setResetConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start New Quote</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Are you sure you want to start a new quote? All current data will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setResetConfirmDialog(false);
+                doResetForm();
+              }}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              Start New Quote
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Discard Changes Dialog */}
+      <AlertDialog open={discardChangesDialog} onOpenChange={setDiscardChangesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Load Quote</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Are you sure you want to load this quote? All current data will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingQuoteToLoad(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setDiscardChangesDialog(false);
+                if (pendingQuoteToLoad) {
+                  doLoadQuote(pendingQuoteToLoad);
+                  setPendingQuoteToLoad(null);
+                }
+              }}
+              className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
+            >
+              Load Quote
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

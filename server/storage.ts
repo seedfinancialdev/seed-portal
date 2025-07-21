@@ -69,12 +69,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateQuote(updateQuote: UpdateQuote): Promise<Quote> {
-    const [quote] = await db
-      .update(quotes)
-      .set({ ...updateQuote, updatedAt: new Date() })
-      .where(eq(quotes.id, updateQuote.id))
-      .returning();
-    return quote;
+    try {
+      const [quote] = await db
+        .update(quotes)
+        .set({ ...updateQuote, updatedAt: new Date() })
+        .where(eq(quotes.id, updateQuote.id))
+        .returning();
+      
+      if (!quote) {
+        throw new Error(`Quote with ID ${updateQuote.id} not found or could not be updated`);
+      }
+      
+      return quote;
+    } catch (error: any) {
+      console.error('Error updating quote:', error);
+      throw error;
+    }
   }
 
   async archiveQuote(id: number): Promise<Quote> {

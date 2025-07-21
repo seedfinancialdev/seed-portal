@@ -91,15 +91,29 @@ export function setupAuth(app: Express) {
 
             // Create user automatically with default password
             console.log(`Creating new user for ${email} with default password`);
-            user = await storage.createUser({
-              email,
-              password: await hashPassword('SeedAdmin1!'), // Default password
-              firstName: '',
-              lastName: '',
-              hubspotUserId: null,
-            });
-            
-            console.log(`Successfully created user with ID: ${user.id}`);
+            try {
+              user = await storage.createUser({
+                email,
+                password: await hashPassword('SeedAdmin1!'), // Default password
+                firstName: '',
+                lastName: '',
+                hubspotUserId: null,
+              });
+              console.log(`Successfully created user with ID: ${user.id}`);
+            } catch (createError: any) {
+              // Handle race condition - if another request created the user first
+              if (createError.code === '23505' || createError.message?.includes('unique constraint')) {
+                console.log(`User creation race condition detected for ${email}, fetching existing user`);
+                user = await storage.getUserByEmail(email);
+                if (!user) {
+                  console.error(`Failed to fetch user after race condition for ${email}`);
+                  return done(null, false);
+                }
+              } else {
+                console.error(`Failed to create user for ${email}:`, createError);
+                return done(createError);
+              }
+            }
           } else {
             // For existing users, also verify they still exist in HubSpot
             if (hubSpotService) {
