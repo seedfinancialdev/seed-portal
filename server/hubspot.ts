@@ -232,7 +232,7 @@ Services Include:
           hs_sender_lastname: 'Team',
           hs_sender_email: 'hello@seedfinancial.io',
           hs_esign_enabled: true,
-          hs_payment_enabled: true,
+          hs_payment_enabled: false, // Disable for now, can be enabled manually in HubSpot
         },
         associations: [
           {
