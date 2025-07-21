@@ -805,7 +805,7 @@ export default function Home() {
                                   setHubspotVerificationStatus('idle');
                                   setHubspotContact(null);
                                   setLastVerifiedEmail('');
-                                  // Don't clear search term here as user might want to keep it
+                                  setSearchTerm(""); // Clear search filter when email is cleared
                                 }
                                 
                                 debouncedVerifyEmail(email);
