@@ -770,59 +770,69 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Dashboard Section */}
+        {/* Service Selection Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Quick Stats */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg">
+          {/* Bookkeeping Service */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Quotes</p>
-                  <p className="text-2xl font-bold text-gray-900">{allQuotes.length}</p>
+              <div className="text-center space-y-4">
+                <div className="h-16 w-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto">
+                  <Calculator className="h-8 w-8 text-blue-600" />
                 </div>
-                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-blue-600" />
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Bookkeeping</h3>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Monthly bookkeeping services with cleanup options
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Currently Active
+                  </span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Recent Activity */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg">
+          {/* TaaS Service */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer opacity-75">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+              <div className="text-center space-y-4">
+                <div className="h-16 w-16 bg-green-100 rounded-xl flex items-center justify-center mx-auto">
+                  <FileText className="h-8 w-8 text-green-600" />
+                </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Today's Quotes</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {allQuotes.filter(quote => {
-                      const today = new Date().toDateString();
-                      const quoteDate = new Date(quote.createdAt).toDateString();
-                      return today === quoteDate;
-                    }).length}
+                  <h3 className="text-xl font-bold text-gray-900">TaaS</h3>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Tax as a Service - Comprehensive tax solutions
                   </p>
                 </div>
-                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-6 w-6 text-green-600" />
+                <div className="pt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    Coming Soon
+                  </span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Average Quote Value */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg">
+          {/* Other Services */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer opacity-75">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+              <div className="text-center space-y-4">
+                <div className="h-16 w-16 bg-purple-100 rounded-xl flex items-center justify-center mx-auto">
+                  <Sparkles className="h-8 w-8 text-purple-600" />
+                </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Monthly Fee</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    ${allQuotes.length > 0 
-                      ? Math.round(allQuotes.reduce((sum, quote) => sum + parseFloat(quote.monthlyFee), 0) / allQuotes.length).toLocaleString()
-                      : '0'
-                    }
+                  <h3 className="text-xl font-bold text-gray-900">Other Services</h3>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Payroll, FP&A Lite, AP/AR Lite, and more
                   </p>
                 </div>
-                <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-orange-600" />
+                <div className="pt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    Coming Soon
+                  </span>
                 </div>
               </div>
             </CardContent>
