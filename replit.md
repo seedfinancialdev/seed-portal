@@ -31,7 +31,7 @@ Preferred communication style: Simple, everyday language.
   - Deal creation with "New Business" deal type classification
   - Deal Owner properly assigned to the user creating the quote
   - Modern quote creation (legacy templates deprecated by HubSpot)
-  - Quote sender properly shows actual user name (Jon Wells) instead of generic team name
+  - Quote sender information dynamically pulled from HubSpot user profiles (name and company details)
   - Proper Seed Financial company information in quotes
   - E-signature enabled in quotes (payments temporarily disabled for validation)
   - Auto-save quote functionality before pushing to HubSpot

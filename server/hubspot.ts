@@ -111,6 +111,41 @@ export class HubSpotService {
     return response.json();
   }
 
+  async getUserProfile(email: string): Promise<{ firstName?: string; lastName?: string; companyName?: string; companyAddress?: string } | null> {
+    try {
+      // First try to find the user in owners (team members)
+      const ownersResult = await this.makeRequest('/crm/v3/owners', {
+        method: 'GET'
+      });
+      
+      const owner = ownersResult.results?.find((o: any) => o.email === email);
+      if (owner) {
+        return {
+          firstName: owner.firstName,
+          lastName: owner.lastName,
+          companyName: 'Seed Financial', // Default company name for owners
+          companyAddress: 'Austin, TX' // Default company address
+        };
+      }
+      
+      // If not found in owners, try contacts
+      const contact = await this.verifyContactByEmail(email);
+      if (contact.verified && contact.contact) {
+        return {
+          firstName: contact.contact.properties?.firstname,
+          lastName: contact.contact.properties?.lastname,
+          companyName: contact.contact.properties?.company || 'Seed Financial',
+          companyAddress: 'Austin, TX' // Default company address
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  }
+
   async verifyContactByEmail(email: string): Promise<{ verified: boolean; contact?: HubSpotContact }> {
     try {
       const searchBody = {
@@ -207,6 +242,9 @@ export class HubSpotService {
       // Create a proper HubSpot quote using the quotes API
       console.log('Creating HubSpot quote...');
       
+      // Get the user's profile information from HubSpot
+      const userProfile = await this.getUserProfile(userEmail);
+      
       const quoteName = `${companyName} - Bookkeeping Services Quote`;
       
       // Set expiration date to 30 days from now
@@ -241,10 +279,10 @@ Services Include:
           hs_status: 'DRAFT',
           hs_expiration_date: expirationDate.toISOString().split('T')[0], // YYYY-MM-DD format
           hs_language: 'en',
-          hs_sender_company_name: 'Seed Financial',
-          hs_sender_company_address: 'Austin, TX',
-          hs_sender_firstname: firstName || 'Jon',
-          hs_sender_lastname: lastName || 'Wells',
+          hs_sender_company_name: userProfile?.companyName || 'Seed Financial',
+          hs_sender_company_address: userProfile?.companyAddress || 'Austin, TX',
+          hs_sender_firstname: userProfile?.firstName || firstName || 'Jon',
+          hs_sender_lastname: userProfile?.lastName || lastName || 'Wells',
           hs_sender_email: userEmail,
           hs_esign_enabled: true,
           hs_payment_enabled: false, // Disable for now, can be enabled manually in HubSpot
