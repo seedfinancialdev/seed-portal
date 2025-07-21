@@ -406,18 +406,18 @@ Services Include:
 
       console.log('Line item created:', result.id);
 
-      // Associate the line item with the quote using type 67
+      // Associate the quote with the line item using type 67 (reversed direction)
       const associationBody = {
         inputs: [
           {
-            from: { id: result.id },
-            to: { id: quoteId },
+            from: { id: quoteId },
+            to: { id: result.id },
             types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 67 }]
           }
         ]
       };
 
-      await this.makeRequest('/crm/v4/associations/line_items/quotes/batch/create', {
+      await this.makeRequest('/crm/v4/associations/quotes/line_items/batch/create', {
         method: 'POST',
         body: JSON.stringify(associationBody)
       });
