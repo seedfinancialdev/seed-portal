@@ -29,6 +29,16 @@ export class HubSpotService {
     this.accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
   }
 
+  // Get pipeline information to find the correct pipeline and stage IDs
+  async getPipelines(): Promise<any> {
+    try {
+      return await this.makeRequest('/crm/v3/pipelines/deals');
+    } catch (error) {
+      console.error('Error fetching pipelines:', error);
+      return null;
+    }
+  }
+
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
@@ -105,11 +115,13 @@ export class HubSpotService {
       const dealName = `${companyName} - Bookkeeping`;
       const totalAmount = (monthlyFee * 12 + setupFee).toString();
 
+      // First, let's get the correct pipeline and stage IDs
       const dealBody = {
         properties: {
           dealname: dealName,
-          dealstage: 'appointmentscheduled', // Using a more standard deal stage
+          dealstage: '1108547151', // Qualified stage ID in Seed Sales Pipeline
           amount: totalAmount,
+          pipeline: '761069086', // Seed Sales Pipeline ID
         },
         associations: [
           {
@@ -132,7 +144,7 @@ export class HubSpotService {
         id: result.id,
         properties: {
           dealname: result.properties?.dealname || dealName,
-          dealstage: result.properties?.dealstage || 'appointmentscheduled',
+          dealstage: result.properties?.dealstage || 'qualified',
           amount: result.properties?.amount || totalAmount
         }
       };
@@ -144,17 +156,133 @@ export class HubSpotService {
 
   async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<{ id: string; title: string } | null> {
     try {
-      // Just update the deal with quote information - simpler and more reliable
-      console.log('Updating deal with quote information...');
-      await this.updateDealWithQuote(dealId, companyName, monthlyFee, setupFee);
+      // Create a proper HubSpot quote using the quotes API
+      console.log('Creating HubSpot quote...');
       
+      const quoteName = `${companyName} - Bookkeeping Services Quote`;
+      
+      // Set expiration date to 30 days from now
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + 30);
+      
+      // Create detailed quote description with pricing breakdown
+      const quoteDescription = `
+Bookkeeping Services Quote
+
+MONTHLY SERVICES:
+• Monthly Bookkeeping Services: $${monthlyFee.toFixed(2)}/month
+• Annual Total (12 months): $${(monthlyFee * 12).toFixed(2)}
+
+${setupFee > 0 ? `SETUP & CLEANUP:
+• One-time Setup and Cleanup Fee: $${setupFee.toFixed(2)}
+` : ''}
+TOTAL QUOTE VALUE: $${(monthlyFee * 12 + setupFee).toFixed(2)}
+
+Services Include:
+• Bank reconciliation
+• Accounts payable/receivable management
+• Financial statement preparation
+• Monthly reporting
+• QuickBooks maintenance
+• Ongoing support and consultation
+      `.trim();
+
+      const quoteBody = {
+        properties: {
+          hs_title: quoteName,
+          hs_status: 'DRAFT',
+          hs_expiration_date: expirationDate.toISOString().split('T')[0], // YYYY-MM-DD format
+          hs_language: 'en',
+        },
+        associations: [
+          {
+            to: { id: dealId },
+            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 64 }] // Quote to Deal association
+          }
+        ]
+      };
+
+      console.log('Creating quote with body:', JSON.stringify(quoteBody, null, 2));
+
+      const result = await this.makeRequest('/crm/v3/objects/quotes', {
+        method: 'POST',
+        body: JSON.stringify(quoteBody)
+      });
+
+      console.log('Quote created successfully:', result.id);
+
       return {
-        id: `deal_${dealId}`,
-        title: `${companyName} - Bookkeeping Quote`
+        id: result.id,
+        title: quoteName
       };
     } catch (error) {
-      console.error('Error updating deal with quote info:', error);
-      return null;
+      console.error('Error creating HubSpot quote:', error);
+      // Fallback to updating deal with quote information
+      try {
+        console.log('Falling back to updating deal with quote info...');
+        await this.updateDealWithQuote(dealId, companyName, monthlyFee, setupFee);
+        return {
+          id: `deal_${dealId}`,
+          title: `${companyName} - Bookkeeping Quote (Deal Updated)`
+        };
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        return null;
+      }
+    }
+  }
+
+  private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number): Promise<void> {
+    try {
+      // Create monthly service line item
+      const monthlyLineItem = {
+        properties: {
+          name: 'Monthly Bookkeeping Services',
+          description: 'Ongoing monthly bookkeeping and accounting services',
+          price: monthlyFee.toString(),
+          quantity: '12', // 12 months
+        },
+        associations: [
+          {
+            to: { id: quoteId },
+            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 69 }] // Line item to quote association
+          }
+        ]
+      };
+
+      const monthlyLineItemResult = await this.makeRequest(`/crm/v3/objects/line_items`, {
+        method: 'POST',
+        body: JSON.stringify(monthlyLineItem)
+      });
+
+      console.log('Monthly line item created:', monthlyLineItemResult.id);
+
+      // Create setup fee line item if there is one
+      if (setupFee > 0) {
+        const setupLineItem = {
+          properties: {
+            name: 'One-time Setup and Cleanup Fee',
+            description: 'Initial setup and historical cleanup of accounting records',
+            price: setupFee.toString(),
+            quantity: '1',
+          },
+          associations: [
+            {
+              to: { id: quoteId },
+              types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 69 }] // Line item to quote association
+            }
+          ]
+        };
+
+        const setupLineItemResult = await this.makeRequest(`/crm/v3/objects/line_items`, {
+          method: 'POST',
+          body: JSON.stringify(setupLineItem)
+        });
+
+        console.log('Setup line item created:', setupLineItemResult.id);
+      }
+    } catch (error) {
+      console.warn('Could not add line items to quote:', error);
     }
   }
 
