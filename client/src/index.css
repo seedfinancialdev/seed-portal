@@ -72,11 +72,11 @@
 @layer components {
   /* Enhanced card hover effects */
   .quote-card {
-    @apply transition-all duration-300 ease-in-out;
+    @apply transition-shadow duration-300 ease-in-out;
   }
   
   .quote-card:hover {
-    @apply transform -translate-y-1 shadow-2xl;
+    @apply shadow-2xl;
   }
   
   /* Enhanced table row hover */
@@ -85,7 +85,7 @@
   }
   
   .quote-table-row:hover {
-    @apply bg-gradient-to-r from-blue-50 to-indigo-50 scale-[1.01] shadow-sm;
+    @apply bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm;
   }
   
   /* Gradient text effects */
@@ -118,6 +118,6 @@
   }
   
   .enhanced-input:focus {
-    @apply transform scale-[1.02] shadow-lg ring-2 ring-[#e24c00]/20;
+    @apply shadow-lg ring-2 ring-[#e24c00]/20;
   }
 }
