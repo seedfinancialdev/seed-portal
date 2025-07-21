@@ -31,12 +31,12 @@ Preferred communication style: Simple, everyday language.
   - Deal creation with "New Business" deal type classification
   - Deal Owner properly assigned to the user creating the quote
   - Modern quote creation (legacy templates deprecated by HubSpot)
-  - Quote sender information dynamically pulled from HubSpot user profiles (name and company details)
+  - Quote sender information dynamically pulled from HubSpot user profiles and company branding settings
   - Proper Seed Financial company information in quotes
   - E-signature enabled in quotes (payments temporarily disabled for validation)
   - Auto-save quote functionality before pushing to HubSpot
   - Error handling for non-existing contacts with user-friendly messages
-  - Line items integration using HubSpot product library for proper quote formatting
+  - Line items using specific HubSpot product IDs (25687054003 for monthly, 25683750263 for cleanup)
   - Successfully tested with live HubSpot API integration
 
 ✓ **Archive Dialog Issue Fixed** (July 21, 2025)

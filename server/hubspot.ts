@@ -113,6 +113,9 @@ export class HubSpotService {
 
   async getUserProfile(email: string): Promise<{ firstName?: string; lastName?: string; companyName?: string; companyAddress?: string } | null> {
     try {
+      // Get company branding information
+      const brandingInfo = await this.getCompanyBranding();
+      
       // First try to find the user in owners (team members)
       const ownersResult = await this.makeRequest('/crm/v3/owners', {
         method: 'GET'
@@ -123,8 +126,8 @@ export class HubSpotService {
         return {
           firstName: owner.firstName,
           lastName: owner.lastName,
-          companyName: 'Seed Financial', // Default company name for owners
-          companyAddress: 'Austin, TX' // Default company address
+          companyName: brandingInfo?.companyName || 'Seed Financial',
+          companyAddress: brandingInfo?.companyAddress || 'Austin, TX'
         };
       }
       
@@ -134,14 +137,41 @@ export class HubSpotService {
         return {
           firstName: contact.contact.properties?.firstname,
           lastName: contact.contact.properties?.lastname,
-          companyName: contact.contact.properties?.company || 'Seed Financial',
-          companyAddress: 'Austin, TX' // Default company address
+          companyName: brandingInfo?.companyName || 'Seed Financial',
+          companyAddress: brandingInfo?.companyAddress || 'Austin, TX'
         };
       }
       
       return null;
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      return null;
+    }
+  }
+
+  async getCompanyBranding(): Promise<{ companyName?: string; companyAddress?: string } | null> {
+    try {
+      // Try to get company information from account details
+      const accountInfo = await this.makeRequest('/account/api/account/details/portalInfo');
+      
+      if (accountInfo) {
+        const address = [
+          accountInfo.address,
+          accountInfo.address2,
+          accountInfo.city,
+          accountInfo.state,
+          accountInfo.zip
+        ].filter(Boolean).join(', ');
+
+        return {
+          companyName: accountInfo.company || 'Seed Financial',
+          companyAddress: address || 'Austin, TX'
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.log('Could not fetch company branding, using defaults:', (error as Error).message);
       return null;
     }
   }
@@ -330,33 +360,18 @@ Services Include:
 
   private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number): Promise<void> {
     try {
-      // First, get existing products from the product library
-      const products = await this.getProducts();
-      
-      // Find the bookkeeping and cleanup products
-      const monthlyProduct = products?.find((p: any) => 
-        p.properties?.name?.includes('Monthly Bookkeeping') || 
-        p.properties?.name?.includes('Bookkeeping')
-      );
-      
-      const cleanupProduct = products?.find((p: any) => 
-        p.properties?.name?.includes('Clean-Up') || 
-        p.properties?.name?.includes('Cleanup')
-      );
+      // Use specific product IDs provided by user
+      const MONTHLY_PRODUCT_ID = '25687054003'; // Monthly Bookkeeping
+      const CLEANUP_PRODUCT_ID = '25683750263'; // Clean-Up / Catch-Up Project
 
-      // If products exist in library, use them; otherwise create custom line items
-      if (monthlyProduct) {
-        await this.addProductToQuote(quoteId, monthlyProduct.id, monthlyFee, 12);
-        console.log('Added monthly bookkeeping product to quote');
-      } else {
-        console.log('Monthly bookkeeping product not found in library, skipping line item');
-      }
+      // Add monthly bookkeeping product
+      await this.addProductToQuote(quoteId, MONTHLY_PRODUCT_ID, monthlyFee, 12);
+      console.log('Added monthly bookkeeping product to quote');
 
-      if (setupFee > 0 && cleanupProduct) {
-        await this.addProductToQuote(quoteId, cleanupProduct.id, setupFee, 1);
+      // Add cleanup product if there's a setup fee
+      if (setupFee > 0) {
+        await this.addProductToQuote(quoteId, CLEANUP_PRODUCT_ID, setupFee, 1);
         console.log('Added cleanup product to quote');
-      } else if (setupFee > 0) {
-        console.log('Cleanup product not found in library, skipping line item');
       }
     } catch (error) {
       console.warn('Could not add line items to quote:', error);
@@ -383,11 +398,11 @@ Services Include:
       associations: [
         {
           to: { id: quoteId },
-          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 20 }] // Line item to quote association
+          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 69 }] // Line item to quote association
         },
         {
           to: { id: productId },
-          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 21 }] // Line item to product association
+          types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 67 }] // Line item to product association
         }
       ]
     };
