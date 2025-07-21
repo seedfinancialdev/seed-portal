@@ -603,7 +603,34 @@ Generated: ${new Date().toLocaleDateString()}`;
         }
       }
 
-      console.log(`Quote ${quoteId} and line items updated successfully`);
+      // Also update the associated deal amount
+      // First get the deal ID from the quote
+      const dealAssociations = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/deals`, {
+        method: 'GET'
+      });
+
+      if (dealAssociations && dealAssociations.results && dealAssociations.results.length > 0) {
+        const dealId = dealAssociations.results[0].toObjectId;
+        const totalAmount = monthlyFee + setupFee;
+        
+        console.log(`Updating deal ${dealId} amount to $${totalAmount}`);
+        
+        // Update the deal amount
+        const dealUpdateBody = {
+          properties: {
+            amount: totalAmount.toString()
+          }
+        };
+        
+        await this.makeRequest(`/crm/v3/objects/deals/${dealId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(dealUpdateBody)
+        });
+        
+        console.log(`Successfully updated deal ${dealId} amount to $${totalAmount}`);
+      }
+
+      console.log(`Quote ${quoteId}, line items, and deal amount updated successfully`);
       return true;
     } catch (error: any) {
       console.error('Error updating quote in HubSpot:', error);
