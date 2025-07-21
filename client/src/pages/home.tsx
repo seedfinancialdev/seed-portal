@@ -105,13 +105,12 @@ function calculateFees(data: Partial<FormData>) {
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
   
-  // If no cleanup months, setup fee is $0
-  if (effectiveCleanupMonths === 0) {
-    return { monthlyFee, setupFee: 0 };
+  // If no cleanup months, setup fee is $0, but monthly fee remains normal
+  let setupFee = 0;
+  if (effectiveCleanupMonths > 0) {
+    const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
+    setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
   }
-  
-  const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
-  const setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
   
   return { monthlyFee, setupFee };
 }
