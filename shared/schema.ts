@@ -16,6 +16,18 @@ export const quotes = pgTable("quotes", {
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).notNull(),
   archived: boolean("archived").default(false).notNull(),
+  // Quote type - 'bookkeeping' or 'taas'
+  quoteType: text("quote_type").default("bookkeeping").notNull(),
+  // TaaS-specific fields
+  entityType: text("entity_type"), // LLC, S-Corp, C-Corp, Partnership, Sole Prop, Non-Profit
+  numEntities: integer("num_entities"),
+  statesFiled: integer("states_filed"),
+  internationalFiling: boolean("international_filing"),
+  numBusinessOwners: integer("num_business_owners"),
+  bookkeepingQuality: text("bookkeeping_quality"), // Clean (Seed), Outside CPA, Messy
+  include1040s: boolean("include_1040s"),
+  priorYearsUnfiled: integer("prior_years_unfiled"),
+  alreadyOnSeedBookkeeping: boolean("already_on_seed_bookkeeping"),
   // User ownership
   ownerId: integer("owner_id").notNull(),
   // HubSpot integration fields

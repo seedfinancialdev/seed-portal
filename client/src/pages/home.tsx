@@ -40,6 +40,14 @@ const formSchema = insertQuoteSchema.omit({
   overrideReason: z.string().optional(),
   customOverrideReason: z.string().optional(),
   companyName: z.string().optional(),
+  // TaaS fields
+  numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
+  statesFiled: z.number().min(1, "Must file in at least 1 state").optional(),
+  internationalFiling: z.boolean().optional(),
+  numBusinessOwners: z.number().min(1, "Must have at least 1 business owner").optional(),
+  include1040s: z.boolean().optional(),
+  priorYearsUnfiled: z.number().min(0, "Cannot be negative").max(5, "Maximum 5 years").optional(),
+  alreadyOnSeedBookkeeping: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   // If cleanup override is checked, require a reason
   if (data.cleanupOverride && !data.overrideReason) {
@@ -59,13 +67,73 @@ const formSchema = insertQuoteSchema.omit({
     });
   }
   
-  // If override is not checked or not approved, enforce minimum cleanup months
-  if (!data.cleanupOverride && data.cleanupMonths < currentMonth) {
+  // If override is not checked or not approved, enforce minimum cleanup months (only for bookkeeping)
+  if (data.quoteType === 'bookkeeping' && !data.cleanupOverride && data.cleanupMonths < currentMonth) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: `Minimum ${currentMonth} months required (current calendar year) unless override is approved`,
       path: ["cleanupMonths"],
     });
+  }
+  
+  // TaaS validations
+  if (data.quoteType === 'taas') {
+    if (!data.entityType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Entity type is required for TaaS quotes",
+        path: ["entityType"],
+      });
+    }
+    if (!data.numEntities) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Number of entities is required for TaaS quotes",
+        path: ["numEntities"],
+      });
+    }
+    if (!data.statesFiled) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "States filed is required for TaaS quotes",
+        path: ["statesFiled"],
+      });
+    }
+    if (!data.numBusinessOwners) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Number of business owners is required for TaaS quotes",
+        path: ["numBusinessOwners"],
+      });
+    }
+    if (!data.bookkeepingQuality) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bookkeeping quality is required for TaaS quotes",
+        path: ["bookkeepingQuality"],
+      });
+    }
+    if (data.include1040s === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please specify if 1040s should be included",
+        path: ["include1040s"],
+      });
+    }
+    if (data.priorYearsUnfiled === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Prior years unfiled is required for TaaS quotes",
+        path: ["priorYearsUnfiled"],
+      });
+    }
+    if (data.alreadyOnSeedBookkeeping === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please specify if already on Seed Bookkeeping",
+        path: ["alreadyOnSeedBookkeeping"],
+      });
+    }
   }
 });
 
@@ -157,6 +225,85 @@ function calculateFees(data: Partial<FormData>) {
   return { monthlyFee, setupFee };
 }
 
+// TaaS-specific calculation function based on provided logic
+function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { monthlyFee: number; setupFee: number }) {
+  if (!data.revenueBand || !data.industry || !data.entityType || !data.numEntities || !data.statesFiled || 
+      data.internationalFiling === undefined || !data.numBusinessOwners || !data.bookkeepingQuality || 
+      data.include1040s === undefined || data.priorYearsUnfiled === undefined || data.alreadyOnSeedBookkeeping === undefined) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+
+  const base = 150;
+
+  // Entity upcharge
+  const entityUpcharge = data.numEntities === 1 ? 0 : data.numEntities <= 3 ? 75 : 150;
+  
+  // State upcharge
+  const stateUpcharge = data.statesFiled <= 1 ? 0 : data.statesFiled <= 5 ? 50 : 150;
+  
+  // International filing upcharge
+  const intlUpcharge = data.internationalFiling ? 200 : 0;
+  
+  // Owner upcharge
+  const ownerUpcharge = data.numBusinessOwners <= 1 ? 0 : data.numBusinessOwners <= 3 ? 50 : 100;
+  
+  // Bookkeeping quality upcharge
+  const bookUpcharge = data.bookkeepingQuality === 'Clean (Seed)' ? 0 : 
+                       data.bookkeepingQuality === 'Outside CPA' ? 75 : 150;
+  
+  // Personal 1040s
+  const personal1040 = data.include1040s ? data.numBusinessOwners * 25 : 0;
+
+  // Industry multiplier (simplified mapping from TaaS logic to our existing industries)
+  const taasIndustryMult: Record<string, number> = {
+    'Software/SaaS': 1.0,
+    'Professional Services': 1.1, // Agencies
+    'Consulting': 1.1, // Agencies  
+    'Real Estate': 1.2,
+    'E-commerce/Retail': 1.3,
+    'Construction/Trades': 1.4,
+    'Multi-entity/Holding Companies': 1.5,
+    // Default to SaaS multiplier for others
+  };
+  
+  const industryMult = taasIndustryMult[data.industry] || 1.0;
+
+  // Revenue multiplier (map our revenue bands to average monthly revenue)
+  const avgMonthlyRevenue = data.revenueBand === '<$10K' ? 5000 :
+                           data.revenueBand === '10K-25K' ? 17500 :
+                           data.revenueBand === '25K-75K' ? 50000 :
+                           data.revenueBand === '75K-250K' ? 162500 :
+                           data.revenueBand === '250K-1M' ? 625000 :
+                           data.revenueBand === '1M+' ? 1000000 : 5000;
+
+  const revenueMult = avgMonthlyRevenue <= 10000 ? 1.0 :
+                     avgMonthlyRevenue <= 25000 ? 1.2 :
+                     avgMonthlyRevenue <= 75000 ? 1.4 :
+                     avgMonthlyRevenue <= 250000 ? 1.6 :
+                     avgMonthlyRevenue <= 1000000 ? 1.8 : 2.0;
+
+  // Calculate raw fee
+  const rawFee = (base + entityUpcharge + stateUpcharge + intlUpcharge + ownerUpcharge + bookUpcharge + personal1040) * industryMult * revenueMult;
+
+  // Apply Seed Bookkeeping discount if applicable
+  const isBookkeepingClient = data.alreadyOnSeedBookkeeping;
+  const monthlyFee = Math.max(150, Math.round((isBookkeepingClient ? rawFee * 0.9 : rawFee) / 5) * 5);
+
+  // Setup fee calculation
+  const perYearFee = monthlyFee * 0.8 * 12;
+  const setupFee = Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled);
+
+  // If we have existing bookkeeping fees, add them on top
+  if (existingBookkeepingFees) {
+    return {
+      monthlyFee: monthlyFee + existingBookkeepingFees.monthlyFee,
+      setupFee: setupFee + existingBookkeepingFees.setupFee
+    };
+  }
+
+  return { monthlyFee, setupFee };
+}
+
 export default function Home() {
   const { toast } = useToast();
   const { user, logoutMutation } = useAuth();
@@ -199,6 +346,10 @@ export default function Home() {
   // Debounce state for HubSpot verification
   const [verificationTimeoutId, setVerificationTimeoutId] = useState<NodeJS.Timeout | null>(null);
   
+  // TaaS state
+  const [showTaaSCard, setShowTaaSCard] = useState(false);
+  const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
+  
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -212,6 +363,15 @@ export default function Home() {
       overrideReason: "",
       customOverrideReason: "",
       companyName: "",
+      quoteType: "bookkeeping",
+      // TaaS defaults
+      numEntities: 1,
+      statesFiled: 1,
+      internationalFiling: false,
+      numBusinessOwners: 1,
+      include1040s: false,
+      priorYearsUnfiled: 0,
+      alreadyOnSeedBookkeeping: false,
     },
   });
 
@@ -232,7 +392,26 @@ export default function Home() {
   const createQuoteMutation = useMutation({
     mutationFn: async (data: FormData) => {
       console.log('Submitting quote data:', data);
-      const fees = calculateFees(data);
+      
+      let fees;
+      if (data.quoteType === 'taas') {
+        // For TaaS, check if there's an existing bookkeeping quote for this email
+        const existingBookkeepingQuote = allQuotes.find(q => 
+          q.contactEmail === data.contactEmail && 
+          q.quoteType === 'bookkeeping' && 
+          !q.archived
+        );
+        
+        const existingBookkeepingFees = existingBookkeepingQuote ? {
+          monthlyFee: parseFloat(existingBookkeepingQuote.monthlyFee),
+          setupFee: parseFloat(existingBookkeepingQuote.setupFee)
+        } : undefined;
+        
+        fees = calculateTaaSFees(data, existingBookkeepingFees);
+      } else {
+        fees = calculateFees(data);
+      }
+      
       console.log('Calculated fees:', fees);
       
       const quoteData = {
@@ -462,7 +641,87 @@ export default function Home() {
   });
 
   const watchedValues = form.watch();
-  const { monthlyFee, setupFee } = calculateFees(watchedValues);
+  
+  // Calculate fees and breakdown based on quote type
+  const { monthlyFee, setupFee, breakdown } = (() => {
+    if (watchedValues.quoteType === 'taas') {
+      // For TaaS, check if there's an existing bookkeeping quote for this email
+      const existingBookkeepingQuote = allQuotes.find(q => 
+        q.contactEmail === watchedValues.contactEmail && 
+        q.quoteType === 'bookkeeping' && 
+        !q.archived
+      );
+      
+      const existingBookkeepingFees = existingBookkeepingQuote ? {
+        monthlyFee: parseFloat(existingBookkeepingQuote.monthlyFee),
+        setupFee: parseFloat(existingBookkeepingQuote.setupFee)
+      } : undefined;
+      
+      const fees = calculateTaaSFees(watchedValues, existingBookkeepingFees);
+      
+      // Create TaaS breakdown
+      const breakdown = watchedValues.entityType && watchedValues.numEntities && 
+                       watchedValues.statesFiled && watchedValues.numBusinessOwners &&
+                       watchedValues.bookkeepingQuality && watchedValues.include1040s !== undefined &&
+                       watchedValues.priorYearsUnfiled !== undefined && 
+                       watchedValues.alreadyOnSeedBookkeeping !== undefined ? {
+        type: 'taas',
+        baseFee: 150,
+        entityUpcharge: watchedValues.numEntities === 1 ? 0 : watchedValues.numEntities <= 3 ? 75 : 150,
+        stateUpcharge: watchedValues.statesFiled <= 1 ? 0 : watchedValues.statesFiled <= 5 ? 50 : 150,
+        intlUpcharge: watchedValues.internationalFiling ? 200 : 0,
+        ownerUpcharge: watchedValues.numBusinessOwners <= 1 ? 0 : watchedValues.numBusinessOwners <= 3 ? 50 : 100,
+        bookUpcharge: watchedValues.bookkeepingQuality === 'Clean (Seed)' ? 0 : 
+                     watchedValues.bookkeepingQuality === 'Outside CPA' ? 75 : 150,
+        personal1040: watchedValues.include1040s ? watchedValues.numBusinessOwners * 25 : 0,
+        industryMult: watchedValues.industry ? (
+          watchedValues.industry === 'Software/SaaS' ? 1.0 :
+          watchedValues.industry === 'Professional Services' || watchedValues.industry === 'Consulting' ? 1.1 :
+          watchedValues.industry === 'Real Estate' ? 1.2 :
+          watchedValues.industry === 'E-commerce/Retail' ? 1.3 :
+          watchedValues.industry === 'Construction/Trades' ? 1.4 :
+          watchedValues.industry === 'Multi-entity/Holding Companies' ? 1.5 : 1.0
+        ) : 1.0,
+        revenueMult: watchedValues.revenueBand ? (
+          watchedValues.revenueBand === '<$10K' || watchedValues.revenueBand === '10K-25K' ? 1.0 :
+          watchedValues.revenueBand === '25K-75K' ? 1.4 :
+          watchedValues.revenueBand === '75K-250K' ? 1.6 :
+          watchedValues.revenueBand === '250K-1M' ? 1.8 : 2.0
+        ) : 1.0,
+        bookkeepingDiscount: watchedValues.alreadyOnSeedBookkeeping ? 0.1 : 0,
+        existingBookkeeping: existingBookkeepingFees || null
+      } : null;
+      
+      return { ...fees, breakdown };
+    } else {
+      const fees = calculateFees(watchedValues);
+      
+      // Create bookkeeping breakdown
+      const breakdown = watchedValues.revenueBand && watchedValues.industry && 
+                       watchedValues.monthlyTransactions && watchedValues.cleanupMonths !== undefined ? {
+        type: 'bookkeeping',
+        baseFee: 150,
+        txFee: watchedValues.monthlyTransactions ? (
+          watchedValues.monthlyTransactions === '<100' ? 0 :
+          watchedValues.monthlyTransactions === '100-300' ? 100 :
+          watchedValues.monthlyTransactions === '300-600' ? 500 :
+          watchedValues.monthlyTransactions === '600-1000' ? 800 :
+          watchedValues.monthlyTransactions === '1000-2000' ? 1200 : 1600
+        ) : 0,
+        revenueMultiplier: watchedValues.revenueBand ? (
+          watchedValues.revenueBand === '<$10K' || watchedValues.revenueBand === '10K-25K' ? 1.0 :
+          watchedValues.revenueBand === '25K-75K' ? 2.2 :
+          watchedValues.revenueBand === '75K-250K' ? 3.5 :
+          watchedValues.revenueBand === '250K-1M' ? 5.0 : 7.0
+        ) : 1.0,
+        multiplier: watchedValues.industry ? (industryMultipliers[watchedValues.industry as keyof typeof industryMultipliers]?.monthly || 1.0) : 1.0,
+        cleanupMultiplier: parseFloat(watchedValues.cleanupComplexity || '0')
+      } : null;
+      
+      return { ...fees, breakdown };
+    }
+  })();
+  
   const isCalculated = monthlyFee > 0;
   
 
@@ -711,20 +970,7 @@ export default function Home() {
     createQuoteMutation.mutate(data);
   };
 
-  const getBreakdownValues = () => {
-    if (!watchedValues.revenueBand || !watchedValues.monthlyTransactions || !watchedValues.industry) {
-      return null;
-    }
-    
-    const revenueMultiplier = revenueMultipliers[watchedValues.revenueBand as keyof typeof revenueMultipliers] || 1.0;
-    const baseFee = Math.round(baseMonthlyFee * revenueMultiplier);
-    const txFee = txSurcharge[watchedValues.monthlyTransactions as keyof typeof txSurcharge] || 0;
-    const industryData = industryMultipliers[watchedValues.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
-    
-    return { baseFee, txFee, multiplier: industryData.monthly, revenueMultiplier };
-  };
-
-  const breakdown = getBreakdownValues();
+  // Remove the old breakdown function since it's now handled in the calculation logic above
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
@@ -1220,6 +1466,376 @@ export default function Home() {
             </CardContent>
           </Card>
 
+          {/* Service Selection Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Bookkeeping Card */}
+            <Card 
+              className={`cursor-pointer transition-all duration-300 border-2 ${
+                !showTaaSCard ? 'border-green-500 bg-green-50 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md'
+              }`}
+              onClick={() => {
+                setShowTaaSCard(false);
+                form.setValue('quoteType', 'bookkeeping');
+              }}
+            >
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-500 text-white rounded-lg">
+                  <Calculator className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Bookkeeping Services</h3>
+                <p className="text-sm text-gray-600">Monthly bookkeeping and cleanup services</p>
+              </CardContent>
+            </Card>
+
+            {/* TaaS Card */}
+            <Card 
+              className={`cursor-pointer transition-all duration-300 border-2 ${
+                showTaaSCard ? 'border-blue-500 bg-blue-50 shadow-lg' : 'border-gray-200 bg-white hover:shadow-md'
+              }`}
+              onClick={() => {
+                if (!showTaaSCard) {
+                  // Copy core fields from bookkeeping when switching to TaaS
+                  const currentValues = form.getValues();
+                  setShowTaaSCard(true);
+                  form.setValue('quoteType', 'taas');
+                  
+                  // Reset TaaS-specific fields to defaults
+                  form.setValue('numEntities', 1);
+                  form.setValue('statesFiled', 1);
+                  form.setValue('internationalFiling', false);
+                  form.setValue('numBusinessOwners', 1);
+                  form.setValue('include1040s', false);
+                  form.setValue('priorYearsUnfiled', 0);
+                  form.setValue('alreadyOnSeedBookkeeping', false);
+                  form.setValue('entityType', '');
+                  form.setValue('bookkeepingQuality', '');
+                }
+              }}
+            >
+              <CardContent className="p-6 text-center">
+                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-blue-500 text-white rounded-lg">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Tax as a Service (TaaS)</h3>
+                <p className="text-sm text-gray-600">Business tax preparation and filing services</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* TaaS Form Card */}
+          {showTaaSCard && (
+            <Card className="bg-blue-50 shadow-xl border-0 quote-card">
+              <CardContent className="p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                    <FileText className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      Tax as a Service (TaaS) Quote
+                    </h2>
+                    <p className="text-sm text-gray-500">Configure your tax preparation requirements</p>
+                  </div>
+                </div>
+
+                <Form {...form}>
+                  <form className="space-y-6">
+                    {/* Core Fields Section */}
+                    <div className="bg-white rounded-lg p-6 space-y-6">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Core Information</h3>
+                      
+                      {/* Contact Email - Read Only for TaaS */}
+                      <FormField
+                        control={form.control}
+                        name="contactEmail"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contact Email</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="email"
+                                placeholder="client@company.com"
+                                className="bg-gray-100 border-gray-300"
+                                readOnly
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Company Name - Read Only for TaaS */}
+                      <FormField
+                        control={form.control}
+                        name="companyName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Company Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Company name"
+                                className="bg-gray-100 border-gray-300"
+                                readOnly
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Revenue Band - Read Only for TaaS */}
+                      <FormField
+                        control={form.control}
+                        name="revenueBand"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Annual Revenue Band</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Revenue band"
+                                className="bg-gray-100 border-gray-300"
+                                readOnly
+                                value={field.value}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Industry - Read Only for TaaS */}
+                      <FormField
+                        control={form.control}
+                        name="industry"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Industry</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="Industry"
+                                className="bg-gray-100 border-gray-300"
+                                readOnly
+                                value={field.value}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* TaaS-Specific Fields */}
+                    <div className="bg-white rounded-lg p-6 space-y-6">
+                      <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Tax Service Details</h3>
+
+                      {/* Entity Type */}
+                      <FormField
+                        control={form.control}
+                        name="entityType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Entity Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select entity type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="LLC">LLC</SelectItem>
+                                <SelectItem value="S-Corp">S-Corp</SelectItem>
+                                <SelectItem value="C-Corp">C-Corp</SelectItem>
+                                <SelectItem value="Partnership">Partnership</SelectItem>
+                                <SelectItem value="Sole Prop">Sole Prop</SelectItem>
+                                <SelectItem value="Non-Profit">Non-Profit</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Number of Entities */}
+                      <FormField
+                        control={form.control}
+                        name="numEntities"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Entities</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="1"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* States Filed */}
+                      <FormField
+                        control={form.control}
+                        name="statesFiled"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>States Filed</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="1"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* International Filing */}
+                      <FormField
+                        control={form.control}
+                        name="internationalFiling"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="border-gray-300 data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>International Filing? (FBAR, 5471 triggers)</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Number of Business Owners */}
+                      <FormField
+                        control={form.control}
+                        name="numBusinessOwners"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Business Owners</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="1"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Bookkeeping Quality */}
+                      <FormField
+                        control={form.control}
+                        name="bookkeepingQuality"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bookkeeping Quality</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select bookkeeping quality" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
+                                <SelectItem value="Outside CPA">Outside CPA</SelectItem>
+                                <SelectItem value="Messy">Messy</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Include 1040s */}
+                      <FormField
+                        control={form.control}
+                        name="include1040s"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="border-gray-300 data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Include 1040s? (charge $25 per owner if yes)</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Prior Years Unfiled */}
+                      <FormField
+                        control={form.control}
+                        name="priorYearsUnfiled"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prior Years Unfiled (0-5)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="5"
+                                placeholder="0"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Already on Seed Bookkeeping */}
+                      <FormField
+                        control={form.control}
+                        name="alreadyOnSeedBookkeeping"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="border-gray-300 data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Already on Seed Bookkeeping? (gets 10% discount)</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Results Card */}
           <Card className="bg-white shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
@@ -1242,7 +1858,7 @@ export default function Home() {
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <label className="text-sm font-semibold text-green-800">
-                        Monthly Bookkeeping Fee
+                        {showTaaSCard ? 'Monthly TaaS Fee' : 'Monthly Bookkeeping Fee'}
                       </label>
                     </div>
                     <Button
@@ -1298,47 +1914,133 @@ export default function Home() {
                     {isCalculated ? `$${setupFee.toLocaleString()}` : '$0'}
                   </div>
                   <p className="text-sm text-orange-600 font-medium">
-                    Includes {watchedValues.cleanupMonths || 0} months of cleanup
+                    {showTaaSCard ? 
+                      `Based on ${watchedValues.priorYearsUnfiled || 0} prior years unfiled` :
+                      `Includes ${watchedValues.cleanupMonths || 0} months of cleanup`
+                    }
                   </p>
                 </div>
 
                 {/* Calculation Breakdown */}
                 {breakdown && isCalculated && (
                   <div className="border-t pt-6">
-                    <div className="flex items-center gap-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsBreakdownExpanded(!isBreakdownExpanded)}
+                      className="flex items-center gap-2 mb-4 w-full text-left hover:bg-gray-50 p-2 rounded-md transition-colors"
+                    >
                       <Sparkles className="h-5 w-5 text-purple-500" />
-                      <h3 className="text-lg font-bold text-gray-800">
+                      <h3 className="text-lg font-bold text-gray-800 flex-1">
                         Calculation Breakdown
                       </h3>
-                    </div>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Base Fee:</span>
-                        <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
+                      <div className={`transition-transform duration-200 ${isBreakdownExpanded ? 'rotate-180' : ''}`}>
+                        <ArrowUpDown className="h-4 w-4 text-gray-500" />
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Transaction Surcharge ({watchedValues.monthlyTransactions}):</span>
-                        <span className="font-medium text-gray-800">${breakdown.txFee}</span>
+                    </button>
+                    
+                    {isBreakdownExpanded && (
+                      <div className="space-y-3 text-sm animate-in slide-in-from-top-2 duration-200">
+                        {breakdown.type === 'taas' ? (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Base Fee:</span>
+                              <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Entity Upcharge ({watchedValues.numEntities} entities):</span>
+                              <span className="font-medium text-gray-800">${(breakdown as any).entityUpcharge}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">State Upcharge ({watchedValues.statesFiled} states):</span>
+                              <span className="font-medium text-gray-800">${(breakdown as any).stateUpcharge}</span>
+                            </div>
+                            {(breakdown as any).intlUpcharge > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">International Filing:</span>
+                                <span className="font-medium text-gray-800">${(breakdown as any).intlUpcharge}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Owner Upcharge ({watchedValues.numBusinessOwners} owners):</span>
+                              <span className="font-medium text-gray-800">${(breakdown as any).ownerUpcharge}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Bookkeeping Quality ({watchedValues.bookkeepingQuality}):</span>
+                              <span className="font-medium text-gray-800">${(breakdown as any).bookUpcharge}</span>
+                            </div>
+                            {(breakdown as any).personal1040 > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Personal 1040s ({watchedValues.numBusinessOwners} × $25):</span>
+                                <span className="font-medium text-gray-800">${(breakdown as any).personal1040}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
+                              <span className="font-medium text-gray-800">{(breakdown as any).industryMult}x</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Revenue Multiplier ({watchedValues.revenueBand}):</span>
+                              <span className="font-medium text-gray-800">{(breakdown as any).revenueMult}x</span>
+                            </div>
+                            {(breakdown as any).bookkeepingDiscount > 0 && (
+                              <div className="flex justify-between text-green-600">
+                                <span>Seed Bookkeeping Discount:</span>
+                                <span className="font-medium">-10%</span>
+                              </div>
+                            )}
+                            {(breakdown as any).existingBookkeeping && (
+                              <div className="border-t pt-2 space-y-2">
+                                <div className="flex justify-between text-blue-600">
+                                  <span>Existing Bookkeeping Monthly:</span>
+                                  <span className="font-medium">+${(breakdown as any).existingBookkeeping.monthlyFee}</span>
+                                </div>
+                                <div className="flex justify-between text-blue-600">
+                                  <span>Existing Bookkeeping Setup:</span>
+                                  <span className="font-medium">+${(breakdown as any).existingBookkeeping.setupFee}</span>
+                                </div>
+                              </div>
+                            )}
+                            <div className="flex justify-between border-t pt-2">
+                              <span className="text-gray-600">Monthly Fee:</span>
+                              <span className="font-semibold text-gray-800">${monthlyFee.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Setup Fee ({watchedValues.priorYearsUnfiled} prior years):</span>
+                              <span className="font-semibold text-[#e24c00]">${setupFee.toLocaleString()}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Base Fee:</span>
+                              <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Transaction Surcharge ({watchedValues.monthlyTransactions}):</span>
+                              <span className="font-medium text-gray-800">${(breakdown as any).txFee}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
+                              <span className="font-medium text-gray-800">{(breakdown as any).multiplier}x</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Revenue Modifier ({watchedValues.revenueBand}):</span>
+                              <span className="font-medium text-gray-800">{(breakdown as any).revenueMultiplier}x</span>
+                            </div>
+                            <div className="flex justify-between border-t pt-2">
+                              <span className="text-gray-600">Monthly Fee:</span>
+                              <span className="font-semibold text-gray-800">${monthlyFee.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Cleanup ({watchedValues.cleanupMonths} months × {parseFloat(watchedValues.cleanupComplexity || '0') * 100}%):
+                              </span>
+                              <span className="font-semibold text-[#e24c00]">${setupFee.toLocaleString()}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
-                        <span className="font-medium text-gray-800">{breakdown.multiplier}x</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Revenue Modifier ({watchedValues.revenueBand}):</span>
-                        <span className="font-medium text-gray-800">{breakdown.revenueMultiplier}x</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span className="text-gray-600">Monthly Fee:</span>
-                        <span className="font-semibold text-gray-800">${monthlyFee.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          Cleanup ({watchedValues.cleanupMonths} months × {parseFloat(watchedValues.cleanupComplexity || '0') * 100}%):
-                        </span>
-                        <span className="font-semibold text-[#e24c00]">${setupFee.toLocaleString()}</span>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 )}
 
