@@ -554,7 +554,56 @@ Generated: ${new Date().toLocaleDateString()}`;
         body: JSON.stringify(updateBody)
       });
 
-      console.log(`Quote ${quoteId} updated successfully`);
+      // Get associated line items for this quote
+      const lineItemsResponse = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/line_items`, {
+        method: 'GET'
+      });
+
+      if (lineItemsResponse && lineItemsResponse.results && lineItemsResponse.results.length > 0) {
+        console.log(`Found ${lineItemsResponse.results.length} line items to update`);
+        
+        for (const lineItemAssociation of lineItemsResponse.results) {
+          const lineItemId = lineItemAssociation.toObjectId;
+          
+          // Get the line item details to determine if it's monthly or setup
+          const lineItemDetails = await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
+            method: 'GET'
+          });
+          
+          if (lineItemDetails && lineItemDetails.properties) {
+            const productId = lineItemDetails.properties.hs_product_id;
+            let newPrice;
+            
+            // Determine which price to use based on product ID
+            if (productId === '25687054003') { // Monthly bookkeeping product
+              newPrice = monthlyFee;
+              console.log(`Updating monthly line item ${lineItemId} to $${monthlyFee}`);
+            } else if (productId === '25683750263') { // Cleanup product  
+              newPrice = setupFee;
+              console.log(`Updating setup line item ${lineItemId} to $${setupFee}`);
+            } else {
+              console.log(`Unknown product ID ${productId} for line item ${lineItemId}, skipping`);
+              continue;
+            }
+            
+            // Update the line item price
+            const lineItemUpdateBody = {
+              properties: {
+                price: newPrice.toString()
+              }
+            };
+            
+            await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
+              method: 'PATCH',
+              body: JSON.stringify(lineItemUpdateBody)
+            });
+            
+            console.log(`Successfully updated line item ${lineItemId} price to $${newPrice}`);
+          }
+        }
+      }
+
+      console.log(`Quote ${quoteId} and line items updated successfully`);
       return true;
     } catch (error: any) {
       console.error('Error updating quote in HubSpot:', error);
