@@ -382,8 +382,12 @@ export default function Home() {
       if (data.success) {
         toast({
           title: "HubSpot Updated",
-          description: "Quote successfully updated in HubSpot.",
+          description: "Quote successfully updated in HubSpot and saved.",
         });
+        // Refresh the quotes list to show updated data
+        queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+        refetchQuotes();
+        setHasUnsavedChanges(false);
       } else if (data.needsNewQuote) {
         toast({
           title: "Quote Expired",

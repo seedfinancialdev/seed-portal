@@ -397,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const companyName = quote.companyName || 'Unknown Company';
       
-      // If current form data is provided, recalculate fees based on current values
+      // If current form data is provided, recalculate fees and update database
       let monthlyFee = parseFloat(quote.monthlyFee);
       let setupFee = parseFloat(quote.setupFee);
       
@@ -407,6 +407,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         monthlyFee = fees.monthlyFee;
         setupFee = fees.setupFee;
         console.log(`Recalculated fees for update - Monthly: $${monthlyFee}, Setup: $${setupFee}`);
+        
+        // Update the quote in our database with current form data and recalculated fees
+        const updateData = {
+          id: quoteId,
+          ...currentFormData,
+          monthlyFee: monthlyFee.toString(),
+          setupFee: setupFee.toString()
+        };
+        
+        await storage.updateQuote(updateData);
+        console.log(`Updated quote ${quoteId} in database with new form data and fees`);
       }
 
       // Update quote in HubSpot
