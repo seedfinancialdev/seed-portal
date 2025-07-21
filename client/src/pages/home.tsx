@@ -91,12 +91,16 @@ function roundToNearest25(num: number): number {
 }
 
 function calculateFees(data: Partial<FormData>) {
+  console.log('calculateFees called with data:', data);
+  
   if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
+    console.log('Missing required fields, returning zeros');
     return { monthlyFee: 0, setupFee: 0 };
   }
   
   // If cleanup months is 0, cleanup complexity is not required
   if (data.cleanupMonths > 0 && !data.cleanupComplexity) {
+    console.log('Cleanup months > 0 but no complexity, returning zeros');
     return { monthlyFee: 0, setupFee: 0 };
   }
 
@@ -104,8 +108,12 @@ function calculateFees(data: Partial<FormData>) {
   const txFee = txSurcharge[data.monthlyTransactions as keyof typeof txSurcharge] || 0;
   const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
   
+  console.log('Calculation values:', { revenueMultiplier, txFee, industryData, baseMonthlyFee });
+  
   // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
   const monthlyFee = Math.round((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  
+  console.log('Calculated monthly fee:', monthlyFee);
   
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
@@ -113,7 +121,7 @@ function calculateFees(data: Partial<FormData>) {
   // If no cleanup months, setup fee is $0, but monthly fee remains normal
   let setupFee = 0;
   if (effectiveCleanupMonths > 0) {
-    const cleanupMultiplier = parseFloat(data.cleanupComplexity) * industryData.cleanup;
+    const cleanupMultiplier = parseFloat(data.cleanupComplexity || "0.75") * industryData.cleanup;
     setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
   }
   
