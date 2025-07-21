@@ -326,9 +326,8 @@ Services Include:
 
       console.log('Quote created successfully:', result.id);
       
-      // Note: Line items need to be manually added in HubSpot due to API limitations
-      // Products available: 25687054003 (Monthly Bookkeeping), 25683750263 (Clean-Up)
-      console.log('Quote created - line items should be manually added from product library');
+      // Add line items to the quote
+      await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
 
       return {
         id: result.id,
@@ -383,27 +382,47 @@ Services Include:
 
   private async associateProductWithQuote(quoteId: string, productId: string, price: number, quantity: number): Promise<void> {
     try {
-      // Create a line item with product association
+      // Get product details first
+      const product = await this.makeRequest(`/crm/v3/objects/products/${productId}`);
+      
+      // Create a line item with correct properties
       const lineItem = {
         properties: {
+          name: product.properties?.name || 'Bookkeeping Service',
           price: price.toString(),
           quantity: quantity.toString(),
           hs_product_id: productId,
-          name: `Product ${productId}` // Add a name property
+          hs_sku: product.properties?.hs_sku || productId,
+          description: product.properties?.description || ''
         }
       };
 
+      console.log('Creating line item:', lineItem);
+      
       const result = await this.makeRequest('/crm/v3/objects/line_items', {
         method: 'POST',
         body: JSON.stringify(lineItem)
       });
 
-      // Now associate the line item with the quote
-      await this.makeRequest(`/crm/v3/objects/quotes/${quoteId}/associations/line_items/${result.id}/20`, {
-        method: 'PUT'
+      console.log('Line item created:', result.id);
+
+      // Associate the line item with the quote using type 67
+      const associationBody = {
+        inputs: [
+          {
+            from: { id: result.id },
+            to: { id: quoteId },
+            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 67 }]
+          }
+        ]
+      };
+
+      await this.makeRequest('/crm/v4/associations/line_items/quotes/batch/create', {
+        method: 'POST',
+        body: JSON.stringify(associationBody)
       });
 
-      console.log(`Line item ${result.id} associated with quote ${quoteId}`);
+      console.log(`Line item ${result.id} associated with quote ${quoteId} using type 67`);
     } catch (error) {
       console.error('Error associating product with quote:', error);
       throw error;

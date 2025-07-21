@@ -36,7 +36,7 @@ Preferred communication style: Simple, everyday language.
   - E-signature enabled in quotes (payments temporarily disabled for validation)
   - Auto-save quote functionality before pushing to HubSpot
   - Error handling for non-existing contacts with user-friendly messages
-  - Line items using specific HubSpot product IDs (25687054003 for monthly, 25683750263 for cleanup)
+  - Line items automatically added using HubSpot product library with association type 67
   - Successfully tested with live HubSpot API integration
 
 ✓ **Archive Dialog Issue Fixed** (July 21, 2025)
