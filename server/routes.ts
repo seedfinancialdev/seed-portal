@@ -279,6 +279,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check for existing quotes by email
+  app.post("/api/quotes/check-existing", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        res.status(400).json({ message: "Email is required" });
+        return;
+      }
+
+      const existingQuotes = await storage.getQuotesByEmail(email);
+      
+      res.json({ 
+        hasExistingQuotes: existingQuotes.length > 0,
+        count: existingQuotes.length,
+        quotes: existingQuotes
+      });
+    } catch (error) {
+      console.error('Error checking existing quotes:', error);
+      res.status(500).json({ message: "Failed to check existing quotes" });
+    }
+  });
+
   // HubSpot integration endpoints
   
   // Verify contact email in HubSpot

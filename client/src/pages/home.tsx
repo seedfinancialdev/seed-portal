@@ -187,6 +187,10 @@ export default function Home() {
   const [hubspotContact, setHubspotContact] = useState<any>(null);
   const [lastVerifiedEmail, setLastVerifiedEmail] = useState('');
   
+  // Existing quotes state
+  const [existingQuotesForEmail, setExistingQuotesForEmail] = useState<Quote[]>([]);
+  const [showExistingQuotesNotification, setShowExistingQuotesNotification] = useState(false);
+  
   // Custom dialog states
   const [resetConfirmDialog, setResetConfirmDialog] = useState(false);
   const [discardChangesDialog, setDiscardChangesDialog] = useState(false);
@@ -333,25 +337,45 @@ export default function Home() {
     setLastVerifiedEmail(email);
     
     try {
-      const response = await apiRequest('POST', '/api/hubspot/verify-contact', { email });
-      const result = await response.json();
+      // Check for existing quotes and verify HubSpot contact in parallel
+      const [hubspotResponse, existingQuotesResponse] = await Promise.all([
+        apiRequest('POST', '/api/hubspot/verify-contact', { email }),
+        apiRequest('POST', '/api/quotes/check-existing', { email })
+      ]);
       
-      if (result.verified && result.contact) {
+      const hubspotResult = await hubspotResponse.json();
+      const existingQuotesResult = await existingQuotesResponse.json();
+      
+      // Handle HubSpot verification
+      if (hubspotResult.verified && hubspotResult.contact) {
         setHubspotVerificationStatus('verified');
-        setHubspotContact(result.contact);
+        setHubspotContact(hubspotResult.contact);
         
         // Auto-fill company name if available
-        if (result.contact.properties.company && !form.getValues('companyName')) {
-          form.setValue('companyName', result.contact.properties.company);
+        if (hubspotResult.contact.properties.company && !form.getValues('companyName')) {
+          form.setValue('companyName', hubspotResult.contact.properties.company);
         }
       } else {
         setHubspotVerificationStatus('not-found');
         setHubspotContact(null);
       }
+      
+      // Handle existing quotes
+      if (existingQuotesResult.hasExistingQuotes) {
+        setExistingQuotesForEmail(existingQuotesResult.quotes);
+        setShowExistingQuotesNotification(true);
+        // Automatically filter the saved quotes table to show only this email's quotes
+        setSearchTerm(email);
+      } else {
+        setExistingQuotesForEmail([]);
+        setShowExistingQuotesNotification(false);
+      }
     } catch (error) {
       console.error('Error verifying email:', error);
       setHubspotVerificationStatus('not-found');
       setHubspotContact(null);
+      setExistingQuotesForEmail([]);
+      setShowExistingQuotesNotification(false);
     }
   };
 
@@ -552,6 +576,13 @@ export default function Home() {
     setHubspotContact(null);
     setLastVerifiedEmail('');
     setIsApproved(false);
+    
+    // Reset existing quotes state
+    setExistingQuotesForEmail([]);
+    setShowExistingQuotesNotification(false);
+    
+    // Clear search term to show all quotes again
+    setSearchTerm("");
     
     setHasUnsavedChanges(false);
   };
@@ -766,6 +797,17 @@ export default function Home() {
                               onChange={(e) => {
                                 field.onChange(e);
                                 const email = e.target.value;
+                                
+                                // If email is cleared, reset existing quotes state
+                                if (!email.trim()) {
+                                  setExistingQuotesForEmail([]);
+                                  setShowExistingQuotesNotification(false);
+                                  setHubspotVerificationStatus('idle');
+                                  setHubspotContact(null);
+                                  setLastVerifiedEmail('');
+                                  // Don't clear search term here as user might want to keep it
+                                }
+                                
                                 debouncedVerifyEmail(email);
                               }}
                             />
@@ -815,6 +857,26 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
+
+                  {/* Existing Quotes Notification */}
+                  {showExistingQuotesNotification && existingQuotesForEmail.length > 0 && (
+                    <Alert className="border-blue-200 bg-blue-50">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-800">
+                        <strong>Existing quotes found!</strong> This email has {existingQuotesForEmail.length} existing quote{existingQuotesForEmail.length > 1 ? 's' : ''}. 
+                        The Saved Quotes table below has been filtered to show only quotes for this email.
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 ml-2 text-blue-600 underline"
+                          onClick={() => setShowExistingQuotesNotification(false)}
+                        >
+                          Dismiss
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
 
                   {/* Monthly Transactions */}
                   <FormField
