@@ -1525,11 +1525,11 @@ export default function Home() {
 
                 <Form {...form}>
                   <form className="space-y-6">
-                    {/* Core Fields Section */}
+                    {/* Core Fields Section - Same as Quote Builder */}
                     <div className="bg-white rounded-lg p-6 space-y-6">
                       <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Core Information</h3>
                       
-                      {/* Contact Email - Read Only for TaaS */}
+                      {/* Contact Email - Same as Quote Builder */}
                       <FormField
                         control={form.control}
                         name="contactEmail"
@@ -1537,31 +1537,59 @@ export default function Home() {
                           <FormItem>
                             <FormLabel>Contact Email</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="email"
-                                placeholder="client@company.com"
-                                className="bg-gray-100 border-gray-300"
-                                readOnly
-                                {...field}
-                              />
+                              <div className="relative">
+                                <Input 
+                                  type="email"
+                                  placeholder="client@company.com"
+                                  className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    const email = e.target.value;
+                                    
+                                    // If email is cleared, reset existing quotes state
+                                    if (!email.trim()) {
+                                      setExistingQuotesForEmail([]);
+                                      setShowExistingQuotesNotification(false);
+                                      setHubspotVerificationStatus('idle');
+                                      setHubspotContact(null);
+                                      setLastVerifiedEmail('');
+                                      setSearchTerm(""); // Clear search filter when email is cleared
+                                      form.setValue('companyName', ''); // Clear company name when email is cleared
+                                    }
+                                    
+                                    debouncedVerifyEmail(email);
+                                  }}
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                  {hubspotVerificationStatus === 'verifying' && (
+                                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                  )}
+                                  {hubspotVerificationStatus === 'verified' && (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  )}
+                                  {hubspotVerificationStatus === 'not-found' && (
+                                    <XCircle className="h-4 w-4 text-red-500" />
+                                  )}
+                                </div>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
 
-                      {/* Company Name - Read Only for TaaS */}
+                      {/* Company Name (Optional) - Same as Quote Builder */}
                       <FormField
                         control={form.control}
                         name="companyName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Company Name</FormLabel>
+                            <FormLabel>Company Name (Optional)</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="Company name"
-                                className="bg-gray-100 border-gray-300"
-                                readOnly
+                                placeholder="Company Name"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                                 {...field}
                               />
                             </FormControl>
@@ -1570,41 +1598,73 @@ export default function Home() {
                         )}
                       />
 
-                      {/* Revenue Band - Read Only for TaaS */}
-                      <FormField
-                        control={form.control}
-                        name="revenueBand"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Annual Revenue Band</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Revenue band"
-                                className="bg-gray-100 border-gray-300"
-                                readOnly
-                                value={field.value}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Industry - Read Only for TaaS */}
+                      {/* Industry - Same as Quote Builder */}
                       <FormField
                         control={form.control}
                         name="industry"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Industry</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="Industry"
-                                className="bg-gray-100 border-gray-300"
-                                readOnly
-                                value={field.value}
-                              />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select industry" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
+                                <SelectItem value="Professional Services">Professional Services</SelectItem>
+                                <SelectItem value="Consulting">Consulting</SelectItem>
+                                <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
+                                <SelectItem value="Real Estate">Real Estate</SelectItem>
+                                <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
+                                <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
+                                <SelectItem value="Financial Services">Financial Services</SelectItem>
+                                <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                                <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
+                                <SelectItem value="Food/Hospitality">Food/Hospitality</SelectItem>
+                                <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
+                                <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
+                                <SelectItem value="Beauty/Personal Care">Beauty/Personal Care</SelectItem>
+                                <SelectItem value="Education/Training">Education/Training</SelectItem>
+                                <SelectItem value="Non-Profit">Non-Profit</SelectItem>
+                                <SelectItem value="Photography/Media">Photography/Media</SelectItem>
+                                <SelectItem value="Agriculture">Agriculture</SelectItem>
+                                <SelectItem value="Interior Design">Interior Design</SelectItem>
+                                <SelectItem value="Law Firms">Law Firms</SelectItem>
+                                <SelectItem value="Auto/Automotive">Auto/Automotive</SelectItem>
+                                <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
+                                <SelectItem value="Cannabis/CBD">Cannabis/CBD</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Monthly Revenue Band - Same as Quote Builder */}
+                      <FormField
+                        control={form.control}
+                        name="revenueBand"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Monthly Revenue Band</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select revenue band" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="<$10K">&lt;$10K</SelectItem>
+                                <SelectItem value="10K-25K">$10K-$25K</SelectItem>
+                                <SelectItem value="25K-75K">$25K-$75K</SelectItem>
+                                <SelectItem value="75K-250K">$75K-$250K</SelectItem>
+                                <SelectItem value="250K-1M">$250K-$1M</SelectItem>
+                                <SelectItem value=">1M">&gt;$1M</SelectItem>
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
