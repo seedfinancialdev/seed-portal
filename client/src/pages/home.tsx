@@ -441,7 +441,8 @@ export default function Home() {
   };
 
   const resetForm = () => {
-    if (hasUnsavedChanges) {
+    // Always show confirmation dialog when there are changes or when editing a quote
+    if (hasUnsavedChanges || editingQuoteId !== null) {
       setResetConfirmDialog(true);
       return;
     }
@@ -451,8 +452,14 @@ export default function Home() {
 
   // Helper function to actually load a quote (used by both direct loading and after dialog confirmation)
   const doLoadQuote = (quote: Quote) => {
+    console.log('Loading quote into form:', quote);
     setEditingQuoteId(quote.id);
-    form.reset({
+    
+    // Set approval state before form reset
+    setIsApproved(quote.approvalRequired || false);
+    
+    // Reset form with quote data
+    const formData = {
       contactEmail: quote.contactEmail,
       revenueBand: quote.revenueBand,
       monthlyTransactions: quote.monthlyTransactions,
@@ -462,17 +469,24 @@ export default function Home() {
       cleanupOverride: quote.cleanupOverride || false,
       overrideReason: quote.overrideReason || "",
       companyName: quote.companyName || "",
-    });
+    };
+    
+    console.log('Resetting form with data:', formData);
+    form.reset(formData);
+    
+    // Use setTimeout to ensure form is reset before checking values
+    setTimeout(() => {
+      console.log('Form values after reset:', form.getValues());
+    }, 50);
     
     // Reset HubSpot verification state and re-verify if email exists
     setHubspotVerificationStatus('idle');
     setHubspotContact(null);
     setLastVerifiedEmail('');
-    setIsApproved(quote.approvalRequired || false);
     
     // Re-verify the email if it exists
     if (quote.contactEmail) {
-      setTimeout(() => verifyHubSpotEmail(quote.contactEmail), 100);
+      debouncedVerifyEmail(quote.contactEmail);
     }
     
     setHasUnsavedChanges(false);
@@ -768,7 +782,7 @@ export default function Home() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Monthly Transactions</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                               <SelectValue placeholder="Select transaction volume" />
@@ -795,7 +809,7 @@ export default function Home() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Monthly Revenue Band</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                               <SelectValue placeholder="Select revenue band" />
@@ -822,7 +836,7 @@ export default function Home() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Industry</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                               <SelectValue placeholder="Select industry" />
@@ -849,7 +863,7 @@ export default function Home() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Cleanup Complexity</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                               <SelectValue placeholder="Select complexity" />
@@ -955,7 +969,7 @@ export default function Home() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Reason</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                                 <SelectValue placeholder="Select reason for override" />
@@ -1443,7 +1457,10 @@ export default function Home() {
           <AlertDialogHeader>
             <AlertDialogTitle>Start New Quote</AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved changes. Are you sure you want to start a new quote? All current data will be lost.
+              {hasUnsavedChanges 
+                ? "You have unsaved changes. Are you sure you want to start a new quote? All current data will be lost."
+                : "Are you sure you want to start a new quote? This will clear all current data."
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
