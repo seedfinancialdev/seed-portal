@@ -233,6 +233,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send Slack notification with approval code including custom override reason
       try {
+        console.log('Sending Slack notification with data:', {
+          overrideReason: quoteData.overrideReason,
+          customOverrideReason: quoteData.customOverrideReason
+        });
+        
         await sendCleanupOverrideNotification({
           ...quoteData,
           approvalCode,

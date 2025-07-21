@@ -543,6 +543,7 @@ export default function Home() {
       cleanupComplexity: "",
       cleanupOverride: false,
       overrideReason: "",
+      customOverrideReason: "",
       companyName: "",
     });
     
@@ -589,6 +590,7 @@ export default function Home() {
           industry: formData.industry,
           cleanupMonths: formData.cleanupMonths,
           overrideReason: formData.overrideReason || "",
+          customOverrideReason: formData.customOverrideReason || "",
           monthlyFee: fees.monthlyFee,
           setupFee: fees.setupFee
         }
