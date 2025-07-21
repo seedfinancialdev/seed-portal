@@ -91,7 +91,12 @@ function roundToNearest25(num: number): number {
 }
 
 function calculateFees(data: Partial<FormData>) {
-  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined || !data.cleanupComplexity) {
+  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+  
+  // If cleanup months is 0, cleanup complexity is not required
+  if (data.cleanupMonths > 0 && !data.cleanupComplexity) {
     return { monthlyFee: 0, setupFee: 0 };
   }
 
