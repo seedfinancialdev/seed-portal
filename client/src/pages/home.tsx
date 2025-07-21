@@ -1546,8 +1546,7 @@ export default function Home() {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-white text-sm opacity-80">
-            Internal Tool • Seed Financial Sales Team • 
-            <span className="font-medium">≤30s quotes with ≥60% margins</span>
+            Internal Tool • Seed Financial Sales Team
           </p>
         </div>
       </div>
