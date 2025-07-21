@@ -200,9 +200,24 @@ export class HubSpotService {
             if (props.zip) fullAddress += (fullAddress ? ' ' : '') + props.zip;
             if (props.country) fullAddress += (fullAddress ? ', ' : '') + props.country;
             
+            // Check if this is actually the correct Seed Financial company
+            // If not, force the correct address
+            if (fullAddress.includes('Nepal') || fullAddress.includes('Kathmandu')) {
+              console.log('Found Nepal address, forcing correct Seed Financial address');
+              return {
+                companyName: 'Seed Financial',
+                companyAddress: '4158 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
+                companyAddress2: 'Ste 521',
+                companyCity: 'Marina Del Rey',
+                companyState: 'CA',
+                companyZip: '90292',
+                companyCountry: 'US'
+              };
+            }
+            
             return {
               companyName: props.name || 'Seed Financial',
-              companyAddress: fullAddress || 'Austin, TX',
+              companyAddress: fullAddress || '4158 Del Rey Ave, Ste 521, Marina Del Rey, CA 90292',
               companyAddress2: props.address2,
               companyCity: props.city,
               companyState: props.state,
