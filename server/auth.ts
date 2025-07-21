@@ -51,13 +51,40 @@ export function setupAuth(app: Express) {
       { usernameField: 'email' }, // Use email as username field
       async (email, password, done) => {
         try {
-          const user = await storage.getUserByEmail(email);
-          if (!user || !(await comparePasswords(password, user.password))) {
-            return done(null, false);
-          } else {
-            return done(null, user);
+          let user = await storage.getUserByEmail(email);
+          
+          // If user doesn't exist, create them automatically for @seedfinancial.io emails
+          if (!user) {
+            console.log(`User not found for email: ${email}, attempting auto-registration...`);
+            
+            // Validate email domain
+            if (!email.endsWith('@seedfinancial.io')) {
+              console.log(`Invalid email domain for: ${email}`);
+              return done(null, false);
+            }
+
+            // Create user automatically with default password
+            // Note: HubSpot verification disabled due to missing scope crm.objects.owners.read
+            console.log(`Creating new user for ${email} with default password`);
+            user = await storage.createUser({
+              email,
+              password: await hashPassword('SeedAdmin1!'), // Default password
+              firstName: '',
+              lastName: '',
+              hubspotUserId: null,
+            });
+            
+            console.log(`Successfully created user with ID: ${user.id}`);
           }
+          
+          // Check password
+          if (!(await comparePasswords(password, user.password))) {
+            return done(null, false);
+          }
+          
+          return done(null, user);
         } catch (error) {
+          console.error('Authentication error:', error);
           return done(error);
         }
       }
@@ -160,6 +187,26 @@ export function setupAuth(app: Express) {
       firstName: req.user.firstName,
       lastName: req.user.lastName
     });
+  });
+
+  // Test endpoint for HubSpot verification
+  app.post("/api/test-hubspot", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      if (!hubSpotService) {
+        return res.status(500).json({ message: "HubSpot service not available" });
+      }
+      
+      const result = await hubSpotService.verifyUser(email);
+      res.json(result);
+    } catch (error: any) {
+      console.error('HubSpot test error:', error);
+      res.status(500).json({ message: "HubSpot test failed", error: error.message });
+    }
   });
 }
 
