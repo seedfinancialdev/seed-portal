@@ -241,7 +241,6 @@ Services Include:
           hs_status: 'DRAFT',
           hs_expiration_date: expirationDate.toISOString().split('T')[0], // YYYY-MM-DD format
           hs_language: 'en',
-          hs_template: 'MODERN', // Use the Modern quote template
           hs_sender_company_name: 'Seed Financial',
           hs_sender_company_address: 'Austin, TX',
           hs_sender_firstname: firstName || 'Seed Financial',
