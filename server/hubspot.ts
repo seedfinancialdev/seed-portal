@@ -40,7 +40,16 @@ export class HubSpotService {
     });
 
     if (!response.ok) {
-      throw new Error(`HubSpot API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`HubSpot API error details:`, {
+        status: response.status,
+        statusText: response.statusText,
+        endpoint,
+        method: options.method || 'GET',
+        body: options.body,
+        errorResponse: errorText
+      });
+      throw new Error(`HubSpot API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     return response.json();
@@ -99,7 +108,7 @@ export class HubSpotService {
       const dealBody = {
         properties: {
           dealname: dealName,
-          dealstage: 'qualifiedtobuy',
+          dealstage: 'appointmentscheduled', // Using a more standard deal stage
           amount: totalAmount,
         },
         associations: [
@@ -110,16 +119,20 @@ export class HubSpotService {
         ]
       };
 
+      console.log('Creating deal with body:', JSON.stringify(dealBody, null, 2));
+
       const result = await this.makeRequest('/crm/v3/objects/deals', {
         method: 'POST',
         body: JSON.stringify(dealBody)
       });
       
+      console.log('Deal created successfully:', result.id);
+      
       return {
         id: result.id,
         properties: {
           dealname: result.properties?.dealname || dealName,
-          dealstage: result.properties?.dealstage || 'qualifiedtobuy',
+          dealstage: result.properties?.dealstage || 'appointmentscheduled',
           amount: result.properties?.amount || totalAmount
         }
       };
@@ -131,40 +144,37 @@ export class HubSpotService {
 
   async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<{ id: string; title: string } | null> {
     try {
-      // For simplicity, we'll create a basic deal note instead of a complex quote
-      // This ensures compatibility and reduces API complexity
-      const note = `Quote for ${companyName}:
-- Monthly Fee: $${monthlyFee.toLocaleString()}
-- Setup Fee: $${setupFee.toLocaleString()}
-- Total Annual Value: $${(monthlyFee * 12 + setupFee).toLocaleString()}
-- Generated: ${new Date().toLocaleDateString()}`;
-
-      const noteBody = {
-        properties: {
-          hs_note_body: note,
-          hs_attachment_ids: '',
-        },
-        associations: [
-          {
-            to: { id: dealId },
-            types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 214 }]
-          }
-        ]
-      };
-
-      const result = await this.makeRequest('/crm/v3/objects/notes', {
-        method: 'POST',
-        body: JSON.stringify(noteBody)
-      });
-
+      // Just update the deal with quote information - simpler and more reliable
+      console.log('Updating deal with quote information...');
+      await this.updateDealWithQuote(dealId, companyName, monthlyFee, setupFee);
+      
       return {
-        id: result.id,
+        id: `deal_${dealId}`,
         title: `${companyName} - Bookkeeping Quote`
       };
     } catch (error) {
-      console.error('Error creating quote note in HubSpot:', error);
+      console.error('Error updating deal with quote info:', error);
       return null;
     }
+  }
+
+  private async updateDealWithQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<void> {
+    const description = `Quote Details:
+Monthly Fee: $${monthlyFee.toLocaleString()}
+Setup Fee: $${setupFee.toLocaleString()}
+Total Annual Value: $${(monthlyFee * 12 + setupFee).toLocaleString()}
+Generated: ${new Date().toLocaleDateString()}`;
+
+    const updateBody = {
+      properties: {
+        description: description
+      }
+    };
+
+    await this.makeRequest(`/crm/v3/objects/deals/${dealId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updateBody)
+    });
   }
 
   async updateQuote(noteId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<boolean> {
