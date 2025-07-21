@@ -371,7 +371,11 @@ export default function Home() {
   // Update HubSpot quote mutation
   const updateHubSpotMutation = useMutation({
     mutationFn: async (quoteId: number) => {
-      const response = await apiRequest("POST", "/api/hubspot/update-quote", { quoteId });
+      const currentFormData = form.getValues();
+      const response = await apiRequest("POST", "/api/hubspot/update-quote", { 
+        quoteId, 
+        currentFormData 
+      });
       return response.json();
     },
     onSuccess: (data) => {

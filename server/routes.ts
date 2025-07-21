@@ -7,6 +7,70 @@ import { sendCleanupOverrideNotification } from "./slack";
 import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
 
+// Pricing calculation constants (copied from frontend)
+const baseMonthlyFee = 150;
+
+const revenueMultipliers = {
+  '<$10K': 1.0,
+  '10K-25K': 1.0,
+  '25K-75K': 2.2,
+  '75K-250K': 3.5,
+  '250K-1M': 5.0,
+  '1M+': 7.0
+};
+
+const txSurcharge = {
+  '<100': 0,
+  '100-300': 100,
+  '300-600': 500,
+  '600-1000': 800,
+  '1000-2000': 1200,
+  '2000+': 1600
+};
+
+const industryMultipliers = {
+  'Software/SaaS': { monthly: 1.0, cleanup: 1.0 },
+  'Professional Services': { monthly: 1.0, cleanup: 1.1 },
+  'Real Estate': { monthly: 1.25, cleanup: 1.05 },
+  'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
+  'Construction/Trades': { monthly: 1.5, cleanup: 1.08 },
+  'Multi-entity/Holding Companies': { monthly: 1.35, cleanup: 1.25 }
+};
+
+function roundToNearest25(num: number): number {
+  return Math.ceil(num / 25) * 25;
+}
+
+function calculateQuoteFees(data: any) {
+  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+  
+  // If cleanup months is 0, cleanup complexity is not required
+  if (data.cleanupMonths > 0 && !data.cleanupComplexity) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+
+  const revenueMultiplier = revenueMultipliers[data.revenueBand as keyof typeof revenueMultipliers] || 1.0;
+  const txFee = txSurcharge[data.monthlyTransactions as keyof typeof txSurcharge] || 0;
+  const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
+  
+  // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
+  const monthlyFee = Math.round((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  
+  // Use the actual cleanup months value (override just allows values below normal minimum)
+  const effectiveCleanupMonths = data.cleanupMonths;
+  
+  // If no cleanup months, setup fee is $0, but monthly fee remains normal
+  let setupFee = 0;
+  if (effectiveCleanupMonths > 0) {
+    const cleanupMultiplier = parseFloat(data.cleanupComplexity || "0.75") * industryData.cleanup;
+    setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
+  }
+  
+  return { monthlyFee, setupFee };
+}
+
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -312,7 +376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update existing HubSpot quote
   app.post("/api/hubspot/update-quote", async (req, res) => {
     try {
-      const { quoteId } = req.body;
+      const { quoteId, currentFormData } = req.body;
       
       if (!quoteId) {
         res.status(400).json({ message: "Quote ID is required" });
@@ -332,13 +396,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const companyName = quote.companyName || 'Unknown Company';
+      
+      // If current form data is provided, recalculate fees based on current values
+      let monthlyFee = parseFloat(quote.monthlyFee);
+      let setupFee = parseFloat(quote.setupFee);
+      
+      if (currentFormData) {
+        // Recalculate fees using current form data (same logic as in pricing calculation)
+        const fees = calculateQuoteFees(currentFormData);
+        monthlyFee = fees.monthlyFee;
+        setupFee = fees.setupFee;
+        console.log(`Recalculated fees for update - Monthly: $${monthlyFee}, Setup: $${setupFee}`);
+      }
 
       // Update quote in HubSpot
       const success = await hubSpotService.updateQuote(
         quote.hubspotQuoteId,
         companyName,
-        parseFloat(quote.monthlyFee),
-        parseFloat(quote.setupFee)
+        monthlyFee,
+        setupFee
       );
 
       if (success) {
