@@ -71,6 +71,20 @@ export class HubSpotService {
     }
   }
 
+  async getOwnerByEmail(email: string): Promise<string | null> {
+    try {
+      const result = await this.makeRequest('/crm/v3/owners', {
+        method: 'GET'
+      });
+      
+      const owner = result.results?.find((owner: any) => owner.email === email);
+      return owner?.id || null;
+    } catch (error) {
+      console.error('Error fetching HubSpot owner:', error);
+      return null;
+    }
+  }
+
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
@@ -142,7 +156,7 @@ export class HubSpotService {
     }
   }
 
-  async createDeal(contactId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<HubSpotDeal | null> {
+  async createDeal(contactId: string, companyName: string, monthlyFee: number, setupFee: number, ownerId?: string): Promise<HubSpotDeal | null> {
     try {
       const dealName = `${companyName} - Bookkeeping`;
       const totalAmount = (monthlyFee * 12 + setupFee).toString();
@@ -155,6 +169,7 @@ export class HubSpotService {
           amount: totalAmount,
           pipeline: '761069086', // Seed Sales Pipeline ID
           dealtype: 'newbusiness', // Deal Type: New Business
+          ...(ownerId && { hubspot_owner_id: ownerId }), // Set deal owner
         },
         associations: [
           {
@@ -187,7 +202,7 @@ export class HubSpotService {
     }
   }
 
-  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<{ id: string; title: string } | null> {
+  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string): Promise<{ id: string; title: string } | null> {
     try {
       // Create a proper HubSpot quote using the quotes API
       console.log('Creating HubSpot quote...');
@@ -226,11 +241,12 @@ Services Include:
           hs_status: 'DRAFT',
           hs_expiration_date: expirationDate.toISOString().split('T')[0], // YYYY-MM-DD format
           hs_language: 'en',
+          hs_template: 'Default Modern Quote Template', // Use the specified template
           hs_sender_company_name: 'Seed Financial',
           hs_sender_company_address: 'Austin, TX',
-          hs_sender_firstname: 'Seed Financial',
-          hs_sender_lastname: 'Team',
-          hs_sender_email: 'hello@seedfinancial.io',
+          hs_sender_firstname: firstName || 'Seed Financial',
+          hs_sender_lastname: lastName || 'Team',
+          hs_sender_email: userEmail,
           hs_esign_enabled: true,
           hs_payment_enabled: false, // Disable for now, can be enabled manually in HubSpot
         },
@@ -251,8 +267,8 @@ Services Include:
 
       console.log('Quote created successfully:', result.id);
       
-      // Add line items to the quote
-      await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
+      // Note: Line items creation commented out due to API permission requirements
+      // await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
 
       return {
         id: result.id,

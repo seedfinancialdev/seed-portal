@@ -53,7 +53,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get quotes by specific email (filtered by owner)
         const quotes = await storage.getQuotesByEmail(email);
         // Filter by owner
-        const userQuotes = quotes.filter(quote => quote.ownerId === req.user.id);
+        const userQuotes = quotes.filter(quote => quote.ownerId === req.user!.id);
         res.json(userQuotes);
       } else {
         // Get all quotes for the authenticated user
@@ -226,6 +226,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      if (!req.user) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
       if (!hubSpotService) {
         res.status(400).json({ message: "HubSpot integration not configured" });
         return;
@@ -248,12 +253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contact = contactResult.contact;
       const companyName = contact.properties.company || quote.companyName || 'Unknown Company';
 
+      // Get the HubSpot owner ID for the user
+      const ownerId = await hubSpotService.getOwnerByEmail(req.user!.email);
+
       // Create deal in HubSpot
       const deal = await hubSpotService.createDeal(
         contact.id,
         companyName,
         parseFloat(quote.monthlyFee),
-        parseFloat(quote.setupFee)
+        parseFloat(quote.setupFee),
+        ownerId || undefined
       );
 
       if (!deal) {
@@ -266,7 +275,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deal.id,
         companyName,
         parseFloat(quote.monthlyFee),
-        parseFloat(quote.setupFee)
+        parseFloat(quote.setupFee),
+        req.user!.email,
+        req.user!.firstName || '',
+        req.user!.lastName || ''
       );
 
       if (!hubspotQuote) {
