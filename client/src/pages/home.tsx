@@ -956,6 +956,51 @@ export default function Home() {
                     </Alert>
                   )}
 
+                  {/* Industry */}
+                  <FormField
+                    control={form.control}
+                    name="industry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Industry</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                              <SelectValue placeholder="Select industry" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
+                            <SelectItem value="Professional Services">Professional Services</SelectItem>
+                            <SelectItem value="Consulting">Consulting</SelectItem>
+                            <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
+                            <SelectItem value="Real Estate">Real Estate</SelectItem>
+                            <SelectItem value="Property Management">Property Management</SelectItem>
+                            <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
+                            <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
+                            <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
+                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                            <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
+                            <SelectItem value="Nonprofit">Nonprofit</SelectItem>
+                            <SelectItem value="Law Firm">Law Firm</SelectItem>
+                            <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
+                            <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
+                            <SelectItem value="Insurance">Insurance</SelectItem>
+                            <SelectItem value="Automotive">Automotive</SelectItem>
+                            <SelectItem value="Education">Education</SelectItem>
+                            <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
+                            <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
+                            <SelectItem value="Agriculture">Agriculture</SelectItem>
+                            <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
+                            <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Revenue Band */}
                   <FormField
                     control={form.control}
@@ -1003,51 +1048,6 @@ export default function Home() {
                             <SelectItem value="600-1000">600 - 1,000</SelectItem>
                             <SelectItem value="1000-2000">1,000 - 2,000</SelectItem>
                             <SelectItem value="2000+">2,000+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Industry */}
-                  <FormField
-                    control={form.control}
-                    name="industry"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Industry</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                              <SelectValue placeholder="Select industry" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
-                            <SelectItem value="Professional Services">Professional Services</SelectItem>
-                            <SelectItem value="Consulting">Consulting</SelectItem>
-                            <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
-                            <SelectItem value="Real Estate">Real Estate</SelectItem>
-                            <SelectItem value="Property Management">Property Management</SelectItem>
-                            <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
-                            <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
-                            <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
-                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
-                            <SelectItem value="Nonprofit">Nonprofit</SelectItem>
-                            <SelectItem value="Law Firm">Law Firm</SelectItem>
-                            <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
-                            <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
-                            <SelectItem value="Insurance">Insurance</SelectItem>
-                            <SelectItem value="Automotive">Automotive</SelectItem>
-                            <SelectItem value="Education">Education</SelectItem>
-                            <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
-                            <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
-                            <SelectItem value="Agriculture">Agriculture</SelectItem>
-                            <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
-                            <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
