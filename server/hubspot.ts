@@ -29,6 +29,38 @@ export class HubSpotService {
     this.accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
   }
 
+  // Check if a user exists in HubSpot by email (contacts or owners)
+  async verifyUserByEmail(email: string): Promise<boolean> {
+    try {
+      // Check contacts first
+      const contactExists = await this.verifyContactByEmail(email);
+      if (contactExists.verified) {
+        return true;
+      }
+
+      // Try to check HubSpot users (employees) via the owners API
+      // Note: This requires the crm.objects.owners.read scope
+      try {
+        const ownersResponse = await this.makeRequest('/crm/v3/owners');
+        if (ownersResponse && ownersResponse.results) {
+          const userExists = ownersResponse.results.some((owner: any) => 
+            owner.email && owner.email.toLowerCase() === email.toLowerCase()
+          );
+          if (userExists) {
+            return true;
+          }
+        }
+      } catch (ownerError) {
+        console.log('Owners API not accessible (missing scope), checking contacts only');
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error verifying user in HubSpot:', error);
+      return false;
+    }
+  }
+
   // Get pipeline information to find the correct pipeline and stage IDs
   async getPipelines(): Promise<any> {
     try {

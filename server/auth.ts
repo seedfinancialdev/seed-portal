@@ -6,7 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
-import { hubSpotService } from "./hubspot";
+import { HubSpotService } from "./hubspot";
 
 declare global {
   namespace Express {
@@ -30,6 +30,14 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // Initialize HubSpot service for user verification
+  let hubSpotService: HubSpotService | null = null;
+  try {
+    hubSpotService = new HubSpotService();
+  } catch (error) {
+    console.warn('HubSpot service not available for user verification:', error);
+  }
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || 'seed-financial-quote-calculator',
     resave: false,
@@ -53,7 +61,7 @@ export function setupAuth(app: Express) {
         try {
           let user = await storage.getUserByEmail(email);
           
-          // If user doesn't exist, create them automatically for @seedfinancial.io emails
+          // If user doesn't exist, create them automatically for verified @seedfinancial.io emails
           if (!user) {
             console.log(`User not found for email: ${email}, attempting auto-registration...`);
             
@@ -63,8 +71,34 @@ export function setupAuth(app: Express) {
               return done(null, false);
             }
 
+            // Pre-approved emails (admin override until HubSpot verification is fully configured)
+            const preApprovedEmails = [
+              'josh@seedfinancial.io',
+              'jon@seedfinancial.io'
+            ];
+            
+            const isPreApproved = preApprovedEmails.includes(email.toLowerCase());
+            
+            // Verify user exists in HubSpot or is pre-approved
+            if (hubSpotService && !isPreApproved) {
+              try {
+                const hubSpotUserExists = await hubSpotService.verifyUserByEmail(email);
+                if (!hubSpotUserExists) {
+                  console.log(`Email ${email} not found in HubSpot - access denied`);
+                  return done(null, false);
+                }
+                console.log(`Email ${email} verified in HubSpot`);
+              } catch (error) {
+                console.error(`HubSpot verification failed for ${email}:`, error);
+                return done(null, false);
+              }
+            } else if (isPreApproved) {
+              console.log(`Email ${email} is pre-approved`);
+            } else {
+              console.log(`Warning: HubSpot verification not available, allowing ${email}`);
+            }
+
             // Create user automatically with default password
-            // Note: HubSpot verification disabled due to missing scope crm.objects.owners.read
             console.log(`Creating new user for ${email} with default password`);
             user = await storage.createUser({
               email,
@@ -75,6 +109,29 @@ export function setupAuth(app: Express) {
             });
             
             console.log(`Successfully created user with ID: ${user.id}`);
+          } else {
+            // For existing users, also verify they still exist in HubSpot (unless pre-approved)
+            const preApprovedEmails = [
+              'josh@seedfinancial.io',
+              'jon@seedfinancial.io'
+            ];
+            
+            const isPreApproved = preApprovedEmails.includes(email.toLowerCase());
+            
+            if (hubSpotService && !isPreApproved) {
+              try {
+                const hubSpotUserExists = await hubSpotService.verifyUserByEmail(email);
+                if (!hubSpotUserExists) {
+                  console.log(`Existing user ${email} no longer found in HubSpot - access denied`);
+                  return done(null, false);
+                }
+              } catch (error) {
+                console.error(`HubSpot verification failed for existing user ${email}:`, error);
+                return done(null, false);
+              }
+            } else if (isPreApproved) {
+              console.log(`Existing user ${email} is pre-approved`);
+            }
           }
           
           // Check password

@@ -74,7 +74,7 @@ export default function AuthPage() {
                         <Input 
                           {...field} 
                           type="email" 
-                          placeholder="your.name@seedfinancial.io"
+                          placeholder="name@seedfinancial.io"
                           disabled={loginMutation.isPending}
                           className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                         />

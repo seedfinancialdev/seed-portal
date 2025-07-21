@@ -20,6 +20,9 @@ Preferred communication style: Simple, everyday language.
   - Clean authentication UI with Seed Financial branding
   - User menu with logout functionality in application header
   - Simplified auth page removing registration option as requested
+  - HubSpot user verification: Only emails existing in HubSpot contacts/owners can access
+  - Pre-approved email list for immediate access to key users
+  - Updated placeholder text to "name@seedfinancial.io" for clarity
 
 ✓ **HubSpot Integration Successfully Implemented** (July 21, 2025)
   - Added complete HubSpot CRM integration with contact verification
