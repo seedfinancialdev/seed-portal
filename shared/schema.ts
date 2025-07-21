@@ -12,6 +12,7 @@ export const quotes = pgTable("quotes", {
   cleanupComplexity: decimal("cleanup_complexity", { precision: 3, scale: 2 }).notNull(),
   cleanupOverride: boolean("cleanup_override").default(false).notNull(),
   overrideReason: text("override_reason"),
+  approvalRequired: boolean("approval_required").default(false).notNull(),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).notNull(),
   archived: boolean("archived").default(false).notNull(),

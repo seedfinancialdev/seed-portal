@@ -10,6 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Approval Code Tracking Added** (July 21, 2025)
+  - Added 'approvalRequired' database column to track quotes that used approved overrides
+  - Visual indicators in quotes table: "Approved" (orange badge), "Override" (gray badge), "Standard" (gray text)
+  - Enables auditing and tracking of override patterns for business analysis
+
+✓ **Complete Approval Code System Implemented** (July 21, 2025)
+  - Built 4-digit approval code generation and validation system
+  - Request Approval button triggers Slack notification with unique code
+  - Approval code popup dialog for secure code entry
+  - Cleanup months field locked until valid approval code entered
+  - Codes expire after 1 hour and are single-use for security
+
 ✓ **Archive Functionality Implemented** (July 20, 2025)
   - Added archive button to saved quotes with confirmation dialog
   - Archives preserve all data for auditing (never deleted from database)
