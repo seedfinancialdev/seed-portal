@@ -528,28 +528,43 @@ Generated: ${new Date().toLocaleDateString()}`;
     });
   }
 
-  async updateQuote(noteId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<boolean> {
+  async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<boolean> {
     try {
-      const note = `Quote for ${companyName} (Updated):
-- Monthly Fee: $${monthlyFee.toLocaleString()}
-- Setup Fee: $${setupFee.toLocaleString()}
-- Total Annual Value: $${(monthlyFee * 12 + setupFee).toLocaleString()}
-- Updated: ${new Date().toLocaleDateString()}`;
+      // First check if the quote still exists and is in a valid state
+      const quoteCheck = await this.makeRequest(`/crm/v3/objects/quotes/${quoteId}`, {
+        method: 'GET'
+      });
 
+      if (!quoteCheck || quoteCheck.properties?.hs_status === 'EXPIRED') {
+        console.log(`Quote ${quoteId} is expired or not found`);
+        return false;
+      }
+
+      // Update the quote title with new pricing information
+      const updatedTitle = `${companyName} - Bookkeeping Services Quote (Updated ${new Date().toLocaleDateString()})`;
+      
       const updateBody = {
         properties: {
-          hs_note_body: note
+          hs_title: updatedTitle
         }
       };
 
-      await this.makeRequest(`/crm/v3/objects/notes/${noteId}`, {
+      await this.makeRequest(`/crm/v3/objects/quotes/${quoteId}`, {
         method: 'PATCH',
         body: JSON.stringify(updateBody)
       });
 
+      console.log(`Quote ${quoteId} updated successfully`);
       return true;
-    } catch (error) {
-      console.error('Error updating quote note in HubSpot:', error);
+    } catch (error: any) {
+      console.error('Error updating quote in HubSpot:', error);
+      
+      // If quote is not found or expired, return false to trigger new quote creation
+      if (error.message?.includes('404') || error.message?.includes('not found')) {
+        console.log(`Quote ${quoteId} not found or expired, will need to create new quote`);
+        return false;
+      }
+      
       return false;
     }
   }

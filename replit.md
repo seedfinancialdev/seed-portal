@@ -41,6 +41,25 @@ Preferred communication style: Simple, everyday language.
   - Address override system to ensure correct Seed Financial address displays in quotes
   - Successfully tested with live HubSpot API integration
 
+✓ **Quote Recall Functionality Fully Fixed** (July 21, 2025)
+  - Fixed React Hook Form Select components using `value` instead of `defaultValue`
+  - Resolved data type mismatch between database decimals and form options
+  - All fields now populate correctly when loading saved quotes
+  - HubSpot verification re-runs properly on quote load
+  - Added debug logging for troubleshooting form state
+
+✓ **HubSpot Quote Update Issue Fixed** (July 21, 2025)
+  - Fixed updateQuote method incorrectly targeting notes API instead of quotes API
+  - Added proper quote existence and status checking before updates
+  - Improved error handling for expired or non-existent quotes
+  - Quote updates now target correct HubSpot quote objects
+
+✓ **Reset Confirmation Dialog Enhanced** (July 21, 2025)
+  - Shows proper "unsaved changes" warning message
+  - Triggers confirmation for both new forms and edited quotes
+  - Different messages based on actual form state
+  - Replaces browser confirm() with custom AlertDialog
+
 ✓ **Archive Dialog Issue Fixed** (July 21, 2025)
   - Replaced browser confirm() dialog with custom AlertDialog component
   - Added "Don't show this dialog again" checkbox with localStorage persistence
