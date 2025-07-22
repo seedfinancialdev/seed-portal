@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -1824,7 +1824,124 @@ export default function Home() {
             </Card>
           )}
 
-          {/* Results Card */}
+          {/* Service Selection Cards - Now at the top */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            {/* Bookkeeping Service Card */}
+            <div 
+              className={`
+                cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
+                ${feeCalculation.includesBookkeeping 
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
+                  : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
+                }
+              `}
+              onClick={() => {
+                const newValue = !feeCalculation.includesBookkeeping;
+                form.setValue('includesBookkeeping', newValue);
+                form.trigger();
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
+                  }`}>
+                    {feeCalculation.includesBookkeeping && <Check className="h-4 w-4 text-white" />}
+                  </div>
+                  <h4 className={`font-semibold ${
+                    feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-600'
+                  }`}>
+                    Bookkeeping
+                  </h4>
+                </div>
+              </div>
+              <div className={`text-2xl font-bold mb-1 ${
+                feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
+              </div>
+              <div className={`text-sm font-medium mb-2 ${
+                feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
+              </div>
+              <p className={`text-xs ${
+                feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
+              }`}>
+                Monthly bookkeeping, cleanup, and financial management
+              </p>
+            </div>
+
+            {/* TaaS Service Card */}
+            <div 
+              className={`
+                cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
+                ${feeCalculation.includesTaas 
+                  ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
+                  : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                }
+              `}
+              onClick={() => {
+                const newValue = !feeCalculation.includesTaas;
+                form.setValue('includesTaas', newValue);
+                setShowTaaSCard(newValue);
+                form.trigger();
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
+                  }`}>
+                    {feeCalculation.includesTaas && <Check className="h-4 w-4 text-white" />}
+                  </div>
+                  <h4 className={`font-semibold ${
+                    feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-600'
+                  }`}>
+                    TaaS
+                  </h4>
+                </div>
+              </div>
+              <div className={`text-2xl font-bold mb-1 ${
+                feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
+              </div>
+              <div className={`text-sm font-medium mb-2 ${
+                feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} prior years
+              </div>
+              <p className={`text-xs ${
+                feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
+              }`}>
+                Tax preparation, filing, and compliance services
+              </p>
+            </div>
+
+            {/* Other Services Card - Coming Soon */}
+            <div className="cursor-not-allowed rounded-xl p-6 border-2 border-dashed border-gray-300 shadow-sm bg-gray-50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
+                    <Plus className="h-4 w-4 text-gray-500" />
+                  </div>
+                  <h4 className="font-semibold text-gray-500">Other Services</h4>
+                </div>
+              </div>
+              <div className="text-2xl font-bold mb-1 text-gray-400">
+                Coming Soon
+              </div>
+              <div className="text-sm font-medium mb-2 text-gray-400">
+                Additional services
+              </div>
+              <p className="text-xs text-gray-500">
+                Payroll, FBAR filing, APAP Lite, and more
+              </p>
+            </div>
+          </div>
+
+          {/* Pricing Summary Card */}
           <Card className="bg-white shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
@@ -1840,148 +1957,6 @@ export default function Home() {
               </div>
               
               <div className="space-y-4">
-                {/* Service Selection Cards */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Services</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    
-                    {/* Bookkeeping Service Card */}
-                    <div 
-                      className={`
-                        cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
-                        ${feeCalculation.includesBookkeeping 
-                          ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
-                          : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
-                        }
-                      `}
-                      onClick={() => {
-                        const newValue = !feeCalculation.includesBookkeeping;
-                        form.setValue('includesBookkeeping', newValue);
-                        // Force recalculation
-                        form.trigger();
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
-                          }`}>
-                            {feeCalculation.includesBookkeeping && <Check className="h-4 w-4 text-white" />}
-                          </div>
-                          <h4 className={`font-semibold ${
-                            feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-600'
-                          }`}>
-                            Bookkeeping Services
-                          </h4>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className={`h-8 px-3 text-xs shadow-sm ${
-                            feeCalculation.includesBookkeeping 
-                              ? 'bg-green-600 text-white border-green-600 hover:bg-green-700' 
-                              : 'bg-gray-400 text-white border-gray-400'
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (feeCalculation.includesBookkeeping) {
-                              copyToClipboard(feeCalculation.bookkeeping.monthlyFee.toLocaleString(), 'bookkeeping');
-                            }
-                          }}
-                          disabled={!feeCalculation.includesBookkeeping}
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </Button>
-                      </div>
-                      <div className={`text-3xl font-bold mb-2 ${
-                        feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
-                      }`}>
-                        ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
-                      </div>
-                      <div className={`text-xl font-semibold mb-2 ${
-                        feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
-                      }`}>
-                        ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
-                      </div>
-                      <p className={`text-sm ${
-                        feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
-                      }`}>
-                        Monthly bookkeeping, cleanup, and financial management
-                      </p>
-                    </div>
-
-                    {/* TaaS Service Card */}
-                    <div 
-                      className={`
-                        cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
-                        ${feeCalculation.includesTaas 
-                          ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
-                          : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
-                        }
-                      `}
-                      onClick={() => {
-                        const newValue = !feeCalculation.includesTaas;
-                        form.setValue('includesTaas', newValue);
-                        setShowTaaSCard(newValue);
-                        // Force recalculation
-                        form.trigger();
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                            feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
-                          }`}>
-                            {feeCalculation.includesTaas && <Check className="h-4 w-4 text-white" />}
-                          </div>
-                          <h4 className={`font-semibold ${
-                            feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-600'
-                          }`}>
-                            Tax as a Service (TaaS)
-                          </h4>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className={`h-8 px-3 text-xs shadow-sm ${
-                            feeCalculation.includesTaas 
-                              ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' 
-                              : 'bg-gray-400 text-white border-gray-400'
-                          }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (feeCalculation.includesTaas) {
-                              copyToClipboard(feeCalculation.taas.monthlyFee.toLocaleString(), 'taas');
-                            }
-                          }}
-                          disabled={!feeCalculation.includesTaas}
-                        >
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </Button>
-                      </div>
-                      <div className={`text-3xl font-bold mb-2 ${
-                        feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
-                      }`}>
-                        ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
-                      </div>
-                      <div className={`text-xl font-semibold mb-2 ${
-                        feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
-                      }`}>
-                        ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} prior years
-                      </div>
-                      <p className={`text-sm ${
-                        feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
-                      }`}>
-                        Tax preparation, filing, and compliance services
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Combined Total Card */}
                 {(feeCalculation.includesBookkeeping && feeCalculation.includesTaas) && (
                   <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl p-6 shadow-sm">
@@ -2018,7 +1993,19 @@ export default function Home() {
                 {/* Single Service Total */}
                 {(feeCalculation.includesBookkeeping && !feeCalculation.includesTaas) && (
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 shadow-sm">
-                    <h4 className="font-semibold text-green-800 mb-3">Bookkeeping Package Total</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-green-800">Bookkeeping Package Total</h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 shadow-sm"
+                        onClick={() => copyToClipboard(feeCalculation.bookkeeping.monthlyFee.toLocaleString(), 'bookkeeping')}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
                     <div className="text-3xl font-bold text-green-800 mb-2">
                       ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()} / mo
                     </div>
@@ -2030,13 +2017,36 @@ export default function Home() {
 
                 {(!feeCalculation.includesBookkeeping && feeCalculation.includesTaas) && (
                   <div className="bg-gradient-to-br from-blue-50 to-sky-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm">
-                    <h4 className="font-semibold text-blue-800 mb-3">TaaS Package Total</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-blue-800">TaaS Package Total</h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 text-xs bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm"
+                        onClick={() => copyToClipboard(feeCalculation.taas.monthlyFee.toLocaleString(), 'taas')}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
                     <div className="text-3xl font-bold text-blue-800 mb-2">
                       ${feeCalculation.taas.monthlyFee.toLocaleString()} / mo
                     </div>
                     <div className="text-xl font-semibold text-blue-700">
                       ${feeCalculation.taas.setupFee.toLocaleString()} prior years fee
                     </div>
+                  </div>
+                )}
+
+                {/* No Services Selected */}
+                {(!feeCalculation.includesBookkeeping && !feeCalculation.includesTaas) && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                    <div className="text-gray-500 mb-2">
+                      <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    </div>
+                    <h4 className="font-semibold text-gray-600 mb-1">No Services Selected</h4>
+                    <p className="text-sm text-gray-500">Click on the service cards above to start building your quote</p>
                   </div>
                 )}
 
