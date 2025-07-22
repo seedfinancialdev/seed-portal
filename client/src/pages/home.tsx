@@ -2028,10 +2028,12 @@ export default function Home() {
                                         <span>+${feeCalculation.bookkeeping.breakdown.txFee.toLocaleString()}</span>
                                       </div>
                                     )}
-                                    <div className="flex justify-between pl-4 text-xs text-green-600">
-                                      <span>Industry Multiplier ({feeCalculation.bookkeeping.breakdown.industryMultiplier.toFixed(1)}x):</span>
-                                      <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
-                                    </div>
+                                    {feeCalculation.bookkeeping.breakdown.industryMultiplier !== 1 && (
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>Industry Multiplier ({feeCalculation.bookkeeping.breakdown.industryMultiplier.toFixed(1)}x):</span>
+                                        <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
+                                      </div>
+                                    )}
                                   </>
                                 )}
                               </div>
@@ -2048,25 +2050,11 @@ export default function Home() {
                                         <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
                                       </div>
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>Complexity Multiplier ({feeCalculation.bookkeeping.breakdown.cleanupComplexity.toFixed(0)}%):</span>
-                                        <span>{(feeCalculation.bookkeeping.breakdown.cleanupComplexity / 100).toFixed(2)}x</span>
-                                      </div>
-                                      <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>× Months ({feeCalculation.bookkeeping.breakdown.cleanupMonths}):</span>
-                                        <span>${(feeCalculation.bookkeeping.breakdown.cleanupBeforeIndustry || feeCalculation.bookkeeping.breakdown.setupCalc).toLocaleString()}</span>
-                                      </div>
-                                      {feeCalculation.bookkeeping.breakdown.industryCleanupMultiplier !== 1 && (
-                                        <div className="flex justify-between pl-4 text-xs text-green-600">
-                                          <span>Industry Cleanup Multiplier ({feeCalculation.bookkeeping.breakdown.industryCleanupMultiplier.toFixed(1)}x):</span>
-                                          <span>${feeCalculation.bookkeeping.breakdown.setupCalc.toLocaleString()}</span>
-                                        </div>
-                                      )}
-                                      <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>Minimum Fee (Monthly):</span>
-                                        <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
+                                        <span>Complexity ({feeCalculation.bookkeeping.breakdown.cleanupComplexity.toFixed(0)}%) × {feeCalculation.bookkeeping.breakdown.cleanupMonths} months:</span>
+                                        <span>${feeCalculation.bookkeeping.breakdown.setupCalc.toLocaleString()}</span>
                                       </div>
                                       <div className="flex justify-between pl-4 text-xs text-green-600 font-medium border-t border-green-300 pt-1">
-                                        <span>Final (Max of above):</span>
+                                        <span>Final (Max of calculated vs monthly):</span>
                                         <span>${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
                                       </div>
                                     </>
