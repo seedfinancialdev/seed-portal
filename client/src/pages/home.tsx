@@ -1100,7 +1100,7 @@ export default function Home() {
 
         {/* Service Selection Cards - Optimized for desktop */}
         <div className="max-w-4xl mx-auto mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             {/* Bookkeeping Service Card */}
             <div 
               className={`
@@ -1232,7 +1232,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Quote Builder Form Card */}
           <Card className="bg-gray-50 shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
