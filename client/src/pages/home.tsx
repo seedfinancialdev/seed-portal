@@ -1399,6 +1399,7 @@ export default function Home() {
                             <SelectItem value="Property Management">Property Management</SelectItem>
                             <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
                             <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
+                            <SelectItem value="Hospitality">Hospitality</SelectItem>
                             <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
                             <SelectItem value="Manufacturing">Manufacturing</SelectItem>
                             <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
@@ -1920,16 +1921,7 @@ export default function Home() {
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-green-800">Bookkeeping Package Total</h4>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-3 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 shadow-sm"
-                        onClick={() => copyToClipboard(feeCalculation.bookkeeping.monthlyFee.toLocaleString(), 'bookkeeping')}
-                      >
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy
-                      </Button>
+
                     </div>
                     <div className="text-2xl font-bold text-green-800 mb-1">
                       ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()} / mo
@@ -1947,16 +1939,7 @@ export default function Home() {
                   <div className="bg-gradient-to-br from-blue-50 to-sky-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-blue-800">TaaS Package Total</h4>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-3 text-xs bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm"
-                        onClick={() => copyToClipboard(feeCalculation.taas.monthlyFee.toLocaleString(), 'taas')}
-                      >
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy
-                      </Button>
+
                     </div>
                     <div className="text-3xl font-bold text-blue-800 mb-2">
                       ${feeCalculation.taas.monthlyFee.toLocaleString()} / mo
