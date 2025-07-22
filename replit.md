@@ -87,11 +87,11 @@ Preferred communication style: Simple, everyday language.
   - Fixed TaaS-only quote validation by providing defaults for bookkeeping-required fields
 
 ✓ **Final Housekeeping Updates Completed** (July 22, 2025)
-  - Added Hospitality industry with same modifiers as Restaurant/Food Service (1.6x monthly, 1.4x cleanup)
+  - Added Hospitality industry to dropdown with same modifiers as Restaurant/Food Service (1.6x monthly, 1.4x cleanup)
   - Increased Seed Package discount from 10% to 15% for existing bookkeeping clients
   - Updated service card descriptions: Bookkeeping "Monthly bookkeeping, cleanup, and financial statements"; TaaS "Tax preparation, filing and planning services"; Other Services "Payroll, FP&A Lite, AP/AR Lite, and more"
   - Made Reset button always visible for better user experience
-  - Removed copy buttons to simplify interface
+  - Completely removed all copy buttons to simplify interface
 
 ✓ **Complete Approval Code System Implemented** (July 21, 2025)
   - Built 4-digit approval code generation and validation system
