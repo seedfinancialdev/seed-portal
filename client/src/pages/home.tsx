@@ -1451,7 +1451,7 @@ export default function Home() {
                   />
 
                   {/* Bookkeeping Service Details Section */}
-                  {(currentFormView === 'bookkeeping' || (currentFormView === 'combined' && form.watch('includesBookkeeping') !== false)) && (
+                  {currentFormView === 'bookkeeping' && (
                   <div className="space-y-6 border-t pt-6">
                     <h3 className="text-lg font-semibold text-gray-800">Bookkeeping Service Details</h3>
                     
