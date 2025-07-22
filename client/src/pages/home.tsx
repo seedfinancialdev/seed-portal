@@ -199,32 +199,83 @@ function roundToNearest25(num: number): number {
 
 function calculateFees(data: Partial<FormData>) {
   if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
-    return { monthlyFee: 0, setupFee: 0 };
+    return { 
+      monthlyFee: 0, 
+      setupFee: 0,
+      breakdown: {
+        baseFee: 0,
+        revenueMultiplier: 1,
+        afterRevenue: 0,
+        txFee: 0,
+        afterTx: 0,
+        industryMultiplier: 1,
+        finalMonthly: 0,
+        cleanupComplexity: 0,
+        cleanupMonths: 0,
+        setupCalc: 0
+      }
+    };
   }
   
   // If cleanup months is 0, cleanup complexity is not required
   if (data.cleanupMonths > 0 && !data.cleanupComplexity) {
-    return { monthlyFee: 0, setupFee: 0 };
+    return { 
+      monthlyFee: 0, 
+      setupFee: 0,
+      breakdown: {
+        baseFee: 0,
+        revenueMultiplier: 1,
+        afterRevenue: 0,
+        txFee: 0,
+        afterTx: 0,
+        industryMultiplier: 1,
+        finalMonthly: 0,
+        cleanupComplexity: 0,
+        cleanupMonths: 0,
+        setupCalc: 0
+      }
+    };
   }
 
   const revenueMultiplier = revenueMultipliers[data.revenueBand as keyof typeof revenueMultipliers] || 1.0;
   const txFee = txSurcharge[data.monthlyTransactions as keyof typeof txSurcharge] || 0;
   const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
   
-  // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
-  const monthlyFee = Math.round((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  // Step-by-step calculation for breakdown
+  const afterRevenue = baseMonthlyFee * revenueMultiplier;
+  const afterTx = afterRevenue + txFee;
+  const monthlyFee = Math.round(afterTx * industryData.monthly);
   
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
   
   // If no cleanup months, setup fee is $0, but monthly fee remains normal
   let setupFee = 0;
+  let setupCalc = 0;
+  const cleanupComplexityMultiplier = parseFloat(data.cleanupComplexity || "0.5");
+  
   if (effectiveCleanupMonths > 0) {
-    const cleanupMultiplier = parseFloat(data.cleanupComplexity || "0.75") * industryData.cleanup;
-    setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
+    const cleanupMultiplier = cleanupComplexityMultiplier * industryData.cleanup;
+    setupCalc = monthlyFee * cleanupMultiplier * effectiveCleanupMonths;
+    setupFee = roundToNearest25(Math.max(monthlyFee, setupCalc));
   }
   
-  return { monthlyFee, setupFee };
+  return { 
+    monthlyFee, 
+    setupFee,
+    breakdown: {
+      baseFee: baseMonthlyFee,
+      revenueMultiplier,
+      afterRevenue: Math.round(afterRevenue),
+      txFee,
+      afterTx: Math.round(afterTx),
+      industryMultiplier: industryData.monthly,
+      finalMonthly: monthlyFee,
+      cleanupComplexity: cleanupComplexityMultiplier * 100, // As percentage
+      cleanupMonths: effectiveCleanupMonths,
+      setupCalc: Math.round(setupCalc)
+    }
+  };
 }
 
 // TaaS-specific calculation function based on provided logic
@@ -232,7 +283,28 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   if (!data.revenueBand || !data.industry || !data.entityType || !data.numEntities || !data.statesFiled || 
       data.internationalFiling === undefined || !data.numBusinessOwners || !data.bookkeepingQuality || 
       data.include1040s === undefined || data.priorYearsUnfiled === undefined || data.alreadyOnSeedBookkeeping === undefined) {
-    return { monthlyFee: 0, setupFee: 0 };
+    return { 
+      monthlyFee: 0, 
+      setupFee: 0,
+      breakdown: {
+        base: 0,
+        entityUpcharge: 0,
+        stateUpcharge: 0,
+        intlUpcharge: 0,
+        ownerUpcharge: 0,
+        bookUpcharge: 0,
+        personal1040: 0,
+        beforeMultipliers: 0,
+        industryMult: 1,
+        revenueMult: 1,
+        afterMultipliers: 0,
+        seedDiscount: 0,
+        finalMonthly: 0,
+        priorYearsUnfiled: 0,
+        perYearFee: 0,
+        setupFee: 0
+      }
+    };
   }
 
   const base = 150;
@@ -284,26 +356,49 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
                      avgMonthlyRevenue <= 250000 ? 1.6 :
                      avgMonthlyRevenue <= 1000000 ? 1.8 : 2.0;
 
-  // Calculate raw fee
-  const rawFee = (base + entityUpcharge + stateUpcharge + intlUpcharge + ownerUpcharge + bookUpcharge + personal1040) * industryMult * revenueMult;
+  // Step-by-step calculation for breakdown
+  const beforeMultipliers = base + entityUpcharge + stateUpcharge + intlUpcharge + ownerUpcharge + bookUpcharge + personal1040;
+  const afterMultipliers = beforeMultipliers * industryMult * revenueMult;
 
   // Apply Seed Bookkeeping discount if applicable
   const isBookkeepingClient = data.alreadyOnSeedBookkeeping;
-  const monthlyFee = Math.max(150, Math.round((isBookkeepingClient ? rawFee * 0.9 : rawFee) / 5) * 5);
+  const seedDiscount = isBookkeepingClient ? afterMultipliers * 0.1 : 0;
+  const discountedFee = afterMultipliers - seedDiscount;
+  const monthlyFee = Math.max(150, Math.round(discountedFee / 5) * 5);
 
   // Setup fee calculation
   const perYearFee = monthlyFee * 0.8 * 12;
   const setupFee = Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled);
 
+  const breakdown = {
+    base,
+    entityUpcharge,
+    stateUpcharge,
+    intlUpcharge,
+    ownerUpcharge,
+    bookUpcharge,
+    personal1040,
+    beforeMultipliers,
+    industryMult,
+    revenueMult,
+    afterMultipliers: Math.round(afterMultipliers),
+    seedDiscount: Math.round(seedDiscount),
+    finalMonthly: monthlyFee,
+    priorYearsUnfiled: data.priorYearsUnfiled,
+    perYearFee: Math.round(perYearFee),
+    setupFee
+  };
+
   // If we have existing bookkeeping fees, add them on top
   if (existingBookkeepingFees) {
     return {
       monthlyFee: monthlyFee + existingBookkeepingFees.monthlyFee,
-      setupFee: setupFee + existingBookkeepingFees.setupFee
+      setupFee: setupFee + existingBookkeepingFees.setupFee,
+      breakdown
     };
   }
 
-  return { monthlyFee, setupFee };
+  return { monthlyFee, setupFee, breakdown };
 }
 
 // Combined calculation function for quotes that include both services
@@ -311,8 +406,8 @@ function calculateCombinedFees(data: Partial<FormData>) {
   const includesBookkeeping = data.includesBookkeeping !== false; // Default to true
   const includesTaas = data.includesTaas === true;
   
-  let bookkeepingFees = { monthlyFee: 0, setupFee: 0 };
-  let taasFees = { monthlyFee: 0, setupFee: 0 };
+  let bookkeepingFees = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
+  let taasFees = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
   
   if (includesBookkeeping) {
     bookkeepingFees = calculateFees(data);
@@ -1394,8 +1489,8 @@ export default function Home() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="0.5">Clean and Current</SelectItem>
-                            <SelectItem value="0.75">Standard</SelectItem>
+                            <SelectItem value="0.25">Clean and Current</SelectItem>
+                            <SelectItem value="0.5">Standard</SelectItem>
                             <SelectItem value="1.0">Not Done / Years Behind</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1911,29 +2006,53 @@ export default function Home() {
                                   <span className="text-green-700">Monthly Fee:</span>
                                   <span className="text-green-800">${feeCalculation.bookkeeping.monthlyFee.toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between pl-4 text-xs text-green-600">
-                                  <span>Revenue Band: {form.watch('revenueBand') || 'Not selected'}</span>
-                                  <span>✓</span>
-                                </div>
-                                <div className="flex justify-between pl-4 text-xs text-green-600">
-                                  <span>Transaction Volume: {form.watch('monthlyTransactions') || 'Not selected'}</span>
-                                  <span>✓</span>
-                                </div>
-                                <div className="flex justify-between pl-4 text-xs text-green-600">
-                                  <span>Industry: {form.watch('industry') || 'Not selected'}</span>
-                                  <span>✓</span>
-                                </div>
+                                {feeCalculation.bookkeeping.breakdown && (
+                                  <>
+                                    <div className="flex justify-between pl-4 text-xs text-green-600">
+                                      <span>Base Fee:</span>
+                                      <span>${feeCalculation.bookkeeping.breakdown.baseFee.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between pl-4 text-xs text-green-600">
+                                      <span>Revenue Multiplier ({feeCalculation.bookkeeping.breakdown.revenueMultiplier.toFixed(1)}x):</span>
+                                      <span>${feeCalculation.bookkeeping.breakdown.afterRevenue.toLocaleString()}</span>
+                                    </div>
+                                    {feeCalculation.bookkeeping.breakdown.txFee > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>Transaction Surcharge:</span>
+                                        <span>+${feeCalculation.bookkeeping.breakdown.txFee.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between pl-4 text-xs text-green-600">
+                                      <span>Industry Multiplier ({feeCalculation.bookkeeping.breakdown.industryMultiplier.toFixed(1)}x):</span>
+                                      <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
+                                    </div>
+                                  </>
+                                )}
                               </div>
-                              <div className="border-t border-green-200 pt-2">
-                                <div className="flex justify-between font-medium">
-                                  <span className="text-green-700">Setup/Cleanup Fee:</span>
-                                  <span className="text-green-800">${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
+                              {feeCalculation.bookkeeping.setupFee > 0 && (
+                                <div className="border-t border-green-200 pt-2">
+                                  <div className="flex justify-between font-medium">
+                                    <span className="text-green-700">Setup/Cleanup Fee:</span>
+                                    <span className="text-green-800">${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
+                                  </div>
+                                  {feeCalculation.bookkeeping.breakdown && (
+                                    <>
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>Cleanup Months: {feeCalculation.bookkeeping.breakdown.cleanupMonths}</span>
+                                        <span>✓</span>
+                                      </div>
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>Complexity: {feeCalculation.bookkeeping.breakdown.cleanupComplexity.toFixed(0)}%</span>
+                                        <span>✓</span>
+                                      </div>
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>Calculated Fee:</span>
+                                        <span>${feeCalculation.bookkeeping.breakdown.setupCalc.toLocaleString()}</span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
-                                <div className="flex justify-between pl-4 text-xs text-green-600">
-                                  <span>Cleanup Months ({form.watch('cleanupMonths') || 0}):</span>
-                                  <span>${(feeCalculation.bookkeeping.setupFee || 0).toLocaleString()}</span>
-                                </div>
-                              </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1947,41 +2066,89 @@ export default function Home() {
                                   <span className="text-blue-700">Monthly Fee:</span>
                                   <span className="text-blue-800">${feeCalculation.taas.monthlyFee.toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                  <span>Revenue Band: {form.watch('revenueBand') || 'Not selected'}</span>
-                                  <span>✓</span>
-                                </div>
-                                <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                  <span>Entities: {form.watch('numEntities') || 1}</span>
-                                  <span>✓</span>
-                                </div>
-                                <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                  <span>States: {form.watch('statesFiled') || 1}</span>
-                                  <span>✓</span>
-                                </div>
-                                {form.watch('include1040s') && (
-                                  <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                    <span>Personal 1040s: {form.watch('numBusinessOwners') || 1} owners</span>
-                                    <span>✓</span>
-                                  </div>
-                                )}
-                                {form.watch('alreadyOnSeedBookkeeping') && (
-                                  <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                    <span>Seed Bookkeeping Discount</span>
-                                    <span className="text-green-600">10% off</span>
-                                  </div>
+                                {feeCalculation.taas.breakdown && (
+                                  <>
+                                    <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                      <span>Base Fee:</span>
+                                      <span>${feeCalculation.taas.breakdown.base.toLocaleString()}</span>
+                                    </div>
+                                    {feeCalculation.taas.breakdown.entityUpcharge > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Entity Upcharge ({form.watch('numEntities')} entities):</span>
+                                        <span>+${feeCalculation.taas.breakdown.entityUpcharge.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {feeCalculation.taas.breakdown.stateUpcharge > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>State Upcharge ({form.watch('statesFiled')} states):</span>
+                                        <span>+${feeCalculation.taas.breakdown.stateUpcharge.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {feeCalculation.taas.breakdown.intlUpcharge > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>International Filing:</span>
+                                        <span>+${feeCalculation.taas.breakdown.intlUpcharge.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {feeCalculation.taas.breakdown.ownerUpcharge > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Owner Upcharge ({form.watch('numBusinessOwners')} owners):</span>
+                                        <span>+${feeCalculation.taas.breakdown.ownerUpcharge.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {feeCalculation.taas.breakdown.bookUpcharge > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Bookkeeping Quality:</span>
+                                        <span>+${feeCalculation.taas.breakdown.bookUpcharge.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {feeCalculation.taas.breakdown.personal1040 > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Personal 1040s:</span>
+                                        <span>+${feeCalculation.taas.breakdown.personal1040.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                      <span>Before Multipliers:</span>
+                                      <span>${feeCalculation.taas.breakdown.beforeMultipliers.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                      <span>Industry Multiplier ({feeCalculation.taas.breakdown.industryMult.toFixed(1)}x):</span>
+                                      <span>✓</span>
+                                    </div>
+                                    <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                      <span>Revenue Multiplier ({feeCalculation.taas.breakdown.revenueMult.toFixed(1)}x):</span>
+                                      <span>${feeCalculation.taas.breakdown.afterMultipliers.toLocaleString()}</span>
+                                    </div>
+                                    {feeCalculation.taas.breakdown.seedDiscount > 0 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Seed Bookkeeping Discount (10%):</span>
+                                        <span className="text-green-600">-${feeCalculation.taas.breakdown.seedDiscount.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </div>
-                              <div className="border-t border-blue-200 pt-2">
-                                <div className="flex justify-between font-medium">
-                                  <span className="text-blue-700">Prior Years Fee:</span>
-                                  <span className="text-blue-800">${feeCalculation.taas.setupFee.toLocaleString()}</span>
+                              {feeCalculation.taas.setupFee > 0 && (
+                                <div className="border-t border-blue-200 pt-2">
+                                  <div className="flex justify-between font-medium">
+                                    <span className="text-blue-700">Prior Years Fee:</span>
+                                    <span className="text-blue-800">${feeCalculation.taas.setupFee.toLocaleString()}</span>
+                                  </div>
+                                  {feeCalculation.taas.breakdown && (
+                                    <>
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Unfiled Years: {feeCalculation.taas.breakdown.priorYearsUnfiled}</span>
+                                        <span>✓</span>
+                                      </div>
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Per Year Fee:</span>
+                                        <span>${feeCalculation.taas.breakdown.perYearFee.toLocaleString()}</span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
-                                <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                  <span>Unfiled Years ({form.watch('priorYearsUnfiled') || 0}):</span>
-                                  <span>${feeCalculation.taas.setupFee.toLocaleString()}</span>
-                                </div>
-                              </div>
+                              )}
                             </div>
                           </div>
                         )}
