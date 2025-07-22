@@ -218,6 +218,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         setupFee: req.body.setupFee || "0", 
         taasMonthlyFee: req.body.taasMonthlyFee || "0",
         taasPriorYearsFee: req.body.taasPriorYearsFee || "0",
+        // For TaaS-only quotes, provide defaults for bookkeeping-required fields
+        monthlyTransactions: req.body.monthlyTransactions || "N/A",
+        cleanupComplexity: req.body.cleanupComplexity || "0",
+        cleanupMonths: req.body.cleanupMonths || 0,
       };
       
       const quoteData = insertQuoteSchema.parse(requestDataWithFees);
