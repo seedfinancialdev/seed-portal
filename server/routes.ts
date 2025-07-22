@@ -503,7 +503,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName,
         parseFloat(quote.monthlyFee),
         parseFloat(quote.setupFee),
-        ownerId || undefined
+        ownerId || undefined,
+        quote.includesBookkeeping,
+        quote.includesTaas
       );
 
       if (!deal) {
@@ -519,7 +521,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parseFloat(quote.setupFee),
         req.user!.email,
         req.user!.firstName || '',
-        req.user!.lastName || ''
+        req.user!.lastName || '',
+        quote.includesBookkeeping,
+        quote.includesTaas,
+        quote.taasMonthlyFee ? parseFloat(quote.taasMonthlyFee) : undefined,
+        quote.taasPriorYearsFee ? parseFloat(quote.taasPriorYearsFee) : undefined
       );
 
       if (!hubspotQuote) {

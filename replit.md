@@ -72,6 +72,14 @@ Preferred communication style: Simple, everyday language.
   - Visual indicators in quotes table: "Approved" (orange badge), "Override" (gray badge), "Standard" (gray text)
   - Enables auditing and tracking of override patterns for business analysis
 
+✓ **Critical HubSpot Integration Bug Fixed** (July 22, 2025)
+  - Fixed HubSpot integration to properly handle combined Bookkeeping + TaaS quotes
+  - Deal names now dynamically generated based on services: "Company - Bookkeeping", "Company - TaaS", or "Company - Bookkeeping + TaaS"
+  - Quote names updated to match service combinations: "Company - Bookkeeping Services Quote", etc.
+  - Line items now include both services when quote is combined
+  - TaaS monthly and prior years fees properly pushed as separate line items
+  - Updated HubSpot service methods to accept service type parameters
+
 ✓ **Complete Approval Code System Implemented** (July 21, 2025)
   - Built 4-digit approval code generation and validation system
   - Request Approval button triggers Slack notification with unique code

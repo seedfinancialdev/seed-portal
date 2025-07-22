@@ -293,9 +293,18 @@ export class HubSpotService {
     }
   }
 
-  async createDeal(contactId: string, companyName: string, monthlyFee: number, setupFee: number, ownerId?: string): Promise<HubSpotDeal | null> {
+  async createDeal(contactId: string, companyName: string, monthlyFee: number, setupFee: number, ownerId?: string, includesBookkeeping?: boolean, includesTaas?: boolean): Promise<HubSpotDeal | null> {
     try {
-      const dealName = `${companyName} - Bookkeeping`;
+      // Generate dynamic deal name based on services
+      let serviceName = '';
+      if (includesBookkeeping && includesTaas) {
+        serviceName = 'Bookkeeping + TaaS';
+      } else if (includesTaas) {
+        serviceName = 'TaaS';
+      } else {
+        serviceName = 'Bookkeeping';
+      }
+      const dealName = `${companyName} - ${serviceName}`;
       const totalAmount = (monthlyFee * 12 + setupFee).toString();
 
       // First, let's get the correct pipeline and stage IDs
@@ -339,7 +348,7 @@ export class HubSpotService {
     }
   }
 
-  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string): Promise<{ id: string; title: string } | null> {
+  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number): Promise<{ id: string; title: string } | null> {
     try {
       // Create a proper HubSpot quote using the quotes API
       console.log('Creating HubSpot quote...');
@@ -347,7 +356,16 @@ export class HubSpotService {
       // Get the user's profile information from HubSpot
       const userProfile = await this.getUserProfile(userEmail);
       
-      const quoteName = `${companyName} - Bookkeeping Services Quote`;
+      // Generate dynamic quote name based on services
+      let serviceName = '';
+      if (includesBookkeeping && includesTaas) {
+        serviceName = 'Bookkeeping + TaaS Services';
+      } else if (includesTaas) {
+        serviceName = 'TaaS Services';
+      } else {
+        serviceName = 'Bookkeeping Services';
+      }
+      const quoteName = `${companyName} - ${serviceName} Quote`;
       
       // Set expiration date to 30 days from now
       const expirationDate = new Date();
@@ -407,7 +425,7 @@ Services Include:
       console.log('Quote created successfully:', result.id);
       
       // Add line items to the quote
-      await this.addQuoteLineItems(result.id, monthlyFee, setupFee);
+      await this.addQuoteLineItems(result.id, monthlyFee, setupFee, includesBookkeeping, includesTaas, taasMonthlyFee || 0, taasPriorYearsFee || 0);
 
       return {
         id: result.id,
@@ -430,20 +448,42 @@ Services Include:
     }
   }
 
-  private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number): Promise<void> {
+  private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number): Promise<void> {
     try {
       // Use specific product IDs provided by user
       const MONTHLY_PRODUCT_ID = '25687054003'; // Monthly Bookkeeping
       const CLEANUP_PRODUCT_ID = '25683750263'; // Clean-Up / Catch-Up Project
+      // TODO: Add TaaS product IDs when available
+      const TAAS_MONTHLY_PRODUCT_ID = 'TAAS_MONTHLY_ID'; // TaaS Monthly - Need actual product ID
+      const TAAS_PRIOR_YEARS_PRODUCT_ID = 'TAAS_PRIOR_YEARS_ID'; // TaaS Prior Years - Need actual product ID
 
-      // Try to associate products directly with the quote using associations API
-      await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, monthlyFee, 1);
-      console.log('Associated monthly bookkeeping product with quote');
+      // Add bookkeeping line items if bookkeeping is included
+      if (includesBookkeeping) {
+        // Calculate bookkeeping monthly fee (subtract TaaS portion if both services)
+        const bookkeepingMonthlyFee = includesTaas ? monthlyFee - (taasMonthlyFee || 0) : monthlyFee;
+        const bookkeepingSetupFee = includesTaas ? setupFee - (taasPriorYearsFee || 0) : setupFee;
+        
+        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, bookkeepingMonthlyFee, 1);
+        console.log('Associated monthly bookkeeping product with quote');
 
-      // Add cleanup product if there's a setup fee
-      if (setupFee > 0) {
-        await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, setupFee, 1);
-        console.log('Associated cleanup product with quote');
+        // Add cleanup product if there's a bookkeeping setup fee
+        if (bookkeepingSetupFee > 0) {
+          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, bookkeepingSetupFee, 1);
+          console.log('Associated cleanup product with quote');
+        }
+      }
+
+      // Add TaaS line items if TaaS is included
+      if (includesTaas) {
+        // Note: Using bookkeeping product IDs as placeholders until TaaS product IDs are provided
+        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, taasMonthlyFee || 0, 1, 'TaaS Monthly Services');
+        console.log('Associated TaaS monthly product with quote');
+
+        // Add prior years fee if there's a TaaS setup fee
+        if ((taasPriorYearsFee || 0) > 0) {
+          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, taasPriorYearsFee || 0, 1, 'TaaS Prior Years Filing');
+          console.log('Associated TaaS prior years product with quote');
+        }
       }
     } catch (error) {
       console.warn('Could not add line items to quote:', error);
@@ -460,7 +500,7 @@ Services Include:
     }
   }
 
-  private async associateProductWithQuote(quoteId: string, productId: string, price: number, quantity: number): Promise<void> {
+  private async associateProductWithQuote(quoteId: string, productId: string, price: number, quantity: number, customName?: string): Promise<void> {
     try {
       // Get product details first
       const product = await this.makeRequest(`/crm/v3/objects/products/${productId}`);
@@ -468,12 +508,12 @@ Services Include:
       // Create a line item with correct properties
       const lineItem = {
         properties: {
-          name: product.properties?.name || 'Bookkeeping Service',
+          name: customName || product.properties?.name || 'Service',
           price: price.toString(),
           quantity: quantity.toString(),
           hs_product_id: productId,
           hs_sku: product.properties?.hs_sku || productId,
-          description: product.properties?.description || ''
+          description: customName ? `Seed Financial ${customName}` : (product.properties?.description || '')
         }
       };
 
