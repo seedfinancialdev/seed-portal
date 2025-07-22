@@ -1449,7 +1449,7 @@ export default function Home() {
                   />
 
                   {/* Monthly Transactions - Only show for Bookkeeping */}
-                  {form.watch('includesBookkeeping') !== false && (
+                  {(currentFormView === 'bookkeeping' || (currentFormView === 'combined' && form.watch('includesBookkeeping') !== false)) && (
                   <FormField
                     control={form.control}
                     name="monthlyTransactions"
@@ -1478,7 +1478,7 @@ export default function Home() {
                   )}
 
                   {/* Cleanup Complexity - Only show for Bookkeeping */}
-                  {form.watch('includesBookkeeping') !== false && (
+                  {(currentFormView === 'bookkeeping' || (currentFormView === 'combined' && form.watch('includesBookkeeping') !== false)) && (
                   <>
                   <FormField
                     control={form.control}
