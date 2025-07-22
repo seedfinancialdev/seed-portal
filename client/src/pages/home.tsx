@@ -36,7 +36,7 @@ const formSchema = insertQuoteSchema.omit({
   hubspotQuoteId: true,
   hubspotContactVerified: true,
 }).extend({
-  contactEmail: z.string().email("Please enter a valid email address"),
+  contactEmail: z.string().min(1, "Email is required").email("Please enter a valid email address"),
   cleanupMonths: z.number().min(0, "Cannot be negative"),
   cleanupOverride: z.boolean().default(false),
   overrideReason: z.string().optional(),
@@ -586,6 +586,9 @@ export default function Home() {
       if (hubspotResult.verified && hubspotResult.contact) {
         setHubspotVerificationStatus('verified');
         setHubspotContact(hubspotResult.contact);
+        
+        // Clear any email validation errors since HubSpot verification succeeded
+        form.clearErrors('contactEmail');
         
         // Auto-fill company name if available
         if (hubspotResult.contact.properties.company && !form.getValues('companyName')) {
@@ -1833,12 +1836,15 @@ export default function Home() {
                         Copy
                       </Button>
                     </div>
-                    <div className="text-3xl font-bold text-green-800 mb-2">
+                    <div className="text-2xl font-bold text-green-800 mb-1">
                       ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()} / mo
                     </div>
-                    <div className="text-xl font-semibold text-green-700">
+                    <div className="text-lg font-semibold text-green-700 mb-2">
                       ${feeCalculation.bookkeeping.setupFee.toLocaleString()} setup fee
                     </div>
+                    <p className="text-sm text-green-600">
+                      Monthly bookkeeping, cleanup, and financial management
+                    </p>
                   </div>
                 )}
 
@@ -1898,15 +1904,35 @@ export default function Home() {
                       <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
                         {feeCalculation.includesBookkeeping && (
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <div className="font-medium text-green-800 mb-2">Bookkeeping Service</div>
+                            <div className="font-medium text-green-800 mb-3">Bookkeeping Service</div>
                             <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-green-600">Monthly Fee:</span>
-                                <span className="font-medium text-green-800">${feeCalculation.bookkeeping.monthlyFee.toLocaleString()}</span>
+                              <div className="space-y-1">
+                                <div className="flex justify-between font-medium">
+                                  <span className="text-green-700">Monthly Fee:</span>
+                                  <span className="text-green-800">${feeCalculation.bookkeeping.monthlyFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-green-600">
+                                  <span>Revenue Band: {form.watch('revenueBand') || 'Not selected'}</span>
+                                  <span>✓</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-green-600">
+                                  <span>Transaction Volume: {form.watch('monthlyTransactions') || 'Not selected'}</span>
+                                  <span>✓</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-green-600">
+                                  <span>Industry: {form.watch('industry') || 'Not selected'}</span>
+                                  <span>✓</span>
+                                </div>
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-green-600">Setup/Cleanup Fee:</span>
-                                <span className="font-medium text-green-800">${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
+                              <div className="border-t border-green-200 pt-2">
+                                <div className="flex justify-between font-medium">
+                                  <span className="text-green-700">Setup/Cleanup Fee:</span>
+                                  <span className="text-green-800">${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-green-600">
+                                  <span>Cleanup Months ({form.watch('cleanupMonths') || 0}):</span>
+                                  <span>${(feeCalculation.bookkeeping.setupFee || 0).toLocaleString()}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1914,15 +1940,47 @@ export default function Home() {
                         
                         {feeCalculation.includesTaas && (
                           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="font-medium text-blue-800 mb-2">Tax as a Service (TaaS)</div>
+                            <div className="font-medium text-blue-800 mb-3">Tax as a Service (TaaS)</div>
                             <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-blue-600">Monthly Fee:</span>
-                                <span className="font-medium text-blue-800">${feeCalculation.taas.monthlyFee.toLocaleString()}</span>
+                              <div className="space-y-1">
+                                <div className="flex justify-between font-medium">
+                                  <span className="text-blue-700">Monthly Fee:</span>
+                                  <span className="text-blue-800">${feeCalculation.taas.monthlyFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                  <span>Revenue Band: {form.watch('revenueBand') || 'Not selected'}</span>
+                                  <span>✓</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                  <span>Entities: {form.watch('numEntities') || 1}</span>
+                                  <span>✓</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                  <span>States: {form.watch('statesFiled') || 1}</span>
+                                  <span>✓</span>
+                                </div>
+                                {form.watch('include1040s') && (
+                                  <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                    <span>Personal 1040s: {form.watch('numBusinessOwners') || 1} owners</span>
+                                    <span>✓</span>
+                                  </div>
+                                )}
+                                {form.watch('alreadyOnSeedBookkeeping') && (
+                                  <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                    <span>Seed Bookkeeping Discount</span>
+                                    <span className="text-green-600">10% off</span>
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-blue-600">Prior Years Fee:</span>
-                                <span className="font-medium text-blue-800">${feeCalculation.taas.setupFee.toLocaleString()}</span>
+                              <div className="border-t border-blue-200 pt-2">
+                                <div className="flex justify-between font-medium">
+                                  <span className="text-blue-700">Prior Years Fee:</span>
+                                  <span className="text-blue-800">${feeCalculation.taas.setupFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                  <span>Unfiled Years ({form.watch('priorYearsUnfiled') || 0}):</span>
+                                  <span>${feeCalculation.taas.setupFee.toLocaleString()}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
