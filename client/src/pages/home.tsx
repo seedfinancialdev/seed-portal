@@ -377,7 +377,7 @@ export default function Home() {
   const [verificationTimeoutId, setVerificationTimeoutId] = useState<NodeJS.Timeout | null>(null);
   
   // TaaS state
-  const [showTaaSCard, setShowTaaSCard] = useState(false);
+
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   
   // Form navigation state
@@ -1137,46 +1137,42 @@ export default function Home() {
           {/* Quote Builder Form Card */}
           <Card className="bg-gray-50 shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#253e31] to-[#75c29a] rounded-lg">
-                    {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-800">
-                      {currentFormView === 'bookkeeping' ? 'Bookkeeping Quote' : 'TaaS Quote'}
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      {currentFormView === 'bookkeeping' ? 'Configure your bookkeeping pricing' : 'Configure your tax service pricing'}
-                    </p>
+              {/* Modern Navigation Toggle - Only show if multiple services are active */}
+              {getActiveServices().length > 1 && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-center">
+                    <div className="bg-gray-100 rounded-lg p-1 flex items-center gap-1">
+                      {getActiveServices().map((service) => (
+                        <button
+                          key={service}
+                          type="button"
+                          onClick={() => setCurrentFormView(service)}
+                          className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                            currentFormView === service
+                              ? 'bg-white shadow-sm text-[#e24c00] border border-gray-200'
+                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                          }`}
+                        >
+                          {service === 'bookkeeping' ? 'Bookkeeping' : 'Tax Service'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                
-                {/* Navigation arrows */}
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={navigateLeft}
-                    disabled={!canNavigateLeft()}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-xs text-gray-500 px-2">
-                    {getActiveServices().indexOf(currentFormView) + 1} of {getActiveServices().length}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={navigateRight}
-                    disabled={!canNavigateRight()}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+              )}
+
+              {/* Form Header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
+                  {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {currentFormView === 'bookkeeping' ? 'Bookkeeping Quote' : 'Tax as a Service (TaaS) Quote'}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {currentFormView === 'bookkeeping' ? 'Configure your bookkeeping pricing' : 'Configure your tax preparation requirements'}
+                  </p>
                 </div>
               </div>
               
@@ -1545,7 +1541,7 @@ export default function Home() {
                   </div>
 
                   {/* TaaS-specific Fields - Only show when currentFormView is 'taas' */}
-                  {currentFormView === 'taas' && feeCalculation.includesTaas && (
+                  {currentFormView === 'taas' && (
                     <div className="space-y-6 border-t pt-6">
                       <h3 className="text-lg font-semibold text-gray-800">Tax Service Details</h3>
                       
