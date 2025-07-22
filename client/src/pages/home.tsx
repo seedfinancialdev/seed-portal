@@ -2273,7 +2273,7 @@ export default function Home() {
             </CardContent>
           </Card>
         </div>
-
+        
         {/* Quote History Section */}
         <Card className="bg-white shadow-xl mt-8 border-0 quote-card">
           <CardHeader className="pb-4">
