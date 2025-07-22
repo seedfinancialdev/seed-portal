@@ -3,12 +3,9 @@ import { db } from "./db";
 import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
-import { pool } from "./db";
+import MemoryStore from "memorystore";
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
-
-const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   sessionStore: session.Store;
@@ -36,9 +33,10 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({ 
-      pool, 
-      createTableIfMissing: true 
+    // Use memory store for sessions to avoid database connection complexity
+    const MemStore = MemoryStore(session);
+    this.sessionStore = new MemStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
     });
   }
 
