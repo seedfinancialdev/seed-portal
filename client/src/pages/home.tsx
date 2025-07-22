@@ -1448,9 +1448,13 @@ export default function Home() {
                     )}
                   />
 
-                  {/* Monthly Transactions - Only show for Bookkeeping */}
+                  {/* Bookkeeping Service Details Section */}
                   {(currentFormView === 'bookkeeping' || (currentFormView === 'combined' && form.watch('includesBookkeeping') !== false)) && (
-                  <FormField
+                  <div className="space-y-6 border-t pt-6">
+                    <h3 className="text-lg font-semibold text-gray-800">Bookkeeping Service Details</h3>
+                    
+                    {/* Monthly Transactions */}
+                    <FormField
                     control={form.control}
                     name="monthlyTransactions"
                     render={({ field }) => (
@@ -1475,12 +1479,9 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
-                  )}
 
-                  {/* Cleanup Complexity - Only show for Bookkeeping */}
-                  {(currentFormView === 'bookkeeping' || (currentFormView === 'combined' && form.watch('includesBookkeeping') !== false)) && (
-                  <>
-                  <FormField
+                    {/* Cleanup Complexity */}
+                    <FormField
                     control={form.control}
                     name="cleanupComplexity"
                     render={({ field }) => (
@@ -1639,7 +1640,7 @@ export default function Home() {
                       )}
                     />
                   )}
-                  </>
+                  </div>
                   )}
 
                   </div>
