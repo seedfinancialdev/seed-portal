@@ -1838,9 +1838,9 @@ export default function Home() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
-                                <SelectItem value="Outside CPA">Outside CPA</SelectItem>
-                                <SelectItem value="Self-managed">Self-managed</SelectItem>
+                                <SelectItem value="Clean (Seed)">Outside CPA</SelectItem>
+                                <SelectItem value="Outside CPA">Self-Managed</SelectItem>
+                                <SelectItem value="Self-managed">Not Done / Behind</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -1862,8 +1862,8 @@ export default function Home() {
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel>Already on Seed Bookkeeping</FormLabel>
-                              <p className="text-sm text-gray-500">Check if client is already using Seed Bookkeeping services</p>
+                              <FormLabel>Seed Bookkeeping Package</FormLabel>
+                              <p className="text-sm text-gray-500">Check if client is interested in or already using Seed Bookkeeping services</p>
                             </div>
                           </FormItem>
                         )}
@@ -2165,22 +2165,6 @@ export default function Home() {
                                   )}
                                 </div>
                               )}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {feeCalculation.includesBookkeeping && feeCalculation.includesTaas && (
-                          <div className="bg-gray-100 border-2 border-gray-400 rounded-lg p-4 shadow-md">
-                            <div className="font-bold text-gray-800 mb-2 text-lg border-b border-gray-300 pb-2">💰 Combined Total</div>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between font-semibold">
-                                <span className="text-gray-600">Total Monthly:</span>
-                                <span className="text-gray-800">${feeCalculation.combined.monthlyFee.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between font-semibold">
-                                <span className="text-gray-600">Total Setup:</span>
-                                <span className="text-gray-800">${feeCalculation.combined.setupFee.toLocaleString()}</span>
-                              </div>
                             </div>
                           </div>
                         )}
