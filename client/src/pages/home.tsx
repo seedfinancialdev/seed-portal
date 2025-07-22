@@ -1232,9 +1232,9 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="flex flex-col xl:flex-row gap-8 max-w-7xl mx-auto">
           {/* Quote Builder Form Card */}
-          <Card className="bg-gray-50 shadow-xl border-0 quote-card">
+          <Card className="bg-gray-50 shadow-xl border-0 quote-card xl:flex-1">
             <CardContent className="p-6 sm:p-8">
               {/* Modern Navigation Toggle - Only show if multiple services are active */}
               {getActiveServices().length > 1 && (
@@ -1878,7 +1878,7 @@ export default function Home() {
             </CardContent>
           </Card>
           {/* Pricing Summary Card */}
-          <Card className="bg-white shadow-xl border-0 quote-card">
+          <Card className="bg-white shadow-xl border-0 quote-card xl:flex-1">
             <CardContent className="p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
