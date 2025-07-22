@@ -1232,9 +1232,10 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex flex-col xl:flex-row gap-8 max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
+          <style>{`.quote-layout { display: flex; flex-direction: column; } @media (min-width: 1024px) { .quote-layout { flex-direction: row; } }`}</style>
           {/* Quote Builder Form Card */}
-          <Card className="bg-gray-50 shadow-xl border-0 quote-card xl:flex-1">
+          <Card className="bg-gray-50 shadow-xl border-0 quote-card lg:flex-1" style={{ flex: '1', minWidth: 0 }}>
             <CardContent className="p-6 sm:p-8">
               {/* Modern Navigation Toggle - Only show if multiple services are active */}
               {getActiveServices().length > 1 && (
@@ -1878,7 +1879,7 @@ export default function Home() {
             </CardContent>
           </Card>
           {/* Pricing Summary Card */}
-          <Card className="bg-white shadow-xl border-0 quote-card xl:flex-1">
+          <Card className="bg-white shadow-xl border-0 quote-card lg:flex-1" style={{ flex: '1', minWidth: 0 }}>
             <CardContent className="p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
