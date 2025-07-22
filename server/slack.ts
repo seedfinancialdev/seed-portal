@@ -84,7 +84,7 @@ async function sendCleanupOverrideNotification(quoteData: {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Approval Code: ${quoteData.approvalCode}*\n\nAn active quote needs cleanup override approval!`
+            text: `*Approval Code: ${quoteData.approvalCode}*`
           }
         },
         {
@@ -96,23 +96,11 @@ async function sendCleanupOverrideNotification(quoteData: {
             },
             {
               type: 'mrkdwn',
-              text: `*Revenue Band:* ${quoteData.revenueBand}`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Monthly Transactions:* ${quoteData.monthlyTransactions}`
-            },
-            {
-              type: 'mrkdwn',
               text: `*Industry:* ${quoteData.industry}`
             },
             {
               type: 'mrkdwn',
-              text: `*Original Cleanup Months:* ${quoteData.originalCleanupMonths || quoteData.cleanupMonths}`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Requested Cleanup Months:* ${quoteData.requestedCleanupMonths || quoteData.cleanupMonths}`
+              text: `*Cleanup Months:* ${quoteData.originalCleanupMonths || quoteData.cleanupMonths} → ${quoteData.requestedCleanupMonths || quoteData.cleanupMonths}`
             },
             {
               type: 'mrkdwn',
@@ -120,35 +108,14 @@ async function sendCleanupOverrideNotification(quoteData: {
             }
           ]
         },
-        // Add custom override reason as a separate section if provided
-        ...(quoteData.overrideReason === "Other" && quoteData.customOverrideReason ? [{
+        // Add custom override reason and setup fee if provided
+        ...(quoteData.overrideReason === "Other" ? [{
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Custom Override Reason:*\n${quoteData.customOverrideReason}`
+            text: `*Details:* ${quoteData.customOverrideReason || 'No details provided'}${quoteData.customSetupFee ? `\n*Custom Setup Fee:* $${parseInt(quoteData.customSetupFee).toLocaleString()}` : ''}`
           }
-        } as any] : []),
-        // Add custom setup fee section if provided
-        ...(quoteData.overrideReason === "Other" && quoteData.customSetupFee ? [{
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Custom Setup Fee Requested:* $${parseFloat(quoteData.customSetupFee).toLocaleString()}`
-          }
-        } as any] : []),
-        {
-          type: 'section',
-          fields: [
-            {
-              type: 'mrkdwn',
-              text: `*Monthly Fee:* $${quoteData.monthlyFee}`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Setup Fee:* $${quoteData.setupFee}`
-            }
-          ]
-        }
+        } as any] : [])
       ]
     });
   } catch (error) {
@@ -157,7 +124,7 @@ async function sendCleanupOverrideNotification(quoteData: {
       const originalChannel = process.env.SLACK_CHANNEL_ID;
       await sendSlackMessage({
         channel: originalChannel,
-        text: `🚨 *Cleanup Override Request*\n\n*APPROVAL CODE: ${quoteData.approvalCode}*\n\n*Contact:* ${quoteData.contactEmail}\n*Revenue:* ${quoteData.revenueBand}\n*Transactions:* ${quoteData.monthlyTransactions}\n*Industry:* ${quoteData.industry}\n*Original Cleanup Months:* ${quoteData.originalCleanupMonths || quoteData.cleanupMonths}\n*Requested Cleanup Months:* ${quoteData.requestedCleanupMonths || quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}${quoteData.overrideReason === "Other" && quoteData.customOverrideReason ? `\n*Custom Reason:* ${quoteData.customOverrideReason}` : ""}${quoteData.overrideReason === "Other" && quoteData.customSetupFee ? `\n*Custom Setup Fee Requested:* $${parseFloat(quoteData.customSetupFee).toLocaleString()}` : ""}\n*Monthly Fee:* $${quoteData.monthlyFee}\n*Setup Fee:* $${quoteData.setupFee}`
+        text: `🚨 *Cleanup Override Request*\n\n*Approval Code: ${quoteData.approvalCode}*\n\n*Contact:* ${quoteData.contactEmail}\n*Industry:* ${quoteData.industry}\n*Cleanup Months:* ${quoteData.originalCleanupMonths || quoteData.cleanupMonths} → ${quoteData.requestedCleanupMonths || quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}${quoteData.overrideReason === "Other" && quoteData.customOverrideReason ? `\n*Details:* ${quoteData.customOverrideReason}` : ""}${quoteData.overrideReason === "Other" && quoteData.customSetupFee ? `\n*Custom Setup Fee:* $${parseInt(quoteData.customSetupFee).toLocaleString()}` : ""}`
       });
     } else {
       throw error;
