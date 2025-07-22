@@ -1998,8 +1998,8 @@ export default function Home() {
                     {isBreakdownExpanded && (
                       <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
                         {feeCalculation.includesBookkeeping && (
-                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                            <div className="font-medium text-green-800 mb-3">Bookkeeping Service</div>
+                          <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 shadow-sm">
+                            <div className="font-semibold text-green-800 mb-3 text-lg border-b border-green-200 pb-2">📊 Bookkeeping Service</div>
                             <div className="space-y-2 text-sm">
                               <div className="space-y-1">
                                 <div className="flex justify-between font-medium">
@@ -2064,8 +2064,8 @@ export default function Home() {
                         )}
                         
                         {feeCalculation.includesTaas && (
-                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <div className="font-medium text-blue-800 mb-3">Tax as a Service (TaaS)</div>
+                          <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 shadow-sm">
+                            <div className="font-semibold text-blue-800 mb-3 text-lg border-b border-blue-200 pb-2">📋 Tax as a Service (TaaS)</div>
                             <div className="space-y-2 text-sm">
                               <div className="space-y-1">
                                 <div className="flex justify-between font-medium">
@@ -2162,8 +2162,8 @@ export default function Home() {
                         )}
                         
                         {feeCalculation.includesBookkeeping && feeCalculation.includesTaas && (
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                            <div className="font-medium text-gray-800 mb-2">Combined Total</div>
+                          <div className="bg-gray-100 border-2 border-gray-400 rounded-lg p-4 shadow-md">
+                            <div className="font-bold text-gray-800 mb-2 text-lg border-b border-gray-300 pb-2">💰 Combined Total</div>
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between font-semibold">
                                 <span className="text-gray-600">Total Monthly:</span>
