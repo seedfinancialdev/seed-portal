@@ -362,8 +362,8 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   const discountedFee = afterMultipliers - seedDiscount;
   const monthlyFee = Math.max(150, Math.round(discountedFee / 5) * 5);
 
-  // Setup fee calculation - per year fee should be much more reasonable
-  const perYearFee = monthlyFee * 2; // 2x monthly fee per unfiled year seems more reasonable
+  // Setup fee calculation - 0.5 × monthly × 12 with $1000 minimum per year
+  const perYearFee = Math.max(1000, monthlyFee * 0.5 * 12);
   const setupFee = data.priorYearsUnfiled > 0 ? Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled) : 0;
 
   // Add intermediate calculation for better breakdown display
