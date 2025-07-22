@@ -208,30 +208,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const includesBookkeeping = req.body.includesBookkeeping !== false; // Default to true
       const includesTaas = req.body.includesTaas === true;
       
-      // Calculate fees for each service
-      let bookkeepingFees = { monthlyFee: 0, setupFee: 0 };
-      let taasFees = { monthlyFee: 0, setupFee: 0 };
-      
-      if (includesBookkeeping) {
-        bookkeepingFees = calculateQuoteFees(req.body);
-      }
-      
-      if (includesTaas) {
-        taasFees = calculateTaaSFees(req.body);
-      }
-      
-      // Calculate combined totals
-      const combinedMonthlyFee = bookkeepingFees.monthlyFee + taasFees.monthlyFee;
-      const combinedSetupFee = bookkeepingFees.setupFee + taasFees.setupFee;
-      
-      // Merge calculated fees with request body
+      // Trust the frontend calculations - the frontend has the authoritative calculation logic
+      // The frontend already calculated and sent the correct fees, so we should use them
       const requestDataWithFees = {
         ...req.body,
         ownerId: req.user.id,
-        monthlyFee: combinedMonthlyFee.toString(),
-        setupFee: combinedSetupFee.toString(),
-        taasMonthlyFee: taasFees.monthlyFee.toString(),
-        taasPriorYearsFee: taasFees.setupFee.toString(),
+        // Use the frontend-calculated values directly
+        monthlyFee: req.body.monthlyFee || "0",
+        setupFee: req.body.setupFee || "0", 
+        taasMonthlyFee: req.body.taasMonthlyFee || "0",
+        taasPriorYearsFee: req.body.taasPriorYearsFee || "0",
       };
       
       const quoteData = insertQuoteSchema.parse(requestDataWithFees);

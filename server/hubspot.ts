@@ -459,30 +459,37 @@ Services Include:
 
       // Add bookkeeping line items if bookkeeping is included
       if (includesBookkeeping) {
-        // Calculate bookkeeping monthly fee (subtract TaaS portion if both services)
-        const bookkeepingMonthlyFee = includesTaas ? monthlyFee - (taasMonthlyFee || 0) : monthlyFee;
-        const bookkeepingSetupFee = includesTaas ? setupFee - (taasPriorYearsFee || 0) : setupFee;
+        // For combined quotes, we need to calculate the bookkeeping portion properly
+        // The monthlyFee and setupFee passed here are the TOTAL combined amounts
+        // We need to subtract the TaaS portions to get the bookkeeping portions
+        let bookkeepingMonthlyFee = monthlyFee;
+        let bookkeepingSetupFee = setupFee;
+        
+        if (includesTaas && taasMonthlyFee && taasPriorYearsFee) {
+          bookkeepingMonthlyFee = monthlyFee - taasMonthlyFee;
+          bookkeepingSetupFee = setupFee - taasPriorYearsFee;
+        }
         
         await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, bookkeepingMonthlyFee, 1);
-        console.log('Associated monthly bookkeeping product with quote');
+        console.log(`Associated monthly bookkeeping product with quote: $${bookkeepingMonthlyFee}`);
 
         // Add cleanup product if there's a bookkeeping setup fee
         if (bookkeepingSetupFee > 0) {
           await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, bookkeepingSetupFee, 1);
-          console.log('Associated cleanup product with quote');
+          console.log(`Associated cleanup product with quote: $${bookkeepingSetupFee}`);
         }
       }
 
       // Add TaaS line items if TaaS is included
-      if (includesTaas) {
+      if (includesTaas && taasMonthlyFee && taasPriorYearsFee) {
         // Note: Using bookkeeping product IDs as placeholders until TaaS product IDs are provided
-        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, taasMonthlyFee || 0, 1, 'TaaS Monthly Services');
-        console.log('Associated TaaS monthly product with quote');
+        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, taasMonthlyFee, 1, 'TaaS Monthly Services');
+        console.log(`Associated TaaS monthly product with quote: $${taasMonthlyFee}`);
 
         // Add prior years fee if there's a TaaS setup fee
-        if ((taasPriorYearsFee || 0) > 0) {
-          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, taasPriorYearsFee || 0, 1, 'TaaS Prior Years Filing');
-          console.log('Associated TaaS prior years product with quote');
+        if (taasPriorYearsFee > 0) {
+          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, taasPriorYearsFee, 1, 'TaaS Prior Years Filing');
+          console.log(`Associated TaaS prior years product with quote: $${taasPriorYearsFee}`);
         }
       }
     } catch (error) {
