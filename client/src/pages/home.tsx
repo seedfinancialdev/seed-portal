@@ -42,6 +42,7 @@ const formSchema = insertQuoteSchema.omit({
   cleanupOverride: z.boolean().default(false),
   overrideReason: z.string().optional(),
   customOverrideReason: z.string().optional(),
+  customSetupFee: z.string().optional(),
   companyName: z.string().optional(),
   // TaaS fields
   numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
@@ -61,13 +62,22 @@ const formSchema = insertQuoteSchema.omit({
     });
   }
   
-  // If "Other" is selected as reason, require custom text
-  if (data.cleanupOverride && data.overrideReason === "Other" && (!data.customOverrideReason || data.customOverrideReason.trim() === "")) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Please provide a detailed reason for the override",
-      path: ["customOverrideReason"]
-    });
+  // If "Other" is selected as reason, require custom text and setup fee
+  if (data.cleanupOverride && data.overrideReason === "Other") {
+    if (!data.customOverrideReason || data.customOverrideReason.trim() === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please provide a detailed reason for the override",
+        path: ["customOverrideReason"]
+      });
+    }
+    if (!data.customSetupFee || data.customSetupFee.trim() === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Please enter a custom setup fee for manual approval",
+        path: ["customSetupFee"]
+      });
+    }
   }
   
   // If override is not checked or not approved, enforce minimum cleanup months (only for bookkeeping)
@@ -263,7 +273,13 @@ function calculateFees(data: Partial<FormData>) {
     cleanupBeforeIndustry = monthlyFee * cleanupComplexityMultiplier * effectiveCleanupMonths;
     const cleanupMultiplier = cleanupComplexityMultiplier * industryData.cleanup;
     setupCalc = monthlyFee * cleanupMultiplier * effectiveCleanupMonths;
-    setupFee = roundToNearest25(Math.max(monthlyFee, setupCalc));
+    
+    // Use custom setup fee if "Other" reason is selected and custom fee is provided
+    if (data.overrideReason === "Other" && data.customSetupFee && parseFloat(data.customSetupFee) > 0) {
+      setupFee = parseFloat(data.customSetupFee);
+    } else {
+      setupFee = roundToNearest25(Math.max(monthlyFee, setupCalc));
+    }
   }
   
   return { 
@@ -448,6 +464,8 @@ export default function Home() {
   const [isRequestingApproval, setIsRequestingApproval] = useState(false);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [customOverrideReason, setCustomOverrideReason] = useState("");
+  const [hasRequestedApproval, setHasRequestedApproval] = useState(false);
+  const [customSetupFee, setCustomSetupFee] = useState<string>("");
   
   // Archive dialog state
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -528,6 +546,7 @@ export default function Home() {
       cleanupOverride: false,
       overrideReason: "",
       customOverrideReason: "",
+      customSetupFee: "",
       companyName: "",
       quoteType: "bookkeeping",
       // Service flags for combined quotes
@@ -917,6 +936,8 @@ export default function Home() {
     setHubspotContact(null);
     setLastVerifiedEmail('');
     setIsApproved(false);
+    setHasRequestedApproval(false);
+    setCustomSetupFee("");
     
     // Reset existing quotes state
     setExistingQuotesForEmail([]);
@@ -953,6 +974,11 @@ export default function Home() {
       const formData = form.getValues();
       const fees = calculateFees(formData);
       
+      // Include custom setup fee if "Other" reason is selected
+      const setupFee = formData.overrideReason === "Other" && formData.customSetupFee 
+        ? parseFloat(formData.customSetupFee) 
+        : fees.setupFee;
+      
       const response = await apiRequest("POST", "/api/approval/request", {
         contactEmail: formData.contactEmail,
         quoteData: {
@@ -961,14 +987,18 @@ export default function Home() {
           monthlyTransactions: formData.monthlyTransactions,
           industry: formData.industry,
           cleanupMonths: formData.cleanupMonths,
+          requestedCleanupMonths: formData.cleanupMonths, // Add requested months
           overrideReason: formData.overrideReason || "",
           customOverrideReason: formData.customOverrideReason || "",
+          customSetupFee: formData.customSetupFee || "",
           monthlyFee: fees.monthlyFee,
-          setupFee: fees.setupFee
+          setupFee: setupFee,
+          originalCleanupMonths: currentMonth // Include original minimum
         }
       });
       
       if (response.ok) {
+        setHasRequestedApproval(true);
         toast({
           title: "Approval Requested",
           description: "Check Slack for the approval code.",
@@ -1518,18 +1548,19 @@ export default function Home() {
                         <FormControl>
                           <Input 
                             type="number"
-                            min={(form.watch("cleanupOverride") && isApproved) ? "0" : currentMonth.toString()}
+                            min={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
                             max="120"
                             placeholder={currentMonth.toString()}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                            disabled={form.watch("cleanupOverride") && !isApproved}
+                            disabled={false}
                             {...field}
                             onChange={(e) => {
                               const value = parseInt(e.target.value);
                               if (isNaN(value)) {
-                                field.onChange(form.watch("cleanupOverride") && isApproved ? 0 : currentMonth);
+                                field.onChange(form.watch("cleanupOverride") ? 0 : currentMonth);
                               } else {
-                                field.onChange(Math.max(0, value));
+                                const minValue = form.watch("cleanupOverride") ? 0 : currentMonth;
+                                field.onChange(Math.max(minValue, value));
                               }
                             }}
                           />
@@ -1553,7 +1584,11 @@ export default function Home() {
                                 field.onChange(checked);
                                 if (!checked) {
                                   form.setValue("overrideReason", "");
+                                  form.setValue("customOverrideReason", "");
+                                  form.setValue("customSetupFee", "");
                                   setIsApproved(false);
+                                  setHasRequestedApproval(false);
+                                  setCustomSetupFee("");
                                 }
                               }}
                             />
@@ -1565,22 +1600,22 @@ export default function Home() {
                           </div>
                         </div>
                         
-                        {/* Request Approval Button */}
+                        {/* Request Approval / Enter Code Button */}
                         {form.watch("cleanupOverride") && !isApproved && (
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={requestApproval}
+                            onClick={hasRequestedApproval ? () => setIsApprovalDialogOpen(true) : requestApproval}
                             disabled={
                               isRequestingApproval || 
                               !form.watch("contactEmail") || 
                               !form.watch("overrideReason") ||
-                              (form.watch("overrideReason") === "Other" && (!form.watch("customOverrideReason") || form.watch("customOverrideReason")?.trim() === ""))
+                              (form.watch("overrideReason") === "Other" && (!form.watch("customOverrideReason") || form.watch("customOverrideReason")?.trim() === "" || !form.watch("customSetupFee") || form.watch("customSetupFee")?.trim() === ""))
                             }
                             className="ml-4"
                           >
-                            {isRequestingApproval ? "Requesting..." : "Request Approval"}
+                            {isRequestingApproval ? "Requesting..." : hasRequestedApproval ? "Enter Code" : "Request Approval"}
                           </Button>
                         )}
                         
@@ -1622,27 +1657,55 @@ export default function Home() {
 
                   {/* Custom reason text field when "Other" is selected */}
                   {form.watch("cleanupOverride") && form.watch("overrideReason") === "Other" && (
-                    <FormField
-                      control={form.control}
-                      name="customOverrideReason"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Please explain the reason for override</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Enter detailed reason for cleanup months override..."
-                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent min-h-[80px]"
-                              {...field}
-                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                                field.onChange(e);
-                                setCustomOverrideReason(e.target.value);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="customOverrideReason"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Please explain the reason for override</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Enter detailed reason for cleanup months override..."
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent min-h-[80px]"
+                                {...field}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                                  field.onChange(e);
+                                  setCustomOverrideReason(e.target.value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      {/* Custom Setup Fee when "Other" is selected */}
+                      <FormField
+                        control={form.control}
+                        name="customSetupFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Custom Setup Fee (for manual approval)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="Enter custom setup fee..."
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  setCustomSetupFee(e.target.value);
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </>
                   )}
                   </div>
                   )}
@@ -2212,7 +2275,9 @@ export default function Home() {
                           hubspotVerificationStatus !== 'verified' || 
                           pushToHubSpotMutation.isPending || 
                           updateHubSpotMutation.isPending ||
-                          createQuoteMutation.isPending
+                          createQuoteMutation.isPending ||
+                          // Disable if cleanup months reduced below minimum without approval
+                          (form.watch("cleanupOverride") && form.watch("cleanupMonths") < currentMonth && !isApproved)
                         }
                         className="flex-1 bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-orange-700 active:bg-orange-800 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 button-shimmer transition-all duration-300"
                       >
