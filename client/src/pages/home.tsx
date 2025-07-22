@@ -171,6 +171,7 @@ const industryMultipliers = {
   'Property Management': { monthly: 1.3, cleanup: 1.2 },
   'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
   'Restaurant/Food Service': { monthly: 1.6, cleanup: 1.4 },
+  'Hospitality': { monthly: 1.6, cleanup: 1.4 },
   'Construction/Trades': { monthly: 1.5, cleanup: 1.08 },
   'Manufacturing': { monthly: 1.45, cleanup: 1.25 },
   'Transportation/Logistics': { monthly: 1.4, cleanup: 1.2 },
@@ -356,9 +357,9 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   const beforeMultipliers = base + entityUpcharge + stateUpcharge + intlUpcharge + ownerUpcharge + bookUpcharge + personal1040;
   const afterMultipliers = beforeMultipliers * industryMult * revenueMult;
 
-  // Apply Seed Bookkeeping discount if applicable
+  // Apply Seed Bookkeeping discount if applicable (15% for existing clients)
   const isBookkeepingClient = data.alreadyOnSeedBookkeeping;
-  const seedDiscount = isBookkeepingClient ? afterMultipliers * 0.1 : 0;
+  const seedDiscount = isBookkeepingClient ? afterMultipliers * 0.15 : 0;
   const discountedFee = afterMultipliers - seedDiscount;
   const monthlyFee = Math.max(150, Math.round(discountedFee / 5) * 5);
 
@@ -1150,7 +1151,7 @@ export default function Home() {
               <p className={`text-xs ${
                 feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
               }`}>
-                Monthly bookkeeping, cleanup, and financial management
+                Monthly bookkeeping, cleanup, and financial statements
               </p>
             </div>
 
@@ -1205,7 +1206,7 @@ export default function Home() {
               <p className={`text-xs ${
                 feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
               }`}>
-                Tax preparation, filing, and compliance services
+                Tax preparation, filing and planning services
               </p>
             </div>
 
@@ -1224,7 +1225,7 @@ export default function Home() {
                 Additional services
               </div>
               <p className="text-xs text-gray-500">
-                Payroll, FBAR filing, APAP Lite, and more
+                Payroll, FP&A Lite, AP/AR Lite, and more
               </p>
             </div>
           </div>
@@ -1900,16 +1901,7 @@ export default function Home() {
                         </div>
                         <h4 className="font-semibold text-purple-800">Combined Total</h4>
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-8 px-3 text-xs bg-purple-600 text-white border-purple-600 hover:bg-purple-700 shadow-sm"
-                        onClick={() => copyToClipboard(feeCalculation.combined.monthlyFee.toLocaleString(), 'combined')}
-                      >
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy
-                      </Button>
+
                     </div>
                     <div className="text-3xl font-bold text-purple-800 mb-2">
                       ${feeCalculation.combined.monthlyFee.toLocaleString()} / mo
@@ -2191,16 +2183,14 @@ export default function Home() {
                       {createQuoteMutation.isPending ? 'Saving...' : (editingQuoteId ? 'Update Quote' : 'Save Quote')}
                     </Button>
                     
-                    {(editingQuoteId || hasUnsavedChanges) && (
-                      <Button
-                        type="button"
-                        onClick={resetForm}
-                        variant="outline"
-                        className="px-4 py-4 border-gray-300 text-gray-700 hover:bg-gray-50"
-                      >
-                        Reset
-                      </Button>
-                    )}
+                    <Button
+                      type="button"
+                      onClick={resetForm}
+                      variant="outline"
+                      className="px-4 py-4 border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Reset
+                    </Button>
                   </div>
                   
                   {/* HubSpot Integration Button */}
