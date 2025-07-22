@@ -253,8 +253,12 @@ function calculateFees(data: Partial<FormData>) {
   let setupFee = 0;
   let setupCalc = 0;
   const cleanupComplexityMultiplier = parseFloat(data.cleanupComplexity || "0.5");
+  let industryCleanupMultiplier = 1;
+  let cleanupBeforeIndustry = 0;
   
   if (effectiveCleanupMonths > 0) {
+    industryCleanupMultiplier = industryData.cleanup;
+    cleanupBeforeIndustry = monthlyFee * cleanupComplexityMultiplier * effectiveCleanupMonths;
     const cleanupMultiplier = cleanupComplexityMultiplier * industryData.cleanup;
     setupCalc = monthlyFee * cleanupMultiplier * effectiveCleanupMonths;
     setupFee = roundToNearest25(Math.max(monthlyFee, setupCalc));
@@ -273,7 +277,9 @@ function calculateFees(data: Partial<FormData>) {
       finalMonthly: monthlyFee,
       cleanupComplexity: cleanupComplexityMultiplier * 100, // As percentage
       cleanupMonths: effectiveCleanupMonths,
-      setupCalc: Math.round(setupCalc)
+      setupCalc: Math.round(setupCalc),
+      cleanupBeforeIndustry: Math.round(cleanupBeforeIndustry),
+      industryCleanupMultiplier
     }
   };
 }
@@ -406,8 +412,8 @@ function calculateCombinedFees(data: Partial<FormData>) {
   const includesBookkeeping = data.includesBookkeeping !== false; // Default to true
   const includesTaas = data.includesTaas === true;
   
-  let bookkeepingFees = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
-  let taasFees = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
+  let bookkeepingFees: any = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
+  let taasFees: any = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
   
   if (includesBookkeeping) {
     bookkeepingFees = calculateFees(data);
@@ -2035,19 +2041,33 @@ export default function Home() {
                                     <span className="text-green-700">Setup/Cleanup Fee:</span>
                                     <span className="text-green-800">${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
                                   </div>
-                                  {feeCalculation.bookkeeping.breakdown && (
+                                  {feeCalculation.bookkeeping.breakdown && feeCalculation.bookkeeping.setupFee > 0 && (
                                     <>
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>Cleanup Months: {feeCalculation.bookkeeping.breakdown.cleanupMonths}</span>
-                                        <span>✓</span>
+                                        <span>Monthly Fee Base:</span>
+                                        <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
                                       </div>
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>Complexity: {feeCalculation.bookkeeping.breakdown.cleanupComplexity.toFixed(0)}%</span>
-                                        <span>✓</span>
+                                        <span>Complexity Multiplier ({feeCalculation.bookkeeping.breakdown.cleanupComplexity.toFixed(0)}%):</span>
+                                        <span>{(feeCalculation.bookkeeping.breakdown.cleanupComplexity / 100).toFixed(2)}x</span>
                                       </div>
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>Calculated Fee:</span>
-                                        <span>${feeCalculation.bookkeeping.breakdown.setupCalc.toLocaleString()}</span>
+                                        <span>× Months ({feeCalculation.bookkeeping.breakdown.cleanupMonths}):</span>
+                                        <span>${(feeCalculation.bookkeeping.breakdown.cleanupBeforeIndustry || feeCalculation.bookkeeping.breakdown.setupCalc).toLocaleString()}</span>
+                                      </div>
+                                      {feeCalculation.bookkeeping.breakdown.industryCleanupMultiplier !== 1 && (
+                                        <div className="flex justify-between pl-4 text-xs text-green-600">
+                                          <span>Industry Cleanup Multiplier ({feeCalculation.bookkeeping.breakdown.industryCleanupMultiplier.toFixed(1)}x):</span>
+                                          <span>${feeCalculation.bookkeeping.breakdown.setupCalc.toLocaleString()}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>Minimum Fee (Monthly):</span>
+                                        <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between pl-4 text-xs text-green-600 font-medium border-t border-green-300 pt-1">
+                                        <span>Final (Max of above):</span>
+                                        <span>${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
                                       </div>
                                     </>
                                   )}
