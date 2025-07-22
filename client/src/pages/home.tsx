@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -379,6 +379,45 @@ export default function Home() {
   // TaaS state
   const [showTaaSCard, setShowTaaSCard] = useState(false);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
+  
+  // Form navigation state
+  const [currentFormView, setCurrentFormView] = useState<'bookkeeping' | 'taas'>('bookkeeping');
+  
+  // Helper functions for navigation
+  const getActiveServices = () => {
+    const services: ('bookkeeping' | 'taas')[] = [];
+    if (feeCalculation.includesBookkeeping) services.push('bookkeeping');
+    if (feeCalculation.includesTaas) services.push('taas');
+    return services;
+  };
+  
+  const canNavigateLeft = () => {
+    const activeServices = getActiveServices();
+    const currentIndex = activeServices.indexOf(currentFormView);
+    return currentIndex > 0;
+  };
+  
+  const canNavigateRight = () => {
+    const activeServices = getActiveServices();
+    const currentIndex = activeServices.indexOf(currentFormView);
+    return currentIndex < activeServices.length - 1;
+  };
+  
+  const navigateLeft = () => {
+    const activeServices = getActiveServices();
+    const currentIndex = activeServices.indexOf(currentFormView);
+    if (currentIndex > 0) {
+      setCurrentFormView(activeServices[currentIndex - 1]);
+    }
+  };
+  
+  const navigateRight = () => {
+    const activeServices = getActiveServices();
+    const currentIndex = activeServices.indexOf(currentFormView);
+    if (currentIndex < activeServices.length - 1) {
+      setCurrentFormView(activeServices[currentIndex + 1]);
+    }
+  };
   
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -975,6 +1014,17 @@ export default function Home() {
                 const newValue = !feeCalculation.includesBookkeeping;
                 form.setValue('includesBookkeeping', newValue);
                 form.trigger();
+                
+                // Navigation logic
+                if (!feeCalculation.includesBookkeeping) {
+                  // Activating bookkeeping - navigate to bookkeeping form
+                  setCurrentFormView('bookkeeping');
+                } else {
+                  // Deactivating bookkeeping - navigate to next active service
+                  if (feeCalculation.includesTaas) {
+                    setCurrentFormView('taas');
+                  }
+                }
               }}
             >
               <div className="flex items-center gap-3 mb-3">
@@ -1020,6 +1070,17 @@ export default function Home() {
                 form.setValue('includesTaas', newValue);
                 setShowTaaSCard(newValue);
                 form.trigger();
+                
+                // Navigation logic
+                if (!feeCalculation.includesTaas) {
+                  // Activating TaaS - navigate to TaaS form
+                  setCurrentFormView('taas');
+                } else {
+                  // Deactivating TaaS - navigate to next active service
+                  if (feeCalculation.includesBookkeeping) {
+                    setCurrentFormView('bookkeeping');
+                  }
+                }
               }}
             >
               <div className="flex items-center gap-3 mb-3">
@@ -1073,25 +1134,57 @@ export default function Home() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Quote Builder Form Card - Only show when TaaS is not active */}
-          {!showTaaSCard && (
-            <Card className="bg-gray-50 shadow-xl border-0 quote-card">
+          {/* Quote Builder Form Card */}
+          <Card className="bg-gray-50 shadow-xl border-0 quote-card">
             <CardContent className="p-6 sm:p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#253e31] to-[#75c29a] rounded-lg">
-                  <Calculator className="h-5 w-5 text-white" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#253e31] to-[#75c29a] rounded-lg">
+                    {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">
+                      {currentFormView === 'bookkeeping' ? 'Bookkeeping Quote' : 'TaaS Quote'}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {currentFormView === 'bookkeeping' ? 'Configure your bookkeeping pricing' : 'Configure your tax service pricing'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
-                    Quote Builder
-                  </h2>
-                  <p className="text-sm text-gray-500">Configure your pricing details</p>
+                
+                {/* Navigation arrows */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={navigateLeft}
+                    disabled={!canNavigateLeft()}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-gray-500 px-2">
+                    {getActiveServices().indexOf(currentFormView) + 1} of {getActiveServices().length}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={navigateRight}
+                    disabled={!canNavigateRight()}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
               
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Contact Email */}
+                  {/* Core Fields - Always Shown */}
+                  <div className="space-y-6">
+                    {/* Contact Email */}
                   <FormField
                     control={form.control}
                     name="contactEmail"
@@ -1449,14 +1542,239 @@ export default function Home() {
                       )}
                     />
                   )}
+                  </div>
+
+                  {/* TaaS-specific Fields - Only show when currentFormView is 'taas' */}
+                  {currentFormView === 'taas' && feeCalculation.includesTaas && (
+                    <div className="space-y-6 border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-800">Tax Service Details</h3>
+                      
+                      {/* Entity Type */}
+                      <FormField
+                        control={form.control}
+                        name="entityType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Entity Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select entity type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="LLC">LLC</SelectItem>
+                                <SelectItem value="C-Corp">C-Corp</SelectItem>
+                                <SelectItem value="S-Corp">S-Corp</SelectItem>
+                                <SelectItem value="Partnership">Partnership</SelectItem>
+                                <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Number of Entities */}
+                      <FormField
+                        control={form.control}
+                        name="numEntities"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Entities</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of entities" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* States Filed */}
+                      <FormField
+                        control={form.control}
+                        name="statesFiled"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>States Filed</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of states" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="6">6+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* International Filing */}
+                      <FormField
+                        control={form.control}
+                        name="internationalFiling"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>International Filing Required</FormLabel>
+                              <p className="text-sm text-gray-500">Check if international tax filings are needed</p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Number of Business Owners */}
+                      <FormField
+                        control={form.control}
+                        name="numBusinessOwners"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Business Owners</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of owners" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Include 1040s */}
+                      <FormField
+                        control={form.control}
+                        name="include1040s"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Include Personal 1040s</FormLabel>
+                              <p className="text-sm text-gray-500">Check if personal tax returns should be included</p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Prior Years Unfiled */}
+                      <FormField
+                        control={form.control}
+                        name="priorYearsUnfiled"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prior Years Unfiled</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of years" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="0">0</SelectItem>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Bookkeeping Quality */}
+                      <FormField
+                        control={form.control}
+                        name="bookkeepingQuality"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bookkeeping Quality</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select bookkeeping quality" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
+                                <SelectItem value="Outside CPA">Outside CPA</SelectItem>
+                                <SelectItem value="Self-managed">Self-managed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Already on Seed Bookkeeping */}
+                      <FormField
+                        control={form.control}
+                        name="alreadyOnSeedBookkeeping"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Already on Seed Bookkeeping</FormLabel>
+                              <p className="text-sm text-gray-500">Check if client is already using Seed Bookkeeping services</p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
                 </form>
               </Form>
             </CardContent>
           </Card>
-          )}
 
-          {/* TaaS Form Card */}
-          {showTaaSCard && (
+
             <Card className="bg-blue-50 shadow-xl border-0 quote-card">
               <CardContent className="p-6 sm:p-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -1827,7 +2145,6 @@ export default function Home() {
                 </Form>
               </CardContent>
             </Card>
-          )}
 
 
 
