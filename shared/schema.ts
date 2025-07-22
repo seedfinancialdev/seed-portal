@@ -15,6 +15,12 @@ export const quotes = pgTable("quotes", {
   approvalRequired: boolean("approval_required").default(false).notNull(),
   monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
   setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).notNull(),
+  // TaaS pricing fields
+  taasMonthlyFee: decimal("taas_monthly_fee", { precision: 10, scale: 2 }).default("0").notNull(),
+  taasPriorYearsFee: decimal("taas_prior_years_fee", { precision: 10, scale: 2 }).default("0").notNull(),
+  // Combined service flags
+  includesBookkeeping: boolean("includes_bookkeeping").default(true).notNull(),
+  includesTaas: boolean("includes_taas").default(false).notNull(),
   archived: boolean("archived").default(false).notNull(),
   // Quote type - 'bookkeeping' or 'taas'
   quoteType: text("quote_type").default("bookkeeping").notNull(),

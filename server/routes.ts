@@ -89,6 +89,105 @@ function calculateQuoteFees(data: any) {
   return { monthlyFee, setupFee };
 }
 
+// Calculate TaaS fees
+function calculateTaaSFees(data: any): { monthlyFee: number; setupFee: number } {
+  if (!data.includesTaas) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+
+  // TaaS Base Fee: $200
+  let monthlyFee = 200;
+
+  // Entity upcharge: $25 per entity beyond first
+  if (data.numEntities && data.numEntities > 1) {
+    monthlyFee += (data.numEntities - 1) * 25;
+  }
+
+  // State upcharge: $25 per state beyond first
+  if (data.statesFiled && data.statesFiled > 1) {
+    monthlyFee += (data.statesFiled - 1) * 25;
+  }
+
+  // International filing: $200 upcharge
+  if (data.internationalFiling) {
+    monthlyFee += 200;
+  }
+
+  // Business owner upcharge: $25 per owner beyond first
+  if (data.numBusinessOwners && data.numBusinessOwners > 1) {
+    monthlyFee += (data.numBusinessOwners - 1) * 25;
+  }
+
+  // Personal 1040s: $25 per business owner if include1040s is true
+  if (data.include1040s && data.numBusinessOwners) {
+    monthlyFee += data.numBusinessOwners * 25;
+  }
+
+  // Bookkeeping quality upcharge
+  const bookkeepingUpcharges: { [key: string]: number } = {
+    'Current and Clean': 0,
+    'Current with Minor Issues': 25,
+    'Needs Cleanup': 50,
+    'Significant Issues': 100,
+  };
+  if (data.bookkeepingQuality && bookkeepingUpcharges[data.bookkeepingQuality]) {
+    monthlyFee += bookkeepingUpcharges[data.bookkeepingQuality];
+  }
+
+  // Industry and revenue multipliers (same as bookkeeping)
+  const revenueMultipliers = {
+    "<$10K": 0.5,
+    "10K-25K": 0.75,
+    "25K-75K": 1.0,
+    "75K-250K": 1.5,
+    "250K-1M": 2.5,
+    "1M+": 7.0,
+  };
+  
+  const industryMultipliers = {
+    "Software/SaaS": { monthly: 1.0, cleanup: 1.0 },
+    "Professional Services": { monthly: 1.0, cleanup: 1.0 },
+    "Consulting": { monthly: 1.0, cleanup: 1.0 },
+    "Healthcare/Medical": { monthly: 1.2, cleanup: 1.2 },
+    "Real Estate": { monthly: 1.1, cleanup: 1.1 },
+    "Property Management": { monthly: 1.1, cleanup: 1.1 },
+    "E-commerce/Retail": { monthly: 1.0, cleanup: 1.0 },
+    "Restaurant/Food Service": { monthly: 1.3, cleanup: 1.3 },
+    "Construction/Trades": { monthly: 1.2, cleanup: 1.2 },
+    "Manufacturing": { monthly: 1.2, cleanup: 1.2 },
+    "Transportation/Logistics": { monthly: 1.1, cleanup: 1.1 },
+    "Nonprofit": { monthly: 0.8, cleanup: 0.8 },
+    "Law Firm": { monthly: 1.0, cleanup: 1.0 },
+    "Accounting/Finance": { monthly: 1.0, cleanup: 1.0 },
+    "Marketing/Advertising": { monthly: 1.0, cleanup: 1.0 },
+    "Insurance": { monthly: 1.0, cleanup: 1.0 },
+    "Automotive": { monthly: 1.1, cleanup: 1.1 },
+    "Education": { monthly: 0.9, cleanup: 0.9 },
+    "Fitness/Wellness": { monthly: 1.0, cleanup: 1.0 },
+    "Entertainment/Events": { monthly: 1.1, cleanup: 1.1 },
+    "Agriculture": { monthly: 1.1, cleanup: 1.1 },
+    "Technology/IT Services": { monthly: 1.0, cleanup: 1.0 },
+    "Multi-entity/Holding Companies": { monthly: 1.4, cleanup: 1.4 },
+    "Other": { monthly: 1.0, cleanup: 1.0 },
+  };
+
+  const revenueMultiplier = revenueMultipliers[data.revenueBand as keyof typeof revenueMultipliers] || 1.0;
+  const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1.0, cleanup: 1.0 };
+
+  // Apply multipliers
+  monthlyFee = Math.round(monthlyFee * revenueMultiplier * industryData.monthly);
+
+  // 10% discount if already on Seed bookkeeping
+  if (data.alreadyOnSeedBookkeeping) {
+    monthlyFee = Math.round(monthlyFee * 0.9);
+  }
+
+  // Setup fee: $500 per prior year unfiled
+  const setupFee = (data.priorYearsUnfiled || 0) * 500;
+
+  return { monthlyFee, setupFee };
+}
+
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
@@ -104,7 +203,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
-      const quoteData = insertQuoteSchema.parse({ ...req.body, ownerId: req.user.id });
+      
+      // Extract service flags with defaults
+      const includesBookkeeping = req.body.includesBookkeeping !== false; // Default to true
+      const includesTaas = req.body.includesTaas === true;
+      
+      // Calculate fees for each service
+      let bookkeepingFees = { monthlyFee: 0, setupFee: 0 };
+      let taasFees = { monthlyFee: 0, setupFee: 0 };
+      
+      if (includesBookkeeping) {
+        bookkeepingFees = calculateQuoteFees(req.body);
+      }
+      
+      if (includesTaas) {
+        taasFees = calculateTaaSFees(req.body);
+      }
+      
+      // Calculate combined totals
+      const combinedMonthlyFee = bookkeepingFees.monthlyFee + taasFees.monthlyFee;
+      const combinedSetupFee = bookkeepingFees.setupFee + taasFees.setupFee;
+      
+      // Merge calculated fees with request body
+      const requestDataWithFees = {
+        ...req.body,
+        ownerId: req.user.id,
+        monthlyFee: combinedMonthlyFee.toString(),
+        setupFee: combinedSetupFee.toString(),
+        taasMonthlyFee: taasFees.monthlyFee.toString(),
+        taasPriorYearsFee: taasFees.setupFee.toString(),
+      };
+      
+      const quoteData = insertQuoteSchema.parse(requestDataWithFees);
       const quote = await storage.createQuote(quoteData);
       
       // Note: Slack notifications now only sent during approval request, not quote creation

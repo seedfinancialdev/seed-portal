@@ -29,6 +29,8 @@ const currentMonth = new Date().getMonth() + 1;
 const formSchema = insertQuoteSchema.omit({
   monthlyFee: true,
   setupFee: true,
+  taasMonthlyFee: true,
+  taasPriorYearsFee: true,
   hubspotContactId: true,
   hubspotDealId: true,
   hubspotQuoteId: true,
@@ -304,6 +306,34 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   return { monthlyFee, setupFee };
 }
 
+// Combined calculation function for quotes that include both services
+function calculateCombinedFees(data: Partial<FormData>) {
+  const includesBookkeeping = data.includesBookkeeping !== false; // Default to true
+  const includesTaas = data.includesTaas === true;
+  
+  let bookkeepingFees = { monthlyFee: 0, setupFee: 0 };
+  let taasFees = { monthlyFee: 0, setupFee: 0 };
+  
+  if (includesBookkeeping) {
+    bookkeepingFees = calculateFees(data);
+  }
+  
+  if (includesTaas) {
+    taasFees = calculateTaaSFees(data);
+  }
+  
+  return {
+    bookkeeping: bookkeepingFees,
+    taas: taasFees,
+    combined: {
+      monthlyFee: bookkeepingFees.monthlyFee + taasFees.monthlyFee,
+      setupFee: bookkeepingFees.setupFee + taasFees.setupFee
+    },
+    includesBookkeeping,
+    includesTaas
+  };
+}
+
 export default function Home() {
   const { toast } = useToast();
   const { user, logoutMutation } = useAuth();
@@ -364,6 +394,9 @@ export default function Home() {
       customOverrideReason: "",
       companyName: "",
       quoteType: "bookkeeping",
+      // Service flags for combined quotes
+      includesBookkeeping: true,
+      includesTaas: false,
       // TaaS defaults
       numEntities: 1,
       statesFiled: 1,
@@ -393,31 +426,16 @@ export default function Home() {
     mutationFn: async (data: FormData) => {
       console.log('Submitting quote data:', data);
       
-      let fees;
-      if (data.quoteType === 'taas') {
-        // For TaaS, check if there's an existing bookkeeping quote for this email
-        const existingBookkeepingQuote = allQuotes.find(q => 
-          q.contactEmail === data.contactEmail && 
-          q.quoteType === 'bookkeeping' && 
-          !q.archived
-        );
-        
-        const existingBookkeepingFees = existingBookkeepingQuote ? {
-          monthlyFee: parseFloat(existingBookkeepingQuote.monthlyFee),
-          setupFee: parseFloat(existingBookkeepingQuote.setupFee)
-        } : undefined;
-        
-        fees = calculateTaaSFees(data, existingBookkeepingFees);
-      } else {
-        fees = calculateFees(data);
-      }
-      
-      console.log('Calculated fees:', fees);
+      // Use combined calculation system
+      const feeCalculation = calculateCombinedFees(data);
+      console.log('Calculated combined fees:', feeCalculation);
       
       const quoteData = {
         ...data,
-        monthlyFee: fees.monthlyFee.toString(),
-        setupFee: fees.setupFee.toString(),
+        monthlyFee: feeCalculation.combined.monthlyFee.toString(),
+        setupFee: feeCalculation.combined.setupFee.toString(),
+        taasMonthlyFee: feeCalculation.taas.monthlyFee.toString(),
+        taasPriorYearsFee: feeCalculation.taas.setupFee.toString(),
         approvalRequired: data.cleanupOverride && isApproved,
       };
       
@@ -642,85 +660,10 @@ export default function Home() {
 
   const watchedValues = form.watch();
   
-  // Calculate fees and breakdown based on quote type
-  const { monthlyFee, setupFee, breakdown } = (() => {
-    if (watchedValues.quoteType === 'taas') {
-      // For TaaS, check if there's an existing bookkeeping quote for this email
-      const existingBookkeepingQuote = allQuotes.find(q => 
-        q.contactEmail === watchedValues.contactEmail && 
-        q.quoteType === 'bookkeeping' && 
-        !q.archived
-      );
-      
-      const existingBookkeepingFees = existingBookkeepingQuote ? {
-        monthlyFee: parseFloat(existingBookkeepingQuote.monthlyFee),
-        setupFee: parseFloat(existingBookkeepingQuote.setupFee)
-      } : undefined;
-      
-      const fees = calculateTaaSFees(watchedValues, existingBookkeepingFees);
-      
-      // Create TaaS breakdown
-      const breakdown = watchedValues.entityType && watchedValues.numEntities && 
-                       watchedValues.statesFiled && watchedValues.numBusinessOwners &&
-                       watchedValues.bookkeepingQuality && watchedValues.include1040s !== undefined &&
-                       watchedValues.priorYearsUnfiled !== undefined && 
-                       watchedValues.alreadyOnSeedBookkeeping !== undefined ? {
-        type: 'taas',
-        baseFee: 150,
-        entityUpcharge: watchedValues.numEntities === 1 ? 0 : watchedValues.numEntities <= 3 ? 75 : 150,
-        stateUpcharge: watchedValues.statesFiled <= 1 ? 0 : watchedValues.statesFiled <= 5 ? 50 : 150,
-        intlUpcharge: watchedValues.internationalFiling ? 200 : 0,
-        ownerUpcharge: watchedValues.numBusinessOwners <= 1 ? 0 : watchedValues.numBusinessOwners <= 3 ? 50 : 100,
-        bookUpcharge: watchedValues.bookkeepingQuality === 'Clean (Seed)' ? 0 : 
-                     watchedValues.bookkeepingQuality === 'Outside CPA' ? 75 : 150,
-        personal1040: watchedValues.include1040s ? watchedValues.numBusinessOwners * 25 : 0,
-        industryMult: watchedValues.industry ? (
-          watchedValues.industry === 'Software/SaaS' ? 1.0 :
-          watchedValues.industry === 'Professional Services' || watchedValues.industry === 'Consulting' ? 1.1 :
-          watchedValues.industry === 'Real Estate' ? 1.2 :
-          watchedValues.industry === 'E-commerce/Retail' ? 1.3 :
-          watchedValues.industry === 'Construction/Trades' ? 1.4 :
-          watchedValues.industry === 'Multi-entity/Holding Companies' ? 1.5 : 1.0
-        ) : 1.0,
-        revenueMult: watchedValues.revenueBand ? (
-          watchedValues.revenueBand === '<$10K' || watchedValues.revenueBand === '10K-25K' ? 1.0 :
-          watchedValues.revenueBand === '25K-75K' ? 1.4 :
-          watchedValues.revenueBand === '75K-250K' ? 1.6 :
-          watchedValues.revenueBand === '250K-1M' ? 1.8 : 2.0
-        ) : 1.0,
-        bookkeepingDiscount: watchedValues.alreadyOnSeedBookkeeping ? 0.1 : 0,
-        existingBookkeeping: existingBookkeepingFees || null
-      } : null;
-      
-      return { ...fees, breakdown };
-    } else {
-      const fees = calculateFees(watchedValues);
-      
-      // Create bookkeeping breakdown
-      const breakdown = watchedValues.revenueBand && watchedValues.industry && 
-                       watchedValues.monthlyTransactions && watchedValues.cleanupMonths !== undefined ? {
-        type: 'bookkeeping',
-        baseFee: 150,
-        txFee: watchedValues.monthlyTransactions ? (
-          watchedValues.monthlyTransactions === '<100' ? 0 :
-          watchedValues.monthlyTransactions === '100-300' ? 100 :
-          watchedValues.monthlyTransactions === '300-600' ? 500 :
-          watchedValues.monthlyTransactions === '600-1000' ? 800 :
-          watchedValues.monthlyTransactions === '1000-2000' ? 1200 : 1600
-        ) : 0,
-        revenueMultiplier: watchedValues.revenueBand ? (
-          watchedValues.revenueBand === '<$10K' || watchedValues.revenueBand === '10K-25K' ? 1.0 :
-          watchedValues.revenueBand === '25K-75K' ? 2.2 :
-          watchedValues.revenueBand === '75K-250K' ? 3.5 :
-          watchedValues.revenueBand === '250K-1M' ? 5.0 : 7.0
-        ) : 1.0,
-        multiplier: watchedValues.industry ? (industryMultipliers[watchedValues.industry as keyof typeof industryMultipliers]?.monthly || 1.0) : 1.0,
-        cleanupMultiplier: parseFloat(watchedValues.cleanupComplexity || '0')
-      } : null;
-      
-      return { ...fees, breakdown };
-    }
-  })();
+  // Calculate fees using combined system
+  const feeCalculation = calculateCombinedFees(watchedValues);
+  const monthlyFee = feeCalculation.combined.monthlyFee;
+  const setupFee = feeCalculation.combined.setupFee;
   
   const isCalculated = monthlyFee > 0;
   
@@ -1241,6 +1184,67 @@ export default function Home() {
                       </AlertDescription>
                     </Alert>
                   )}
+
+                  {/* Service Selection */}
+                  <div className="space-y-4">
+                    <FormLabel className="text-base font-semibold">Services Required</FormLabel>
+                    <div className="grid grid-cols-1 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="includesBookkeeping"
+                        render={({ field }) => (
+                          <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg bg-green-50">
+                            <Checkbox
+                              id="includesBookkeeping"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                            />
+                            <div className="flex-1">
+                              <label
+                                htmlFor="includesBookkeeping"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-green-800"
+                              >
+                                Bookkeeping Services
+                              </label>
+                              <p className="text-xs text-green-600 mt-1">
+                                Monthly bookkeeping, cleanup, and financial management
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="includesTaas"
+                        render={({ field }) => (
+                          <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg bg-blue-50">
+                            <Checkbox
+                              id="includesTaas"
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                setShowTaaSCard(!!checked);
+                              }}
+                              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                            />
+                            <div className="flex-1">
+                              <label
+                                htmlFor="includesTaas"
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-blue-800"
+                              >
+                                Tax as a Service (TaaS)
+                              </label>
+                              <p className="text-xs text-blue-600 mt-1">
+                                Tax preparation, filing, and compliance services
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    </div>
+                  </div>
 
                   {/* Industry */}
                   <FormField
@@ -1967,7 +1971,7 @@ export default function Home() {
                 </div>
 
                 {/* Calculation Breakdown */}
-                {breakdown && isCalculated && (
+                {isCalculated && (feeCalculation.includesBookkeeping || feeCalculation.includesTaas) && (
                   <div className="border-t pt-6">
                     <button
                       type="button"
@@ -1984,105 +1988,53 @@ export default function Home() {
                     </button>
                     
                     {isBreakdownExpanded && (
-                      <div className="space-y-3 text-sm animate-in slide-in-from-top-2 duration-200">
-                        {breakdown.type === 'taas' ? (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Base Fee:</span>
-                              <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Entity Upcharge ({watchedValues.numEntities} entities):</span>
-                              <span className="font-medium text-gray-800">${(breakdown as any).entityUpcharge}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">State Upcharge ({watchedValues.statesFiled} states):</span>
-                              <span className="font-medium text-gray-800">${(breakdown as any).stateUpcharge}</span>
-                            </div>
-                            {(breakdown as any).intlUpcharge > 0 && (
+                      <div className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+                        {feeCalculation.includesBookkeeping && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div className="font-medium text-green-800 mb-2">Bookkeeping Service</div>
+                            <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-gray-600">International Filing:</span>
-                                <span className="font-medium text-gray-800">${(breakdown as any).intlUpcharge}</span>
+                                <span className="text-green-600">Monthly Fee:</span>
+                                <span className="font-medium text-green-800">${feeCalculation.bookkeeping.monthlyFee.toLocaleString()}</span>
                               </div>
-                            )}
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Owner Upcharge ({watchedValues.numBusinessOwners} owners):</span>
-                              <span className="font-medium text-gray-800">${(breakdown as any).ownerUpcharge}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Bookkeeping Quality ({watchedValues.bookkeepingQuality}):</span>
-                              <span className="font-medium text-gray-800">${(breakdown as any).bookUpcharge}</span>
-                            </div>
-                            {(breakdown as any).personal1040 > 0 && (
                               <div className="flex justify-between">
-                                <span className="text-gray-600">Personal 1040s ({watchedValues.numBusinessOwners} × $25):</span>
-                                <span className="font-medium text-gray-800">${(breakdown as any).personal1040}</span>
+                                <span className="text-green-600">Setup/Cleanup Fee:</span>
+                                <span className="font-medium text-green-800">${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
                               </div>
-                            )}
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
-                              <span className="font-medium text-gray-800">{(breakdown as any).industryMult}x</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Revenue Multiplier ({watchedValues.revenueBand}):</span>
-                              <span className="font-medium text-gray-800">{(breakdown as any).revenueMult}x</span>
-                            </div>
-                            {(breakdown as any).bookkeepingDiscount > 0 && (
-                              <div className="flex justify-between text-green-600">
-                                <span>Seed Bookkeeping Discount:</span>
-                                <span className="font-medium">-10%</span>
+                          </div>
+                        )}
+                        
+                        {feeCalculation.includesTaas && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div className="font-medium text-blue-800 mb-2">Tax as a Service (TaaS)</div>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-blue-600">Monthly Fee:</span>
+                                <span className="font-medium text-blue-800">${feeCalculation.taas.monthlyFee.toLocaleString()}</span>
                               </div>
-                            )}
-                            {(breakdown as any).existingBookkeeping && (
-                              <div className="border-t pt-2 space-y-2">
-                                <div className="flex justify-between text-blue-600">
-                                  <span>Existing Bookkeeping Monthly:</span>
-                                  <span className="font-medium">+${(breakdown as any).existingBookkeeping.monthlyFee}</span>
-                                </div>
-                                <div className="flex justify-between text-blue-600">
-                                  <span>Existing Bookkeeping Setup:</span>
-                                  <span className="font-medium">+${(breakdown as any).existingBookkeeping.setupFee}</span>
-                                </div>
+                              <div className="flex justify-between">
+                                <span className="text-blue-600">Prior Years Fee:</span>
+                                <span className="font-medium text-blue-800">${feeCalculation.taas.setupFee.toLocaleString()}</span>
                               </div>
-                            )}
-                            <div className="flex justify-between border-t pt-2">
-                              <span className="text-gray-600">Monthly Fee:</span>
-                              <span className="font-semibold text-gray-800">${monthlyFee.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Setup Fee ({watchedValues.priorYearsUnfiled} prior years):</span>
-                              <span className="font-semibold text-[#e24c00]">${setupFee.toLocaleString()}</span>
+                          </div>
+                        )}
+                        
+                        {feeCalculation.includesBookkeeping && feeCalculation.includesTaas && (
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div className="font-medium text-gray-800 mb-2">Combined Total</div>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between font-semibold">
+                                <span className="text-gray-600">Total Monthly:</span>
+                                <span className="text-gray-800">${feeCalculation.combined.monthlyFee.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between font-semibold">
+                                <span className="text-gray-600">Total Setup:</span>
+                                <span className="text-gray-800">${feeCalculation.combined.setupFee.toLocaleString()}</span>
+                              </div>
                             </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Base Fee:</span>
-                              <span className="font-medium text-gray-800">${breakdown.baseFee}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Transaction Surcharge ({watchedValues.monthlyTransactions}):</span>
-                              <span className="font-medium text-gray-800">${(breakdown as any).txFee}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Industry Multiplier ({watchedValues.industry}):</span>
-                              <span className="font-medium text-gray-800">{(breakdown as any).multiplier}x</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Revenue Modifier ({watchedValues.revenueBand}):</span>
-                              <span className="font-medium text-gray-800">{(breakdown as any).revenueMultiplier}x</span>
-                            </div>
-                            <div className="flex justify-between border-t pt-2">
-                              <span className="text-gray-600">Monthly Fee:</span>
-                              <span className="font-semibold text-gray-800">${monthlyFee.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">
-                                Cleanup ({watchedValues.cleanupMonths} months × {parseFloat(watchedValues.cleanupComplexity || '0') * 100}%):
-                              </span>
-                              <span className="font-semibold text-[#e24c00]">${setupFee.toLocaleString()}</span>
-                            </div>
-                          </>
+                          </div>
                         )}
                       </div>
                     )}
