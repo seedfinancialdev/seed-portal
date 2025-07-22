@@ -1824,25 +1824,25 @@ export default function Home() {
             </Card>
           )}
 
-          {/* Service Selection Cards - Now at the top */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {/* Bookkeeping Service Card */}
-            <div 
-              className={`
-                cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
-                ${feeCalculation.includesBookkeeping 
-                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
-                  : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
-                }
-              `}
-              onClick={() => {
-                const newValue = !feeCalculation.includesBookkeeping;
-                form.setValue('includesBookkeeping', newValue);
-                form.trigger();
-              }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
+          {/* Service Selection Cards - Optimized for desktop */}
+          <div className="max-w-4xl mx-auto mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Bookkeeping Service Card */}
+              <div 
+                className={`
+                  cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
+                  ${feeCalculation.includesBookkeeping 
+                    ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
+                    : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
+                  }
+                `}
+                onClick={() => {
+                  const newValue = !feeCalculation.includesBookkeeping;
+                  form.setValue('includesBookkeeping', newValue);
+                  form.trigger();
+                }}
+              >
+                <div className="flex items-center gap-3 mb-3">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                     feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
                   }`}>
@@ -1854,42 +1854,40 @@ export default function Home() {
                     Bookkeeping
                   </h4>
                 </div>
+                <div className={`text-2xl font-bold mb-1 ${
+                  feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
+                }`}>
+                  ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
+                </div>
+                <div className={`text-sm font-medium mb-2 ${
+                  feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
+                }`}>
+                  ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
+                </div>
+                <p className={`text-xs ${
+                  feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
+                }`}>
+                  Monthly bookkeeping, cleanup, and financial management
+                </p>
               </div>
-              <div className={`text-2xl font-bold mb-1 ${
-                feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
-              }`}>
-                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
-              </div>
-              <div className={`text-sm font-medium mb-2 ${
-                feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
-              }`}>
-                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
-              </div>
-              <p className={`text-xs ${
-                feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
-              }`}>
-                Monthly bookkeeping, cleanup, and financial management
-              </p>
-            </div>
 
-            {/* TaaS Service Card */}
-            <div 
-              className={`
-                cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
-                ${feeCalculation.includesTaas 
-                  ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
-                  : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
-                }
-              `}
-              onClick={() => {
-                const newValue = !feeCalculation.includesTaas;
-                form.setValue('includesTaas', newValue);
-                setShowTaaSCard(newValue);
-                form.trigger();
-              }}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
+              {/* TaaS Service Card */}
+              <div 
+                className={`
+                  cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
+                  ${feeCalculation.includesTaas 
+                    ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
+                    : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                  }
+                `}
+                onClick={() => {
+                  const newValue = !feeCalculation.includesTaas;
+                  form.setValue('includesTaas', newValue);
+                  setShowTaaSCard(newValue);
+                  form.trigger();
+                }}
+              >
+                <div className="flex items-center gap-3 mb-3">
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                     feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
                   }`}>
@@ -1901,43 +1899,41 @@ export default function Home() {
                     TaaS
                   </h4>
                 </div>
+                <div className={`text-2xl font-bold mb-1 ${
+                  feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
+                }`}>
+                  ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
+                </div>
+                <div className={`text-sm font-medium mb-2 ${
+                  feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
+                }`}>
+                  ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} prior years
+                </div>
+                <p className={`text-xs ${
+                  feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
+                }`}>
+                  Tax preparation, filing, and compliance services
+                </p>
               </div>
-              <div className={`text-2xl font-bold mb-1 ${
-                feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
-              }`}>
-                ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
-              </div>
-              <div className={`text-sm font-medium mb-2 ${
-                feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
-              }`}>
-                ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} prior years
-              </div>
-              <p className={`text-xs ${
-                feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
-              }`}>
-                Tax preparation, filing, and compliance services
-              </p>
-            </div>
 
-            {/* Other Services Card - Coming Soon */}
-            <div className="cursor-not-allowed rounded-xl p-6 border-2 border-dashed border-gray-300 shadow-sm bg-gray-50">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
+              {/* Other Services Card - Coming Soon */}
+              <div className="cursor-not-allowed rounded-xl p-5 border-2 border-dashed border-gray-300 shadow-sm bg-gray-50">
+                <div className="flex items-center gap-3 mb-3">
                   <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
                     <Plus className="h-4 w-4 text-gray-500" />
                   </div>
                   <h4 className="font-semibold text-gray-500">Other Services</h4>
                 </div>
+                <div className="text-2xl font-bold mb-1 text-gray-400">
+                  Coming Soon
+                </div>
+                <div className="text-sm font-medium mb-2 text-gray-400">
+                  Additional services
+                </div>
+                <p className="text-xs text-gray-500">
+                  Payroll, FBAR filing, APAP Lite, and more
+                </p>
               </div>
-              <div className="text-2xl font-bold mb-1 text-gray-400">
-                Coming Soon
-              </div>
-              <div className="text-sm font-medium mb-2 text-gray-400">
-                Additional services
-              </div>
-              <p className="text-xs text-gray-500">
-                Payroll, FBAR filing, APAP Lite, and more
-              </p>
             </div>
           </div>
 
