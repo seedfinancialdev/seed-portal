@@ -362,8 +362,8 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   const discountedFee = afterMultipliers - seedDiscount;
   const monthlyFee = Math.max(150, Math.round(discountedFee / 5) * 5);
 
-  // Setup fee calculation
-  const perYearFee = monthlyFee * 0.8 * 12;
+  // Setup fee calculation - per year fee should be much more reasonable
+  const perYearFee = monthlyFee * 2; // 2x monthly fee per unfiled year seems more reasonable
   const setupFee = data.priorYearsUnfiled > 0 ? Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled) : 0;
 
   // Add intermediate calculation for better breakdown display
@@ -2040,11 +2040,15 @@ export default function Home() {
                                   {feeCalculation.bookkeeping.breakdown && feeCalculation.bookkeeping.setupFee > 0 && (
                                     <>
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>Monthly Fee Base:</span>
+                                        <span>Setup Base (Monthly Fee):</span>
                                         <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
                                       </div>
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
-                                        <span>Complexity ({feeCalculation.bookkeeping.breakdown.cleanupComplexity.toFixed(0)}%) × {feeCalculation.bookkeeping.breakdown.cleanupMonths} months:</span>
+                                        <span>× Complexity ({feeCalculation.bookkeeping.breakdown.cleanupComplexity.toFixed(0)}%):</span>
+                                        <span>${Math.round(feeCalculation.bookkeeping.breakdown.finalMonthly * (feeCalculation.bookkeeping.breakdown.cleanupComplexity / 100)).toLocaleString()}</span>
+                                      </div>
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>× {feeCalculation.bookkeeping.breakdown.cleanupMonths} months:</span>
                                         <span>${feeCalculation.bookkeeping.breakdown.setupCalc.toLocaleString()}</span>
                                       </div>
                                       <div className="flex justify-between pl-4 text-xs text-green-600 font-medium border-t border-green-300 pt-1">
