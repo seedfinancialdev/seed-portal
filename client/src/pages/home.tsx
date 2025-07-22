@@ -1448,7 +1448,8 @@ export default function Home() {
                     )}
                   />
 
-                  {/* Monthly Transactions */}
+                  {/* Monthly Transactions - Only show for Bookkeeping */}
+                  {form.watch('includesBookkeeping') !== false && (
                   <FormField
                     control={form.control}
                     name="monthlyTransactions"
@@ -1474,8 +1475,11 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
+                  )}
 
-                  {/* Cleanup Complexity */}
+                  {/* Cleanup Complexity - Only show for Bookkeeping */}
+                  {form.watch('includesBookkeeping') !== false && (
+                  <>
                   <FormField
                     control={form.control}
                     name="cleanupComplexity"
@@ -1635,6 +1639,9 @@ export default function Home() {
                       )}
                     />
                   )}
+                  </>
+                  )}
+
                   </div>
 
                   {/* TaaS-specific Fields - Only show when currentFormView is 'taas' */}
