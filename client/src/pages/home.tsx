@@ -1185,67 +1185,6 @@ export default function Home() {
                     </Alert>
                   )}
 
-                  {/* Service Selection */}
-                  <div className="space-y-4">
-                    <FormLabel className="text-base font-semibold">Services Required</FormLabel>
-                    <div className="grid grid-cols-1 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="includesBookkeeping"
-                        render={({ field }) => (
-                          <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg bg-green-50">
-                            <Checkbox
-                              id="includesBookkeeping"
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
-                            />
-                            <div className="flex-1">
-                              <label
-                                htmlFor="includesBookkeeping"
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-green-800"
-                              >
-                                Bookkeeping Services
-                              </label>
-                              <p className="text-xs text-green-600 mt-1">
-                                Monthly bookkeeping, cleanup, and financial management
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="includesTaas"
-                        render={({ field }) => (
-                          <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg bg-blue-50">
-                            <Checkbox
-                              id="includesTaas"
-                              checked={field.value}
-                              onCheckedChange={(checked) => {
-                                field.onChange(checked);
-                                setShowTaaSCard(!!checked);
-                              }}
-                              className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                            />
-                            <div className="flex-1">
-                              <label
-                                htmlFor="includesTaas"
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-blue-800"
-                              >
-                                Tax as a Service (TaaS)
-                              </label>
-                              <p className="text-xs text-blue-600 mt-1">
-                                Tax preparation, filing, and compliance services
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    </div>
-                  </div>
-
                   {/* Industry */}
                   <FormField
                     control={form.control}
@@ -1900,75 +1839,206 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="space-y-6">
-                {/* Monthly Fee */}
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100 rounded-xl p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <label className="text-sm font-semibold text-green-800">
-                        {showTaaSCard ? 'Monthly TaaS Fee' : 'Monthly Bookkeeping Fee'}
-                      </label>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 shadow-sm"
-                      onClick={() => copyToClipboard(monthlyFee.toLocaleString(), 'monthly')}
-                      disabled={!isCalculated}
+              <div className="space-y-4">
+                {/* Service Selection Cards */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Select Services</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    {/* Bookkeeping Service Card */}
+                    <div 
+                      className={`
+                        cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
+                        ${feeCalculation.includesBookkeeping 
+                          ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
+                          : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
+                        }
+                      `}
+                      onClick={() => {
+                        const newValue = !feeCalculation.includesBookkeeping;
+                        form.setValue('includesBookkeeping', newValue);
+                        // Force recalculation
+                        form.trigger();
+                      }}
                     >
-                      {copiedField === 'monthly' ? (
-                        <Check className="h-3 w-3 mr-1" />
-                      ) : (
-                        <Copy className="h-3 w-3 mr-1" />
-                      )}
-                      {copiedField === 'monthly' ? 'Copied!' : 'Copy'}
-                    </Button>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
+                          }`}>
+                            {feeCalculation.includesBookkeeping && <Check className="h-4 w-4 text-white" />}
+                          </div>
+                          <h4 className={`font-semibold ${
+                            feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-600'
+                          }`}>
+                            Bookkeeping Services
+                          </h4>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className={`h-8 px-3 text-xs shadow-sm ${
+                            feeCalculation.includesBookkeeping 
+                              ? 'bg-green-600 text-white border-green-600 hover:bg-green-700' 
+                              : 'bg-gray-400 text-white border-gray-400'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (feeCalculation.includesBookkeeping) {
+                              copyToClipboard(feeCalculation.bookkeeping.monthlyFee.toLocaleString(), 'bookkeeping');
+                            }
+                          }}
+                          disabled={!feeCalculation.includesBookkeeping}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </Button>
+                      </div>
+                      <div className={`text-3xl font-bold mb-2 ${
+                        feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
+                      }`}>
+                        ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
+                      </div>
+                      <div className={`text-xl font-semibold mb-2 ${
+                        feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
+                      }`}>
+                        ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
+                      </div>
+                      <p className={`text-sm ${
+                        feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
+                      }`}>
+                        Monthly bookkeeping, cleanup, and financial management
+                      </p>
+                    </div>
+
+                    {/* TaaS Service Card */}
+                    <div 
+                      className={`
+                        cursor-pointer transition-all duration-200 rounded-xl p-6 border-2 shadow-sm
+                        ${feeCalculation.includesTaas 
+                          ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
+                          : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                        }
+                      `}
+                      onClick={() => {
+                        const newValue = !feeCalculation.includesTaas;
+                        form.setValue('includesTaas', newValue);
+                        setShowTaaSCard(newValue);
+                        // Force recalculation
+                        form.trigger();
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                            feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
+                          }`}>
+                            {feeCalculation.includesTaas && <Check className="h-4 w-4 text-white" />}
+                          </div>
+                          <h4 className={`font-semibold ${
+                            feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-600'
+                          }`}>
+                            Tax as a Service (TaaS)
+                          </h4>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className={`h-8 px-3 text-xs shadow-sm ${
+                            feeCalculation.includesTaas 
+                              ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' 
+                              : 'bg-gray-400 text-white border-gray-400'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (feeCalculation.includesTaas) {
+                              copyToClipboard(feeCalculation.taas.monthlyFee.toLocaleString(), 'taas');
+                            }
+                          }}
+                          disabled={!feeCalculation.includesTaas}
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </Button>
+                      </div>
+                      <div className={`text-3xl font-bold mb-2 ${
+                        feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
+                      }`}>
+                        ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
+                      </div>
+                      <div className={`text-xl font-semibold mb-2 ${
+                        feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
+                      }`}>
+                        ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} prior years
+                      </div>
+                      <p className={`text-sm ${
+                        feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
+                      }`}>
+                        Tax preparation, filing, and compliance services
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-4xl font-bold text-green-800 mb-1">
-                    {isCalculated ? `$${monthlyFee.toLocaleString()}` : '$0'}
-                  </div>
-                  <p className="text-sm text-green-600 font-medium">
-                    Per month, ongoing service
-                  </p>
                 </div>
 
-                {/* Setup Fee */}
-                <div className="bg-gradient-to-br from-orange-50 to-red-50 border border-orange-100 rounded-xl p-6 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <label className="text-sm font-semibold text-orange-800">
-                        One-time Setup Fee
-                      </label>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3 text-xs bg-orange-600 text-white border-orange-600 hover:bg-orange-700 shadow-sm"
-                      onClick={() => copyToClipboard(setupFee.toLocaleString(), 'setup')}
-                      disabled={!isCalculated}
-                    >
-                      {copiedField === 'setup' ? (
-                        <Check className="h-3 w-3 mr-1" />
-                      ) : (
+                {/* Combined Total Card */}
+                {(feeCalculation.includesBookkeeping && feeCalculation.includesTaas) && (
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
+                          <Calculator className="h-4 w-4 text-white" />
+                        </div>
+                        <h4 className="font-semibold text-purple-800">Combined Total</h4>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 text-xs bg-purple-600 text-white border-purple-600 hover:bg-purple-700 shadow-sm"
+                        onClick={() => copyToClipboard(feeCalculation.combined.monthlyFee.toLocaleString(), 'combined')}
+                      >
                         <Copy className="h-3 w-3 mr-1" />
-                      )}
-                      {copiedField === 'setup' ? 'Copied!' : 'Copy'}
-                    </Button>
+                        Copy
+                      </Button>
+                    </div>
+                    <div className="text-3xl font-bold text-purple-800 mb-2">
+                      ${feeCalculation.combined.monthlyFee.toLocaleString()} / mo
+                    </div>
+                    <div className="text-xl font-semibold text-purple-700 mb-2">
+                      ${feeCalculation.combined.setupFee.toLocaleString()} total setup
+                    </div>
+                    <p className="text-sm text-purple-600">
+                      Complete bookkeeping and tax services package
+                    </p>
                   </div>
-                  <div className="text-4xl font-bold text-orange-800 mb-1">
-                    {isCalculated ? `$${setupFee.toLocaleString()}` : '$0'}
+                )}
+
+                {/* Single Service Total */}
+                {(feeCalculation.includesBookkeeping && !feeCalculation.includesTaas) && (
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 shadow-sm">
+                    <h4 className="font-semibold text-green-800 mb-3">Bookkeeping Package Total</h4>
+                    <div className="text-3xl font-bold text-green-800 mb-2">
+                      ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()} / mo
+                    </div>
+                    <div className="text-xl font-semibold text-green-700">
+                      ${feeCalculation.bookkeeping.setupFee.toLocaleString()} setup fee
+                    </div>
                   </div>
-                  <p className="text-sm text-orange-600 font-medium">
-                    {showTaaSCard ? 
-                      `Based on ${watchedValues.priorYearsUnfiled || 0} prior years unfiled` :
-                      `Includes ${watchedValues.cleanupMonths || 0} months of cleanup`
-                    }
-                  </p>
-                </div>
+                )}
+
+                {(!feeCalculation.includesBookkeeping && feeCalculation.includesTaas) && (
+                  <div className="bg-gradient-to-br from-blue-50 to-sky-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm">
+                    <h4 className="font-semibold text-blue-800 mb-3">TaaS Package Total</h4>
+                    <div className="text-3xl font-bold text-blue-800 mb-2">
+                      ${feeCalculation.taas.monthlyFee.toLocaleString()} / mo
+                    </div>
+                    <div className="text-xl font-semibold text-blue-700">
+                      ${feeCalculation.taas.setupFee.toLocaleString()} prior years fee
+                    </div>
+                  </div>
+                )}
 
                 {/* Calculation Breakdown */}
                 {isCalculated && (feeCalculation.includesBookkeeping || feeCalculation.includesTaas) && (
