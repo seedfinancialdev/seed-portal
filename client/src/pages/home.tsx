@@ -334,19 +334,9 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   // Personal 1040s
   const personal1040 = data.include1040s ? data.numBusinessOwners * 25 : 0;
 
-  // Industry multiplier (simplified mapping from TaaS logic to our existing industries)
-  const taasIndustryMult: Record<string, number> = {
-    'Software/SaaS': 1.0,
-    'Professional Services': 1.1, // Agencies
-    'Consulting': 1.1, // Agencies  
-    'Real Estate': 1.2,
-    'E-commerce/Retail': 1.3,
-    'Construction/Trades': 1.4,
-    'Multi-entity/Holding Companies': 1.5,
-    // Default to SaaS multiplier for others
-  };
-  
-  const industryMult = taasIndustryMult[data.industry] || 1.0;
+  // Use the same comprehensive industry multipliers as bookkeeping (monthly values)
+  const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1.0, cleanup: 1.0 };
+  const industryMult = industryData.monthly;
 
   // Revenue multiplier (map our revenue bands to average monthly revenue)
   const avgMonthlyRevenue = data.revenueBand === '<$10K' ? 5000 :
@@ -376,6 +366,9 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   const perYearFee = monthlyFee * 0.8 * 12;
   const setupFee = data.priorYearsUnfiled > 0 ? Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled) : 0;
 
+  // Add intermediate calculation for better breakdown display
+  const afterIndustryMult = beforeMultipliers * industryMult;
+
   const breakdown = {
     base,
     entityUpcharge,
@@ -386,6 +379,7 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
     personal1040,
     beforeMultipliers,
     industryMult,
+    afterIndustryMult: Math.round(afterIndustryMult),
     revenueMult,
     afterMultipliers: Math.round(afterMultipliers),
     seedDiscount: Math.round(seedDiscount),
@@ -2120,10 +2114,12 @@ export default function Home() {
                                       <span>Before Multipliers:</span>
                                       <span>${feeCalculation.taas.breakdown.beforeMultipliers.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                      <span>Industry Multiplier ({feeCalculation.taas.breakdown.industryMult.toFixed(1)}x):</span>
-                                      <span>✓</span>
-                                    </div>
+                                    {feeCalculation.taas.breakdown.industryMult !== 1 && (
+                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                        <span>Industry Multiplier ({feeCalculation.taas.breakdown.industryMult.toFixed(1)}x):</span>
+                                        <span>${feeCalculation.taas.breakdown.afterIndustryMult?.toLocaleString() || feeCalculation.taas.breakdown.beforeMultipliers.toLocaleString()}</span>
+                                      </div>
+                                    )}
                                     <div className="flex justify-between pl-4 text-xs text-blue-600">
                                       <span>Revenue Multiplier ({feeCalculation.taas.breakdown.revenueMult.toFixed(1)}x):</span>
                                       <span>${feeCalculation.taas.breakdown.afterMultipliers.toLocaleString()}</span>
