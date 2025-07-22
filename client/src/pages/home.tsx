@@ -1068,7 +1068,6 @@ export default function Home() {
               onClick={() => {
                 const newValue = !feeCalculation.includesTaas;
                 form.setValue('includesTaas', newValue);
-                setShowTaaSCard(newValue);
                 form.trigger();
                 
                 // Navigation logic
