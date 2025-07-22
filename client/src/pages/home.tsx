@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
-import { calculateCombinedFees as sharedCalculateCombinedFees } from "@shared/pricing";
+
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -800,7 +800,7 @@ export default function Home() {
   const watchedValues = form.watch();
   
   // Calculate fees using combined system
-  const feeCalculation = sharedCalculateCombinedFees(watchedValues);
+  const feeCalculation = calculateCombinedFees(watchedValues);
   const monthlyFee = feeCalculation.combined.monthlyFee;
   const setupFee = feeCalculation.combined.setupFee;
   
