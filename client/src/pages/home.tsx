@@ -2437,7 +2437,7 @@ export default function Home() {
                       </div>
                       <div className="border-t pt-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-base font-semibold text-gray-800">Total Monthly 2-12:</span>
+                          <span className="text-base font-semibold text-gray-800">Total Months 2-12:</span>
                           <span className="text-xl font-bold text-blue-600">
                             ${totalOngoingCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </span>
