@@ -2345,6 +2345,156 @@ export default function Home() {
           </Card>
         </div>
         
+        {/* Commission Tracking Section */}
+        {isCalculated && (() => {
+          // Calculate commissions properly accounting for custom setup fees and combined services
+          const totalSetupFee = setupFee;
+          const totalMonthlyFee = monthlyFee;
+          
+          // Month 1 Commission: 20% of setup fee + 40% of monthly fee
+          const month1SetupCommission = totalSetupFee * 0.20;
+          const month1MonthlyCommission = totalMonthlyFee * 0.40;
+          const totalMonth1Commission = month1SetupCommission + month1MonthlyCommission;
+          
+          // Ongoing Commission: 10% of monthly fee for months 2-12
+          const ongoingMonthlyCommission = totalMonthlyFee * 0.10;
+          const totalOngoingCommission = ongoingMonthlyCommission * 11;
+          
+          // Total first year commission
+          const totalFirstYearCommission = totalMonth1Commission + totalOngoingCommission;
+          
+          return (
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 shadow-xl mt-8 border border-green-200 quote-card">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl font-bold text-gray-800">
+                      Commission Preview
+                    </CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">Your earnings from this quote</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Month 1 Commission */}
+                  <div className="bg-white rounded-lg p-6 shadow-md border border-green-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">Month 1 Commission</h3>
+                      <div className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                        First Month
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {totalSetupFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Setup Fee (20%):</span>
+                          <span className="font-semibold text-gray-800">
+                            ${month1SetupCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Monthly Fee (40%):</span>
+                        <span className="font-semibold text-gray-800">
+                          ${month1MonthlyCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-base font-semibold text-gray-800">Total Month 1:</span>
+                          <span className="text-xl font-bold text-green-600">
+                            ${totalMonth1Commission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ongoing Commission */}
+                  <div className="bg-white rounded-lg p-6 shadow-md border border-green-100">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">Ongoing Commission</h3>
+                      <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                        Months 2-12
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Monthly Fee (10%):</span>
+                        <span className="font-semibold text-gray-800">
+                          ${ongoingMonthlyCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">× 11 months:</span>
+                        <span className="font-semibold text-gray-800">
+                          ${totalOngoingCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="border-t pt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-base font-semibold text-gray-800">Total Months 2-12:</span>
+                          <span className="text-xl font-bold text-blue-600">
+                            ${totalOngoingCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Annual Commission */}
+                <div className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg p-6 border border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">Total First Year Commission</h3>
+                      <p className="text-sm text-gray-600 mt-1">Complete earnings potential from this client</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-amber-600">
+                        ${totalFirstYearCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        Based on current quote
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Breakdown for combined services */}
+                  {(feeCalculation.includesBookkeeping && feeCalculation.includesTaas) && (
+                    <div className="mt-4 pt-4 border-t border-amber-200">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <div className="text-gray-600 mb-1">Bookkeeping Service:</div>
+                          <div className="text-gray-800">
+                            Monthly: ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()}
+                            {feeCalculation.bookkeeping.setupFee > 0 && (
+                              <span> | Setup: ${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-600 mb-1">TaaS Service:</div>
+                          <div className="text-gray-800">
+                            Monthly: ${feeCalculation.taas.monthlyFee.toLocaleString()}
+                            {feeCalculation.taas.setupFee > 0 && (
+                              <span> | Setup: ${feeCalculation.taas.setupFee.toLocaleString()}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+        
         {/* Quote History Section */}
         <Card className="bg-white shadow-xl mt-8 border-0 quote-card">
           <CardHeader className="pb-4">
