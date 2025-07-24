@@ -127,7 +127,7 @@ Preferred communication style: Simple, everyday language.
   - **Enhanced Debug Logging**: Added comprehensive logging to track TaaS fee flow and line item creation
   - **Fixed Form Data Enhancement**: Update mutation now includes calculated TaaS fees in form data to ensure proper line item creation
   - **Fixed HubSpot Association API**: Uses proper quote->line_item direction matching working line item associations
-  - **Added TaaS Line Item Removal**: Automatically deletes TaaS line items when services are removed from quotes
+  - **Generic Service Line Item Management**: Refactored to handle any service type (TaaS, Payroll, etc.) with extensible pattern-based system
   - **Comprehensive Service Conversion**: Handles all aspects of converting bookkeeping-only quotes to combined service quotes
 
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)

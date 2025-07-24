@@ -682,14 +682,15 @@ Generated: ${new Date().toLocaleDateString()}`;
         }
       }
 
-      // Handle TaaS line items - add if needed, remove if not
-      if (includesTaas && (taasMonthlyFee > 0 || taasPriorYearsFee > 0)) {
-        console.log(`Adding TaaS line items - Monthly: $${taasMonthlyFee}, Prior Years: $${taasPriorYearsFee}`);
-        await this.addMissingTaaSLineItems(quoteId, taasMonthlyFee || 0, taasPriorYearsFee || 0);
-      } else {
-        console.log(`TaaS not included - removing existing TaaS line items`);
-        await this.removeTaaSLineItems(quoteId, lineItemsToUpdate);
-      }
+      // Handle service-specific line items based on quote configuration
+      await this.manageServiceLineItems(quoteId, lineItemsToUpdate, {
+        includesBookkeeping,
+        includesTaas,
+        taasMonthlyFee: taasMonthlyFee || 0,
+        taasPriorYearsFee: taasPriorYearsFee || 0,
+        bookkeepingMonthlyFee: bookkeepingMonthlyFee || 0,
+        bookkeepingSetupFee: bookkeepingSetupFee || 0
+      });
 
       // Update the associated deal amount and name
       let actualDealId = dealId;
@@ -753,138 +754,151 @@ Generated: ${new Date().toLocaleDateString()}`;
     }
   }
 
-  private async removeTaaSLineItems(quoteId: string, lineItemsToUpdate: any[]): Promise<void> {
+  private async manageServiceLineItems(quoteId: string, existingLineItems: any[], serviceConfig: {
+    includesBookkeeping: boolean;
+    includesTaas: boolean;
+    taasMonthlyFee: number;
+    taasPriorYearsFee: number;
+    bookkeepingMonthlyFee: number;
+    bookkeepingSetupFee: number;
+  }): Promise<void> {
     try {
-      const taasLineItemsToDelete: string[] = [];
-      
-      // Identify TaaS line items to delete
-      for (const lineItem of lineItemsToUpdate) {
-        const lineItemName = lineItem.properties?.name || '';
-        if (lineItemName.includes('TaaS') || lineItemName.includes('Tax as a Service')) {
-          taasLineItemsToDelete.push(lineItem.id);
+      // Define service patterns for identification and management
+      const servicePatterns = {
+        taas: {
+          identifiers: ['TaaS', 'Tax as a Service', 'Monthly TaaS', 'TaaS Prior Years'],
+          shouldInclude: serviceConfig.includesTaas && (serviceConfig.taasMonthlyFee > 0 || serviceConfig.taasPriorYearsFee > 0),
+          lineItems: [
+            {
+              condition: serviceConfig.taasMonthlyFee > 0,
+              name: 'Monthly TaaS (Custom)',
+              price: serviceConfig.taasMonthlyFee,
+              productId: '25687054003', // Using bookkeeping product ID as placeholder
+              description: 'Seed Financial Monthly TaaS (Custom)'
+            },
+            {
+              condition: serviceConfig.taasPriorYearsFee > 0,
+              name: 'TaaS Prior Years (Custom)',
+              price: serviceConfig.taasPriorYearsFee,
+              productId: '25683750263', // Using cleanup product ID as placeholder
+              description: 'Seed Financial TaaS Prior Years (Custom)'
+            }
+          ]
         }
-      }
-      
-      // Delete TaaS line items
-      for (const lineItemId of taasLineItemsToDelete) {
-        console.log(`Deleting TaaS line item: ${lineItemId}`);
-        await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
-          method: 'DELETE'
-        });
-        console.log(`Successfully deleted TaaS line item: ${lineItemId}`);
-      }
-      
-      if (taasLineItemsToDelete.length > 0) {
-        console.log(`Removed ${taasLineItemsToDelete.length} TaaS line items from quote`);
-      }
-    } catch (error) {
-      console.error('Error removing TaaS line items:', error);
-      throw error;
-    }
-  }
+        // Future services can be added here following the same pattern
+        // payroll: {
+        //   identifiers: ['Payroll', 'Payroll Services'],
+        //   shouldInclude: serviceConfig.includesPayroll,
+        //   lineItems: [...]
+        // }
+      };
 
-  private async addMissingTaaSLineItems(quoteId: string, taasMonthlyFee: number, taasPriorYearsFee: number): Promise<void> {
-    try {
-      // Get existing line items
-      const lineItemsResponse = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/line_items`, {
-        method: 'GET'
-      });
-
-      const existingLineItems = new Set<string>();
-      if (lineItemsResponse && lineItemsResponse.results) {
-        for (const lineItemAssociation of lineItemsResponse.results) {
-          const lineItemId = lineItemAssociation.toObjectId;
-          const lineItemDetails = await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
-            method: 'GET'
+      // Remove line items for services that are no longer included
+      for (const [serviceName, config] of Object.entries(servicePatterns)) {
+        if (!config.shouldInclude) {
+          const lineItemsToDelete = existingLineItems.filter(item => {
+            const itemName = item.properties?.name || '';
+            return config.identifiers.some(identifier => itemName.includes(identifier));
           });
-          
-          if (lineItemDetails && lineItemDetails.properties) {
-            const lineItemName = lineItemDetails.properties.name || '';
-            if (lineItemName.includes('TaaS Monthly')) {
-              existingLineItems.add('taas_monthly');
-            }
-            if (lineItemName.includes('TaaS Prior Years')) {
-              existingLineItems.add('taas_prior');
-            }
+
+          for (const lineItem of lineItemsToDelete) {
+            console.log(`Deleting ${serviceName} line item: ${lineItem.id} (${lineItem.properties?.name})`);
+            await this.makeRequest(`/crm/v3/objects/line_items/${lineItem.id}`, {
+              method: 'DELETE'
+            });
+            console.log(`Successfully deleted ${serviceName} line item: ${lineItem.id}`);
+          }
+
+          if (lineItemsToDelete.length > 0) {
+            console.log(`Removed ${lineItemsToDelete.length} ${serviceName} line items from quote`);
           }
         }
       }
 
-      // Add TaaS Monthly line item if missing and fee > 0
-      if (taasMonthlyFee > 0 && !existingLineItems.has('taas_monthly')) {
-        console.log(`Creating TaaS Monthly line item: $${taasMonthlyFee}`);
-        const monthlyLineItem = await this.makeRequest('/crm/v3/objects/line_items', {
-          method: 'POST',
-          body: JSON.stringify({
-            properties: {
-              name: 'Monthly TaaS (Custom)',
-              price: taasMonthlyFee.toString(),
-              quantity: '1',
-              hs_product_id: '25687054003',
-              hs_sku: '25687054003',
-              description: 'Seed Financial Monthly TaaS (Custom)'
-            }
-          })
-        });
-        
-        if (monthlyLineItem && monthlyLineItem.id) {
-          // Use the same direction as working line items: quote -> line_item
-          await this.makeRequest(`/crm/v4/associations/quotes/line_items/batch/create`, {
-            method: 'POST',
-            body: JSON.stringify({
-              inputs: [{
-                from: { id: quoteId },
-                to: { id: monthlyLineItem.id },
-                types: [{
-                  associationCategory: "HUBSPOT_DEFINED",
-                  associationTypeId: 67
-                }]
-              }]
-            })
-          });
-          console.log(`Added TaaS Monthly line item with quote: $${taasMonthlyFee}`);
-        }
-      }
-
-      // Add TaaS Prior Years line item if missing and fee > 0
-      if (taasPriorYearsFee > 0 && !existingLineItems.has('taas_prior')) {
-        console.log(`Creating TaaS Prior Years line item: $${taasPriorYearsFee}`);
-        const priorYearsLineItem = await this.makeRequest('/crm/v3/objects/line_items', {
-          method: 'POST',
-          body: JSON.stringify({
-            properties: {
-              name: 'TaaS Prior Years (Custom)',
-              price: taasPriorYearsFee.toString(),
-              quantity: '1',
-              hs_product_id: '25683750263',
-              hs_sku: '25683750263',
-              description: 'Seed Financial TaaS Prior Years (Custom)'
-            }
-          })
-        });
-        
-        if (priorYearsLineItem && priorYearsLineItem.id) {
-          // Use the same direction as working line items: quote -> line_item
-          await this.makeRequest(`/crm/v4/associations/quotes/line_items/batch/create`, {
-            method: 'POST',
-            body: JSON.stringify({
-              inputs: [{
-                from: { id: quoteId },
-                to: { id: priorYearsLineItem.id },
-                types: [{
-                  associationCategory: "HUBSPOT_DEFINED",
-                  associationTypeId: 67
-                }]
-              }]
-            })
-          });
-          console.log(`Added TaaS Prior Years line item with quote: $${taasPriorYearsFee}`);
+      // Add missing line items for services that should be included
+      for (const [serviceName, config] of Object.entries(servicePatterns)) {
+        if (config.shouldInclude) {
+          console.log(`Adding missing ${serviceName} line items`);
+          await this.addMissingServiceLineItems(quoteId, serviceName, config, existingLineItems);
         }
       }
     } catch (error) {
-      console.error('Error adding missing TaaS line items:', error);
+      console.error('Error managing service line items:', error);
+      throw error;
     }
   }
+
+  private async addMissingServiceLineItems(quoteId: string, serviceName: string, serviceConfig: any, existingLineItems: any[]): Promise<void> {
+    try {
+      // Get existing line item names for this service
+      const existingServiceItems = new Set<string>();
+      for (const lineItem of existingLineItems) {
+        const lineItemName = lineItem.properties?.name || '';
+        if (serviceConfig.identifiers.some((id: string) => lineItemName.includes(id))) {
+          // Normalize the name for comparison
+          if (lineItemName.includes('Monthly') || lineItemName.includes('TaaS Monthly')) {
+            existingServiceItems.add('monthly');
+          }
+          if (lineItemName.includes('Prior Years') || lineItemName.includes('Setup')) {
+            existingServiceItems.add('setup');
+          }
+        }
+      }
+
+      // Add missing line items
+      for (const lineItemConfig of serviceConfig.lineItems) {
+        if (!lineItemConfig.condition) continue;
+
+        const itemType = lineItemConfig.name.includes('Monthly') ? 'monthly' : 'setup';
+        if (existingServiceItems.has(itemType)) {
+          console.log(`${serviceName} ${itemType} line item already exists, skipping`);
+          continue;
+        }
+
+        console.log(`Creating ${serviceName} ${itemType} line item: $${lineItemConfig.price}`);
+        const lineItem = await this.makeRequest('/crm/v3/objects/line_items', {
+          method: 'POST',
+          body: JSON.stringify({
+            properties: {
+              name: lineItemConfig.name,
+              price: lineItemConfig.price.toString(),
+              quantity: '1',
+              hs_product_id: lineItemConfig.productId,
+              hs_sku: lineItemConfig.productId,
+              description: lineItemConfig.description
+            }
+          })
+        });
+
+        if (lineItem && lineItem.id) {
+          // Associate with quote using the working pattern
+          await this.makeRequest(`/crm/v4/associations/quotes/line_items/batch/create`, {
+            method: 'POST',
+            body: JSON.stringify({
+              inputs: [{
+                from: { id: quoteId },
+                to: { id: lineItem.id },
+                types: [{
+                  associationCategory: "HUBSPOT_DEFINED",
+                  associationTypeId: 67
+                }]
+              }]
+            })
+          });
+          console.log(`Added ${serviceName} ${itemType} line item with quote: $${lineItemConfig.price}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error adding missing ${serviceName} line items:`, error);
+      throw error;
+    }
+  }
+
+
+
+
+
+
 
   async verifyUser(email: string): Promise<{ exists: boolean; userData?: any }> {
     try {
