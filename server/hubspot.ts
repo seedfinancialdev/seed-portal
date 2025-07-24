@@ -348,7 +348,7 @@ export class HubSpotService {
     }
   }
 
-  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number): Promise<{ id: string; title: string } | null> {
+  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<{ id: string; title: string } | null> {
     try {
       // Create a proper HubSpot quote using the quotes API
       console.log('Creating HubSpot quote...');
@@ -425,7 +425,7 @@ Services Include:
       console.log('Quote created successfully:', result.id);
       
       // Add line items to the quote
-      await this.addQuoteLineItems(result.id, monthlyFee, setupFee, includesBookkeeping, includesTaas, taasMonthlyFee || 0, taasPriorYearsFee || 0);
+      await this.addQuoteLineItems(result.id, monthlyFee, setupFee, includesBookkeeping, includesTaas, taasMonthlyFee || 0, taasPriorYearsFee || 0, bookkeepingMonthlyFee, bookkeepingSetupFee);
 
       return {
         id: result.id,
@@ -448,7 +448,7 @@ Services Include:
     }
   }
 
-  private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number): Promise<void> {
+  private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<void> {
     try {
       // Use specific product IDs provided by user
       const MONTHLY_PRODUCT_ID = '25687054003'; // Monthly Bookkeeping
@@ -459,24 +459,27 @@ Services Include:
 
       // Add bookkeeping line items if bookkeeping is included
       if (includesBookkeeping) {
-        // For combined quotes, we need to calculate the bookkeeping portion properly
-        // The monthlyFee and setupFee passed here are the TOTAL combined amounts
-        // We need to subtract the TaaS portions to get the bookkeeping portions
-        let bookkeepingMonthlyFee = monthlyFee;
-        let bookkeepingSetupFee = setupFee;
+        // Use the specific bookkeeping fees if provided, otherwise calculate from totals
+        let actualBookkeepingMonthlyFee = bookkeepingMonthlyFee ?? monthlyFee;
+        let actualBookkeepingSetupFee = bookkeepingSetupFee ?? setupFee;
         
-        if (includesTaas && taasMonthlyFee && taasPriorYearsFee) {
-          bookkeepingMonthlyFee = monthlyFee - taasMonthlyFee;
-          bookkeepingSetupFee = setupFee - taasPriorYearsFee;
+        // If this is a combined quote and we have specific fees, use them
+        if (includesTaas && bookkeepingMonthlyFee !== undefined && bookkeepingSetupFee !== undefined) {
+          actualBookkeepingMonthlyFee = bookkeepingMonthlyFee;
+          actualBookkeepingSetupFee = bookkeepingSetupFee;
+        } else if (includesTaas && taasMonthlyFee && taasPriorYearsFee) {
+          // Fallback: calculate by subtracting TaaS amounts
+          actualBookkeepingMonthlyFee = monthlyFee - taasMonthlyFee;
+          actualBookkeepingSetupFee = setupFee - taasPriorYearsFee;
         }
         
-        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, bookkeepingMonthlyFee, 1);
-        console.log(`Associated monthly bookkeeping product with quote: $${bookkeepingMonthlyFee}`);
+        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, actualBookkeepingMonthlyFee, 1, 'Monthly Bookkeeping (Custom)');
+        console.log(`Associated monthly bookkeeping product with quote: $${actualBookkeepingMonthlyFee}`);
 
         // Add cleanup product if there's a bookkeeping setup fee
-        if (bookkeepingSetupFee > 0) {
-          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, bookkeepingSetupFee, 1);
-          console.log(`Associated cleanup product with quote: $${bookkeepingSetupFee}`);
+        if (actualBookkeepingSetupFee > 0) {
+          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, actualBookkeepingSetupFee, 1, 'Clean-Up / Catch-Up Project');
+          console.log(`Associated cleanup product with quote: $${actualBookkeepingSetupFee}`);
         }
       }
 
@@ -575,7 +578,7 @@ Generated: ${new Date().toLocaleDateString()}`;
     });
   }
 
-  async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<boolean> {
+  async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<boolean> {
     try {
       // First check if the quote still exists and is in a valid state
       const quoteCheck = await this.makeRequest(`/crm/v3/objects/quotes/${quoteId}`, {
@@ -619,15 +622,30 @@ Generated: ${new Date().toLocaleDateString()}`;
           
           if (lineItemDetails && lineItemDetails.properties) {
             const productId = lineItemDetails.properties.hs_product_id;
+            const lineItemName = lineItemDetails.properties.name || '';
             let newPrice;
             
-            // Determine which price to use based on product ID
-            if (productId === '25687054003') { // Monthly bookkeeping product
-              newPrice = monthlyFee;
-              console.log(`Updating monthly line item ${lineItemId} to $${monthlyFee}`);
-            } else if (productId === '25683750263') { // Cleanup product  
-              newPrice = setupFee;
-              console.log(`Updating setup line item ${lineItemId} to $${setupFee}`);
+            // Determine which price to use based on product ID and custom name
+            if (productId === '25687054003') {
+              if (lineItemName.includes('TaaS Monthly')) {
+                // TaaS Monthly line item
+                newPrice = taasMonthlyFee || 0;
+                console.log(`Updating TaaS monthly line item ${lineItemId} to $${newPrice}`);
+              } else {
+                // Regular bookkeeping monthly line item
+                newPrice = bookkeepingMonthlyFee !== undefined ? bookkeepingMonthlyFee : (monthlyFee - (taasMonthlyFee || 0));
+                console.log(`Updating bookkeeping monthly line item ${lineItemId} to $${newPrice}`);
+              }
+            } else if (productId === '25683750263') {
+              if (lineItemName.includes('TaaS Prior Years')) {
+                // TaaS Prior Years line item
+                newPrice = taasPriorYearsFee || 0;
+                console.log(`Updating TaaS prior years line item ${lineItemId} to $${newPrice}`);
+              } else {
+                // Regular bookkeeping setup/cleanup line item
+                newPrice = bookkeepingSetupFee !== undefined ? bookkeepingSetupFee : (setupFee - (taasPriorYearsFee || 0));
+                console.log(`Updating bookkeeping setup line item ${lineItemId} to $${newPrice}`);
+              }
             } else {
               console.log(`Unknown product ID ${productId} for line item ${lineItemId}, skipping`);
               continue;

@@ -323,6 +323,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Calculate individual service fees for separate line items
+      const pricingData = {
+        ...quote,
+        numEntities: quote.numEntities || 1,
+        statesFiled: quote.statesFiled || 1,
+        numBusinessOwners: quote.numBusinessOwners || 1,
+        priorYearsUnfiled: quote.priorYearsUnfiled || 0,
+        cleanupComplexity: quote.cleanupComplexity || "0",
+        internationalFiling: quote.internationalFiling ?? false,
+        include1040s: quote.include1040s ?? false,
+        alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
+        cleanupOverride: quote.cleanupOverride ?? false,
+        entityType: quote.entityType || "LLC",
+        bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)"
+      };
+      const fees = calculateCombinedFees(pricingData);
+      const bookkeepingMonthlyFee = fees.bookkeeping.monthlyFee;
+      const bookkeepingSetupFee = fees.bookkeeping.setupFee;
+      
       // Create quote/note in HubSpot
       const hubspotQuote = await hubSpotService.createQuote(
         deal.id,
@@ -335,7 +354,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         quote.includesBookkeeping,
         quote.includesTaas,
         quote.taasMonthlyFee ? parseFloat(quote.taasMonthlyFee) : undefined,
-        quote.taasPriorYearsFee ? parseFloat(quote.taasPriorYearsFee) : undefined
+        quote.taasPriorYearsFee ? parseFloat(quote.taasPriorYearsFee) : undefined,
+        bookkeepingMonthlyFee,
+        bookkeepingSetupFee
       );
 
       if (!hubspotQuote) {
@@ -413,12 +434,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Updated quote ${quoteId} in database with new form data and fees`);
       }
 
+      // Calculate individual service fees for separate line item updates
+      const updatePricingData = {
+        ...quote,
+        ...currentFormData,
+        numEntities: quote.numEntities || 1,
+        statesFiled: quote.statesFiled || 1,
+        numBusinessOwners: quote.numBusinessOwners || 1,
+        priorYearsUnfiled: quote.priorYearsUnfiled || 0,
+        cleanupComplexity: quote.cleanupComplexity || "0",
+        internationalFiling: quote.internationalFiling ?? false,
+        include1040s: quote.include1040s ?? false,
+        alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
+        cleanupOverride: quote.cleanupOverride ?? false,
+        entityType: quote.entityType || "LLC",
+        bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)"
+      };
+      const updateFees = calculateCombinedFees(updatePricingData);
+      const updateBookkeepingMonthlyFee = updateFees.bookkeeping.monthlyFee;
+      const updateBookkeepingSetupFee = updateFees.bookkeeping.setupFee;
+      const updateTaasMonthlyFee = updateFees.taas.monthlyFee;
+      const updateTaasPriorYearsFee = updateFees.taas.setupFee;
+
       // Update quote in HubSpot
       const success = await hubSpotService.updateQuote(
         quote.hubspotQuoteId,
         companyName,
         monthlyFee,
-        setupFee
+        setupFee,
+        quote.includesBookkeeping,
+        quote.includesTaas,
+        updateTaasMonthlyFee,
+        updateTaasPriorYearsFee,
+        updateBookkeepingMonthlyFee,
+        updateBookkeepingSetupFee
       );
 
       if (success) {
