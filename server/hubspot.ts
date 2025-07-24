@@ -814,6 +814,26 @@ Generated: ${new Date().toLocaleDateString()}`;
     try {
       // Define service patterns for identification and management
       const servicePatterns = {
+        bookkeeping: {
+          identifiers: ['Monthly Bookkeeping', 'Clean-Up', 'Catch-Up Project'],
+          shouldInclude: serviceConfig.includesBookkeeping && (serviceConfig.bookkeepingMonthlyFee > 0 || serviceConfig.bookkeepingSetupFee > 0),
+          lineItems: [
+            {
+              condition: serviceConfig.bookkeepingMonthlyFee > 0,
+              name: 'Monthly Bookkeeping (Custom)',
+              price: serviceConfig.bookkeepingMonthlyFee,
+              productId: '25687054003',
+              description: 'Seed Financial Monthly Bookkeeping (Custom)'
+            },
+            {
+              condition: serviceConfig.bookkeepingSetupFee > 0,
+              name: 'Clean-Up / Catch-Up Project',
+              price: serviceConfig.bookkeepingSetupFee,
+              productId: '25683750263',
+              description: 'Seed Financial Clean-Up / Catch-Up Project'
+            }
+          ]
+        },
         taas: {
           identifiers: ['TaaS', 'Tax as a Service', 'Monthly TaaS', 'TaaS Prior Years'],
           shouldInclude: serviceConfig.includesTaas && (serviceConfig.taasMonthlyFee > 0 || serviceConfig.taasPriorYearsFee > 0),
@@ -879,17 +899,26 @@ Generated: ${new Date().toLocaleDateString()}`;
 
   private async addMissingServiceLineItems(quoteId: string, serviceName: string, serviceConfig: any, existingLineItems: any[]): Promise<void> {
     try {
-      // Get existing line item names for this service
+      // Get existing line item names for this service - be more specific with matching
       const existingServiceItems = new Set<string>();
       for (const lineItem of existingLineItems) {
         const lineItemName = lineItem.properties?.name || '';
         if (serviceConfig.identifiers.some((id: string) => lineItemName.includes(id))) {
-          // Normalize the name for comparison
-          if (lineItemName.includes('Monthly') || lineItemName.includes('TaaS Monthly')) {
-            existingServiceItems.add('monthly');
-          }
-          if (lineItemName.includes('Prior Years') || lineItemName.includes('Setup')) {
-            existingServiceItems.add('setup');
+          // More specific matching to avoid conflicts
+          if (serviceName === 'bookkeeping') {
+            if (lineItemName.includes('Monthly Bookkeeping')) {
+              existingServiceItems.add('monthly');
+            }
+            if (lineItemName.includes('Clean-Up') || lineItemName.includes('Catch-Up')) {
+              existingServiceItems.add('setup');
+            }
+          } else if (serviceName === 'taas') {
+            if (lineItemName.includes('Monthly TaaS') || lineItemName.includes('TaaS (Custom)')) {
+              existingServiceItems.add('monthly');
+            }
+            if (lineItemName.includes('TaaS Prior Years') || lineItemName.includes('Prior Years (Custom)')) {
+              existingServiceItems.add('setup');
+            }
           }
         }
       }
@@ -898,7 +927,12 @@ Generated: ${new Date().toLocaleDateString()}`;
       for (const lineItemConfig of serviceConfig.lineItems) {
         if (!lineItemConfig.condition) continue;
 
-        const itemType = lineItemConfig.name.includes('Monthly') ? 'monthly' : 'setup';
+        // Determine item type more specifically
+        let itemType = 'setup';
+        if (lineItemConfig.name.includes('Monthly')) {
+          itemType = 'monthly';
+        }
+
         if (existingServiceItems.has(itemType)) {
           console.log(`${serviceName} ${itemType} line item already exists, skipping`);
           continue;
