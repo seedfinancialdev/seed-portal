@@ -663,6 +663,9 @@ Generated: ${new Date().toLocaleDateString()}`;
         method: 'GET'
       });
 
+      // Collect existing line items for service management
+      const existingLineItems: any[] = [];
+      
       if (lineItemsResponse && lineItemsResponse.results && lineItemsResponse.results.length > 0) {
         console.log(`Found ${lineItemsResponse.results.length} line items to update`);
         
@@ -675,6 +678,12 @@ Generated: ${new Date().toLocaleDateString()}`;
           });
           
           if (lineItemDetails && lineItemDetails.properties) {
+            // Add to existing line items for service management
+            existingLineItems.push({
+              id: lineItemId,
+              properties: lineItemDetails.properties
+            });
+            
             const productId = lineItemDetails.properties.hs_product_id;
             const lineItemName = lineItemDetails.properties.name || '';
             let newPrice;
@@ -723,7 +732,7 @@ Generated: ${new Date().toLocaleDateString()}`;
       }
 
       // Handle service-specific line items based on quote configuration
-      await this.manageServiceLineItems(quoteId, lineItems, {
+      await this.manageServiceLineItems(quoteId, existingLineItems, {
         includesBookkeeping,
         includesTaas,
         taasMonthlyFee: taasMonthlyFee || 0,
