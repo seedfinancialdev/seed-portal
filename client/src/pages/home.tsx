@@ -1429,11 +1429,12 @@ export default function Home() {
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Company Name (Optional)</FormLabel>
+                        <FormLabel>Company Name</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="Company Name"
-                            className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                            className="bg-gray-100 border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                            readOnly
                             {...field}
                           />
                         </FormControl>
@@ -2154,7 +2155,7 @@ export default function Home() {
                                     <span className="text-green-800">${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
                                   </div>
                                   {feeCalculation.bookkeeping.breakdown && feeCalculation.bookkeeping.setupFee > 0 && (
-                                    <>
+                                    <div className="space-y-1">
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
                                         <span>Setup Base (Monthly Fee):</span>
                                         <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
@@ -2171,7 +2172,7 @@ export default function Home() {
                                         <span>Final (Max of calculated vs monthly):</span>
                                         <span>${feeCalculation.bookkeeping.setupFee.toLocaleString()}</span>
                                       </div>
-                                    </>
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -2246,7 +2247,7 @@ export default function Home() {
                                     </div>
                                     {feeCalculation.taas.breakdown.seedDiscount > 0 && (
                                       <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                        <span>Seed Bookkeeping Discount (10%):</span>
+                                        <span>Seed Bookkeeping Discount (15%):</span>
                                         <span className="text-green-600">-${feeCalculation.taas.breakdown.seedDiscount.toLocaleString()}</span>
                                       </div>
                                     )}
