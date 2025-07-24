@@ -115,6 +115,14 @@ Preferred communication style: Simple, everyday language.
   - **Service Card Synchronization**: Form view now properly aligns with loaded quote's service selection
   - **TypeScript Error Resolution**: Fixed type annotations for quote data access in button logic
 
+✓ **Complete HubSpot Service Conversion Fix** (July 24, 2025)
+  - **Database Update Fixed**: Preserves custom setup fees and uses form data instead of recalculating during updates
+  - **Deal Name Updates**: Automatically updates deal names to reflect service combinations (Bookkeeping + TaaS)
+  - **Quote Title Updates**: Updates quote titles to show correct service combinations with (Updated date)
+  - **TaaS Line Item Creation**: Adds missing TaaS line items when converting from single to combined services
+  - **Deal Value Calculation**: Correctly includes all TaaS fees in deal value calculations
+  - **Comprehensive Service Conversion**: Handles all aspects of converting bookkeeping-only quotes to combined service quotes
+
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
   - **Eliminated Code Duplication**: Created `/shared/pricing.ts` with unified pricing logic used by both frontend and backend
   - **Component Extraction**: Built reusable components (QuoteTable, ContactSection, BookkeepingSection, TaasSection, ServiceCards, PricingDisplay, FormNavigation)

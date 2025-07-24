@@ -700,7 +700,10 @@ Generated: ${new Date().toLocaleDateString()}`;
       }
 
       if (actualDealId) {
-        const totalAmount = (monthlyFee * 12) + setupFee;
+        // Calculate total amount including all TaaS fees
+        const totalMonthlyAmount = monthlyFee * 12;
+        const totalSetupAmount = setupFee;
+        const totalAmount = totalMonthlyAmount + totalSetupAmount;
         
         // Update deal name based on services
         let dealName = `${companyName} - Services`;
@@ -713,6 +716,7 @@ Generated: ${new Date().toLocaleDateString()}`;
         }
         
         console.log(`Updating deal ${actualDealId} amount to $${totalAmount} (Monthly: $${monthlyFee} x 12 + Setup: $${setupFee})`);
+        console.log(`TaaS breakdown - Monthly: $${taasMonthlyFee || 0}, Prior Years: $${taasPriorYearsFee || 0}`);
         
         // Update the deal amount and name
         const dealUpdateBody = {
@@ -775,17 +779,59 @@ Generated: ${new Date().toLocaleDateString()}`;
       // Add TaaS Monthly line item if missing and fee > 0
       if (taasMonthlyFee > 0 && !existingLineItems.has('taas_monthly')) {
         console.log(`Creating TaaS Monthly line item: $${taasMonthlyFee}`);
-        const monthlyLineItem = await this.createLineItem('Monthly TaaS (Custom)', taasMonthlyFee, 1, '25687054003', 'Seed Financial Monthly TaaS (Custom)');
-        await this.associateLineItemWithQuote(monthlyLineItem.id, quoteId);
-        console.log(`Added TaaS Monthly line item with quote: $${taasMonthlyFee}`);
+        const monthlyLineItem = await this.makeRequest('/crm/v3/objects/line_items', {
+          method: 'POST',
+          body: JSON.stringify({
+            properties: {
+              name: 'Monthly TaaS (Custom)',
+              price: taasMonthlyFee.toString(),
+              quantity: '1',
+              hs_product_id: '25687054003',
+              hs_sku: '25687054003',
+              description: 'Seed Financial Monthly TaaS (Custom)'
+            }
+          })
+        });
+        
+        if (monthlyLineItem && monthlyLineItem.id) {
+          await this.makeRequest(`/crm/v4/objects/line_items/${monthlyLineItem.id}/associations/quotes/${quoteId}`, {
+            method: 'PUT',
+            body: JSON.stringify([{
+              associationCategory: "HUBSPOT_DEFINED",
+              associationTypeId: 67
+            }])
+          });
+          console.log(`Added TaaS Monthly line item with quote: $${taasMonthlyFee}`);
+        }
       }
 
       // Add TaaS Prior Years line item if missing and fee > 0
       if (taasPriorYearsFee > 0 && !existingLineItems.has('taas_prior')) {
         console.log(`Creating TaaS Prior Years line item: $${taasPriorYearsFee}`);
-        const priorYearsLineItem = await this.createLineItem('TaaS Prior Years (Custom)', taasPriorYearsFee, 1, '25683750263', 'Seed Financial TaaS Prior Years (Custom)');
-        await this.associateLineItemWithQuote(priorYearsLineItem.id, quoteId);
-        console.log(`Added TaaS Prior Years line item with quote: $${taasPriorYearsFee}`);
+        const priorYearsLineItem = await this.makeRequest('/crm/v3/objects/line_items', {
+          method: 'POST',
+          body: JSON.stringify({
+            properties: {
+              name: 'TaaS Prior Years (Custom)',
+              price: taasPriorYearsFee.toString(),
+              quantity: '1',
+              hs_product_id: '25683750263',
+              hs_sku: '25683750263',
+              description: 'Seed Financial TaaS Prior Years (Custom)'
+            }
+          })
+        });
+        
+        if (priorYearsLineItem && priorYearsLineItem.id) {
+          await this.makeRequest(`/crm/v4/objects/line_items/${priorYearsLineItem.id}/associations/quotes/${quoteId}`, {
+            method: 'PUT',
+            body: JSON.stringify([{
+              associationCategory: "HUBSPOT_DEFINED",
+              associationTypeId: 67
+            }])
+          });
+          console.log(`Added TaaS Prior Years line item with quote: $${taasPriorYearsFee}`);
+        }
       }
     } catch (error) {
       console.error('Error adding missing TaaS line items:', error);
