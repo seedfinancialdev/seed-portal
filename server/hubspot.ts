@@ -797,13 +797,19 @@ Generated: ${new Date().toLocaleDateString()}`;
         });
         
         if (monthlyLineItem && monthlyLineItem.id) {
-          // Use the same method as the working line item association in addQuoteLineItems
-          await this.makeRequest(`/crm/v4/objects/line_items/${monthlyLineItem.id}/associations/quotes/${quoteId}`, {
-            method: 'PUT',
-            body: JSON.stringify([{
-              associationCategory: "HUBSPOT_DEFINED",
-              associationTypeId: 67
-            }])
+          // Use the batch association API that works with existing line items
+          await this.makeRequest(`/crm/v4/associations/line_items/quotes/batch/create`, {
+            method: 'POST',
+            body: JSON.stringify({
+              inputs: [{
+                from: { id: monthlyLineItem.id },
+                to: { id: quoteId },
+                types: [{
+                  associationCategory: "HUBSPOT_DEFINED",
+                  associationTypeId: 67
+                }]
+              }]
+            })
           });
           console.log(`Added TaaS Monthly line item with quote: $${taasMonthlyFee}`);
         }
@@ -827,13 +833,19 @@ Generated: ${new Date().toLocaleDateString()}`;
         });
         
         if (priorYearsLineItem && priorYearsLineItem.id) {
-          // Use the same method as the working line item association in addQuoteLineItems
-          await this.makeRequest(`/crm/v4/objects/line_items/${priorYearsLineItem.id}/associations/quotes/${quoteId}`, {
-            method: 'PUT',
-            body: JSON.stringify([{
-              associationCategory: "HUBSPOT_DEFINED",
-              associationTypeId: 67
-            }])
+          // Use the batch association API that works with existing line items
+          await this.makeRequest(`/crm/v4/associations/line_items/quotes/batch/create`, {
+            method: 'POST',
+            body: JSON.stringify({
+              inputs: [{
+                from: { id: priorYearsLineItem.id },
+                to: { id: quoteId },
+                types: [{
+                  associationCategory: "HUBSPOT_DEFINED",
+                  associationTypeId: 67
+                }]
+              }]
+            })
           });
           console.log(`Added TaaS Prior Years line item with quote: $${taasPriorYearsFee}`);
         }
