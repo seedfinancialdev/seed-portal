@@ -295,26 +295,25 @@ function calculateFees(data: Partial<FormData>) {
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
   
-  // If no cleanup months, setup fee is $0, but monthly fee remains normal
+  // Calculate setup fee - custom setup fee ALWAYS overrides calculated values
   let setupFee = 0;
   let setupCalc = 0;
   const cleanupComplexityMultiplier = parseFloat(data.cleanupComplexity || "0.5");
   let industryCleanupMultiplier = 1;
   let cleanupBeforeIndustry = 0;
   
-  if (effectiveCleanupMonths > 0) {
+  // Check for custom setup fee override first (takes precedence regardless of cleanup months)
+  if (data.overrideReason === "Other" && data.customSetupFee && parseFloat(data.customSetupFee) > 0) {
+    setupFee = parseFloat(data.customSetupFee);
+  } else if (effectiveCleanupMonths > 0) {
+    // Standard cleanup calculation only if no custom override
     industryCleanupMultiplier = industryData.cleanup;
     cleanupBeforeIndustry = monthlyFee * cleanupComplexityMultiplier * effectiveCleanupMonths;
     const cleanupMultiplier = cleanupComplexityMultiplier * industryData.cleanup;
     setupCalc = monthlyFee * cleanupMultiplier * effectiveCleanupMonths;
-    
-    // Use custom setup fee if "Other" reason is selected and custom fee is provided
-    if (data.overrideReason === "Other" && data.customSetupFee && parseFloat(data.customSetupFee) > 0) {
-      setupFee = parseFloat(data.customSetupFee);
-    } else {
-      setupFee = roundToNearest25(Math.max(monthlyFee, setupCalc));
-    }
+    setupFee = roundToNearest25(Math.max(monthlyFee, setupCalc));
   }
+  // If cleanup months is 0 and no custom override, setup fee remains 0
   
   return { 
     monthlyFee, 
