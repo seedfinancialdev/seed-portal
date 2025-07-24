@@ -904,25 +904,44 @@ export default function Home() {
       quoteType: quote.quoteType || "bookkeeping",
       includesBookkeeping: quote.includesBookkeeping ?? true,
       includesTaas: quote.includesTaas ?? false,
-      // TaaS-specific fields
+      // TaaS-specific fields (ensure proper type conversion)
       entityType: quote.entityType || "LLC",
-      numEntities: quote.numEntities || 1,
-      statesFiled: quote.statesFiled || 1,
+      numEntities: quote.numEntities ? Number(quote.numEntities) : 1,
+      statesFiled: quote.statesFiled ? Number(quote.statesFiled) : 1,
       internationalFiling: quote.internationalFiling ?? false,
-      numBusinessOwners: quote.numBusinessOwners || 1,
+      numBusinessOwners: quote.numBusinessOwners ? Number(quote.numBusinessOwners) : 1,
       bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)",
       include1040s: quote.include1040s ?? false,
-      priorYearsUnfiled: quote.priorYearsUnfiled || 0,
+      priorYearsUnfiled: quote.priorYearsUnfiled ? Number(quote.priorYearsUnfiled) : 0,
       alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
     };
     
     console.log('Resetting form with data:', formData);
+    console.log('Quote TaaS fields from DB:', {
+      entityType: quote.entityType,
+      numEntities: quote.numEntities,
+      statesFiled: quote.statesFiled,
+      numBusinessOwners: quote.numBusinessOwners,
+      priorYearsUnfiled: quote.priorYearsUnfiled,
+      includesTaas: quote.includesTaas,
+      includesBookkeeping: quote.includesBookkeeping
+    });
+    
     form.reset(formData);
     
     // Use setTimeout to ensure form is reset before checking values
     setTimeout(() => {
       console.log('Form values after reset:', form.getValues());
-    }, 50);
+      console.log('TaaS fields specifically:', {
+        entityType: form.getValues('entityType'),
+        numEntities: form.getValues('numEntities'),
+        statesFiled: form.getValues('statesFiled'),
+        numBusinessOwners: form.getValues('numBusinessOwners'),
+        priorYearsUnfiled: form.getValues('priorYearsUnfiled'),
+        includesTaas: form.getValues('includesTaas'),
+        includesBookkeeping: form.getValues('includesBookkeeping')
+      });
+    }, 100);
     
     // Reset HubSpot verification state and re-verify if email exists
     setHubspotVerificationStatus('idle');
@@ -934,17 +953,22 @@ export default function Home() {
       debouncedVerifyEmail(quote.contactEmail);
     }
     
-    // Set the appropriate form view based on the quote's services
-    if (quote.includesBookkeeping && quote.includesTaas) {
-      // Combined quote - default to bookkeeping view
-      setCurrentFormView('bookkeeping');
-    } else if (quote.includesTaas) {
-      // TaaS only
-      setCurrentFormView('taas');
-    } else {
-      // Bookkeeping only (default)
-      setCurrentFormView('bookkeeping');
-    }
+    // Set the appropriate form view based on the quote's services (delayed to ensure form reset completes)
+    setTimeout(() => {
+      if (quote.includesBookkeeping && quote.includesTaas) {
+        // Combined quote - default to bookkeeping view
+        console.log('Setting form view to bookkeeping for combined quote');
+        setCurrentFormView('bookkeeping');
+      } else if (quote.includesTaas) {
+        // TaaS only
+        console.log('Setting form view to taas for TaaS-only quote');
+        setCurrentFormView('taas');
+      } else {
+        // Bookkeeping only (default)
+        console.log('Setting form view to bookkeeping for bookkeeping-only quote');
+        setCurrentFormView('bookkeeping');
+      }
+    }, 150);
     
     setHasUnsavedChanges(false);
   };
