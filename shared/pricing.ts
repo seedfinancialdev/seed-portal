@@ -8,6 +8,8 @@ export interface PricingData {
   cleanupMonths?: number;
   cleanupComplexity?: string;
   cleanupOverride?: boolean;
+  overrideReason?: string;
+  customSetupFee?: string;
   // TaaS specific fields
   includesTaas?: boolean;
   numEntities?: number;
@@ -106,12 +108,19 @@ export function calculateBookkeepingFees(data: PricingData): FeeResult {
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
   
-  // If no cleanup months, setup fee is $0, but monthly fee remains normal
+  // Calculate setup fee with custom override logic
   let setupFee = 0;
-  if (effectiveCleanupMonths > 0) {
+  
+  // Check for custom setup fee override first (always takes precedence)
+  const customSetupFee = (data as any).customSetupFee;
+  if (data.cleanupOverride && (data as any).overrideReason === "Other" && customSetupFee && parseFloat(customSetupFee) > 0) {
+    setupFee = parseFloat(customSetupFee);
+  } else if (effectiveCleanupMonths > 0) {
+    // Standard cleanup calculation only if no custom override
     const cleanupMultiplier = parseFloat(data.cleanupComplexity || "0.75") * industryData.cleanup;
     setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
   }
+  // If cleanup months is 0 and no custom override, setup fee remains 0
   
   return { monthlyFee, setupFee };
 }
