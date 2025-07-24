@@ -105,8 +105,11 @@ Preferred communication style: Simple, everyday language.
   - **Smart Button Text Logic**: Button now correctly shows "Update in HubSpot" when editing quotes with HubSpot IDs or "Push to HubSpot" for new quotes
   - **Enhanced State Tracking**: After saving quotes, editingQuoteId is set so users can immediately update in HubSpot
   - **Post-Push State Management**: After pushing to HubSpot, editingQuoteId is maintained for subsequent updates
-  - **Fixed TaaS Quote Loading**: Quote loading now properly restores all TaaS-specific fields (entityType, numEntities, statesFiled, etc.)
+  - **Fixed TaaS Quote Loading Consistency**: Resolved intermittent field population by adding explicit setValue calls after form reset
+  - **Enhanced Select Component Synchronization**: TaaS numeric fields now consistently populate in Select dropdowns
+  - **Robust Form Reset Process**: Added form.trigger() and individual field updates to ensure reliable form state management
   - **Complete Form Data Restoration**: Loading saved quotes now includes service flags (includesBookkeeping, includesTaas) and quote type
+  - **Service Card Synchronization**: Form view now properly aligns with loaded quote's service selection
   - **TypeScript Error Resolution**: Fixed type annotations for quote data access in button logic
 
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)

@@ -916,16 +916,7 @@ export default function Home() {
       alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
     };
     
-    console.log('Resetting form with data:', formData);
-    console.log('Quote TaaS fields from DB:', {
-      entityType: quote.entityType,
-      numEntities: quote.numEntities,
-      statesFiled: quote.statesFiled,
-      numBusinessOwners: quote.numBusinessOwners,
-      priorYearsUnfiled: quote.priorYearsUnfiled,
-      includesTaas: quote.includesTaas,
-      includesBookkeeping: quote.includesBookkeeping
-    });
+    console.log('Loading quote into form:', quote.id);
     
     form.reset(formData);
     
@@ -940,16 +931,6 @@ export default function Home() {
       if (quote.bookkeepingQuality) form.setValue('bookkeepingQuality', quote.bookkeepingQuality);
       
       form.trigger();
-      console.log('Form values after reset, setValue, and trigger:', form.getValues());
-      console.log('TaaS fields specifically:', {
-        entityType: form.getValues('entityType'),
-        numEntities: form.getValues('numEntities'),
-        statesFiled: form.getValues('statesFiled'),
-        numBusinessOwners: form.getValues('numBusinessOwners'),
-        priorYearsUnfiled: form.getValues('priorYearsUnfiled'),
-        includesTaas: form.getValues('includesTaas'),
-        includesBookkeeping: form.getValues('includesBookkeeping')
-      });
     }, 100);
     
     // Reset HubSpot verification state and re-verify if email exists
@@ -966,15 +947,12 @@ export default function Home() {
     setTimeout(() => {
       if (quote.includesBookkeeping && quote.includesTaas) {
         // Combined quote - default to bookkeeping view
-        console.log('Setting form view to bookkeeping for combined quote');
         setCurrentFormView('bookkeeping');
       } else if (quote.includesTaas) {
         // TaaS only
-        console.log('Setting form view to taas for TaaS-only quote');
         setCurrentFormView('taas');
       } else {
         // Bookkeeping only (default)
-        console.log('Setting form view to bookkeeping for bookkeeping-only quote');
         setCurrentFormView('bookkeeping');
       }
     }, 150);
