@@ -448,27 +448,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Updated quote ${quoteId} in database with form data`);
       }
 
-      // Calculate individual service fees for separate line item updates
-      const updatePricingData = {
-        ...quote,
-        ...currentFormData,
-        numEntities: quote.numEntities || 1,
-        statesFiled: quote.statesFiled || 1,
-        numBusinessOwners: quote.numBusinessOwners || 1,
-        priorYearsUnfiled: quote.priorYearsUnfiled || 0,
-        cleanupComplexity: quote.cleanupComplexity || "0",
-        internationalFiling: quote.internationalFiling ?? false,
-        include1040s: quote.include1040s ?? false,
-        alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
-        cleanupOverride: quote.cleanupOverride ?? false,
-        entityType: quote.entityType || "LLC",
-        bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)"
-      };
-      const updateFees = calculateCombinedFees(updatePricingData);
-      const updateBookkeepingMonthlyFee = updateFees.bookkeeping.monthlyFee;
-      const updateBookkeepingSetupFee = updateFees.bookkeeping.setupFee;
-      const updateTaasMonthlyFee = updateFees.taas.monthlyFee;
-      const updateTaasPriorYearsFee = updateFees.taas.setupFee;
+      // Use the form data fees directly instead of recalculating
+      const updateBookkeepingMonthlyFee = currentFormData ? 
+        parseFloat(currentFormData.monthlyFee || "0") - parseFloat(currentFormData.taasMonthlyFee || "0") :
+        parseFloat(quote.monthlyFee) - parseFloat(quote.taasMonthlyFee || "0");
+        
+      const updateBookkeepingSetupFee = currentFormData ?
+        parseFloat(currentFormData.setupFee || "0") - parseFloat(currentFormData.taasPriorYearsFee || "0") :
+        parseFloat(quote.setupFee) - parseFloat(quote.taasPriorYearsFee || "0");
+        
+      const updateTaasMonthlyFee = taasMonthlyFee;
+      const updateTaasPriorYearsFee = taasPriorYearsFee;
 
       // Update quote in HubSpot with current service configuration
       const currentIncludesBookkeeping = currentFormData?.includesBookkeeping !== false;
