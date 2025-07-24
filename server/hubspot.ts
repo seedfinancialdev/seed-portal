@@ -797,13 +797,13 @@ Generated: ${new Date().toLocaleDateString()}`;
         });
         
         if (monthlyLineItem && monthlyLineItem.id) {
-          // Use the batch association API that works with existing line items
-          await this.makeRequest(`/crm/v4/associations/line_items/quotes/batch/create`, {
+          // Use the same direction as working line items: quote -> line_item
+          await this.makeRequest(`/crm/v4/associations/quotes/line_items/batch/create`, {
             method: 'POST',
             body: JSON.stringify({
               inputs: [{
-                from: { id: monthlyLineItem.id },
-                to: { id: quoteId },
+                from: { id: quoteId },
+                to: { id: monthlyLineItem.id },
                 types: [{
                   associationCategory: "HUBSPOT_DEFINED",
                   associationTypeId: 67
@@ -833,13 +833,13 @@ Generated: ${new Date().toLocaleDateString()}`;
         });
         
         if (priorYearsLineItem && priorYearsLineItem.id) {
-          // Use the batch association API that works with existing line items
-          await this.makeRequest(`/crm/v4/associations/line_items/quotes/batch/create`, {
+          // Use the same direction as working line items: quote -> line_item
+          await this.makeRequest(`/crm/v4/associations/quotes/line_items/batch/create`, {
             method: 'POST',
             body: JSON.stringify({
               inputs: [{
-                from: { id: priorYearsLineItem.id },
-                to: { id: quoteId },
+                from: { id: quoteId },
+                to: { id: priorYearsLineItem.id },
                 types: [{
                   associationCategory: "HUBSPOT_DEFINED",
                   associationTypeId: 67
