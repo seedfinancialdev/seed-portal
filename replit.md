@@ -125,6 +125,7 @@ Preferred communication style: Simple, everyday language.
   - **Fixed TaaS Line Item Association**: Corrected HubSpot API endpoint for associating new TaaS line items with quotes (line_items to quotes direction)
   - **Simplified Fee Calculation**: Uses form data fees directly instead of recalculating to prevent discrepancies
   - **Enhanced Debug Logging**: Added comprehensive logging to track TaaS fee flow and line item creation
+  - **Fixed Form Data Enhancement**: Update mutation now includes calculated TaaS fees in form data to ensure proper line item creation
   - **Comprehensive Service Conversion**: Handles all aspects of converting bookkeeping-only quotes to combined service quotes
 
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)

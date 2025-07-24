@@ -823,9 +823,19 @@ export default function Home() {
   const updateHubSpotMutation = useMutation({
     mutationFn: async (quoteId: number) => {
       const currentFormData = form.getValues();
+      
+      // Ensure calculated fees are included in form data
+      const enhancedFormData = {
+        ...currentFormData,
+        monthlyFee: combinedPricing.combined.monthlyFee.toString(),
+        setupFee: combinedPricing.combined.setupFee.toString(),
+        taasMonthlyFee: combinedPricing.taas.monthlyFee.toString(),
+        taasPriorYearsFee: combinedPricing.taas.setupFee.toString()
+      };
+      
       const response = await apiRequest("POST", "/api/hubspot/update-quote", { 
         quoteId, 
-        currentFormData 
+        currentFormData: enhancedFormData 
       });
       return response.json();
     },
