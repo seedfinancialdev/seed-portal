@@ -450,56 +450,96 @@ Services Include:
 
   private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<void> {
     try {
-      // Use specific product IDs provided by user
-      const MONTHLY_PRODUCT_ID = '25687054003'; // Monthly Bookkeeping
-      const CLEANUP_PRODUCT_ID = '25683750263'; // Clean-Up / Catch-Up Project
-      // TODO: Add TaaS product IDs when available
-      const TAAS_MONTHLY_PRODUCT_ID = 'TAAS_MONTHLY_ID'; // TaaS Monthly - Need actual product ID
-      const TAAS_PRIOR_YEARS_PRODUCT_ID = 'TAAS_PRIOR_YEARS_ID'; // TaaS Prior Years - Need actual product ID
+      // Use the generic service management system for initial quote creation
+      await this.createInitialServiceLineItems(quoteId, {
+        includesBookkeeping: includesBookkeeping ?? true,
+        includesTaas: includesTaas ?? false,
+        taasMonthlyFee: taasMonthlyFee || 0,
+        taasPriorYearsFee: taasPriorYearsFee || 0,
+        bookkeepingMonthlyFee: bookkeepingMonthlyFee || monthlyFee,
+        bookkeepingSetupFee: bookkeepingSetupFee || setupFee
+      });
+    } catch (error) {
+      console.warn('Could not add line items to quote:', error);
+    }
+  }
 
-      // Add bookkeeping line items if bookkeeping is included
-      if (includesBookkeeping) {
-        // Use the specific bookkeeping fees if provided, otherwise calculate from totals
-        let actualBookkeepingMonthlyFee = bookkeepingMonthlyFee ?? monthlyFee;
-        let actualBookkeepingSetupFee = bookkeepingSetupFee ?? setupFee;
-        
-        // If this is a combined quote and we have specific fees, use them
-        if (includesTaas && bookkeepingMonthlyFee !== undefined && bookkeepingSetupFee !== undefined) {
-          actualBookkeepingMonthlyFee = bookkeepingMonthlyFee;
-          actualBookkeepingSetupFee = bookkeepingSetupFee;
-        } else if (includesTaas && taasMonthlyFee && taasPriorYearsFee) {
-          // Fallback: calculate by subtracting TaaS amounts
-          actualBookkeepingMonthlyFee = monthlyFee - taasMonthlyFee;
-          actualBookkeepingSetupFee = setupFee - taasPriorYearsFee;
+  private async createInitialServiceLineItems(quoteId: string, serviceConfig: {
+    includesBookkeeping: boolean;
+    includesTaas: boolean;
+    taasMonthlyFee: number;
+    taasPriorYearsFee: number;
+    bookkeepingMonthlyFee: number;
+    bookkeepingSetupFee: number;
+  }): Promise<void> {
+    try {
+      // Define all services in a consistent pattern
+      const serviceDefinitions = {
+        bookkeeping: {
+          shouldInclude: serviceConfig.includesBookkeeping,
+          lineItems: [
+            {
+              condition: serviceConfig.bookkeepingMonthlyFee > 0,
+              name: 'Monthly Bookkeeping (Custom)',
+              price: serviceConfig.bookkeepingMonthlyFee,
+              productId: '25687054003',
+              description: 'Seed Financial Monthly Bookkeeping (Custom)'
+            },
+            {
+              condition: serviceConfig.bookkeepingSetupFee > 0,
+              name: 'Clean-Up / Catch-Up Project',
+              price: serviceConfig.bookkeepingSetupFee,
+              productId: '25683750263',
+              description: 'Seed Financial Clean-Up / Catch-Up Project'
+            }
+          ]
+        },
+        taas: {
+          shouldInclude: serviceConfig.includesTaas && (serviceConfig.taasMonthlyFee > 0 || serviceConfig.taasPriorYearsFee > 0),
+          lineItems: [
+            {
+              condition: serviceConfig.taasMonthlyFee > 0,
+              name: 'Monthly TaaS (Custom)',
+              price: serviceConfig.taasMonthlyFee,
+              productId: '25687054003', // Using bookkeeping product ID as placeholder
+              description: 'Seed Financial Monthly TaaS (Custom)'
+            },
+            {
+              condition: serviceConfig.taasPriorYearsFee > 0,
+              name: 'TaaS Prior Years (Custom)',
+              price: serviceConfig.taasPriorYearsFee,
+              productId: '25683750263', // Using cleanup product ID as placeholder
+              description: 'Seed Financial TaaS Prior Years (Custom)'
+            }
+          ]
         }
-        
-        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, actualBookkeepingMonthlyFee, 1, 'Monthly Bookkeeping (Custom)');
-        console.log(`Associated monthly bookkeeping product with quote: $${actualBookkeepingMonthlyFee}`);
+        // Future services can be easily added here:
+        // payroll: {
+        //   shouldInclude: serviceConfig.includesPayroll,
+        //   lineItems: [...]
+        // }
+      };
 
-        // Add cleanup product if there's a bookkeeping setup fee
-        if (actualBookkeepingSetupFee > 0) {
-          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, actualBookkeepingSetupFee, 1, 'Clean-Up / Catch-Up Project');
-          console.log(`Associated cleanup product with quote: $${actualBookkeepingSetupFee}`);
-        }
-      }
-
-      // Add TaaS line items if TaaS is included
-      if (includesTaas) {
-        // Add TaaS monthly fee if present
-        if (taasMonthlyFee && taasMonthlyFee > 0) {
-          // Note: Using bookkeeping product IDs as placeholders until TaaS product IDs are provided
-          await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, taasMonthlyFee, 1, 'TaaS Monthly Services');
-          console.log(`Associated TaaS monthly product with quote: $${taasMonthlyFee}`);
-        }
-
-        // Add prior years fee if there's a TaaS setup fee
-        if (taasPriorYearsFee && taasPriorYearsFee > 0) {
-          await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, taasPriorYearsFee, 1, 'TaaS Prior Years Filing');
-          console.log(`Associated TaaS prior years product with quote: $${taasPriorYearsFee}`);
+      // Create line items for all included services
+      for (const [serviceName, config] of Object.entries(serviceDefinitions)) {
+        if (config.shouldInclude) {
+          for (const lineItemConfig of config.lineItems) {
+            if (lineItemConfig.condition) {
+              await this.associateProductWithQuote(
+                quoteId,
+                lineItemConfig.productId,
+                lineItemConfig.price,
+                1,
+                lineItemConfig.name
+              );
+              console.log(`Associated ${serviceName} product with quote: $${lineItemConfig.price}`);
+            }
+          }
         }
       }
     } catch (error) {
-      console.warn('Could not add line items to quote:', error);
+      console.error('Error creating initial service line items:', error);
+      throw error;
     }
   }
 
@@ -893,10 +933,6 @@ Generated: ${new Date().toLocaleDateString()}`;
       throw error;
     }
   }
-
-
-
-
 
 
 
