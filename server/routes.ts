@@ -323,24 +323,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      // Calculate individual service fees for separate line items
-      const pricingData = {
-        ...quote,
-        numEntities: quote.numEntities || 1,
-        statesFiled: quote.statesFiled || 1,
-        numBusinessOwners: quote.numBusinessOwners || 1,
-        priorYearsUnfiled: quote.priorYearsUnfiled || 0,
-        cleanupComplexity: quote.cleanupComplexity || "0",
-        internationalFiling: quote.internationalFiling ?? false,
-        include1040s: quote.include1040s ?? false,
-        alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
-        cleanupOverride: quote.cleanupOverride ?? false,
-        entityType: quote.entityType || "LLC",
-        bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)"
-      };
-      const fees = calculateCombinedFees(pricingData);
-      const bookkeepingMonthlyFee = fees.bookkeeping.monthlyFee;
-      const bookkeepingSetupFee = fees.bookkeeping.setupFee;
+      // For combined quotes, calculate individual service fees for separate line items
+      // For single service quotes, use the saved quote values to preserve custom overrides
+      let bookkeepingMonthlyFee = parseFloat(quote.monthlyFee);
+      let bookkeepingSetupFee = parseFloat(quote.setupFee);
+      
+      if (quote.includesBookkeeping && quote.includesTaas) {
+        // Combined quote - need to separate fees
+        const pricingData = {
+          ...quote,
+          numEntities: quote.numEntities || 1,
+          statesFiled: quote.statesFiled || 1,
+          numBusinessOwners: quote.numBusinessOwners || 1,
+          priorYearsUnfiled: quote.priorYearsUnfiled || 0,
+          cleanupComplexity: quote.cleanupComplexity || "0",
+          internationalFiling: quote.internationalFiling ?? false,
+          include1040s: quote.include1040s ?? false,
+          alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
+          cleanupOverride: quote.cleanupOverride ?? false,
+          entityType: quote.entityType || "LLC",
+          bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)"
+        };
+        const fees = calculateCombinedFees(pricingData);
+        bookkeepingMonthlyFee = fees.bookkeeping.monthlyFee;
+        bookkeepingSetupFee = fees.bookkeeping.setupFee;
+      }
+      // For single service quotes, keep the saved values to preserve custom setup fees
       
       // Create quote/note in HubSpot
       const hubspotQuote = await hubSpotService.createQuote(

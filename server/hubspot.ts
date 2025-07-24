@@ -477,12 +477,9 @@ Services Include:
         console.log(`Associated monthly bookkeeping product with quote: $${actualBookkeepingMonthlyFee}`);
 
         // Add cleanup product if there's a bookkeeping setup fee
-        console.log(`Checking setup fee: actualBookkeepingSetupFee=${actualBookkeepingSetupFee}, setupFee=${setupFee}, bookkeepingSetupFee=${bookkeepingSetupFee}`);
         if (actualBookkeepingSetupFee > 0) {
           await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, actualBookkeepingSetupFee, 1, 'Clean-Up / Catch-Up Project');
           console.log(`Associated cleanup product with quote: $${actualBookkeepingSetupFee}`);
-        } else {
-          console.log(`Skipping cleanup product - setup fee is ${actualBookkeepingSetupFee}`);
         }
       }
 
