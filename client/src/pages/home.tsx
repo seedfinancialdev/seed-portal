@@ -934,6 +934,18 @@ export default function Home() {
       debouncedVerifyEmail(quote.contactEmail);
     }
     
+    // Set the appropriate form view based on the quote's services
+    if (quote.includesBookkeeping && quote.includesTaas) {
+      // Combined quote - default to bookkeeping view
+      setCurrentFormView('bookkeeping');
+    } else if (quote.includesTaas) {
+      // TaaS only
+      setCurrentFormView('taas');
+    } else {
+      // Bookkeeping only (default)
+      setCurrentFormView('bookkeeping');
+    }
+    
     setHasUnsavedChanges(false);
   };
 
@@ -950,7 +962,22 @@ export default function Home() {
       cleanupOverride: false,
       overrideReason: "",
       customOverrideReason: "",
+      customSetupFee: "",
       companyName: "",
+      quoteType: "bookkeeping",
+      // Service flags for combined quotes
+      includesBookkeeping: true,
+      includesTaas: false,
+      // TaaS defaults
+      entityType: "LLC",
+      numEntities: 1,
+      statesFiled: 1,
+      internationalFiling: false,
+      numBusinessOwners: 1,
+      bookkeepingQuality: "Clean (Seed)",
+      include1040s: false,
+      priorYearsUnfiled: 0,
+      alreadyOnSeedBookkeeping: false,
     });
     
     // Reset all HubSpot verification state
@@ -967,6 +994,9 @@ export default function Home() {
     
     // Clear search term to show all quotes again
     setSearchTerm("");
+    
+    // Reset form view to default (bookkeeping)
+    setCurrentFormView('bookkeeping');
     
     setHasUnsavedChanges(false);
   };
