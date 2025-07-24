@@ -101,6 +101,14 @@ Preferred communication style: Simple, everyday language.
   - **Detailed Slack Notifications**: Include original cleanup months, requested months, and custom setup fee in approval messages
   - **Approval State Management**: Better tracking of approval states to prevent accidental bypassing of approval requirements
 
+✓ **Fixed HubSpot Button State Management and TaaS Quote Loading** (July 24, 2025)
+  - **Smart Button Text Logic**: Button now correctly shows "Update in HubSpot" when editing quotes with HubSpot IDs or "Push to HubSpot" for new quotes
+  - **Enhanced State Tracking**: After saving quotes, editingQuoteId is set so users can immediately update in HubSpot
+  - **Post-Push State Management**: After pushing to HubSpot, editingQuoteId is maintained for subsequent updates
+  - **Fixed TaaS Quote Loading**: Quote loading now properly restores all TaaS-specific fields (entityType, numEntities, statesFiled, etc.)
+  - **Complete Form Data Restoration**: Loading saved quotes now includes service flags (includesBookkeeping, includesTaas) and quote type
+  - **TypeScript Error Resolution**: Fixed type annotations for quote data access in button logic
+
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
   - **Eliminated Code Duplication**: Created `/shared/pricing.ts` with unified pricing logic used by both frontend and backend
   - **Component Extraction**: Built reusable components (QuoteTable, ContactSection, BookkeepingSection, TaasSection, ServiceCards, PricingDisplay, FormNavigation)

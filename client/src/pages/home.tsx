@@ -900,6 +900,20 @@ export default function Home() {
       cleanupOverride: quote.cleanupOverride || false,
       overrideReason: quote.overrideReason || "",
       companyName: quote.companyName || "",
+      // Quote type and service flags
+      quoteType: quote.quoteType || "bookkeeping",
+      includesBookkeeping: quote.includesBookkeeping ?? true,
+      includesTaas: quote.includesTaas ?? false,
+      // TaaS-specific fields
+      entityType: quote.entityType || "LLC",
+      numEntities: quote.numEntities || 1,
+      statesFiled: quote.statesFiled || 1,
+      internationalFiling: quote.internationalFiling ?? false,
+      numBusinessOwners: quote.numBusinessOwners || 1,
+      bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)",
+      include1040s: quote.include1040s ?? false,
+      priorYearsUnfiled: quote.priorYearsUnfiled || 0,
+      alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
     };
     
     console.log('Resetting form with data:', formData);
