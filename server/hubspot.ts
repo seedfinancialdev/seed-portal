@@ -581,7 +581,7 @@ Generated: ${new Date().toLocaleDateString()}`;
     });
   }
 
-  async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<boolean> {
+  async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number, dealId?: string): Promise<boolean> {
     try {
       // First check if the quote still exists and is in a valid state
       const quoteCheck = await this.makeRequest(`/crm/v3/objects/quotes/${quoteId}`, {
@@ -593,8 +593,17 @@ Generated: ${new Date().toLocaleDateString()}`;
         return false;
       }
 
-      // Update the quote title with new pricing information
-      const updatedTitle = `${companyName} - Bookkeeping Services Quote (Updated ${new Date().toLocaleDateString()})`;
+      // Update the quote title with correct service combination
+      let serviceType = 'Services';
+      if (includesBookkeeping && includesTaas) {
+        serviceType = 'Bookkeeping + TaaS';
+      } else if (includesTaas) {
+        serviceType = 'TaaS';
+      } else {
+        serviceType = 'Bookkeeping Services';
+      }
+      
+      const updatedTitle = `${companyName} - ${serviceType} Quote (Updated ${new Date().toLocaleDateString()})`;
       
       const updateBody = {
         properties: {
@@ -606,6 +615,8 @@ Generated: ${new Date().toLocaleDateString()}`;
         method: 'PATCH',
         body: JSON.stringify(updateBody)
       });
+      
+      console.log(`Updated quote title to: ${updatedTitle}`);
 
       // Get associated line items for this quote
       const lineItemsResponse = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/line_items`, {
@@ -671,31 +682,52 @@ Generated: ${new Date().toLocaleDateString()}`;
         }
       }
 
-      // Also update the associated deal amount
-      // First get the deal ID from the quote
-      const dealAssociations = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/deals`, {
-        method: 'GET'
-      });
+      // Check if we need to add TaaS line items
+      if (includesTaas && (taasMonthlyFee > 0 || taasPriorYearsFee > 0)) {
+        await this.addMissingTaaSLineItems(quoteId, taasMonthlyFee || 0, taasPriorYearsFee || 0);
+      }
 
-      if (dealAssociations && dealAssociations.results && dealAssociations.results.length > 0) {
-        const dealId = dealAssociations.results[0].toObjectId;
+      // Update the associated deal amount and name
+      let actualDealId = dealId;
+      if (!actualDealId) {
+        // Get deal ID from quote associations if not provided
+        const dealAssociations = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/deals`, {
+          method: 'GET'
+        });
+        if (dealAssociations && dealAssociations.results && dealAssociations.results.length > 0) {
+          actualDealId = dealAssociations.results[0].toObjectId;
+        }
+      }
+
+      if (actualDealId) {
         const totalAmount = (monthlyFee * 12) + setupFee;
         
-        console.log(`Updating deal ${dealId} amount to $${totalAmount} (Monthly: $${monthlyFee} x 12 + Setup: $${setupFee})`);
+        // Update deal name based on services
+        let dealName = `${companyName} - Services`;
+        if (includesBookkeeping && includesTaas) {
+          dealName = `${companyName} - Bookkeeping + TaaS`;
+        } else if (includesTaas) {
+          dealName = `${companyName} - TaaS`;
+        } else {
+          dealName = `${companyName} - Bookkeeping`;
+        }
         
-        // Update the deal amount
+        console.log(`Updating deal ${actualDealId} amount to $${totalAmount} (Monthly: $${monthlyFee} x 12 + Setup: $${setupFee})`);
+        
+        // Update the deal amount and name
         const dealUpdateBody = {
           properties: {
-            amount: totalAmount.toString()
+            amount: totalAmount.toString(),
+            dealname: dealName
           }
         };
         
-        await this.makeRequest(`/crm/v3/objects/deals/${dealId}`, {
+        await this.makeRequest(`/crm/v3/objects/deals/${actualDealId}`, {
           method: 'PATCH',
           body: JSON.stringify(dealUpdateBody)
         });
         
-        console.log(`Successfully updated deal ${dealId} amount to $${totalAmount}`);
+        console.log(`Successfully updated deal ${actualDealId} amount to $${totalAmount} and name to "${dealName}"`);
       }
 
       console.log(`Quote ${quoteId}, line items, and deal amount updated successfully`);
@@ -710,6 +742,53 @@ Generated: ${new Date().toLocaleDateString()}`;
       }
       
       return false;
+    }
+  }
+
+  private async addMissingTaaSLineItems(quoteId: string, taasMonthlyFee: number, taasPriorYearsFee: number): Promise<void> {
+    try {
+      // Get existing line items
+      const lineItemsResponse = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/line_items`, {
+        method: 'GET'
+      });
+
+      const existingLineItems = new Set<string>();
+      if (lineItemsResponse && lineItemsResponse.results) {
+        for (const lineItemAssociation of lineItemsResponse.results) {
+          const lineItemId = lineItemAssociation.toObjectId;
+          const lineItemDetails = await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
+            method: 'GET'
+          });
+          
+          if (lineItemDetails && lineItemDetails.properties) {
+            const lineItemName = lineItemDetails.properties.name || '';
+            if (lineItemName.includes('TaaS Monthly')) {
+              existingLineItems.add('taas_monthly');
+            }
+            if (lineItemName.includes('TaaS Prior Years')) {
+              existingLineItems.add('taas_prior');
+            }
+          }
+        }
+      }
+
+      // Add TaaS Monthly line item if missing and fee > 0
+      if (taasMonthlyFee > 0 && !existingLineItems.has('taas_monthly')) {
+        console.log(`Creating TaaS Monthly line item: $${taasMonthlyFee}`);
+        const monthlyLineItem = await this.createLineItem('Monthly TaaS (Custom)', taasMonthlyFee, 1, '25687054003', 'Seed Financial Monthly TaaS (Custom)');
+        await this.associateLineItemWithQuote(monthlyLineItem.id, quoteId);
+        console.log(`Added TaaS Monthly line item with quote: $${taasMonthlyFee}`);
+      }
+
+      // Add TaaS Prior Years line item if missing and fee > 0
+      if (taasPriorYearsFee > 0 && !existingLineItems.has('taas_prior')) {
+        console.log(`Creating TaaS Prior Years line item: $${taasPriorYearsFee}`);
+        const priorYearsLineItem = await this.createLineItem('TaaS Prior Years (Custom)', taasPriorYearsFee, 1, '25683750263', 'Seed Financial TaaS Prior Years (Custom)');
+        await this.associateLineItemWithQuote(priorYearsLineItem.id, quoteId);
+        console.log(`Added TaaS Prior Years line item with quote: $${taasPriorYearsFee}`);
+      }
+    } catch (error) {
+      console.error('Error adding missing TaaS line items:', error);
     }
   }
 

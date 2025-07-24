@@ -419,27 +419,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const companyName = quote.companyName || 'Unknown Company';
       
-      // If current form data is provided, recalculate fees and update database
+      // If current form data is provided, update database with form data (preserve custom fees)
       let monthlyFee = parseFloat(quote.monthlyFee);
       let setupFee = parseFloat(quote.setupFee);
+      let taasMonthlyFee = parseFloat(quote.taasMonthlyFee || "0");
+      let taasPriorYearsFee = parseFloat(quote.taasPriorYearsFee || "0");
       
       if (currentFormData) {
-        // Recalculate fees using current form data (same logic as in pricing calculation)
-        const fees = calculateCombinedFees(currentFormData);
-        monthlyFee = fees.combined.monthlyFee;
-        setupFee = fees.combined.setupFee;
-        console.log(`Recalculated fees for update - Monthly: $${monthlyFee}, Setup: $${setupFee}`);
+        // Use form data values directly to preserve custom overrides
+        monthlyFee = parseFloat(currentFormData.monthlyFee || quote.monthlyFee);
+        setupFee = parseFloat(currentFormData.setupFee || quote.setupFee);
+        taasMonthlyFee = parseFloat(currentFormData.taasMonthlyFee || "0");
+        taasPriorYearsFee = parseFloat(currentFormData.taasPriorYearsFee || "0");
         
-        // Update the quote in our database with current form data and recalculated fees
+        console.log(`Using form data fees - Monthly: $${monthlyFee}, Setup: $${setupFee}, TaaS Monthly: $${taasMonthlyFee}, TaaS Setup: $${taasPriorYearsFee}`);
+        
+        // Update the quote in our database with current form data (preserve calculated fees)
         const updateData = {
           id: quoteId,
           ...currentFormData,
           monthlyFee: monthlyFee.toString(),
-          setupFee: setupFee.toString()
+          setupFee: setupFee.toString(),
+          taasMonthlyFee: taasMonthlyFee.toString(),
+          taasPriorYearsFee: taasPriorYearsFee.toString()
         };
         
         await storage.updateQuote(updateData);
-        console.log(`Updated quote ${quoteId} in database with new form data and fees`);
+        console.log(`Updated quote ${quoteId} in database with form data`);
       }
 
       // Calculate individual service fees for separate line item updates
@@ -464,18 +470,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateTaasMonthlyFee = updateFees.taas.monthlyFee;
       const updateTaasPriorYearsFee = updateFees.taas.setupFee;
 
-      // Update quote in HubSpot
+      // Update quote in HubSpot with current service configuration
+      const currentIncludesBookkeeping = currentFormData?.includesBookkeeping !== false;
+      const currentIncludesTaas = currentFormData?.includesTaas === true;
+      
       const success = await hubSpotService.updateQuote(
         quote.hubspotQuoteId,
         companyName,
         monthlyFee,
         setupFee,
-        quote.includesBookkeeping,
-        quote.includesTaas,
+        currentIncludesBookkeeping,
+        currentIncludesTaas,
         updateTaasMonthlyFee,
         updateTaasPriorYearsFee,
         updateBookkeepingMonthlyFee,
-        updateBookkeepingSetupFee
+        updateBookkeepingSetupFee,
+        quote.hubspotDealId // Pass deal ID for updating deal name and value
       );
 
       if (success) {
