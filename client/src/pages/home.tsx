@@ -929,9 +929,18 @@ export default function Home() {
     
     form.reset(formData);
     
-    // Use setTimeout to ensure form is reset before checking values
+    // Force trigger and individual field updates to ensure all form fields update properly
     setTimeout(() => {
-      console.log('Form values after reset:', form.getValues());
+      // Force update individual TaaS fields to ensure Select components render correctly
+      if (quote.entityType) form.setValue('entityType', quote.entityType);
+      if (quote.numEntities) form.setValue('numEntities', Number(quote.numEntities));
+      if (quote.statesFiled) form.setValue('statesFiled', Number(quote.statesFiled));
+      if (quote.numBusinessOwners) form.setValue('numBusinessOwners', Number(quote.numBusinessOwners));
+      if (quote.priorYearsUnfiled !== undefined) form.setValue('priorYearsUnfiled', Number(quote.priorYearsUnfiled));
+      if (quote.bookkeepingQuality) form.setValue('bookkeepingQuality', quote.bookkeepingQuality);
+      
+      form.trigger();
+      console.log('Form values after reset, setValue, and trigger:', form.getValues());
       console.log('TaaS fields specifically:', {
         entityType: form.getValues('entityType'),
         numEntities: form.getValues('numEntities'),
