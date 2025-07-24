@@ -794,11 +794,14 @@ Generated: ${new Date().toLocaleDateString()}`;
         });
         
         if (monthlyLineItem && monthlyLineItem.id) {
-          await this.makeRequest(`/crm/v4/objects/line_items/${monthlyLineItem.id}/associations/quotes/${quoteId}`, {
+          await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/line_items`, {
             method: 'PUT',
             body: JSON.stringify([{
-              associationCategory: "HUBSPOT_DEFINED",
-              associationTypeId: 67
+              to: { id: monthlyLineItem.id },
+              types: [{
+                associationCategory: "HUBSPOT_DEFINED",
+                associationTypeId: 67
+              }]
             }])
           });
           console.log(`Added TaaS Monthly line item with quote: $${taasMonthlyFee}`);
@@ -823,11 +826,14 @@ Generated: ${new Date().toLocaleDateString()}`;
         });
         
         if (priorYearsLineItem && priorYearsLineItem.id) {
-          await this.makeRequest(`/crm/v4/objects/line_items/${priorYearsLineItem.id}/associations/quotes/${quoteId}`, {
+          await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/line_items`, {
             method: 'PUT',
             body: JSON.stringify([{
-              associationCategory: "HUBSPOT_DEFINED",
-              associationTypeId: 67
+              to: { id: priorYearsLineItem.id },
+              types: [{
+                associationCategory: "HUBSPOT_DEFINED",
+                associationTypeId: 67
+              }]
             }])
           });
           console.log(`Added TaaS Prior Years line item with quote: $${taasPriorYearsFee}`);

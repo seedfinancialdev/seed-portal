@@ -2384,9 +2384,27 @@ export default function Home() {
                               console.error('Failed to save quote before pushing to HubSpot:', error);
                             }
                           } else if (editingQuoteId || hasHubSpotIds) {
-                            // Update existing quote in HubSpot (either we're editing or quote has HubSpot IDs)
+                            // Update existing quote - auto-save first, then update HubSpot
                             const quoteId = editingQuoteId || currentQuote?.id;
-                            if (quoteId) {
+                            if (quoteId && hasUnsavedChanges) {
+                              // Auto-save the form changes first (editingQuoteId is already set)
+                              const formData = form.getValues();
+                              try {
+                                await new Promise((resolve, reject) => {
+                                  createQuoteMutation.mutate(formData, {
+                                    onSuccess: (savedQuote) => {
+                                      // Now update in HubSpot
+                                      updateHubSpotMutation.mutate(quoteId);
+                                      resolve(savedQuote);
+                                    },
+                                    onError: reject
+                                  });
+                                });
+                              } catch (error) {
+                                console.error('Failed to save quote before updating HubSpot:', error);
+                              }
+                            } else if (quoteId) {
+                              // No unsaved changes, just update HubSpot
                               updateHubSpotMutation.mutate(quoteId);
                             }
                           } else {

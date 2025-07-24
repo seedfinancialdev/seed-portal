@@ -121,6 +121,8 @@ Preferred communication style: Simple, everyday language.
   - **Quote Title Updates**: Updates quote titles to show correct service combinations with (Updated date)
   - **TaaS Line Item Creation**: Adds missing TaaS line items when converting from single to combined services
   - **Deal Value Calculation**: Correctly includes all TaaS fees in deal value calculations
+  - **Auto-Save Before HubSpot Update**: "Update in HubSpot" button now auto-saves form changes first, ensuring database matches display
+  - **Fixed TaaS Line Item Association**: Corrected HubSpot API calls for associating new TaaS line items with quotes
   - **Comprehensive Service Conversion**: Handles all aspects of converting bookkeeping-only quotes to combined service quotes
 
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
