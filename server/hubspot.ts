@@ -684,7 +684,10 @@ Generated: ${new Date().toLocaleDateString()}`;
 
       // Check if we need to add TaaS line items
       if (includesTaas && (taasMonthlyFee > 0 || taasPriorYearsFee > 0)) {
+        console.log(`Adding TaaS line items - Monthly: $${taasMonthlyFee}, Prior Years: $${taasPriorYearsFee}`);
         await this.addMissingTaaSLineItems(quoteId, taasMonthlyFee || 0, taasPriorYearsFee || 0);
+      } else {
+        console.log(`Not adding TaaS line items - includesTaas: ${includesTaas}, taasMonthlyFee: ${taasMonthlyFee}, taasPriorYearsFee: ${taasPriorYearsFee}`);
       }
 
       // Update the associated deal amount and name

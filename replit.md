@@ -124,6 +124,7 @@ Preferred communication style: Simple, everyday language.
   - **Auto-Save Before HubSpot Update**: "Update in HubSpot" button now auto-saves form changes first, ensuring database matches display
   - **Fixed TaaS Line Item Association**: Corrected HubSpot API endpoint for associating new TaaS line items with quotes (line_items to quotes direction)
   - **Simplified Fee Calculation**: Uses form data fees directly instead of recalculating to prevent discrepancies
+  - **Enhanced Debug Logging**: Added comprehensive logging to track TaaS fee flow and line item creation
   - **Comprehensive Service Conversion**: Handles all aspects of converting bookkeeping-only quotes to combined service quotes
 
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)

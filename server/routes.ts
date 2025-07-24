@@ -433,6 +433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         taasPriorYearsFee = parseFloat(currentFormData.taasPriorYearsFee || "0");
         
         console.log(`Using form data fees - Monthly: $${monthlyFee}, Setup: $${setupFee}, TaaS Monthly: $${taasMonthlyFee}, TaaS Setup: $${taasPriorYearsFee}`);
+        console.log(`Current form data includes TaaS: ${currentFormData.includesTaas}, TaaS monthly: ${currentFormData.taasMonthlyFee}, TaaS setup: ${currentFormData.taasPriorYearsFee}`);
         
         // Update the quote in our database with current form data (preserve calculated fees)
         const updateData = {
@@ -449,16 +450,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use the form data fees directly instead of recalculating
-      const updateBookkeepingMonthlyFee = currentFormData ? 
-        parseFloat(currentFormData.monthlyFee || "0") - parseFloat(currentFormData.taasMonthlyFee || "0") :
-        parseFloat(quote.monthlyFee) - parseFloat(quote.taasMonthlyFee || "0");
-        
-      const updateBookkeepingSetupFee = currentFormData ?
-        parseFloat(currentFormData.setupFee || "0") - parseFloat(currentFormData.taasPriorYearsFee || "0") :
-        parseFloat(quote.setupFee) - parseFloat(quote.taasPriorYearsFee || "0");
-        
       const updateTaasMonthlyFee = taasMonthlyFee;
       const updateTaasPriorYearsFee = taasPriorYearsFee;
+      
+      const updateBookkeepingMonthlyFee = monthlyFee - updateTaasMonthlyFee;
+      const updateBookkeepingSetupFee = setupFee - updateTaasPriorYearsFee;
+      
+      console.log(`Calculated individual service fees - Bookkeeping Monthly: $${updateBookkeepingMonthlyFee}, Bookkeeping Setup: $${updateBookkeepingSetupFee}, TaaS Monthly: $${updateTaasMonthlyFee}, TaaS Setup: $${updateTaasPriorYearsFee}`);
 
       // Update quote in HubSpot with current service configuration
       const currentIncludesBookkeeping = currentFormData?.includesBookkeeping !== false;
