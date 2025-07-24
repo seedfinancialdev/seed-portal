@@ -2404,8 +2404,20 @@ export default function Home() {
                           pushToHubSpotMutation.isPending || 
                           updateHubSpotMutation.isPending ||
                           createQuoteMutation.isPending ||
-                          // Disable if cleanup months reduced below minimum without approval
-                          (form.watch("cleanupOverride") && form.watch("cleanupMonths") < currentMonth && !isApproved)
+                          // Disable if override requires approval but not yet approved
+                          (form.watch("cleanupOverride") && !isApproved && (() => {
+                            const overrideReason = form.watch("overrideReason");
+                            const customSetupFee = form.watch("customSetupFee");
+                            const cleanupMonths = form.watch("cleanupMonths");
+                            
+                            if (overrideReason === "Other") {
+                              // For "Other" - requires approval if custom setup fee OR cleanup months reduced
+                              return (customSetupFee && parseFloat(customSetupFee) > 0) || cleanupMonths < currentMonth;
+                            } else {
+                              // For other reasons - only requires approval if cleanup months reduced
+                              return cleanupMonths < currentMonth;
+                            }
+                          })())
                         }
                         className="flex-1 bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-orange-700 active:bg-orange-800 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 button-shimmer transition-all duration-300"
                       >

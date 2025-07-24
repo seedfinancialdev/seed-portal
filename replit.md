@@ -93,7 +93,7 @@ Preferred communication style: Simple, everyday language.
   - Made Reset button always visible for better user experience
   - Completely removed all copy buttons to simplify interface
 
-✓ **Enhanced Cleanup Override System** (July 24, 2025)
+✓ **Enhanced Cleanup Override System and HubSpot Integration Fix** (July 24, 2025)
   - **Automatic Override Unlock**: Clicking override checkbox automatically allows cleanup months to be reduced to 0
   - **Smart Approval Logic**: For "Other" reason - button enabled when custom setup fee entered OR cleanup months decreased; For "Brand New Business"/"Books Confirmed Current" - button enabled only when cleanup months decreased
   - **Custom Setup Fee Always Overrides**: Custom setup fee takes precedence over calculated setup fee regardless of cleanup months value, including when months = 0
@@ -101,6 +101,8 @@ Preferred communication style: Simple, everyday language.
   - **Enhanced Request/Enter Code Flow**: "Request Approval" button changes to "Enter Code" after approval requested, allowing users to reopen code dialog
   - **Detailed Slack Notifications**: Include original cleanup months, requested months, and custom setup fee in approval messages
   - **Approval State Management**: Better tracking of approval states to prevent accidental bypassing of approval requirements
+  - **HubSpot Integration Protection**: HubSpot push button now properly disabled until approval code entered for all override scenarios
+  - **Custom Setup Fee HubSpot Fix**: Fixed backend recalculation overriding custom setup fees - now preserves saved values in HubSpot quotes
 
 ✓ **Fixed HubSpot Button State Management and TaaS Quote Loading** (July 24, 2025)
   - **Smart Button Text Logic**: Button now correctly shows "Update in HubSpot" when editing quotes with HubSpot IDs or "Push to HubSpot" for new quotes
