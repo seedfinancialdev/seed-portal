@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -19,12 +19,46 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
+
+// Helper functions for approval logic
+const getApprovalButtonDisabledReason = (formValues: any, isRequestingApproval: boolean, hasRequestedApproval: boolean): string | null => {
+  if (isRequestingApproval) return null;
+  if (!formValues.contactEmail) return "Contact email is required";
+  if (!formValues.overrideReason) return "Please select a reason for override";
+  
+  const overrideReason = formValues.overrideReason;
+  const cleanupMonths = formValues.cleanupMonths || 0;
+  const customSetupFee = formValues.customSetupFee?.trim();
+  const customOverrideReason = formValues.customOverrideReason?.trim();
+  
+  if (overrideReason === "Other") {
+    if (!customOverrideReason) return "Please explain the reason for override";
+    // For "Other", button is enabled if custom setup fee is entered OR cleanup months are decreased
+    const hasCustomSetupFee = customSetupFee && customSetupFee !== "";
+    const hasDecreasedMonths = cleanupMonths < currentMonth;
+    if (!hasCustomSetupFee && !hasDecreasedMonths) {
+      return "Enter a custom setup fee OR reduce cleanup months below the minimum";
+    }
+  } else if (overrideReason === "Brand New Business" || overrideReason === "Books Confirmed Current") {
+    // For these reasons, button is only enabled if cleanup months are decreased
+    if (cleanupMonths >= currentMonth) {
+      return "Reduce cleanup months below the minimum to request approval";
+    }
+  }
+  
+  return null;
+};
+
+const isApprovalButtonDisabled = (formValues: any, isRequestingApproval: boolean, hasRequestedApproval: boolean): boolean => {
+  return getApprovalButtonDisabledReason(formValues, isRequestingApproval, hasRequestedApproval) !== null;
+};
 
 // Create form schema without the calculated fields
 const formSchema = insertQuoteSchema.omit({
@@ -1666,21 +1700,34 @@ export default function Home() {
                         
                         {/* Request Approval / Enter Code Button */}
                         {form.watch("cleanupOverride") && !isApproved && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={hasRequestedApproval ? () => setIsApprovalDialogOpen(true) : requestApproval}
-                            disabled={
-                              isRequestingApproval || 
-                              !form.watch("contactEmail") || 
-                              !form.watch("overrideReason") ||
-                              (form.watch("overrideReason") === "Other" && (!form.watch("customOverrideReason") || form.watch("customOverrideReason")?.trim() === "" || !form.watch("customSetupFee") || form.watch("customSetupFee")?.trim() === ""))
-                            }
-                            className="ml-4"
-                          >
-                            {isRequestingApproval ? "Requesting..." : hasRequestedApproval ? "Enter Code" : "Request Approval"}
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="ml-4">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={hasRequestedApproval ? () => setIsApprovalDialogOpen(true) : requestApproval}
+                                    disabled={isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval)}
+                                    className="relative"
+                                  >
+                                    {isRequestingApproval ? "Requesting..." : hasRequestedApproval ? "Enter Code" : "Request Approval"}
+                                    {isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval) && (
+                                      <HelpCircle className="h-3 w-3 ml-1 text-gray-400" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </TooltipTrigger>
+                              {isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval) && (
+                                <TooltipContent>
+                                  <p className="text-xs max-w-xs">
+                                    {getApprovalButtonDisabledReason(form.getValues(), isRequestingApproval, hasRequestedApproval)}
+                                  </p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                         
                         {/* Approval Status */}
