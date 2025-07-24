@@ -484,13 +484,16 @@ Services Include:
       }
 
       // Add TaaS line items if TaaS is included
-      if (includesTaas && taasMonthlyFee && taasPriorYearsFee) {
-        // Note: Using bookkeeping product IDs as placeholders until TaaS product IDs are provided
-        await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, taasMonthlyFee, 1, 'TaaS Monthly Services');
-        console.log(`Associated TaaS monthly product with quote: $${taasMonthlyFee}`);
+      if (includesTaas) {
+        // Add TaaS monthly fee if present
+        if (taasMonthlyFee && taasMonthlyFee > 0) {
+          // Note: Using bookkeeping product IDs as placeholders until TaaS product IDs are provided
+          await this.associateProductWithQuote(quoteId, MONTHLY_PRODUCT_ID, taasMonthlyFee, 1, 'TaaS Monthly Services');
+          console.log(`Associated TaaS monthly product with quote: $${taasMonthlyFee}`);
+        }
 
         // Add prior years fee if there's a TaaS setup fee
-        if (taasPriorYearsFee > 0) {
+        if (taasPriorYearsFee && taasPriorYearsFee > 0) {
           await this.associateProductWithQuote(quoteId, CLEANUP_PRODUCT_ID, taasPriorYearsFee, 1, 'TaaS Prior Years Filing');
           console.log(`Associated TaaS prior years product with quote: $${taasPriorYearsFee}`);
         }
