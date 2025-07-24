@@ -723,7 +723,7 @@ Generated: ${new Date().toLocaleDateString()}`;
       }
 
       // Handle service-specific line items based on quote configuration
-      await this.manageServiceLineItems(quoteId, lineItemsToUpdate, {
+      await this.manageServiceLineItems(quoteId, lineItems, {
         includesBookkeeping,
         includesTaas,
         taasMonthlyFee: taasMonthlyFee || 0,
