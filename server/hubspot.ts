@@ -682,12 +682,13 @@ Generated: ${new Date().toLocaleDateString()}`;
         }
       }
 
-      // Check if we need to add TaaS line items
+      // Handle TaaS line items - add if needed, remove if not
       if (includesTaas && (taasMonthlyFee > 0 || taasPriorYearsFee > 0)) {
         console.log(`Adding TaaS line items - Monthly: $${taasMonthlyFee}, Prior Years: $${taasPriorYearsFee}`);
         await this.addMissingTaaSLineItems(quoteId, taasMonthlyFee || 0, taasPriorYearsFee || 0);
       } else {
-        console.log(`Not adding TaaS line items - includesTaas: ${includesTaas}, taasMonthlyFee: ${taasMonthlyFee}, taasPriorYearsFee: ${taasPriorYearsFee}`);
+        console.log(`TaaS not included - removing existing TaaS line items`);
+        await this.removeTaaSLineItems(quoteId, lineItemsToUpdate);
       }
 
       // Update the associated deal amount and name
@@ -749,6 +750,36 @@ Generated: ${new Date().toLocaleDateString()}`;
       }
       
       return false;
+    }
+  }
+
+  private async removeTaaSLineItems(quoteId: string, lineItemsToUpdate: any[]): Promise<void> {
+    try {
+      const taasLineItemsToDelete: string[] = [];
+      
+      // Identify TaaS line items to delete
+      for (const lineItem of lineItemsToUpdate) {
+        const lineItemName = lineItem.properties?.name || '';
+        if (lineItemName.includes('TaaS') || lineItemName.includes('Tax as a Service')) {
+          taasLineItemsToDelete.push(lineItem.id);
+        }
+      }
+      
+      // Delete TaaS line items
+      for (const lineItemId of taasLineItemsToDelete) {
+        console.log(`Deleting TaaS line item: ${lineItemId}`);
+        await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
+          method: 'DELETE'
+        });
+        console.log(`Successfully deleted TaaS line item: ${lineItemId}`);
+      }
+      
+      if (taasLineItemsToDelete.length > 0) {
+        console.log(`Removed ${taasLineItemsToDelete.length} TaaS line items from quote`);
+      }
+    } catch (error) {
+      console.error('Error removing TaaS line items:', error);
+      throw error;
     }
   }
 
