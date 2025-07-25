@@ -108,6 +108,14 @@ export class HubSpotService {
       throw new Error(`HubSpot API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
+    // Handle empty responses (like 204 No Content from DELETE requests)
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+    
+    if (response.status === 204 || contentLength === '0' || !contentType?.includes('application/json')) {
+      return null; // Return null for empty responses
+    }
+    
     return response.json();
   }
 
@@ -919,9 +927,15 @@ Generated: ${new Date().toLocaleDateString()}`;
       // Delete unnecessary items
       for (const item of itemsToDelete) {
         console.log(`Deleting unnecessary line item: ${item.id} (product ${item.properties?.hs_product_id}, amount $${item.properties?.amount})`);
-        await this.makeRequest(`/crm/v3/objects/line_items/${item.id}`, {
-          method: 'DELETE'
-        });
+        try {
+          await this.makeRequest(`/crm/v3/objects/line_items/${item.id}`, {
+            method: 'DELETE'
+          });
+          console.log(`Successfully deleted line item: ${item.id}`);
+        } catch (error) {
+          console.error(`Failed to delete line item ${item.id}:`, error);
+          // Continue with other deletions even if one fails
+        }
       }
       
       // Step 2: Update existing line items or create missing ones
