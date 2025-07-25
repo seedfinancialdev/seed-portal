@@ -23,7 +23,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
-import navLogoPath from "@assets/Nav Logo_1753431362883.png";
 
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
@@ -1269,7 +1268,7 @@ export default function Home() {
                 Back to Portal
               </Button>
               <img 
-                src={navLogoPath} 
+                src={logoPath} 
                 alt="Seed Financial Logo" 
                 className="h-10"
               />

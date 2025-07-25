@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { Calculator, LogOut, User } from "lucide-react";
-import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
+import navLogoPath from "@assets/Nav Logo_1753431362883.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Dashboard() {
@@ -21,7 +21,7 @@ export default function Dashboard() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <img 
-                src={logoPath} 
+                src={navLogoPath} 
                 alt="Seed Financial Logo" 
                 className="h-8 mr-3"
               />
