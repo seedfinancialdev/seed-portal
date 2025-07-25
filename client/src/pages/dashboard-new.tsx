@@ -48,9 +48,10 @@ export default function Dashboard() {
       <header className="bg-transparent z-50">
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex items-center justify-between h-16">
+            <div></div>
             <Link href="/">
               <div className="flex items-center cursor-pointer">
-                <img src={navLogoPath} alt="Seed Financial" className="h-8" />
+                <img src={navLogoPath} alt="Seed Financial" className="h-10" />
               </div>
             </Link>
             
@@ -104,33 +105,33 @@ export default function Dashboard() {
 
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-3 gap-6 mb-12">
-          <Card className="bg-white/60 backdrop-blur-sm border-0 shadow-sm hover:shadow-md transition-all">
+          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-3">
                 <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-2xl font-light text-gray-900 mb-1">$127.3K</p>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Pipeline Value</p>
+              <p className="text-2xl font-light text-white mb-1">$127.3K</p>
+              <p className="text-xs text-white/80 uppercase tracking-wide">Pipeline Value</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/60 backdrop-blur-sm border-0 shadow-sm hover:shadow-md transition-all">
+          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
                 <Target className="h-6 w-6 text-blue-600" />
               </div>
-              <p className="text-2xl font-light text-gray-900 mb-1">18</p>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Active Leads</p>
+              <p className="text-2xl font-light text-white mb-1">18</p>
+              <p className="text-xs text-white/80 uppercase tracking-wide">Active Leads</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/60 backdrop-blur-sm border-0 shadow-sm hover:shadow-md transition-all">
+          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
                 <Activity className="h-6 w-6 text-purple-600" />
               </div>
-              <p className="text-2xl font-light text-gray-900 mb-1">$89.2K</p>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">MTD Revenue</p>
+              <p className="text-2xl font-light text-white mb-1">$89.2K</p>
+              <p className="text-xs text-white/80 uppercase tracking-wide">MTD Revenue</p>
             </CardContent>
           </Card>
         </div>
@@ -161,7 +162,7 @@ export default function Dashboard() {
               <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-3 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
                 <UserCheck className="h-5 w-5 text-white" />
               </div>
-              <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Client Intel</h3>
+              <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Client<br/>Intel</h3>
               <p className="text-xs text-white/80 text-center leading-tight">AI snapshots</p>
             </div>
 
@@ -169,7 +170,7 @@ export default function Dashboard() {
               <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-3 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
                 <Video className="h-5 w-5 text-white" />
               </div>
-              <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Meeting Vault</h3>
+              <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Meeting<br/>Vault</h3>
               <p className="text-xs text-white/80 text-center leading-tight">View recordings</p>
             </div>
           </div>
@@ -269,6 +270,34 @@ export default function Dashboard() {
                     <div>
                       <h3 className="font-semibold text-gray-900 text-sm">Urban Property Management</h3>
                       <p className="text-xs text-gray-600">Real Estate • $890K ARR • Proposal requested</p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
+                </div>
+
+                {/* Lead 7 */}
+                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">⭐</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 text-sm">Digital Marketing Pro</h3>
+                      <p className="text-xs text-gray-600">Marketing • $650K ARR • Hot lead</p>
+                    </div>
+                  </div>
+                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
+                </div>
+
+                {/* Lead 8 */}
+                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">🎯</span>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 text-sm">Green Energy Solutions</h3>
+                      <p className="text-xs text-gray-600">Clean Tech • $2.1M ARR • Decision maker meeting</p>
                     </div>
                   </div>
                   <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
