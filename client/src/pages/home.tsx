@@ -1157,10 +1157,17 @@ export default function Home() {
         // Store approved values to prevent bypassing approval system
         setApprovedCleanupMonths(currentFormValues.cleanupMonths);
         const currentCalculation = calculateFees(currentFormValues);
-        const approvedFee = currentFormValues.customSetupFee ? 
+        const approvedFee = currentFormValues.customSetupFee && currentFormValues.customSetupFee !== "" ? 
           parseInt(currentFormValues.customSetupFee) : 
           currentCalculation.setupFee;
         setApprovedSetupFee(approvedFee);
+        
+        console.log('Setting approved values:', {
+          approvedCleanupMonths: currentFormValues.cleanupMonths,
+          approvedSetupFee: approvedFee,
+          customSetupFee: currentFormValues.customSetupFee,
+          calculatedSetupFee: currentCalculation.setupFee
+        });
         
         setIsApproved(true);
         setIsApprovalDialogOpen(false);
@@ -1751,6 +1758,7 @@ export default function Home() {
                                 
                                 // FIX 3: Check if this reduction requires new approval
                                 if (isApproved && approvedCleanupMonths !== null && newValue < approvedCleanupMonths) {
+                                  console.log('Triggering approval warning for cleanup months reduction');
                                   handleApprovalWarning(
                                     () => field.onChange(currentValue), // Revert function
                                     () => {
@@ -1798,6 +1806,7 @@ export default function Home() {
                                   // Clear approved values tracking
                                   setApprovedCleanupMonths(null);
                                   setApprovedSetupFee(null);
+                                  console.log('Cleared approval state due to override checkbox unchecked');
                                 }
                               }}
                             />
