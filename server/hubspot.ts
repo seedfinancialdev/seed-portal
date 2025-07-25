@@ -892,52 +892,33 @@ Generated: ${new Date().toLocaleDateString()}`;
       // Step 1: Remove line items that shouldn't exist anymore
       const itemsToDelete = [];
       for (const existingItem of existingLineItems) {
-        const itemName = existingItem.properties?.name || '';
+        const productId = existingItem.properties?.hs_product_id || '';
+        const amount = parseFloat(existingItem.properties?.amount || '0');
         let shouldKeep = false;
         
-        // Check if this item matches any required line item (more specific matching)
+        // Check if this item matches any required line item by product ID
         for (const [key, requiredItem] of requiredLineItems) {
-          const isMatch = requiredItem.identifiers.some((id: string) => {
-            // More precise matching to avoid false negatives
-            if (key.includes('bookkeeping_monthly') && itemName.includes('Monthly Bookkeeping')) {
-              return true;
-            }
-            if (key.includes('bookkeeping_setup') && (itemName.includes('Clean-Up') || itemName.includes('Catch-Up'))) {
-              return true;
-            }
-            if (key.includes('taas_monthly') && itemName.includes('Monthly TaaS')) {
-              return true;
-            }
-            if (key.includes('taas_setup') && itemName.includes('TaaS Prior Years')) {
-              return true;
-            }
-            return itemName.includes(id);
-          });
-          
-          if (isMatch) {
+          if (productId === requiredItem.productId) {
             shouldKeep = true;
             break;
           }
         }
         
-        if (!shouldKeep) {
-          // Check if it's a service-related item that should be removed
-          const isServiceItem = 
-            itemName.includes('Monthly Bookkeeping') || 
-            itemName.includes('Clean-Up') || 
-            itemName.includes('Catch-Up') ||
-            itemName.includes('TaaS') ||
-            itemName.includes('Tax as');
-            
+        // Remove any line items that don't match required services OR have $0 amounts (ghost items)
+        if (!shouldKeep || amount === 0) {
+          // Only delete service-related items (our known product IDs)
+          const isServiceItem = ['25687054003', '25683750263', '26203849099', '26354718811'].includes(productId);
+          
           if (isServiceItem) {
             itemsToDelete.push(existingItem);
+            console.log(`Marking line item ${existingItem.id} (product ${productId}, amount $${amount}) for deletion - shouldKeep: ${shouldKeep}`);
           }
         }
       }
       
       // Delete unnecessary items
       for (const item of itemsToDelete) {
-        console.log(`Deleting unnecessary line item: ${item.id} (${item.properties?.name})`);
+        console.log(`Deleting unnecessary line item: ${item.id} (product ${item.properties?.hs_product_id}, amount $${item.properties?.amount})`);
         await this.makeRequest(`/crm/v3/objects/line_items/${item.id}`, {
           method: 'DELETE'
         });
