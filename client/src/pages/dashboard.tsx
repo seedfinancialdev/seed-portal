@@ -35,15 +35,21 @@ import {
   UserCheck,
   Menu,
   ChevronRight,
-  Filter
+  Filter,
+  Cloud,
+  Sun,
+  CloudRain,
+  ChevronDown
 } from "lucide-react";
 import navLogoPath from "@assets/Nav Logo_1753431362883.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  const [weather, setWeather] = useState({ temp: 72, condition: 'sunny', location: 'Marina Del Rey, CA' });
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -55,6 +61,34 @@ export default function Dashboard() {
     month: 'long', 
     day: 'numeric' 
   });
+
+  // Mock weather data - in production this would come from weather API based on user profile location
+  useEffect(() => {
+    // Simulate weather fetch based on user location from profile
+    const fetchWeather = () => {
+      const conditions = ['sunny', 'cloudy', 'rainy'];
+      const temps = [68, 72, 75, 78];
+      const randomCondition = conditions[Math.floor(Math.random() * conditions.length)];
+      const randomTemp = temps[Math.floor(Math.random() * temps.length)];
+      
+      setWeather({
+        temp: randomTemp,
+        condition: randomCondition,
+        location: 'Marina Del Rey, CA' // From user profile
+      });
+    };
+    
+    fetchWeather();
+  }, []);
+
+  const getWeatherIcon = (condition: string) => {
+    switch (condition) {
+      case 'sunny': return <Sun className="h-4 w-4 text-yellow-500" />;
+      case 'cloudy': return <Cloud className="h-4 w-4 text-gray-500" />;
+      case 'rainy': return <CloudRain className="h-4 w-4 text-blue-500" />;
+      default: return <Sun className="h-4 w-4 text-yellow-500" />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-100">
@@ -177,11 +211,20 @@ export default function Dashboard() {
       <div className="bg-gradient-to-r from-[#253e31] via-[#2d4937] to-[#3a5d47] text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-1">
-                Welcome back, {user?.email?.split('@')[0]}
-              </h1>
-              <p className="text-sm text-green-100">{currentDate}</p>
+            <div className="flex items-center space-x-8">
+              <div>
+                <h1 className="text-2xl font-bold text-white mb-1">
+                  Welcome back, {user?.email?.split('@')[0]}
+                </h1>
+                <p className="text-sm text-green-100">{currentDate}</p>
+              </div>
+              <div className="flex items-center space-x-3 bg-white/10 rounded-lg px-3 py-2">
+                {getWeatherIcon(weather.condition)}
+                <div>
+                  <span className="text-sm font-medium">{weather.temp}°F</span>
+                  <p className="text-xs text-green-100 capitalize">{weather.condition} in {weather.location}</p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center space-x-8">
               <div className="text-center">
@@ -203,345 +246,205 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Primary Tools Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Left Column - Core Business Tools */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Core Business Tools</h2>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Customize View
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Link href="/calculator">
-                <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-[#e24c00]/10 rounded-lg">
-                          <Calculator className="h-5 w-5 text-[#e24c00]" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base font-semibold">Quote Calculator</CardTitle>
-                          <p className="text-sm text-gray-500">Pricing & Proposals</p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">Active</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">This Month</span>
-                        <span className="font-medium">127 quotes</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Conversion Rate</span>
-                        <span className="font-medium text-green-600">34.2%</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-
-              <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-green-500/10 rounded-lg">
-                        <DollarSign className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base font-semibold">Commission Tracker</CardTitle>
-                        <p className="text-sm text-gray-500">Earnings & Pipeline</p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-xs">Real-time</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">YTD Earnings</span>
-                      <span className="font-medium">$24,750</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Pipeline Forecast</span>
-                      <span className="font-medium text-blue-600">$127.3K</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-500/10 rounded-lg">
-                        <Inbox className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base font-semibold">Sales Inbox</CardTitle>
-                        <p className="text-sm text-gray-500">Lead Management</p>
-                      </div>
-                    </div>
-                    <Badge variant="destructive" className="text-xs">18 New</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Hot Leads</span>
-                      <span className="font-medium text-red-600">🔥 5</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Follow-ups Due</span>
-                      <span className="font-medium">12</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-purple-500/10 rounded-lg">
-                        <UserCheck className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-base font-semibold">Client Snapshot</CardTitle>
-                        <p className="text-sm text-gray-500">Instant Intelligence</p>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">AI-Powered</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Data Sources</span>
-                      <span className="font-medium">HubSpot + QBO</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Last Updated</span>
-                      <span className="font-medium text-green-600">Live</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+        <div className="flex gap-8">
+          {/* Primary Content - Sales Inbox */}
+          <div className="flex-1">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Sales Inbox</h2>
+              <p className="text-gray-600">Your central command center for lead management and sales operations</p>
             </div>
 
-            {/* Sales Inbox Preview */}
-            <Card className="mb-6 bg-white/70 backdrop-blur-sm border border-gray-200">
+            {/* Enhanced Sales Inbox */}
+            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200 mb-6">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Inbox className="h-5 w-5 text-blue-600" />
-                    Recent Leads
-                  </CardTitle>
-                  <Button variant="outline" size="sm">View All</Button>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Inbox className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">Active Leads</CardTitle>
+                      <CardDescription>18 leads requiring attention</CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm">
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filter
+                    </Button>
+                    <Button size="sm" className="bg-[#e24c00] hover:bg-[#d63c00]">
+                      Add Lead
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                        <span className="text-red-600 font-semibold text-sm">🔥</span>
+                  {/* Lead 1 - Hot */}
+                  <div className="flex items-center justify-between p-4 bg-red-50 border-l-4 border-l-red-500 rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <span className="text-red-600 font-bold text-lg">🔥</span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">TechFlow Solutions</p>
-                        <p className="text-sm text-gray-500">Software Startup • $2M ARR • Ready to buy</p>
+                        <h3 className="font-semibold text-gray-900">TechFlow Solutions</h3>
+                        <p className="text-sm text-gray-600">Software Startup • $2M ARR • Ready to buy</p>
+                        <p className="text-xs text-red-600 font-medium">Hot Lead - Requires immediate attention</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button size="sm" variant="outline">HubSpot</Button>
-                      <Button size="sm" variant="outline">Call</Button>
-                      <Button size="sm" className="bg-[#e24c00] hover:bg-[#d63c00]">Book Meeting</Button>
+                    <div className="flex items-center space-x-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">$45K</p>
+                        <p className="text-xs text-gray-500">Est. Value</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button size="sm" variant="outline">HubSpot</Button>
+                        <Button size="sm" variant="outline">Call</Button>
+                        <Button size="sm" className="bg-[#e24c00] hover:bg-[#d63c00]">Book Meeting</Button>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                        <span className="text-orange-600 font-semibold text-sm">⚡</span>
+
+                  {/* Lead 2 - Warm */}
+                  <div className="flex items-center justify-between p-4 bg-orange-50 border-l-4 border-l-orange-400 rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                        <span className="text-orange-600 font-bold text-lg">⚡</span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">Wellness Hub Inc</p>
-                        <p className="text-sm text-gray-500">Healthcare • $850K ARR • Warm prospect</p>
+                        <h3 className="font-semibold text-gray-900">Wellness Hub Inc</h3>
+                        <p className="text-sm text-gray-600">Healthcare • $850K ARR • Warm prospect</p>
+                        <p className="text-xs text-orange-600 font-medium">Follow-up due in 2 days</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button size="sm" variant="outline">HubSpot</Button>
-                      <Button size="sm" variant="outline">Text</Button>
-                      <Button size="sm" variant="outline">Follow Up</Button>
+                    <div className="flex items-center space-x-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">$28K</p>
+                        <p className="text-xs text-gray-500">Est. Value</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button size="sm" variant="outline">HubSpot</Button>
+                        <Button size="sm" variant="outline">Text</Button>
+                        <Button size="sm" variant="outline">Follow Up</Button>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-semibold text-sm">🧊</span>
+
+                  {/* Lead 3 - Cold */}
+                  <div className="flex items-center justify-between p-4 bg-blue-50 border-l-4 border-l-blue-400 rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 font-bold text-lg">🧊</span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">Local Bakery Co</p>
-                        <p className="text-sm text-gray-500">Food Service • $125K ARR • Price shopper</p>
+                        <h3 className="font-semibold text-gray-900">Local Bakery Co</h3>
+                        <p className="text-sm text-gray-600">Food Service • $125K ARR • Price shopper</p>
+                        <p className="text-xs text-blue-600 font-medium">Quote requested - Price sensitive</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Button size="sm" variant="outline">HubSpot</Button>
-                      <Button size="sm" variant="outline">Email</Button>
-                      <Button size="sm" variant="outline">Quote</Button>
+                    <div className="flex items-center space-x-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-900">$8K</p>
+                        <p className="text-xs text-gray-500">Est. Value</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button size="sm" variant="outline">HubSpot</Button>
+                        <Button size="sm" variant="outline">Email</Button>
+                        <Button size="sm" variant="outline">Quote</Button>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* More leads indicator */}
+                  <div className="text-center py-4 border-t border-gray-200">
+                    <Button variant="outline" className="w-full">
+                      View All 18 Leads
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column - Resources & Intelligence */}
-          <div className="space-y-6">
-            {/* Knowledge Resources */}
+          {/* Compact Sidebar - Secondary Tools */}
+          <div className="w-80 space-y-4">
+            {/* Quick Tools */}
             <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5 text-indigo-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Quick Tools</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  <Link href="/calculator">
+                    <Button variant="outline" size="sm" className="w-full justify-start">
+                      <Calculator className="h-4 w-4 mr-2" />
+                      Quote Calc
+                    </Button>
+                  </Link>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Commission
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <UserCheck className="h-4 w-4 mr-2" />
+                    Client Intel
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start">
+                    <Video className="h-4 w-4 mr-2" />
+                    Meetings
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Knowledge Base */}
+            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Bot className="h-4 w-4 text-indigo-600" />
                   Knowledge Base
                 </CardTitle>
-                <CardDescription>AI-powered search & resources</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input placeholder="Ask anything..." className="pl-10" />
+                    <Input placeholder="Ask anything..." className="pl-10 text-sm" />
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
-                      <span className="text-sm font-medium">S-Corp Election Process</span>
-                      <Badge variant="secondary" className="text-xs">Updated</Badge>
-                    </div>
-                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
-                      <span className="text-sm">Tax Planning Strategies 2024</span>
-                      <span className="text-xs text-gray-500">Guide</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
-                      <span className="text-sm">Client Onboarding SOP</span>
-                      <span className="text-xs text-gray-500">Process</span>
-                    </div>
+                  <div className="space-y-1">
+                    <div className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer py-1">S-Corp Election Process</div>
+                    <div className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer py-1">Tax Planning 2024</div>
+                    <div className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer py-1">Client Onboarding SOP</div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Meeting Vault */}
-            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Video className="h-5 w-5 text-green-600" />
-                  Meeting Vault
-                </CardTitle>
-                <CardDescription>Auto-logged recordings & AI summaries</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium">TechFlow Discovery Call</span>
-                    </div>
-                    <span className="text-xs text-gray-500">2h ago</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-sm">Wellness Hub Strategy Session</span>
-                    </div>
-                    <span className="text-xs text-gray-500">1d ago</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                      <span className="text-sm">Team Standup</span>
-                    </div>
-                    <span className="text-xs text-gray-500">2d ago</span>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full mt-3">
-                    Search All Meetings
-                  </Button>
                 </div>
               </CardContent>
             </Card>
 
             {/* Seed Academy */}
             <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-purple-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <GraduationCap className="h-4 w-4 text-purple-600" />
                   Seed Academy
                 </CardTitle>
-                <CardDescription>Staff training & development</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Your XP: 2,450</span>
+                    <span className="text-sm font-medium">XP: 2,450</span>
                     <Badge variant="secondary" className="text-xs">Level 7</Badge>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between py-2 px-3 bg-purple-50 rounded-lg">
-                      <span className="text-sm font-medium">Tax Planning 201</span>
-                      <span className="text-xs text-purple-600">In Progress</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
-                      <span className="text-sm">How to Quote Like a Beast</span>
-                      <span className="text-xs text-gray-500">New</span>
-                    </div>
-                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
-                      <span className="text-sm">Bookkeeping Deep Dive</span>
-                      <span className="text-xs text-green-600">Completed</span>
-                    </div>
-                  </div>
+                  <div className="text-xs text-purple-600 bg-purple-50 p-2 rounded">Tax Planning 201 - In Progress</div>
+                  <Button variant="outline" size="sm" className="w-full text-xs">View Courses</Button>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Announcements */}
+            {/* Recent Alerts */}
             <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Megaphone className="h-5 w-5 text-orange-600" />
-                  Announcements
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="border-l-4 border-l-green-500 pl-3">
-                    <p className="text-sm font-medium">New Proposal Engine Shipped!</p>
-                    <p className="text-xs text-gray-500 mt-1">Enhanced automation features now live</p>
-                    <Button variant="link" className="p-0 h-auto text-xs text-blue-600">View Demo</Button>
-                  </div>
-                  <div className="border-l-4 border-l-blue-500 pl-3">
-                    <p className="text-sm font-medium">Updated S-Corp Pay Structure SOP</p>
-                    <p className="text-xs text-gray-500 mt-1">New compliance requirements effective immediately</p>
-                  </div>
-                  <div className="border-l-4 border-l-orange-500 pl-3">
-                    <p className="text-sm font-medium">Q4 Team Challenge Starts Monday</p>
-                    <p className="text-xs text-gray-500 mt-1">$500 Amazon gift card for top performer</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Slack Integration Preview */}
-            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Slack className="h-5 w-5 text-purple-600" />
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Bell className="h-4 w-4 text-orange-600" />
                   Recent Alerts
                 </CardTitle>
               </CardHeader>
@@ -550,22 +453,15 @@ export default function Dashboard() {
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                     <div>
-                      <p className="text-sm">New lead assigned: TechFlow Solutions</p>
+                      <p className="text-xs">New lead: TechFlow Solutions</p>
                       <p className="text-xs text-gray-500">5 min ago</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                     <div>
-                      <p className="text-sm">Commission updated: +$450</p>
+                      <p className="text-xs">Commission: +$450</p>
                       <p className="text-xs text-gray-500">2h ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="text-sm">Client XYZ uploaded bank feed</p>
-                      <p className="text-xs text-gray-500">4h ago</p>
                     </div>
                   </div>
                 </div>
