@@ -889,9 +889,26 @@ Generated: ${new Date().toLocaleDateString()}`;
         const itemName = existingItem.properties?.name || '';
         let shouldKeep = false;
         
-        // Check if this item matches any required line item
+        // Check if this item matches any required line item (more specific matching)
         for (const [key, requiredItem] of requiredLineItems) {
-          if (requiredItem.identifiers.some((id: string) => itemName.includes(id))) {
+          const isMatch = requiredItem.identifiers.some((id: string) => {
+            // More precise matching to avoid false negatives
+            if (key.includes('bookkeeping_monthly') && itemName.includes('Monthly Bookkeeping')) {
+              return true;
+            }
+            if (key.includes('bookkeeping_setup') && (itemName.includes('Clean-Up') || itemName.includes('Catch-Up'))) {
+              return true;
+            }
+            if (key.includes('taas_monthly') && itemName.includes('Monthly TaaS')) {
+              return true;
+            }
+            if (key.includes('taas_setup') && itemName.includes('TaaS Prior Years')) {
+              return true;
+            }
+            return itemName.includes(id);
+          });
+          
+          if (isMatch) {
             shouldKeep = true;
             break;
           }
@@ -924,11 +941,29 @@ Generated: ${new Date().toLocaleDateString()}`;
       for (const [key, requiredItem] of requiredLineItems) {
         let exists = false;
         
-        // Check if this item already exists
-        for (const existingItem of existingLineItems) {
+        // Check if this item already exists (more specific matching)
+        for (const existingItem of refreshedLineItems) {
           const itemName = existingItem.properties?.name || '';
-          if (requiredItem.identifiers.some((id: string) => itemName.includes(id))) {
+          const isMatch = requiredItem.identifiers.some((id: string) => {
+            // More precise matching to avoid false negatives
+            if (key.includes('bookkeeping_monthly') && itemName.includes('Monthly Bookkeeping')) {
+              return true;
+            }
+            if (key.includes('bookkeeping_setup') && (itemName.includes('Clean-Up') || itemName.includes('Catch-Up'))) {
+              return true;
+            }
+            if (key.includes('taas_monthly') && itemName.includes('Monthly TaaS')) {
+              return true;
+            }
+            if (key.includes('taas_setup') && itemName.includes('TaaS Prior Years')) {
+              return true;
+            }
+            return itemName.includes(id);
+          });
+          
+          if (isMatch) {
             exists = true;
+            console.log(`Found existing line item: ${itemName} matches required ${requiredItem.name}`);
             break;
           }
         }
