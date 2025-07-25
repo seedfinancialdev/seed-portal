@@ -256,37 +256,33 @@ export default function Dashboard() {
               </div>
               <div className="grid grid-cols-4 gap-6">
                 <Link href="/calculator">
-                  <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
-                    <div className="p-3 bg-[#e24c00]/10 rounded-full mb-3">
+                  <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                    <div className="p-3 bg-[#e24c00]/10 rounded-full mb-2">
                       <Calculator className="h-6 w-6 text-[#e24c00]" />
                     </div>
-                    <h3 className="text-sm font-semibold text-center">Quote Calculator</h3>
-                    <p className="text-xs text-gray-500 text-center mt-1">Generate pricing</p>
+                    <h3 className="text-xs font-semibold text-center">Quote Calculator</h3>
                   </div>
                 </Link>
 
-                <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
-                  <div className="p-3 bg-green-500/10 rounded-full mb-3">
+                <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                  <div className="p-3 bg-green-500/10 rounded-full mb-2">
                     <DollarSign className="h-6 w-6 text-green-600" />
                   </div>
-                  <h3 className="text-sm font-semibold text-center">Commission Tracker</h3>
-                  <p className="text-xs text-gray-500 text-center mt-1">Track earnings</p>
+                  <h3 className="text-xs font-semibold text-center">Commission Tracker</h3>
                 </div>
 
-                <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
-                  <div className="p-3 bg-purple-500/10 rounded-full mb-3">
+                <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                  <div className="p-3 bg-purple-500/10 rounded-full mb-2">
                     <UserCheck className="h-6 w-6 text-purple-600" />
                   </div>
-                  <h3 className="text-sm font-semibold text-center">Client Intel</h3>
-                  <p className="text-xs text-gray-500 text-center mt-1">AI snapshots</p>
+                  <h3 className="text-xs font-semibold text-center">Client Intel</h3>
                 </div>
 
-                <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
-                  <div className="p-3 bg-indigo-500/10 rounded-full mb-3">
+                <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                  <div className="p-3 bg-indigo-500/10 rounded-full mb-2">
                     <Video className="h-6 w-6 text-indigo-600" />
                   </div>
-                  <h3 className="text-sm font-semibold text-center">Meeting Vault</h3>
-                  <p className="text-xs text-gray-500 text-center mt-1">View recordings</p>
+                  <h3 className="text-xs font-semibold text-center">Meeting Vault</h3>
                 </div>
               </div>
             </div>
@@ -410,35 +406,6 @@ export default function Dashboard() {
 
           {/* Compact Sidebar - Secondary Tools */}
           <div className="w-80 space-y-4">
-            {/* Quick Tools */}
-            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Quick Tools</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  <Link href="/calculator">
-                    <Button variant="outline" size="sm" className="w-full justify-start">
-                      <Calculator className="h-4 w-4 mr-2" />
-                      Quote Calc
-                    </Button>
-                  </Link>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Commission
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <UserCheck className="h-4 w-4 mr-2" />
-                    Client Intel
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    <Video className="h-4 w-4 mr-2" />
-                    Meetings
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Knowledge Base */}
             <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
               <CardHeader className="pb-3">
