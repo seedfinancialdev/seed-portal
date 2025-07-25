@@ -249,6 +249,48 @@ export default function Dashboard() {
         <div className="flex gap-8">
           {/* Primary Content - Sales Inbox */}
           <div className="flex-1">
+            {/* Quick Tools - Round Cards */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Quick Tools</h2>
+              </div>
+              <div className="grid grid-cols-4 gap-6">
+                <Link href="/calculator">
+                  <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
+                    <div className="p-3 bg-[#e24c00]/10 rounded-full mb-3">
+                      <Calculator className="h-6 w-6 text-[#e24c00]" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-center">Quote Calculator</h3>
+                    <p className="text-xs text-gray-500 text-center mt-1">Generate pricing</p>
+                  </div>
+                </Link>
+
+                <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
+                  <div className="p-3 bg-green-500/10 rounded-full mb-3">
+                    <DollarSign className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-center">Commission Tracker</h3>
+                  <p className="text-xs text-gray-500 text-center mt-1">Track earnings</p>
+                </div>
+
+                <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
+                  <div className="p-3 bg-purple-500/10 rounded-full mb-3">
+                    <UserCheck className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-center">Client Intel</h3>
+                  <p className="text-xs text-gray-500 text-center mt-1">AI snapshots</p>
+                </div>
+
+                <div className="flex flex-col items-center p-6 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer aspect-square">
+                  <div className="p-3 bg-indigo-500/10 rounded-full mb-3">
+                    <Video className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <h3 className="text-sm font-semibold text-center">Meeting Vault</h3>
+                  <p className="text-xs text-gray-500 text-center mt-1">View recordings</p>
+                </div>
+              </div>
+            </div>
+
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Sales Inbox</h2>
               <p className="text-gray-600">Your central command center for lead management and sales operations</p>
