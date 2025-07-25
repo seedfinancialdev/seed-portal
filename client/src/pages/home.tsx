@@ -1229,6 +1229,19 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="relative mb-8">
+          {/* Back Button - Top Left */}
+          <div className="absolute top-0 left-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+              onClick={() => window.location.href = '/'}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back to Portal
+            </Button>
+          </div>
+          
           {/* User Menu - Top Right */}
           <div className="absolute top-0 right-0">
             <DropdownMenu>
@@ -1255,27 +1268,13 @@ export default function Home() {
             </DropdownMenu>
           </div>
           
-          {/* Back Button and Logo - Left */}
-          <div className="flex items-center justify-center">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-                onClick={() => window.location.href = '/'}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Back to Portal
-              </Button>
-              <img 
-                src={logoPath} 
-                alt="Seed Financial Logo" 
-                className="h-10"
-              />
-              <p className="text-lg text-gray-200 ml-4">
-                Internal Pricing Calculator
-              </p>
-            </div>
+          {/* Logo - Center */}
+          <div className="flex justify-center">
+            <img 
+              src={logoPath} 
+              alt="Seed Financial Logo" 
+              className="h-16"
+            />
           </div>
         </div>
 
