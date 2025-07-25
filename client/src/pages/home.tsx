@@ -500,11 +500,10 @@ export default function Home() {
   const [hasRequestedApproval, setHasRequestedApproval] = useState(false);
   const [customSetupFee, setCustomSetupFee] = useState<string>("");
   
-  // Approved values tracking - prevents bypassing approval system
-  const [approvedCleanupMonths, setApprovedCleanupMonths] = useState<number | null>(null);
-  const [approvedSetupFee, setApprovedSetupFee] = useState<number | null>(null);
+  // Simplified approval system - lock fields permanently after approval
+  const [fieldsLocked, setFieldsLocked] = useState(false);
+  const [unlockConfirmDialog, setUnlockConfirmDialog] = useState(false);
   const [originalCleanupMonths, setOriginalCleanupMonths] = useState<number>(currentMonth);
-  const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   
   // Archive dialog state
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -1152,29 +1151,14 @@ export default function Home() {
       const result = await response.json();
       
       if (result.valid) {
-        const currentFormValues = form.getValues();
-        
-        // Store approved values to prevent bypassing approval system
-        setApprovedCleanupMonths(currentFormValues.cleanupMonths);
-        const currentCalculation = calculateFees(currentFormValues);
-        const approvedFee = currentFormValues.customSetupFee && currentFormValues.customSetupFee !== "" ? 
-          parseInt(currentFormValues.customSetupFee) : 
-          currentCalculation.setupFee;
-        setApprovedSetupFee(approvedFee);
-        
-        console.log('Setting approved values:', {
-          approvedCleanupMonths: currentFormValues.cleanupMonths,
-          approvedSetupFee: approvedFee,
-          customSetupFee: currentFormValues.customSetupFee,
-          calculatedSetupFee: currentCalculation.setupFee
-        });
-        
+        // Lock all fields permanently after approval
         setIsApproved(true);
+        setFieldsLocked(true);
         setIsApprovalDialogOpen(false);
         setApprovalCode("");
         toast({
           title: "Approval Granted",
-          description: "You can now modify cleanup months. Values are locked to prevent bypassing approval.",
+          description: "Setup fee fields are now locked. Use the unlock button to make changes.",
         });
       } else {
         toast({
@@ -1195,43 +1179,21 @@ export default function Home() {
     }
   };
 
-  // Check if current values would require new approval
-  const requiresNewApproval = (currentFormValues: any): boolean => {
-    if (!isApproved || approvedCleanupMonths === null || approvedSetupFee === null) return false;
-    
-    const currentCalculation = calculateFees(currentFormValues);
-    const currentSetupFee = currentFormValues.customSetupFee && currentFormValues.customSetupFee !== "" ? 
-      parseInt(currentFormValues.customSetupFee) : 
-      currentCalculation.setupFee;
-    
-    // Requires new approval if cleanup months decreased OR setup fee decreased
-    const needsApproval = currentFormValues.cleanupMonths < approvedCleanupMonths || 
-           currentSetupFee < approvedSetupFee;
-    
-    console.log('requiresNewApproval check:', {
-      isApproved,
-      approvedCleanupMonths,
-      approvedSetupFee,
-      currentCleanupMonths: currentFormValues.cleanupMonths,
-      currentSetupFee,
-      needsApproval
-    });
-    
-    return needsApproval;
+  // Handle unlocking fields with confirmation
+  const handleUnlockFields = () => {
+    setUnlockConfirmDialog(true);
   };
 
-  // Show warning dialog when user tries to change approved values
-  const handleApprovalWarning = (revertFn: () => void, continueFn: () => void) => {
-    const currentFormValues = form.getValues();
-    
-    if (requiresNewApproval(currentFormValues)) {
-      setShowApprovalWarning(true);
-      // Store the revert function for the warning dialog
-      (window as any).revertToApprovedValues = revertFn;
-      (window as any).continueWithNewApproval = continueFn;
-    } else {
-      continueFn();
-    }
+  const confirmUnlockFields = () => {
+    setFieldsLocked(false);
+    setIsApproved(false);
+    setHasRequestedApproval(false);
+    setUnlockConfirmDialog(false);
+    toast({
+      title: "Fields Unlocked",
+      description: "You can now make changes, but will need a new approval code before saving.",
+      variant: "destructive",
+    });
   };
 
   const onSubmit = (data: FormData) => {
@@ -1246,8 +1208,8 @@ export default function Home() {
       return;
     }
     
-    // Check if override is used but not approved (unless values match approved amounts)
-    if (data.cleanupOverride && !isApproved && !valuesMatchApproved(data)) {
+    // Check if override is used but not approved
+    if (data.cleanupOverride && !isApproved) {
       toast({
         title: "Approval Required",
         description: "You must get approval before saving quotes with cleanup overrides.",
@@ -1258,19 +1220,6 @@ export default function Home() {
     
     console.log('Submitting quote via createQuoteMutation');
     createQuoteMutation.mutate(data);
-  };
-
-  // Check if current values match previously approved values
-  const valuesMatchApproved = (currentFormValues: any): boolean => {
-    if (approvedCleanupMonths === null || approvedSetupFee === null) return false;
-    
-    const currentCalculation = calculateFees(currentFormValues);
-    const currentSetupFee = currentFormValues.customSetupFee && currentFormValues.customSetupFee !== "" ? 
-      parseInt(currentFormValues.customSetupFee) : 
-      currentCalculation.setupFee;
-    
-    return currentFormValues.cleanupMonths === approvedCleanupMonths && 
-           currentSetupFee === approvedSetupFee;
   };
 
   // Remove the old breakdown function since it's now handled in the calculation logic above
@@ -1744,34 +1693,17 @@ export default function Home() {
                             max="120"
                             placeholder={currentMonth.toString()}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                            disabled={false}
+                            disabled={fieldsLocked}
                             {...field}
                             onChange={(e) => {
                               const value = parseInt(e.target.value);
-                              const currentValue = field.value;
                               
                               if (isNaN(value)) {
                                 field.onChange(form.watch("cleanupOverride") ? 0 : currentMonth);
                               } else {
                                 const minValue = form.watch("cleanupOverride") ? 0 : currentMonth;
                                 const newValue = Math.max(minValue, value);
-                                
-                                // FIX 3: Check if this reduction requires new approval
-                                if (isApproved && approvedCleanupMonths !== null && newValue < approvedCleanupMonths) {
-                                  console.log('Triggering approval warning for cleanup months reduction');
-                                  handleApprovalWarning(
-                                    () => field.onChange(currentValue), // Revert function
-                                    () => {
-                                      field.onChange(newValue);
-                                      setIsApproved(false);
-                                      setApprovedCleanupMonths(null);
-                                      setApprovedSetupFee(null);
-                                      setHasRequestedApproval(false);
-                                    }
-                                  );
-                                } else {
-                                  field.onChange(newValue);
-                                }
+                                field.onChange(newValue);
                               }
                             }}
                           />
@@ -1791,22 +1723,16 @@ export default function Home() {
                           <FormControl>
                             <Checkbox
                               checked={field.value}
-                              disabled={isApproved} // FIX 2: Lock checkbox after approval code entered
+                              disabled={isApproved} // Permanently lock checkbox after approval
                               onCheckedChange={(checked) => {
                                 field.onChange(checked);
                                 if (!checked) {
-                                  // FIX 1: Reset cleanup months to original value when unchecking
+                                  // Reset when unchecking (only if not approved)
                                   form.setValue("cleanupMonths", originalCleanupMonths);
                                   form.setValue("overrideReason", "");
                                   form.setValue("customOverrideReason", "");
                                   form.setValue("customSetupFee", "");
-                                  setIsApproved(false);
-                                  setHasRequestedApproval(false);
                                   setCustomSetupFee("");
-                                  // Clear approved values tracking
-                                  setApprovedCleanupMonths(null);
-                                  setApprovedSetupFee(null);
-                                  console.log('Cleared approval state due to override checkbox unchecked');
                                 }
                               }}
                             />
@@ -1856,6 +1782,21 @@ export default function Home() {
                             ✓ Approved
                           </div>
                         )}
+                        
+                        {/* Unlock Button */}
+                        {fieldsLocked && (
+                          <div className="ml-4">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={handleUnlockFields}
+                              className="text-amber-600 border-amber-600 hover:bg-amber-50"
+                            >
+                              🔓 Unlock Fields
+                            </Button>
+                          </div>
+                        )}
                       </FormItem>
                     )}
                   />
@@ -1868,7 +1809,7 @@ export default function Home() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Reason</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select onValueChange={field.onChange} value={field.value} disabled={fieldsLocked}>
                             <FormControl>
                               <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                                 <SelectValue placeholder="Select reason for override" />
@@ -1904,6 +1845,7 @@ export default function Home() {
                                   field.onChange(e);
                                   setCustomOverrideReason(e.target.value);
                                 }}
+                                disabled={fieldsLocked}
                               />
                             </FormControl>
                             <FormMessage />
@@ -1930,7 +1872,6 @@ export default function Home() {
                                   {...field}
                                   onChange={(e) => {
                                     const inputValue = e.target.value;
-                                    const currentValue = field.value;
                                     
                                     // Handle empty input
                                     if (inputValue === "") {
@@ -1941,40 +1882,10 @@ export default function Home() {
                                     
                                     // Ensure whole numbers only
                                     const value = Math.floor(parseFloat(inputValue) || 0).toString();
-                                    const numericValue = parseInt(value);
-                                    
-                                    console.log('Custom setup fee change:', {
-                                      inputValue,
-                                      value,
-                                      numericValue,
-                                      approvedSetupFee,
-                                      isApproved,
-                                      willTriggerWarning: isApproved && approvedSetupFee !== null && numericValue > 0 && numericValue < approvedSetupFee
-                                    });
-                                    
-                                    // FIX 3: Check if this reduction requires new approval
-                                    if (isApproved && approvedSetupFee !== null && numericValue > 0 && numericValue < approvedSetupFee) {
-                                      console.log('Triggering approval warning for setup fee reduction');
-                                      handleApprovalWarning(
-                                        () => {
-                                          console.log('Reverting to previous value:', currentValue);
-                                          field.onChange(currentValue);
-                                        }, // Revert function
-                                        () => {
-                                          console.log('Continuing with new value and clearing approval');
-                                          field.onChange(value);
-                                          setCustomSetupFee(value);
-                                          setIsApproved(false);
-                                          setApprovedCleanupMonths(null);
-                                          setApprovedSetupFee(null);
-                                          setHasRequestedApproval(false);
-                                        }
-                                      );
-                                    } else {
-                                      field.onChange(value);
-                                      setCustomSetupFee(value);
-                                    }
+                                    field.onChange(value);
+                                    setCustomSetupFee(value);
                                   }}
+                                  disabled={fieldsLocked}
                                 />
                               </div>
                             </FormControl>
@@ -3116,48 +3027,27 @@ export default function Home() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Approval Warning Dialog */}
-      <AlertDialog open={showApprovalWarning} onOpenChange={setShowApprovalWarning}>
+      {/* Unlock Confirmation Dialog */}
+      <AlertDialog open={unlockConfirmDialog} onOpenChange={setUnlockConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
-              New Approval Required
+              Unlock Setup Fee Fields?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              You are trying to reduce values below what was previously approved. This requires a new approval code.
+              Are you sure you want to unlock the setup fee fields? This will allow you to make changes, but you'll need to request a new approval code before saving any quote with overrides, regardless of whether you increase or decrease the values.
               <br /><br />
-              <strong>Your options:</strong>
-              <br />• <strong>Revert:</strong> Keep the previously approved values
-              <br />• <strong>Continue:</strong> Clear approval status and request a new code
+              <strong>Note:</strong> The override checkbox will remain locked to prevent accidental changes.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowApprovalWarning(false);
-              // Call the revert function stored in window
-              if ((window as any).revertToApprovedValues) {
-                (window as any).revertToApprovedValues();
-              }
-            }}>
-              Revert to Approved Values
-            </AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={() => {
-                setShowApprovalWarning(false);
-                // Call the continue function stored in window
-                if ((window as any).continueWithNewApproval) {
-                  (window as any).continueWithNewApproval();
-                }
-                toast({
-                  title: "Approval Cleared",
-                  description: "You'll need to request a new approval code before saving.",
-                  variant: "destructive",
-                });
-              }}
+              onClick={confirmUnlockFields}
               className="bg-amber-600 hover:bg-amber-700 focus:ring-amber-600"
             >
-              Continue & Request New Approval
+              Yes, Unlock Fields
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
