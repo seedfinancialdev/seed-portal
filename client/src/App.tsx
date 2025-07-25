@@ -1,10 +1,10 @@
 import { Router, Route, Switch } from 'wouter'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from '@/hooks/use-auth'
-import { ProtectedRoute } from '@/components/protected-route'
-import Dashboard from '@/pages/dashboard'
-import Login from '@/pages/login'
+import { AuthProvider } from "@/hooks/use-auth";
+import ProtectedRoute from "@/lib/protected-route";
+import HomePage from "@/pages/home";
+import AuthPage from "@/pages/auth-page";
+import NotFoundPage from "@/pages/not-found";
 import { Toaster } from "@/components/ui/toaster";
 import "./index.css";
 
@@ -25,36 +25,21 @@ const queryClient = new QueryClient({
   },
 });
 
-function AppContent() {
-  return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <Switch>
-          <Route path="/login" component={Login} />
-          <Route path="/" component={() => <ProtectedRoute path="/" component={Dashboard} />} />
-          <Route>
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-gray-900">404 - Page Not Found</h1>
-                <p className="text-gray-600 mt-2">The page you're looking for doesn't exist.</p>
-              </div>
-            </div>
-          </Route>
-        </Switch>
-      </div>
-    </Router>
-  )
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <AppContent />
-          <Toaster />
-        </AuthProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50">
+            <Switch>
+              <Route path="/auth" component={AuthPage} />
+              <ProtectedRoute path="/" component={HomePage} />
+              <Route component={NotFoundPage} />
+            </Switch>
+          </div>
+        </Router>
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   )
 }

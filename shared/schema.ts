@@ -1,113 +1,81 @@
-import { pgTable, serial, text, decimal, integer, boolean, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, decimal, boolean, timestamp, integer } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-// Sales Representatives table
-export const salesReps = pgTable('sales_reps', {
+// Original Quote Calculator Tables
+export const quotes = pgTable('quotes', {
   id: serial('id').primaryKey(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
+  contactEmail: text('contact_email').notNull(),
+  companyName: text('company_name'),
+  hubspotContactId: text('hubspot_contact_id'),
+  hubspotDealId: text('hubspot_deal_id'),
+  hubspotQuoteId: text('hubspot_quote_id'),
+  revenueBand: text('revenue_band').notNull(),
+  entityType: text('entity_type').notNull(),
+  transactionVolume: text('transaction_volume').notNull(),
+  industryType: text('industry_type').notNull(),
+  bookkeepingComplexity: text('bookkeeping_complexity').notNull(),
+  bookkeepingQuality: text('bookkeeping_quality').notNull(),
+  cleanupMonths: integer('cleanup_months').notNull(),
+  customSetupFee: decimal('custom_setup_fee', { precision: 10, scale: 2 }),
+  includesBookkeeping: boolean('includes_bookkeeping').default(true).notNull(),
+  includesTaas: boolean('includes_taas').default(false).notNull(),
+  taasEntityType: text('taas_entity_type'),
+  taasRevenueBand: text('taas_revenue_band'),
+  taasPriorYearsBehind: integer('taas_prior_years_behind'),
+  hasSeedPackage: boolean('has_seed_package').default(false).notNull(),
+  monthlyFee: decimal('monthly_fee', { precision: 10, scale: 2 }).notNull(),
+  setupFee: decimal('setup_fee', { precision: 10, scale: 2 }).notNull(),
+  taasMonthlyFee: decimal('taas_monthly_fee', { precision: 10, scale: 2 }),
+  taasPriorYearsFee: decimal('taas_prior_years_fee', { precision: 10, scale: 2 }),
+  overrideReason: text('override_reason'),
+  approvalRequired: boolean('approval_required').default(false).notNull(),
+  userId: integer('user_id').notNull(),
+  archived: boolean('archived').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
+});
+
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
-  hubspotUserId: text('hubspot_user_id'),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
-// Deals table - synced from HubSpot
-export const deals = pgTable('deals', {
+export const approvalCodes = pgTable('approval_codes', {
   id: serial('id').primaryKey(),
-  hubspotDealId: text('hubspot_deal_id').notNull().unique(),
-  dealName: text('deal_name').notNull(),
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
-  monthlyValue: decimal('monthly_value', { precision: 10, scale: 2 }),
-  setupFee: decimal('setup_fee', { precision: 10, scale: 2 }),
-  closeDate: timestamp('close_date'),
-  dealStage: text('deal_stage').notNull(),
-  dealOwner: text('deal_owner').notNull(), // HubSpot user ID
-  salesRepId: integer('sales_rep_id').references(() => salesReps.id),
-  companyName: text('company_name'),
-  serviceType: text('service_type'), // 'bookkeeping', 'taas', 'combined'
-  isCollected: boolean('is_collected').default(false).notNull(), // Revenue recognition
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  code: text('code').notNull().unique(),
+  userId: integer('user_id').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  used: boolean('used').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
-// Commission records
-export const commissions = pgTable('commissions', {
-  id: serial('id').primaryKey(),
-  dealId: integer('deal_id').references(() => deals.id).notNull(),
-  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
-  commissionType: text('commission_type').notNull(), // 'month_1', 'setup_fee', 'residual'
-  rate: decimal('rate', { precision: 5, scale: 4 }).notNull(), // 0.4000 for 40%
-  baseAmount: decimal('base_amount', { precision: 10, scale: 2 }).notNull(),
-  commissionAmount: decimal('commission_amount', { precision: 10, scale: 2 }).notNull(),
-  monthNumber: integer('month_number'), // 1-12 for tracking residuals
-  isPaid: boolean('is_paid').default(false).notNull(),
-  paidAt: timestamp('paid_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+// Quote Calculator Schemas
+export const insertQuoteSchema = createInsertSchema(quotes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-// Monthly bonus tracking
-export const monthlyBonuses = pgTable('monthly_bonuses', {
-  id: serial('id').primaryKey(),
-  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
-  month: integer('month').notNull(), // 1-12
-  year: integer('year').notNull(),
-  clientsClosed: integer('clients_closed').notNull(),
-  bonusLevel: text('bonus_level'), // '5_clients', '10_clients', '15_plus_clients'
-  bonusAmount: decimal('bonus_amount', { precision: 10, scale: 2 }),
-  bonusDescription: text('bonus_description'),
-  isPaid: boolean('is_paid').default(false).notNull(),
-  paidAt: timestamp('paid_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-// Milestone bonus tracking
-export const milestoneBonuses = pgTable('milestone_bonuses', {
-  id: serial('id').primaryKey(),
-  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
-  milestoneType: text('milestone_type').notNull(), // '25_clients', '40_clients', '60_clients', '100_clients'
-  totalClients: integer('total_clients').notNull(),
-  bonusAmount: decimal('bonus_amount', { precision: 10, scale: 2 }).notNull(),
-  bonusDescription: text('bonus_description'),
-  achievedAt: timestamp('achieved_at').defaultNow().notNull(),
-  isPaid: boolean('is_paid').default(false).notNull(),
-  paidAt: timestamp('paid_at'),
+export const insertApprovalCodeSchema = createInsertSchema(approvalCodes).omit({
+  id: true,
+  createdAt: true
 });
 
-// Commission adjustments (admin overrides)
-export const commissionAdjustments = pgTable('commission_adjustments', {
-  id: serial('id').primaryKey(),
-  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
-  adjustmentType: text('adjustment_type').notNull(), // 'bonus', 'deduction', 'override'
-  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
-  reason: text('reason').notNull(),
-  adminUserId: text('admin_user_id').notNull(),
-  approvedAt: timestamp('approved_at').defaultNow().notNull(),
-  isPaid: boolean('is_paid').default(false).notNull(),
-  paidAt: timestamp('paid_at'),
-});
-
-// Create insert schemas
-export const insertSalesRepSchema = createInsertSchema(salesReps);
-export const insertDealSchema = createInsertSchema(deals);
-export const insertCommissionSchema = createInsertSchema(commissions);
-export const insertMonthlyBonusSchema = createInsertSchema(monthlyBonuses);
-export const insertMilestoneBonusSchema = createInsertSchema(milestoneBonuses);
-export const insertCommissionAdjustmentSchema = createInsertSchema(commissionAdjustments);
-
-// Create types
-export type SalesRep = typeof salesReps.$inferSelect;
-export type Deal = typeof deals.$inferSelect;
-export type Commission = typeof commissions.$inferSelect;
-export type MonthlyBonus = typeof monthlyBonuses.$inferSelect;
-export type MilestoneBonus = typeof milestoneBonuses.$inferSelect;
-export type CommissionAdjustment = typeof commissionAdjustments.$inferSelect;
-
-export type InsertSalesRep = z.infer<typeof insertSalesRepSchema>;
-export type InsertDeal = z.infer<typeof insertDealSchema>;
-export type InsertCommission = z.infer<typeof insertCommissionSchema>;
-export type InsertMonthlyBonus = z.infer<typeof insertMonthlyBonusSchema>;
-export type InsertMilestoneBonus = z.infer<typeof insertMilestoneBonusSchema>;
-export type InsertCommissionAdjustment = z.infer<typeof insertCommissionAdjustmentSchema>;
+export type InsertQuote = z.infer<typeof insertQuoteSchema>;
+export type SelectQuote = typeof quotes.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type SelectUser = typeof users.$inferSelect;
+export type InsertApprovalCode = z.infer<typeof insertApprovalCodeSchema>;
+export type SelectApprovalCode = typeof approvalCodes.$inferSelect;

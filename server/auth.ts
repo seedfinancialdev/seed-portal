@@ -2,7 +2,9 @@ import express from 'express';
 import passport from 'passport';
 import { Strategy as LocalStrategy } from 'passport-local';
 import { z } from 'zod';
-import { storage } from './storage.js';
+import { DatabaseStorage } from './storage.js';
+
+const storage = new DatabaseStorage();
 
 const router = express.Router();
 
@@ -28,11 +30,11 @@ passport.use(new LocalStrategy(
       }
       
       // Get or create user
-      let user = await storage.getSalesRepByEmail(email);
+      let user = await storage.getUserByEmail(email);
       if (!user) {
         // Create user from email
         const [firstName, lastName] = email.split('@')[0].split('.');
-        user = await storage.createSalesRep({
+        user = await storage.createUser({
           email,
           firstName: firstName || 'User',
           lastName: lastName || 'User',

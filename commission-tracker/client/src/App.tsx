@@ -1,57 +1,62 @@
+import { Router, Route, Switch } from 'wouter'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { Router, Route, Switch } from "wouter";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider } from "@/hooks/use-auth";
-import { ProtectedRoute } from "@/components/protected-route";
+import { AuthProvider } from '@/hooks/use-auth'
+import { ProtectedRoute } from '@/components/protected-route'
+import Dashboard from '@/pages/dashboard'
+import Login from '@/pages/login'
+import { Toaster } from "@/components/ui/toaster";
+import "./index.css";
 
-// Pages
-import Login from "@/pages/login";
-import Dashboard from "@/pages/dashboard";
-import RepDashboard from "@/pages/rep-dashboard";
-import AdminDashboard from "@/pages/admin-dashboard";
-import DealsManagement from "@/pages/deals-management";
-import CommissionReports from "@/pages/commission-reports";
-
+// Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
+      queryFn: async ({ queryKey }) => {
+        const res = await fetch(queryKey[0] as string, {
+          credentials: 'include'
+        });
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      },
     },
   },
 });
 
-// Set up the default fetcher for React Query
-queryClient.setQueryDefaults(["api"], {
-  queryFn: async ({ queryKey }) => {
-    const url = Array.isArray(queryKey) ? queryKey.join("/") : queryKey;
-    const res = await fetch(url as string);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    return res.json();
-  },
-});
+function AppContent() {
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Switch>
+          <Route path="/login" component={Login} />
+          <Route path="/" component={() => <ProtectedRoute path="/" component={Dashboard} />} />
+          <Route>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-gray-900">404 - Page Not Found</h1>
+                <p className="text-gray-600 mt-2">The page you're looking for doesn't exist.</p>
+              </div>
+            </div>
+          </Route>
+        </Switch>
+      </div>
+    </Router>
+  )
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="commission-tracker-theme">
+      <ThemeProvider>
         <AuthProvider>
-          <Router>
-            <Switch>
-              <Route path="/login" component={Login} />
-              <ProtectedRoute path="/" component={Dashboard} />
-              <ProtectedRoute path="/rep-dashboard" component={RepDashboard} />
-              <ProtectedRoute path="/admin-dashboard" component={AdminDashboard} />
-              <ProtectedRoute path="/deals" component={DealsManagement} />
-              <ProtectedRoute path="/reports" component={CommissionReports} />
-            </Switch>
-          </Router>
+          <AppContent />
           <Toaster />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
-  );
+  )
 }
 
-export default App;
+export default App

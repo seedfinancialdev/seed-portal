@@ -1,58 +1,47 @@
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import { Router } from "express";
-import { DatabaseStorage } from "./storage.js";
-import { hubspotClient } from "./hubspot.js";
+import express from 'express';
+import passport from 'passport';
+import { Strategy as LocalStrategy } from 'passport-local';
+import { z } from 'zod';
+import { storage } from './storage.js';
 
-const storage = new DatabaseStorage();
-const router = Router();
+const router = express.Router();
 
-// Configure Passport Local Strategy
+// Login schema
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+// Configure passport local strategy
 passport.use(new LocalStrategy(
-  { usernameField: 'email', passwordField: 'password' },
-  async (email: string, password: string, done) => {
+  { usernameField: 'email' },
+  async (email, password, done) => {
     try {
-      // Check if email is @seedfinancial.io
+      // Check if email is from seedfinancial.io domain
       if (!email.endsWith('@seedfinancial.io')) {
-        return done(null, false, { message: 'Only @seedfinancial.io emails are authorized.' });
+        return done(null, false, { message: 'Invalid email domain' });
       }
-
-      // Verify password (same default for all users)
+      
+      // Check default password
       if (password !== 'SeedAdmin1!') {
-        return done(null, false, { message: 'Incorrect password. Contact admin for assistance.' });
+        return done(null, false, { message: 'Invalid password' });
       }
-
-      // Check if user exists in HubSpot
-      let hubspotUser;
-      try {
-        const ownersResponse = await hubspotClient.crm.owners.getAll();
-        hubspotUser = ownersResponse.results.find(
-          owner => owner.email?.toLowerCase() === email.toLowerCase()
-        );
-      } catch (error) {
-        console.error('HubSpot verification failed:', error);
-        return done(null, false, { message: 'Unable to verify user with HubSpot.' });
-      }
-
-      if (!hubspotUser) {
-        return done(null, false, { message: 'User not found in HubSpot CRM.' });
-      }
-
-      // Get or create sales rep in database
-      let salesRep = await storage.getSalesRepByEmail(email);
-      if (!salesRep) {
-        salesRep = await storage.createSalesRep({
+      
+      // Get or create user
+      let user = await storage.getSalesRepByEmail(email);
+      if (!user) {
+        // Create user from email
+        const [firstName, lastName] = email.split('@')[0].split('.');
+        user = await storage.createSalesRep({
           email,
-          firstName: hubspotUser.firstName || '',
-          lastName: hubspotUser.lastName || '',
-          hubspotUserId: hubspotUser.userId || hubspotUser.id?.toString(),
-          startDate: new Date().toISOString().split('T')[0],
+          firstName: firstName || 'User',
+          lastName: lastName || 'User',
+          isActive: true,
         });
       }
-
-      return done(null, salesRep);
+      
+      return done(null, user);
     } catch (error) {
-      console.error('Authentication error:', error);
       return done(error);
     }
   }
@@ -66,44 +55,90 @@ passport.serializeUser((user: any, done) => {
 // Deserialize user from session
 passport.deserializeUser(async (id: number, done) => {
   try {
-    const salesRep = await storage.getSalesRepById(id);
-    done(null, salesRep);
+    const user = await storage.getSalesRepById(id);
+    done(null, user);
   } catch (error) {
     done(error);
   }
 });
 
-// Login route
-router.post('/login', passport.authenticate('local'), (req, res) => {
-  res.json({ 
-    success: true, 
-    user: req.user,
-    message: 'Login successful' 
-  });
+// Login endpoint
+router.post('/login', async (req, res, next) => {
+  try {
+    const { email, password } = loginSchema.parse(req.body);
+    
+    passport.authenticate('local', (err: any, user: any, info: any) => {
+      if (err) {
+        return next(err);
+      }
+      
+      if (!user) {
+        return res.status(401).json({ 
+          error: info?.message || 'Authentication failed' 
+        });
+      }
+      
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        
+        res.json({ 
+          message: 'Login successful', 
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          }
+        });
+      });
+    })(req, res, next);
+    
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid request data' });
+  }
 });
 
-// Logout route
+// Logout endpoint
 router.post('/logout', (req, res) => {
   req.logout((err) => {
     if (err) {
       return res.status(500).json({ error: 'Logout failed' });
     }
+    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ error: 'Session destruction failed' });
       }
-      res.json({ success: true, message: 'Logged out successfully' });
+      
+      res.json({ message: 'Logout successful' });
     });
   });
 });
 
-// Check authentication status
+// Get current user
 router.get('/user', (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json(req.user);
+  if (req.isAuthenticated() && req.user) {
+    const user = req.user as any;
+    res.json({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      isActive: user.isActive,
+    });
   } else {
     res.status(401).json({ error: 'Not authenticated' });
   }
 });
+
+// Middleware to require authentication
+export function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ error: 'Authentication required' });
+}
 
 export { router as authRouter };

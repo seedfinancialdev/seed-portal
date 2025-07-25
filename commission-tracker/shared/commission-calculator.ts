@@ -1,205 +1,138 @@
-import { Deal, Commission } from './schema';
+import { Deal, Commission, MonthlyBonus, MilestoneBonus } from './schema';
 
 export interface CommissionCalculation {
-  dealId: number;
-  salesRepId: number;
-  totalCommissionYear1: number;
-  initialMonthCommission: number;
+  month1Commission: number;
   setupFeeCommission: number;
-  residualCommissions: Array<{
-    month: number;
-    amount: number;
-    paymentDate: Date;
-  }>;
+  residualCommission: number;
+  totalCommission: number;
 }
 
-export interface BonusCalculation {
-  monthly: {
-    clientsClosed: number;
-    eligibleBonus: string | null; // "5_clients", "10_clients", "15_clients"
-    bonusAmount: number;
-    rewardOptions: string[];
-  };
-  milestone: {
-    totalClientsClosed: number;
-    nextMilestone: string | null;
-    clientsToNextMilestone: number;
-    upcomingBonusAmount: number;
-  };
-}
-
-/**
- * Calculate commission structure for a closed deal
- * Commission Plan:
- * - 40% of monthly deal value in Month 1
- * - 20% of initial setup fee in Month 1  
- * - 10% residual commission for Months 2–12 for collected recurring revenue
- */
-export function calculateCommissions(deal: Deal, firstPaymentDate: Date): CommissionCalculation {
-  const monthlyValue = parseFloat(deal.monthlyValue);
-  const setupFee = parseFloat(deal.setupFee);
-  
-  // Month 1 commissions
-  const initialMonthCommission = monthlyValue * 0.40;
-  const setupFeeCommission = setupFee * 0.20;
-  
-  // Residual commissions (months 2-12)
-  const residualCommissions: Array<{
-    month: number;
-    amount: number;
-    paymentDate: Date;
-  }> = [];
-  const residualRate = 0.10;
-  
-  for (let month = 2; month <= 12; month++) {
-    const paymentDate = new Date(firstPaymentDate);
-    paymentDate.setMonth(paymentDate.getMonth() + (month - 1));
-    
-    residualCommissions.push({
-      month,
-      amount: monthlyValue * residualRate,
-      paymentDate
-    });
-  }
-  
-  const totalResidualCommission = residualCommissions.reduce((sum, comm) => sum + comm.amount, 0);
-  const totalCommissionYear1 = initialMonthCommission + setupFeeCommission + totalResidualCommission;
-  
-  return {
-    dealId: deal.id,
-    salesRepId: deal.salesRepId,
-    totalCommissionYear1,
-    initialMonthCommission,
-    setupFeeCommission,
-    residualCommissions
-  };
-}
-
-/**
- * Calculate bonus eligibility based on clients closed in a month
- * Monthly Bonuses (Choose One per Month):
- * - 5 Clients Closed: $500 cash or AirPods
- * - 10 Clients Closed: $1,000 cash or Apple Watch  
- * - 15+ Clients Closed: $1,500 cash or MacBook Air
- */
-export function calculateMonthlyBonus(clientsClosedThisMonth: number): {
-  eligibleBonus: string | null;
+export interface MonthlyBonusCalculation {
+  clientsClosed: number;
+  bonusLevel: string | null;
   bonusAmount: number;
-  rewardOptions: string[];
-} {
-  if (clientsClosedThisMonth >= 15) {
-    return {
-      eligibleBonus: "15_clients",
-      bonusAmount: 1500,
-      rewardOptions: ["cash", "macbook"]
-    };
-  } else if (clientsClosedThisMonth >= 10) {
-    return {
-      eligibleBonus: "10_clients", 
-      bonusAmount: 1000,
-      rewardOptions: ["cash", "apple_watch"]
-    };
-  } else if (clientsClosedThisMonth >= 5) {
-    return {
-      eligibleBonus: "5_clients",
-      bonusAmount: 500,
-      rewardOptions: ["cash", "airpods"]
-    };
-  }
+  bonusDescription: string | null;
+}
+
+export interface MilestoneBonusCalculation {
+  milestone: string;
+  totalClients: number;
+  bonusAmount: number;
+  bonusDescription: string;
+  achieved: boolean;
+}
+
+// Commission rates
+export const COMMISSION_RATES = {
+  MONTH_1: 0.40, // 40% of monthly value
+  SETUP_FEE: 0.20, // 20% of setup fee
+  RESIDUAL: 0.10, // 10% of monthly value for months 2-12
+} as const;
+
+// Monthly bonus structure
+export const MONTHLY_BONUSES = {
+  5: { amount: 500, description: '$500 cash or AirPods' },
+  10: { amount: 1000, description: '$1,000 cash or Apple Watch' },
+  15: { amount: 1500, description: '$1,500 cash or MacBook Air' },
+} as const;
+
+// Milestone bonus structure
+export const MILESTONE_BONUSES = {
+  25: { amount: 1000, description: '$1,000 milestone bonus' },
+  40: { amount: 5000, description: '$5,000 milestone bonus' },
+  60: { amount: 7500, description: '$7,500 milestone bonus' },
+  100: { amount: 10000, description: '$10,000 milestone bonus + Equity Offer' },
+} as const;
+
+/**
+ * Calculate commission for a closed deal
+ */
+export function calculateCommission(deal: Deal): CommissionCalculation {
+  const monthlyValue = parseFloat(deal.monthlyValue?.toString() || '0');
+  const setupFee = parseFloat(deal.setupFee?.toString() || '0');
+  
+  const month1Commission = monthlyValue * COMMISSION_RATES.MONTH_1;
+  const setupFeeCommission = setupFee * COMMISSION_RATES.SETUP_FEE;
+  const residualCommission = monthlyValue * COMMISSION_RATES.RESIDUAL; // Per month for months 2-12
+  
+  const totalCommission = month1Commission + setupFeeCommission + (residualCommission * 11);
   
   return {
-    eligibleBonus: null,
-    bonusAmount: 0,
-    rewardOptions: []
+    month1Commission,
+    setupFeeCommission,
+    residualCommission,
+    totalCommission,
   };
 }
 
 /**
- * Calculate milestone bonus eligibility
- * Milestone Bonuses:
- * - 25 Clients Closed: $1,000
- * - 40 Clients Closed: $5,000
- * - 60 Clients Closed: $7,500
- * - 100 Clients Closed: $10,000 + Equity Offer
+ * Calculate monthly bonus based on clients closed
  */
-export function calculateMilestoneBonus(totalClientsClosed: number): {
-  achievedMilestones: Array<{ milestone: string; amount: number; equityOffer?: boolean }>;
-  nextMilestone: string | null;
-  clientsToNextMilestone: number;
-  upcomingBonusAmount: number;
-} {
-  const milestones = [
-    { threshold: 25, milestone: "25_clients", amount: 1000 },
-    { threshold: 40, milestone: "40_clients", amount: 5000 },
-    { threshold: 60, milestone: "60_clients", amount: 7500 },
-    { threshold: 100, milestone: "100_clients", amount: 10000, equityOffer: true }
-  ];
+export function calculateMonthlyBonus(clientsClosed: number): MonthlyBonusCalculation {
+  let bonusLevel: string | null = null;
+  let bonusAmount = 0;
+  let bonusDescription: string | null = null;
   
-  const achievedMilestones = milestones
-    .filter(m => totalClientsClosed >= m.threshold)
-    .map(m => ({
-      milestone: m.milestone,
-      amount: m.amount,
-      ...(m.equityOffer && { equityOffer: true })
-    }));
-  
-  const nextMilestone = milestones.find(m => totalClientsClosed < m.threshold);
+  if (clientsClosed >= 15) {
+    bonusLevel = '15_plus_clients';
+    bonusAmount = MONTHLY_BONUSES[15].amount;
+    bonusDescription = MONTHLY_BONUSES[15].description;
+  } else if (clientsClosed >= 10) {
+    bonusLevel = '10_clients';
+    bonusAmount = MONTHLY_BONUSES[10].amount;
+    bonusDescription = MONTHLY_BONUSES[10].description;
+  } else if (clientsClosed >= 5) {
+    bonusLevel = '5_clients';
+    bonusAmount = MONTHLY_BONUSES[5].amount;
+    bonusDescription = MONTHLY_BONUSES[5].description;
+  }
   
   return {
-    achievedMilestones,
-    nextMilestone: nextMilestone?.milestone || null,
-    clientsToNextMilestone: nextMilestone ? nextMilestone.threshold - totalClientsClosed : 0,
-    upcomingBonusAmount: nextMilestone?.amount || 0
+    clientsClosed,
+    bonusLevel,
+    bonusAmount,
+    bonusDescription,
   };
 }
 
 /**
- * Generate commission records for database insertion
+ * Calculate milestone bonuses
  */
-export function generateCommissionRecords(calculation: CommissionCalculation, firstPaymentDate: Date): Omit<Commission, 'id' | 'createdAt' | 'isPaid' | 'paidDate'>[] {
-  const records: Omit<Commission, 'id' | 'createdAt' | 'isPaid' | 'paidDate'>[] = [];
+export function calculateMilestoneBonuses(totalClients: number): MilestoneBonusCalculation[] {
+  const milestones = Object.entries(MILESTONE_BONUSES).map(([threshold, bonus]) => ({
+    milestone: `${threshold}_clients`,
+    totalClients: parseInt(threshold),
+    bonusAmount: bonus.amount,
+    bonusDescription: bonus.description,
+    achieved: totalClients >= parseInt(threshold),
+  }));
   
-  // Initial monthly commission (Month 1)
-  if (calculation.initialMonthCommission > 0) {
-    records.push({
-      dealId: calculation.dealId,
-      salesRepId: calculation.salesRepId,
-      commissionType: "initial_monthly",
-      baseAmount: calculation.initialMonthCommission / 0.40, // Back-calculate monthly value
-      commissionRate: "0.4000",
-      commissionAmount: calculation.initialMonthCommission.toFixed(2),
-      monthNumber: 1,
-      paymentMonth: firstPaymentDate.toISOString().split('T')[0]
-    });
-  }
+  return milestones;
+}
+
+/**
+ * Get next milestone progress
+ */
+export function getNextMilestone(totalClients: number): { 
+  next: number; 
+  current: number; 
+  progress: number; 
+  bonusAmount: number;
+} {
+  const thresholds = [25, 40, 60, 100];
+  const nextThreshold = thresholds.find(threshold => totalClients < threshold) || 100;
+  const currentThreshold = thresholds.filter(threshold => totalClients >= threshold).pop() || 0;
   
-  // Setup fee commission (Month 1)
-  if (calculation.setupFeeCommission > 0) {
-    records.push({
-      dealId: calculation.dealId,
-      salesRepId: calculation.salesRepId,
-      commissionType: "setup_fee",
-      baseAmount: calculation.setupFeeCommission / 0.20, // Back-calculate setup fee
-      commissionRate: "0.2000",
-      commissionAmount: calculation.setupFeeCommission.toFixed(2),
-      monthNumber: 1,
-      paymentMonth: firstPaymentDate.toISOString().split('T')[0]
-    });
-  }
+  const progress = nextThreshold === 100 && totalClients >= 100 
+    ? 100 
+    : (totalClients / nextThreshold) * 100;
   
-  // Residual commissions (Months 2-12)
-  calculation.residualCommissions.forEach(residual => {
-    records.push({
-      dealId: calculation.dealId,
-      salesRepId: calculation.salesRepId,
-      commissionType: "residual",
-      baseAmount: residual.amount / 0.10, // Back-calculate monthly value
-      commissionRate: "0.1000",
-      commissionAmount: residual.amount.toFixed(2),
-      monthNumber: residual.month,
-      paymentMonth: residual.paymentDate.toISOString().split('T')[0]
-    });
-  });
+  const bonusAmount = MILESTONE_BONUSES[nextThreshold as keyof typeof MILESTONE_BONUSES]?.amount || 0;
   
-  return records;
+  return {
+    next: nextThreshold,
+    current: currentThreshold,
+    progress: Math.min(progress, 100),
+    bonusAmount,
+  };
 }

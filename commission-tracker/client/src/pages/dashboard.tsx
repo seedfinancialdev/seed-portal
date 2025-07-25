@@ -1,321 +1,265 @@
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { DollarSign, Users, TrendingUp, Award, Calendar, Target } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { DollarSign, TrendingUp, Users, Target, LogOut, TestTube } from "lucide-react";
+import { useState } from "react";
 
-interface DashboardData {
-  salesRep: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  currentMonth: {
-    earnings: number;
-    clientsClosed: number;
-    commissions: Array<{
-      id: number;
-      commissionType: string;
-      commissionAmount: string;
-      paymentMonth: string;
-      isPaid: boolean;
-    }>;
-  };
-  bonuses: {
-    monthly: {
-      eligibleBonus: string | null;
-      bonusAmount: number;
-      rewardOptions: string[];
-    };
-    milestone: {
-      nextMilestone: string | null;
-      clientsToNextMilestone: number;
-      upcomingBonusAmount: number;
-    };
-  };
-  totalStats: {
-    totalClients: number;
-    totalEarnings: number;
-    paidEarnings: number;
+interface DashboardStats {
+  totalEarnings: number;
+  thisMonthEarnings: number;
+  totalClients: number;
+  thisMonthClients: number;
+  unpaidCommissions: number;
+  nextMilestone: {
+    threshold: number;
+    current: number;
+    bonusAmount: number;
   };
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  
-  const { data: dashboardData, isLoading } = useQuery<DashboardData>({
-    queryKey: ["/api/dashboard"],
-    enabled: !!user,
+  const { user, logout } = useAuth();
+  const queryClient = useQueryClient();
+  const [isCreatingTest, setIsCreatingTest] = useState(false);
+
+  // Fetch dashboard stats
+  const { data: stats, isLoading: statsLoading } = useQuery<DashboardStats>({
+    queryKey: ["/api/dashboard/stats"],
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-64 mb-8"></div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-32 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Create test deal mutation
+  const createTestDealMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/deals/test", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to create test deal");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/commissions"] });
+    },
+  });
 
-  if (!dashboardData) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <h2 className="text-2xl font-bold text-gray-900">No data available</h2>
-            <p className="text-gray-600 mt-2">Unable to load dashboard data.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleCreateTestDeal = async () => {
+    setIsCreatingTest(true);
+    try {
+      await createTestDealMutation.mutateAsync();
+    } catch (error) {
+      console.error("Error creating test deal:", error);
+    } finally {
+      setIsCreatingTest(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
-  const currentMonth = new Date().toLocaleDateString('en-US', { 
-    month: 'long', 
-    year: 'numeric' 
-  });
+  const milestoneProgress = stats ? (stats.nextMilestone.current / stats.nextMilestone.threshold) * 100 : 0;
+
+  if (statsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e24c00] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Commission Dashboard</h1>
-              <p className="text-gray-600">
-                Welcome back, {dashboardData.salesRep.firstName} {dashboardData.salesRep.lastName}
-              </p>
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <div className="h-8 w-8 bg-[#e24c00] rounded-md flex items-center justify-center">
+                <span className="text-white font-bold">S</span>
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Commission Tracker</h1>
+                <p className="text-sm text-gray-500">Welcome back, {user?.firstName}</p>
+              </div>
             </div>
-            <div className="flex space-x-3">
-              <Link href="/deals">
-                <Button variant="outline">Manage Deals</Button>
-              </Link>
-              <Link href="/reports">
-                <Button>View Reports</Button>
-              </Link>
+            <div className="flex items-center space-x-4">
+              <Button
+                onClick={handleCreateTestDeal}
+                disabled={isCreatingTest}
+                variant="outline"
+                size="sm"
+                className="border-[#e24c00] text-[#e24c00] hover:bg-[#e24c00] hover:text-white"
+              >
+                <TestTube className="h-4 w-4 mr-2" />
+                {isCreatingTest ? "Creating..." : "Create Test Deal"}
+              </Button>
+              <Button onClick={handleLogout} variant="outline" size="sm">
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
-        {/* Current Month Stats */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">This Month's Earnings</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#e24c00]">
-                {formatCurrency(dashboardData.currentMonth.earnings)}
-              </div>
-              <p className="text-xs text-muted-foreground">{currentMonth}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clients Closed</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.currentMonth.clientsClosed}</div>
-              <p className="text-xs text-muted-foreground">This month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Lifetime Clients</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboardData.totalStats.totalClients}</div>
-              <p className="text-xs text-muted-foreground">All time</p>
-            </CardContent>
-          </Card>
-
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(dashboardData.totalStats.totalEarnings)}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(stats?.totalEarnings || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">All-time commission earnings</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">This Month</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#e24c00]">
+                {formatCurrency(stats?.thisMonthEarnings || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">Current month earnings</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats?.totalClients || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Paid: {formatCurrency(dashboardData.totalStats.paidEarnings)}
+                {stats?.thisMonthClients || 0} closed this month
               </p>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Bonus Section */}
-        <div className="grid gap-6 md:grid-cols-2 mb-8">
-          {/* Monthly Bonus */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Monthly Bonus Status
-              </CardTitle>
-              <CardDescription>Bonus eligibility for {currentMonth}</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {dashboardData.bonuses.monthly.eligibleBonus ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Qualified for:</span>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      {dashboardData.bonuses.monthly.eligibleBonus.replace('_', ' ').toUpperCase()}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Bonus Amount:</span>
-                    <span className="font-bold text-[#e24c00]">
-                      {formatCurrency(dashboardData.bonuses.monthly.bonusAmount)}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-sm font-medium">Reward Options:</span>
-                    <div className="flex flex-wrap gap-2">
-                      {dashboardData.bonuses.monthly.rewardOptions.map((option) => (
-                        <Badge key={option} variant="outline">
-                          {option.replace('_', ' ')}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-muted-foreground">
-                    Close {5 - dashboardData.currentMonth.clientsClosed} more clients to qualify for monthly bonus
-                  </p>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    5 clients = $500 | 10 clients = $1,000 | 15+ clients = $1,500
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Milestone Bonus */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Milestone Progress
-              </CardTitle>
-              <CardDescription>Progress toward next milestone bonus</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {dashboardData.bonuses.milestone.nextMilestone ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Next Milestone:</span>
-                    <Badge variant="outline">
-                      {dashboardData.bonuses.milestone.nextMilestone.replace('_', ' ').toUpperCase()}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Clients Needed:</span>
-                    <span className="font-bold">
-                      {dashboardData.bonuses.milestone.clientsToNextMilestone} more
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Bonus Value:</span>
-                    <span className="font-bold text-[#e24c00]">
-                      {formatCurrency(dashboardData.bonuses.milestone.upcomingBonusAmount)}
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-[#e24c00] h-2 rounded-full" 
-                      style={{ 
-                        width: `${(dashboardData.totalStats.totalClients / (dashboardData.totalStats.totalClients + dashboardData.bonuses.milestone.clientsToNextMilestone)) * 100}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-green-600 font-semibold">🎉 All milestones achieved!</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    You've reached the highest milestone. Amazing work!
-                  </p>
-                </div>
-              )}
+              <div className="text-2xl font-bold text-orange-600">
+                {formatCurrency(stats?.unpaidCommissions || 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">Unpaid commissions</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Commissions */}
-        <Card>
+        {/* Milestone Progress */}
+        <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Recent Commissions</CardTitle>
-            <CardDescription>Your latest commission earnings</CardDescription>
+            <CardTitle>Next Milestone Progress</CardTitle>
+            <CardDescription>
+              Track your progress toward the next commission milestone
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {dashboardData.currentMonth.commissions.length > 0 ? (
-              <div className="space-y-4">
-                {dashboardData.currentMonth.commissions.slice(0, 5).map((commission) => (
-                  <div key={commission.id} className="flex items-center justify-between p-3 border rounded">
-                    <div>
-                      <div className="font-medium capitalize">
-                        {commission.commissionType.replace('_', ' ')} Commission
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(commission.paymentMonth).toLocaleDateString('en-US', { 
-                          month: 'long', 
-                          year: 'numeric' 
-                        })}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-[#e24c00]">
-                        {formatCurrency(parseFloat(commission.commissionAmount))}
-                      </div>
-                      <Badge variant={commission.isPaid ? "default" : "secondary"}>
-                        {commission.isPaid ? "Paid" : "Pending"}
-                      </Badge>
-                    </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">
+                  {stats?.nextMilestone.current || 0} / {stats?.nextMilestone.threshold || 25} clients
+                </span>
+                <Badge variant="outline" className="text-[#e24c00] border-[#e24c00]">
+                  {formatCurrency(stats?.nextMilestone.bonusAmount || 0)} bonus
+                </Badge>
+              </div>
+              <Progress value={Math.min(milestoneProgress, 100)} className="h-2" />
+              <p className="text-xs text-muted-foreground">
+                {stats?.nextMilestone.threshold ? 
+                  `${Math.max(0, stats.nextMilestone.threshold - (stats.nextMilestone.current || 0))} more clients to unlock your next milestone bonus`
+                  : "Keep closing deals to earn milestone bonuses!"
+                }
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Commission Structure */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Commission Structure</CardTitle>
+            <CardDescription>
+              Your commission rates and bonus opportunities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold mb-3">Commission Rates</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Month 1</span>
+                    <Badge>40%</Badge>
                   </div>
-                ))}
-                <div className="text-center">
-                  <Link href="/reports">
-                    <Button variant="outline">View All Commissions</Button>
-                  </Link>
+                  <div className="flex justify-between">
+                    <span>Setup Fee</span>
+                    <Badge>20%</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Months 2-12</span>
+                    <Badge>10%</Badge>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground">No commissions this month yet.</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Close your first deal to start earning commissions!
-                </p>
+              <div>
+                <h4 className="font-semibold mb-3">Monthly Bonuses</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>5 clients</span>
+                    <Badge variant="outline">$500</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>10 clients</span>
+                    <Badge variant="outline">$1,000</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>15+ clients</span>
+                    <Badge variant="outline">$1,500</Badge>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>

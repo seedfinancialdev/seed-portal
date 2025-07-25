@@ -6,7 +6,6 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
-  hubspotUserId?: string;
   isActive: boolean;
 }
 
@@ -42,12 +41,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Login failed");
+        throw new Error(error.error || "Login failed");
       }
 
       return response.json();
@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: 'include',
       });
 
       if (!response.ok) {

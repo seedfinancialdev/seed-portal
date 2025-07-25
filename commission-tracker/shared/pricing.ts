@@ -1,0 +1,225 @@
+// Shared pricing calculation logic
+// This ensures consistency between frontend and backend calculations
+
+export interface PricingData {
+  revenueBand?: string;
+  monthlyTransactions?: string;
+  industry?: string;
+  cleanupMonths?: number;
+  cleanupComplexity?: string;
+  cleanupOverride?: boolean;
+  overrideReason?: string | null;
+  customSetupFee?: string;
+  // TaaS specific fields
+  includesTaas?: boolean;
+  numEntities?: number;
+  statesFiled?: number;
+  internationalFiling?: boolean;
+  numBusinessOwners?: number;
+  include1040s?: boolean;
+  priorYearsUnfiled?: number;
+  alreadyOnSeedBookkeeping?: boolean;
+  entityType?: string;
+  bookkeepingQuality?: string;
+}
+
+export interface FeeResult {
+  monthlyFee: number;
+  setupFee: number;
+}
+
+export interface CombinedFeeResult {
+  bookkeeping: FeeResult;
+  taas: FeeResult;
+  combined: FeeResult;
+  includesBookkeeping: boolean;
+  includesTaas: boolean;
+}
+
+// Constants
+export const PRICING_CONSTANTS = {
+  baseMonthlyFee: 150,
+  revenueMultipliers: {
+    '<$10K': 1.0,
+    '10K-25K': 1.0,
+    '25K-75K': 2.2,
+    '75K-250K': 3.5,
+    '250K-1M': 5.0,
+    '1M+': 7.0
+  },
+  txSurcharge: {
+    '<100': 0,
+    '100-300': 100,
+    '300-600': 500,
+    '600-1000': 800,
+    '1000-2000': 1200,
+    '2000+': 1600
+  },
+  industryMultipliers: {
+    'Software/SaaS': { monthly: 1.0, cleanup: 1.0 },
+    'Professional Services': { monthly: 1.0, cleanup: 1.1 },
+    'Consulting': { monthly: 1.0, cleanup: 1.05 },
+    'Healthcare/Medical': { monthly: 1.4, cleanup: 1.3 },
+    'Real Estate': { monthly: 1.25, cleanup: 1.05 },
+    'Property Management': { monthly: 1.3, cleanup: 1.2 },
+    'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
+    'Restaurant/Food Service': { monthly: 1.6, cleanup: 1.4 },
+    'Hospitality': { monthly: 1.6, cleanup: 1.4 },
+    'Construction/Trades': { monthly: 1.5, cleanup: 1.08 },
+    'Manufacturing': { monthly: 1.45, cleanup: 1.25 },
+    'Transportation/Logistics': { monthly: 1.4, cleanup: 1.2 },
+    'Nonprofit': { monthly: 1.2, cleanup: 1.15 },
+    'Law Firm': { monthly: 1.3, cleanup: 1.35 },
+    'Accounting/Finance': { monthly: 1.1, cleanup: 1.1 },
+    'Marketing/Advertising': { monthly: 1.15, cleanup: 1.1 },
+    'Insurance': { monthly: 1.35, cleanup: 1.25 },
+    'Automotive': { monthly: 1.4, cleanup: 1.2 },
+    'Education': { monthly: 1.25, cleanup: 1.2 },
+    'Fitness/Wellness': { monthly: 1.3, cleanup: 1.15 },
+    'Entertainment/Events': { monthly: 1.5, cleanup: 1.3 },
+    'Agriculture': { monthly: 1.45, cleanup: 1.2 },
+    'Technology/IT Services': { monthly: 1.1, cleanup: 1.05 },
+    'Multi-entity/Holding Companies': { monthly: 1.35, cleanup: 1.25 },
+    'Other': { monthly: 1.2, cleanup: 1.15 }
+  }
+} as const;
+
+export function roundToNearest25(num: number): number {
+  return Math.ceil(num / 25) * 25;
+}
+
+export function calculateBookkeepingFees(data: PricingData): FeeResult {
+  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+  
+  // If cleanup months is 0, cleanup complexity is not required
+  if (data.cleanupMonths > 0 && !data.cleanupComplexity) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+
+  const revenueMultiplier = PRICING_CONSTANTS.revenueMultipliers[data.revenueBand as keyof typeof PRICING_CONSTANTS.revenueMultipliers] || 1.0;
+  const txFee = PRICING_CONSTANTS.txSurcharge[data.monthlyTransactions as keyof typeof PRICING_CONSTANTS.txSurcharge] || 0;
+  const industryData = PRICING_CONSTANTS.industryMultipliers[data.industry as keyof typeof PRICING_CONSTANTS.industryMultipliers] || { monthly: 1, cleanup: 1 };
+  
+  // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
+  const monthlyFee = Math.round((PRICING_CONSTANTS.baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  
+  // Use the actual cleanup months value (override just allows values below normal minimum)
+  const effectiveCleanupMonths = data.cleanupMonths;
+  
+  // Calculate setup fee with custom override logic
+  let setupFee = 0;
+  
+  // Check for custom setup fee override first (always takes precedence)
+  const customSetupFee = (data as any).customSetupFee;
+  if (data.cleanupOverride && (data as any).overrideReason === "Other" && customSetupFee && parseFloat(customSetupFee) > 0) {
+    setupFee = parseFloat(customSetupFee);
+  } else if (effectiveCleanupMonths > 0) {
+    // Standard cleanup calculation only if no custom override
+    const cleanupMultiplier = parseFloat(data.cleanupComplexity || "0.75") * industryData.cleanup;
+    setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
+  }
+  // If cleanup months is 0 and no custom override, setup fee remains 0
+  
+  return { monthlyFee, setupFee };
+}
+
+export function calculateTaaSFees(data: PricingData): FeeResult {
+  if (!data.includesTaas || !data.revenueBand || !data.industry || !data.entityType || 
+      !data.numEntities || !data.statesFiled || data.internationalFiling === undefined || 
+      !data.numBusinessOwners || !data.bookkeepingQuality || data.include1040s === undefined || 
+      data.priorYearsUnfiled === undefined || data.alreadyOnSeedBookkeeping === undefined) {
+    return { monthlyFee: 0, setupFee: 0 };
+  }
+
+  const base = 150;
+
+  // Entity upcharge
+  const entityUpcharge = data.numEntities === 1 ? 0 : data.numEntities <= 3 ? 75 : 150;
+  
+  // State upcharge
+  const stateUpcharge = data.statesFiled <= 1 ? 0 : data.statesFiled <= 5 ? 50 : 150;
+  
+  // International filing upcharge
+  const intlUpcharge = data.internationalFiling ? 200 : 0;
+  
+  // Owner upcharge
+  const ownerUpcharge = data.numBusinessOwners <= 1 ? 0 : data.numBusinessOwners <= 3 ? 50 : 100;
+  
+  // Bookkeeping quality upcharge
+  const bookUpcharge = data.bookkeepingQuality === 'Clean (Seed)' ? 0 : 
+                       data.bookkeepingQuality === 'Outside CPA' ? 75 : 150;
+  
+  // Personal 1040s
+  const personal1040 = data.include1040s ? data.numBusinessOwners * 25 : 0;
+
+  // Industry multiplier (simplified mapping from TaaS logic to our existing industries)
+  const taasIndustryMult: Record<string, number> = {
+    'Software/SaaS': 1.0,
+    'Professional Services': 1.1,
+    'Consulting': 1.1,
+    'Real Estate': 1.2,
+    'E-commerce/Retail': 1.3,
+    'Construction/Trades': 1.4,
+    'Multi-entity/Holding Companies': 1.5,
+  };
+  
+  const industryMult = taasIndustryMult[data.industry] || 1.0;
+
+  // Revenue multiplier (map our revenue bands to average monthly revenue)
+  const avgMonthlyRevenue = data.revenueBand === '<$10K' ? 5000 :
+                           data.revenueBand === '10K-25K' ? 17500 :
+                           data.revenueBand === '25K-75K' ? 50000 :
+                           data.revenueBand === '75K-250K' ? 162500 :
+                           data.revenueBand === '250K-1M' ? 625000 :
+                           data.revenueBand === '1M+' ? 1000000 : 5000;
+
+  const revenueMult = avgMonthlyRevenue <= 10000 ? 1.0 :
+                     avgMonthlyRevenue <= 25000 ? 1.2 :
+                     avgMonthlyRevenue <= 75000 ? 1.4 :
+                     avgMonthlyRevenue <= 250000 ? 1.6 :
+                     avgMonthlyRevenue <= 1000000 ? 1.8 : 2.0;
+
+  // Calculate raw fee
+  const rawFee = (base + entityUpcharge + stateUpcharge + intlUpcharge + ownerUpcharge + bookUpcharge + personal1040) * industryMult * revenueMult;
+
+  // Apply Seed Bookkeeping discount if applicable (15% discount)
+  const isBookkeepingClient = data.alreadyOnSeedBookkeeping;
+  const monthlyFee = roundToNearest25(isBookkeepingClient ? rawFee * 0.85 : rawFee);
+
+  // Setup fee: prior years unfiled * $2100 per year
+  const setupFee = (data.priorYearsUnfiled || 0) * 2100;
+
+  return { monthlyFee, setupFee };
+}
+
+export function calculateCombinedFees(data: PricingData): CombinedFeeResult {
+  // Determine which services are included
+  const includesBookkeeping = data.includesTaas !== undefined ? 
+    // For combined quotes, check both flags
+    (data.includesTaas ? (data as any).includesBookkeeping !== false : true) :
+    // For single service quotes, assume bookkeeping if not explicitly TaaS
+    true;
+  
+  const includesTaas = data.includesTaas === true;
+
+  // Calculate individual service fees
+  const bookkeepingFees = includesBookkeeping ? calculateBookkeepingFees(data) : { monthlyFee: 0, setupFee: 0 };
+  const taasFees = includesTaas ? calculateTaaSFees(data) : { monthlyFee: 0, setupFee: 0 };
+
+  // Combined totals
+  const combinedMonthlyFee = bookkeepingFees.monthlyFee + taasFees.monthlyFee;
+  const combinedSetupFee = bookkeepingFees.setupFee + taasFees.setupFee;
+
+  return {
+    bookkeeping: bookkeepingFees,
+    taas: taasFees,
+    combined: {
+      monthlyFee: combinedMonthlyFee,
+      setupFee: combinedSetupFee
+    },
+    includesBookkeeping,
+    includesTaas
+  };
+}

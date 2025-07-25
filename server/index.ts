@@ -5,7 +5,7 @@ import passport from 'passport';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { authRouter } from './auth.js';
-import { apiRouter } from './routes.js';
+import { quotesRouter } from './routes.js';
 import { setupVite, serveStatic, log } from './vite.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,13 +20,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Session configuration
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'commission-tracker-secret',
+  secret: process.env.SESSION_SECRET || 'your-secret-key-here',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  },
+    secure: false, // Set to true in production with HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
 
 // Passport configuration
@@ -35,7 +35,7 @@ app.use(passport.session());
 
 // Routes
 app.use('/auth', authRouter);
-app.use('/api', apiRouter);
+app.use('/api', quotesRouter);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
