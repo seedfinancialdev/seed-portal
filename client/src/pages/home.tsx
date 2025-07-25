@@ -2094,9 +2094,9 @@ export default function Home() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="Clean (Seed)">Outside CPA</SelectItem>
-                                <SelectItem value="Outside CPA">Self-Managed</SelectItem>
-                                <SelectItem value="Self-managed">Not Done / Behind</SelectItem>
+                                <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
+                                <SelectItem value="Outside CPA">Outside CPA</SelectItem>
+                                <SelectItem value="Messy/DIY">Messy/DIY</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
