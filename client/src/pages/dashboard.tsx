@@ -23,9 +23,8 @@ export default function Dashboard() {
               <img 
                 src={navLogoPath} 
                 alt="Seed Financial Logo" 
-                className="h-8 mr-3"
+                className="h-8"
               />
-              <h1 className="text-xl font-semibold text-gray-900">Employee Portal</h1>
             </div>
             <div className="flex items-center space-x-4">
               <DropdownMenu>
