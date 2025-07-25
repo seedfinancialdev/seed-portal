@@ -115,6 +115,13 @@ Preferred communication style: Simple, everyday language.
   - **Service Card Synchronization**: Form view now properly aligns with loaded quote's service selection
   - **TypeScript Error Resolution**: Fixed type annotations for quote data access in button logic
 
+✓ **Fixed Critical Line Item Duplicate Issue** (July 25, 2025)
+  - **Root Cause Identified**: HubSpot line items don't store custom names, only product IDs and amounts
+  - **Fixed Matching Logic**: Changed from name-based to product ID + amount combination matching
+  - **Enhanced API Debugging**: Added comprehensive logging to reveal actual HubSpot response structure
+  - **Eliminated Duplicates**: Proper identification of existing line items prevents duplicate creation
+  - **Robust Tolerance Matching**: Uses floating-point tolerance for amount comparisons to handle precision issues
+
 ✓ **Complete HubSpot Service Conversion Fix** (July 24, 2025)
   - **Database Update Fixed**: Preserves custom setup fees and uses form data instead of recalculating during updates
   - **Deal Name Updates**: Automatically updates deal names to reflect service combinations (Bookkeeping + TaaS)

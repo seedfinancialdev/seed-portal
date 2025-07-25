@@ -949,34 +949,21 @@ Generated: ${new Date().toLocaleDateString()}`;
         let exists = false;
         console.log(`Checking if ${key} (${requiredItem.name}) already exists...`);
         
-        // Check if this item already exists (more specific matching)
+        // Check if this item already exists (match by product ID and amount)
         for (const existingItem of existingLineItems) {
-          // Try multiple property paths for line item name and price
-          const itemName = existingItem.properties?.name || 
-                           existingItem.properties?.hs_line_item_currency_code || 
-                           existingItem.properties?.description || '';
-          const itemPrice = existingItem.properties?.price || 
-                           existingItem.properties?.amount || 
-                           existingItem.properties?.hs_cost_of_goods_sold || '0';
+          const itemProductId = existingItem.properties?.hs_product_id || '';
+          const itemAmount = parseFloat(existingItem.properties?.amount || '0');
+          const requiredAmount = parseFloat(requiredItem.price.toString());
           
-          console.log(`Checking existing item: "${itemName}" ($${itemPrice}) against required "${requiredItem.name}"`);
-          console.log(`Full existing item properties:`, existingItem.properties);
+          console.log(`Checking existing item: Product ID ${itemProductId}, Amount $${itemAmount} against required "${requiredItem.name}" (Product ID ${requiredItem.productId}, Amount $${requiredAmount})`);
           
-          // More precise matching logic
-          let isMatch = false;
-          if (key === 'bookkeeping_monthly' && itemName.includes('Monthly Bookkeeping')) {
-            isMatch = true;
-          } else if (key === 'bookkeeping_setup' && (itemName.includes('Clean-Up') || itemName.includes('Catch-Up'))) {
-            isMatch = true;
-          } else if (key === 'taas_monthly' && itemName.includes('Monthly TaaS')) {
-            isMatch = true;
-          } else if (key === 'taas_setup' && itemName.includes('TaaS Prior Years')) {
-            isMatch = true;
-          }
+          // Match by product ID and amount (with small tolerance for floating point differences)
+          const productIdMatches = itemProductId === requiredItem.productId;
+          const amountMatches = Math.abs(itemAmount - requiredAmount) < 0.01;
           
-          if (isMatch) {
+          if (productIdMatches && amountMatches) {
             exists = true;
-            console.log(`✓ Found existing line item: "${itemName}" ($${itemPrice}) matches required "${requiredItem.name}" ($${requiredItem.price})`);
+            console.log(`✓ Found existing line item: Product ID ${itemProductId}, Amount $${itemAmount} matches required "${requiredItem.name}" (Product ID ${requiredItem.productId}, Amount $${requiredAmount})`);
             break;
           }
         }
