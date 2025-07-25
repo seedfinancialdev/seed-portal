@@ -873,7 +873,7 @@ Generated: ${new Date().toLocaleDateString()}`;
           requiredLineItems.set('taas_monthly', {
             name: 'Monthly TaaS (Custom)',
             price: serviceConfig.taasMonthlyFee,
-            productId: '25687054003',
+            productId: '26203849099',  // Tax as a Service product ID
             description: 'Seed Financial Monthly TaaS (Custom)',
             identifiers: ['Monthly TaaS', 'TaaS (Custom)']
           });
@@ -882,7 +882,7 @@ Generated: ${new Date().toLocaleDateString()}`;
           requiredLineItems.set('taas_setup', {
             name: 'TaaS Prior Years (Custom)',
             price: serviceConfig.taasPriorYearsFee,
-            productId: '25683750263',
+            productId: '26354718811',  // Prior Years Tax Filing product ID
             description: 'Seed Financial TaaS Prior Years (Custom)',
             identifiers: ['TaaS Prior Years', 'Prior Years (Custom)']
           });
@@ -911,7 +911,7 @@ Generated: ${new Date().toLocaleDateString()}`;
           
           if (isServiceItem) {
             itemsToDelete.push(existingItem);
-            console.log(`Marking line item ${existingItem.id} (product ${productId}, amount $${amount}) for deletion - shouldKeep: ${shouldKeep}`);
+            console.log(`Marking line item ${existingItem.id} (product ${productId}, amount $${amount}) for deletion - shouldKeep: ${shouldKeep}, amount: ${amount}`);
           }
         }
       }

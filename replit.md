@@ -121,6 +121,12 @@ Preferred communication style: Simple, everyday language.
   - **Enhanced API Debugging**: Added comprehensive logging to reveal actual HubSpot response structure
   - **Eliminated Duplicates**: Proper identification of existing line items prevents duplicate creation
   - **Robust Tolerance Matching**: Uses floating-point tolerance for amount comparisons to handle precision issues
+  
+✓ **Critical TaaS Product ID Fix** (July 25, 2025)
+  - **Root Cause**: TaaS was using bookkeeping product IDs, causing updates instead of new line items
+  - **Fixed Product IDs**: Monthly TaaS now uses 26203849099, Prior Years uses 26354718811
+  - **Proper Service Separation**: Each service type now has unique product IDs preventing conflicts
+  - **Complete Line Item Management**: Adding/removing services now properly creates/deletes appropriate line items
 
 ✓ **Complete HubSpot Service Conversion Fix** (July 24, 2025)
   - **Database Update Fixed**: Preserves custom setup fees and uses form data instead of recalculating during updates
