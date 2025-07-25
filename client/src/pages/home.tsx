@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import { useLocation } from "wouter";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -483,6 +484,7 @@ function calculateCombinedFees(data: Partial<FormData>) {
 export default function Home() {
   const { toast } = useToast();
   const { user, logoutMutation } = useAuth();
+  const [, setLocation] = useLocation();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1235,7 +1237,7 @@ export default function Home() {
               variant="ghost"
               size="sm"
               className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-              onClick={() => window.location.href = '/'}
+              onClick={() => setLocation('/')}
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back to Portal
