@@ -153,9 +153,9 @@ export function TaasSection({ control, currentFormView }: TaasSectionProps) {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
                 <SelectItem value="Outside CPA">Outside CPA</SelectItem>
-                <SelectItem value="Messy/DIY">Messy/DIY</SelectItem>
+                <SelectItem value="Self-Managed">Self-Managed</SelectItem>
+                <SelectItem value="Not Done / Behind">Not Done / Behind</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />

@@ -30,7 +30,7 @@ export const quotes = pgTable("quotes", {
   statesFiled: integer("states_filed"),
   internationalFiling: boolean("international_filing"),
   numBusinessOwners: integer("num_business_owners"),
-  bookkeepingQuality: text("bookkeeping_quality"), // Clean (Seed), Outside CPA, Messy
+  bookkeepingQuality: text("bookkeeping_quality"), // Outside CPA, Self-Managed, Not Done / Behind
   include1040s: boolean("include_1040s"),
   priorYearsUnfiled: integer("prior_years_unfiled"),
   alreadyOnSeedBookkeeping: boolean("already_on_seed_bookkeeping"),
