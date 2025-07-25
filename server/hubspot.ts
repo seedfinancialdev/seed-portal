@@ -738,6 +738,7 @@ Generated: ${new Date().toLocaleDateString()}`;
 
       const refreshedLineItems: any[] = [];
       if (refreshedLineItemsResponse && refreshedLineItemsResponse.results && refreshedLineItemsResponse.results.length > 0) {
+        console.log(`Refreshing ${refreshedLineItemsResponse.results.length} line items for accurate duplicate detection`);
         for (const lineItemAssociation of refreshedLineItemsResponse.results) {
           const lineItemId = lineItemAssociation.toObjectId;
           const lineItemDetails = await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
@@ -749,9 +750,12 @@ Generated: ${new Date().toLocaleDateString()}`;
               id: lineItemId,
               properties: lineItemDetails.properties
             });
+            console.log(`Refreshed line item: ${lineItemId} - ${lineItemDetails.properties.name} - $${lineItemDetails.properties.price}`);
           }
         }
       }
+      console.log(`Total refreshed line items: ${refreshedLineItems.length}`);
+      console.log('Refreshed line items:', refreshedLineItems.map(item => `${item.properties.name} ($${item.properties.price})`));
 
       // Handle service-specific line items based on quote configuration
       await this.manageServiceLineItems(quoteId, refreshedLineItems, {
@@ -938,34 +942,37 @@ Generated: ${new Date().toLocaleDateString()}`;
       }
       
       // Step 2: Add missing line items
+      console.log(`Checking for missing line items. Required: ${requiredLineItems.size}`);
       for (const [key, requiredItem] of requiredLineItems) {
         let exists = false;
+        console.log(`Checking if ${key} (${requiredItem.name}) already exists...`);
         
         // Check if this item already exists (more specific matching)
         for (const existingItem of existingLineItems) {
           const itemName = existingItem.properties?.name || '';
-          const isMatch = requiredItem.identifiers.some((id: string) => {
-            // More precise matching to avoid false negatives
-            if (key.includes('bookkeeping_monthly') && itemName.includes('Monthly Bookkeeping')) {
-              return true;
-            }
-            if (key.includes('bookkeeping_setup') && (itemName.includes('Clean-Up') || itemName.includes('Catch-Up'))) {
-              return true;
-            }
-            if (key.includes('taas_monthly') && itemName.includes('Monthly TaaS')) {
-              return true;
-            }
-            if (key.includes('taas_setup') && itemName.includes('TaaS Prior Years')) {
-              return true;
-            }
-            return itemName.includes(id);
-          });
+          const itemPrice = existingItem.properties?.price || '0';
+          
+          // More precise matching logic
+          let isMatch = false;
+          if (key === 'bookkeeping_monthly' && itemName.includes('Monthly Bookkeeping')) {
+            isMatch = true;
+          } else if (key === 'bookkeeping_setup' && (itemName.includes('Clean-Up') || itemName.includes('Catch-Up'))) {
+            isMatch = true;
+          } else if (key === 'taas_monthly' && itemName.includes('Monthly TaaS')) {
+            isMatch = true;
+          } else if (key === 'taas_setup' && itemName.includes('TaaS Prior Years')) {
+            isMatch = true;
+          }
           
           if (isMatch) {
             exists = true;
-            console.log(`Found existing line item: ${itemName} matches required ${requiredItem.name}`);
+            console.log(`✓ Found existing line item: "${itemName}" ($${itemPrice}) matches required "${requiredItem.name}" ($${requiredItem.price})`);
             break;
           }
+        }
+        
+        if (!exists) {
+          console.log(`✗ No existing match found for ${key} (${requiredItem.name})`);
         }
         
         if (!exists) {
