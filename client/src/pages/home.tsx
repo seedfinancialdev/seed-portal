@@ -1193,13 +1193,24 @@ export default function Home() {
     if (!isApproved || approvedCleanupMonths === null || approvedSetupFee === null) return false;
     
     const currentCalculation = calculateFees(currentFormValues);
-    const currentSetupFee = currentFormValues.customSetupFee ? 
+    const currentSetupFee = currentFormValues.customSetupFee && currentFormValues.customSetupFee !== "" ? 
       parseInt(currentFormValues.customSetupFee) : 
       currentCalculation.setupFee;
     
     // Requires new approval if cleanup months decreased OR setup fee decreased
-    return currentFormValues.cleanupMonths < approvedCleanupMonths || 
+    const needsApproval = currentFormValues.cleanupMonths < approvedCleanupMonths || 
            currentSetupFee < approvedSetupFee;
+    
+    console.log('requiresNewApproval check:', {
+      isApproved,
+      approvedCleanupMonths,
+      approvedSetupFee,
+      currentCleanupMonths: currentFormValues.cleanupMonths,
+      currentSetupFee,
+      needsApproval
+    });
+    
+    return needsApproval;
   };
 
   // Show warning dialog when user tries to change approved values
@@ -1228,8 +1239,31 @@ export default function Home() {
       return;
     }
     
+    // Check if override is used but not approved (unless values match approved amounts)
+    if (data.cleanupOverride && !isApproved && !valuesMatchApproved(data)) {
+      toast({
+        title: "Approval Required",
+        description: "You must get approval before saving quotes with cleanup overrides.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     console.log('Submitting quote via createQuoteMutation');
     createQuoteMutation.mutate(data);
+  };
+
+  // Check if current values match previously approved values
+  const valuesMatchApproved = (currentFormValues: any): boolean => {
+    if (approvedCleanupMonths === null || approvedSetupFee === null) return false;
+    
+    const currentCalculation = calculateFees(currentFormValues);
+    const currentSetupFee = currentFormValues.customSetupFee && currentFormValues.customSetupFee !== "" ? 
+      parseInt(currentFormValues.customSetupFee) : 
+      currentCalculation.setupFee;
+    
+    return currentFormValues.cleanupMonths === approvedCleanupMonths && 
+           currentSetupFee === approvedSetupFee;
   };
 
   // Remove the old breakdown function since it's now handled in the calculation logic above
@@ -1886,16 +1920,39 @@ export default function Home() {
                                   className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pl-8"
                                   {...field}
                                   onChange={(e) => {
-                                    // Ensure whole numbers only
-                                    const value = Math.floor(parseFloat(e.target.value) || 0).toString();
+                                    const inputValue = e.target.value;
                                     const currentValue = field.value;
+                                    
+                                    // Handle empty input
+                                    if (inputValue === "") {
+                                      field.onChange("");
+                                      setCustomSetupFee("");
+                                      return;
+                                    }
+                                    
+                                    // Ensure whole numbers only
+                                    const value = Math.floor(parseFloat(inputValue) || 0).toString();
                                     const numericValue = parseInt(value);
                                     
+                                    console.log('Custom setup fee change:', {
+                                      inputValue,
+                                      value,
+                                      numericValue,
+                                      approvedSetupFee,
+                                      isApproved,
+                                      willTriggerWarning: isApproved && approvedSetupFee !== null && numericValue > 0 && numericValue < approvedSetupFee
+                                    });
+                                    
                                     // FIX 3: Check if this reduction requires new approval
-                                    if (isApproved && approvedSetupFee !== null && numericValue < approvedSetupFee) {
+                                    if (isApproved && approvedSetupFee !== null && numericValue > 0 && numericValue < approvedSetupFee) {
+                                      console.log('Triggering approval warning for setup fee reduction');
                                       handleApprovalWarning(
-                                        () => field.onChange(currentValue), // Revert function
                                         () => {
+                                          console.log('Reverting to previous value:', currentValue);
+                                          field.onChange(currentValue);
+                                        }, // Revert function
+                                        () => {
+                                          console.log('Continuing with new value and clearing approval');
                                           field.onChange(value);
                                           setCustomSetupFee(value);
                                           setIsApproved(false);
