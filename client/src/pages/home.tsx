@@ -1923,6 +1923,7 @@ export default function Home() {
                                 <SelectItem value="C-Corp">C-Corp</SelectItem>
                                 <SelectItem value="S-Corp">S-Corp</SelectItem>
                                 <SelectItem value="Partnership">Partnership</SelectItem>
+                                <SelectItem value="Non-Profit">Non-Profit</SelectItem>
                                 <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
                               </SelectContent>
                             </Select>

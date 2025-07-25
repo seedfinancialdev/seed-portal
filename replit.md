@@ -162,6 +162,7 @@ Preferred communication style: Simple, everyday language.
 ✓ **Minor UX Improvements** (July 25, 2025)
   - **Login Error Fix**: Changed login error from "email not authorized" to "incorrect password" with admin contact instructions
   - **TaaS Discount Clarification**: Added "(provides 15% discount)" text to Seed Bookkeeping Package checkbox for clarity
+  - **Entity Type Addition**: Added "Non-Profit" to entity type dropdown with same pricing as C-Corp
 
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
   - **Eliminated Code Duplication**: Created `/shared/pricing.ts` with unified pricing logic used by both frontend and backend
