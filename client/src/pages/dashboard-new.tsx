@@ -45,9 +45,9 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] animate-in fade-in duration-1000">
       {/* Transparent Header */}
-      <header className="bg-transparent z-50">
+      <header className="bg-transparent z-50 py-4">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-20">
             <div></div>
             <Link href="/">
               <div className="flex items-center cursor-pointer">
