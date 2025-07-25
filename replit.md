@@ -128,7 +128,7 @@ Preferred communication style: Simple, everyday language.
   - **Proper Service Separation**: Each service type now has unique product IDs preventing conflicts
   - **Complete Line Item Management**: Adding/removing services now properly creates/deletes appropriate line items
 
-✓ **Complete HubSpot Service Conversion Fix** (July 24, 2025)
+✓ **Complete HubSpot Service Conversion Fix** (July 25, 2025)
   - **Database Update Fixed**: Preserves custom setup fees and uses form data instead of recalculating during updates
   - **Deal Name Updates**: Automatically updates deal names to reflect service combinations (Bookkeeping + TaaS)
   - **Quote Title Updates**: Updates quote titles to show correct service combinations with (Updated date)
@@ -142,6 +142,8 @@ Preferred communication style: Simple, everyday language.
   - **Fixed HubSpot Association API**: Uses proper quote->line_item direction matching working line item associations
   - **Completely Redesigned Line Item Management**: Universal system handles all three core processes - new quote creation, service addition, and service removal without duplicates
   - **Comprehensive Service Conversion**: Handles all aspects of converting bookkeeping-only quotes to combined service quotes
+  - **Fixed HubSpot API Empty Response Handling**: DELETE requests now properly handle 204 No Content responses without JSON parsing errors
+  - **Database Connection Monitoring**: App may occasionally lose connection to Neon PostgreSQL when loading old quotes (transient issue)
 
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
   - **Eliminated Code Duplication**: Created `/shared/pricing.ts` with unified pricing logic used by both frontend and backend
