@@ -53,15 +53,12 @@ export default function AuthPage() {
             Welcome Back
           </h2>
           <p className="mt-2 text-sm text-gray-200">
-            Sign in to access the quote calculator
+            Sign in to access the portal
           </p>
         </div>
 
         <Card className="bg-white shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-center text-gray-900">Sign In</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                 <FormField
