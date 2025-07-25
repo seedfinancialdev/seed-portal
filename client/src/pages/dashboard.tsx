@@ -254,35 +254,35 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Quick Tools</h2>
               </div>
-              <div className="grid grid-cols-4 gap-6">
+              <div className="grid grid-cols-4 gap-8">
                 <Link href="/calculator">
-                  <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
-                    <div className="p-3 bg-[#e24c00]/10 rounded-full mb-2">
-                      <Calculator className="h-6 w-6 text-[#e24c00]" />
+                  <div className="flex flex-col items-center justify-center w-40 h-40 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                    <div className="p-4 bg-[#e24c00]/10 rounded-full mb-3">
+                      <Calculator className="h-8 w-8 text-[#e24c00]" />
                     </div>
-                    <h3 className="text-xs font-semibold text-center">Quote Calculator</h3>
+                    <h3 className="text-sm font-semibold text-center">Quote Calculator</h3>
                   </div>
                 </Link>
 
-                <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
-                  <div className="p-3 bg-green-500/10 rounded-full mb-2">
-                    <DollarSign className="h-6 w-6 text-green-600" />
+                <div className="flex flex-col items-center justify-center w-40 h-40 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                  <div className="p-4 bg-green-500/10 rounded-full mb-3">
+                    <DollarSign className="h-8 w-8 text-green-600" />
                   </div>
-                  <h3 className="text-xs font-semibold text-center">Commission Tracker</h3>
+                  <h3 className="text-sm font-semibold text-center">Commission Tracker</h3>
                 </div>
 
-                <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
-                  <div className="p-3 bg-purple-500/10 rounded-full mb-2">
-                    <UserCheck className="h-6 w-6 text-purple-600" />
+                <div className="flex flex-col items-center justify-center w-40 h-40 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                  <div className="p-4 bg-purple-500/10 rounded-full mb-3">
+                    <UserCheck className="h-8 w-8 text-purple-600" />
                   </div>
-                  <h3 className="text-xs font-semibold text-center">Client Intel</h3>
+                  <h3 className="text-sm font-semibold text-center">Client Intel</h3>
                 </div>
 
-                <div className="flex flex-col items-center justify-center w-32 h-32 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
-                  <div className="p-3 bg-indigo-500/10 rounded-full mb-2">
-                    <Video className="h-6 w-6 text-indigo-600" />
+                <div className="flex flex-col items-center justify-center w-40 h-40 bg-white/70 backdrop-blur-sm border border-gray-200 rounded-full hover:shadow-lg transition-all cursor-pointer">
+                  <div className="p-4 bg-indigo-500/10 rounded-full mb-3">
+                    <Video className="h-8 w-8 text-indigo-600" />
                   </div>
-                  <h3 className="text-xs font-semibold text-center">Meeting Vault</h3>
+                  <h3 className="text-sm font-semibold text-center">Meeting Vault</h3>
                 </div>
               </div>
             </div>
@@ -420,10 +420,28 @@ export default function Dashboard() {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input placeholder="Ask anything..." className="pl-10 text-sm" />
                   </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer py-1">S-Corp Election Process</div>
-                    <div className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer py-1">Tax Planning 2024</div>
-                    <div className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer py-1">Client Onboarding SOP</div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2 px-3 bg-indigo-50 rounded-lg cursor-pointer hover:bg-indigo-100">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">S-Corp Election Process</p>
+                        <p className="text-xs text-gray-500">Updated 2 days ago</p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">New</Badge>
+                    </div>
+                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Tax Planning 2024</p>
+                        <p className="text-xs text-gray-500">Complete guide</p>
+                      </div>
+                      <span className="text-xs text-gray-400">Guide</span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Client Onboarding SOP</p>
+                        <p className="text-xs text-gray-500">Step-by-step process</p>
+                      </div>
+                      <span className="text-xs text-gray-400">SOP</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -438,13 +456,28 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">XP: 2,450</span>
-                    <Badge variant="secondary" className="text-xs">Level 7</Badge>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                    <div>
+                      <p className="text-sm font-semibold text-purple-900">XP: 2,450</p>
+                      <p className="text-xs text-purple-600">Level 7 • Advanced</p>
+                    </div>
+                    <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Level 7</Badge>
                   </div>
-                  <div className="text-xs text-purple-600 bg-purple-50 p-2 rounded">Tax Planning 201 - In Progress</div>
-                  <Button variant="outline" size="sm" className="w-full text-xs">View Courses</Button>
+                  
+                  <div className="space-y-2">
+                    <div className="p-2 bg-green-50 border-l-4 border-green-500 rounded">
+                      <p className="text-sm font-medium text-green-900">Tax Planning 201</p>
+                      <p className="text-xs text-green-600">In Progress • 75% Complete</p>
+                    </div>
+                    
+                    <div className="p-2 bg-blue-50 border-l-4 border-blue-500 rounded">
+                      <p className="text-sm font-medium text-blue-900">Advanced QuickBooks</p>
+                      <p className="text-xs text-blue-600">Next: Due Jan 30</p>
+                    </div>
+                  </div>
+                  
+                  <Button variant="outline" size="sm" className="w-full">View All Courses</Button>
                 </div>
               </CardContent>
             </Card>
@@ -458,19 +491,31 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-start space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="text-xs">New lead: TechFlow Solutions</p>
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mt-1 flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-900">New lead: TechFlow Solutions</p>
+                      <p className="text-xs text-green-600">Software Startup • $45K potential</p>
                       <p className="text-xs text-gray-500">5 min ago</p>
                     </div>
                   </div>
-                  <div className="flex items-start space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="text-xs">Commission: +$450</p>
+                  
+                  <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mt-1 flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900">Commission: +$450</p>
+                      <p className="text-xs text-blue-600">Wellness Hub Inc closed</p>
                       <p className="text-xs text-gray-500">2h ago</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full mt-1 flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-orange-900">Document uploaded</p>
+                      <p className="text-xs text-orange-600">Tax Planning Guide 2024</p>
+                      <p className="text-xs text-gray-500">4h ago</p>
                     </div>
                   </div>
                 </div>
