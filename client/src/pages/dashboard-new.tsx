@@ -98,7 +98,7 @@ export default function Dashboard() {
         {/* Welcome Section */}
         <div className="text-center mb-12">
           <h1 className="text-3xl font-light text-white mb-2">
-            {getGreeting()}, {user?.email?.split('@')[0]}
+            {getGreeting()}, {user?.email?.split('@')[0]?.charAt(0).toUpperCase() + user?.email?.split('@')[0]?.slice(1)}!
           </h1>
           <p className="text-white/70 text-sm">{weather.temp}°F and {weather.condition} in {weather.location}</p>
         </div>
