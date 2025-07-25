@@ -924,36 +924,43 @@ Generated: ${new Date().toLocaleDateString()}`;
         });
       }
       
-      // Step 2: Add missing line items
-      console.log(`Checking for missing line items. Required: ${requiredLineItems.size}`);
+      // Step 2: Update existing line items or create missing ones
+      console.log(`Processing line items. Required: ${requiredLineItems.size}`);
       for (const [key, requiredItem] of requiredLineItems) {
-        let exists = false;
-        console.log(`Checking if ${key} (${requiredItem.name}) already exists...`);
+        let existingItem = null;
+        console.log(`Processing ${key} (${requiredItem.name})...`);
         
-        // Check if this item already exists (match by product ID and amount)
-        for (const existingItem of existingLineItems) {
-          const itemProductId = existingItem.properties?.hs_product_id || '';
-          const itemAmount = parseFloat(existingItem.properties?.amount || '0');
-          const requiredAmount = parseFloat(requiredItem.price.toString());
-          
-          console.log(`Checking existing item: Product ID ${itemProductId}, Amount $${itemAmount} against required "${requiredItem.name}" (Product ID ${requiredItem.productId}, Amount $${requiredAmount})`);
-          
-          // Match by product ID and amount (with small tolerance for floating point differences)
-          const productIdMatches = itemProductId === requiredItem.productId;
-          const amountMatches = Math.abs(itemAmount - requiredAmount) < 0.01;
-          
-          if (productIdMatches && amountMatches) {
-            exists = true;
-            console.log(`✓ Found existing line item: Product ID ${itemProductId}, Amount $${itemAmount} matches required "${requiredItem.name}" (Product ID ${requiredItem.productId}, Amount $${requiredAmount})`);
+        // Check if this item already exists by product ID (regardless of amount)
+        for (const item of existingLineItems) {
+          const itemProductId = item.properties?.hs_product_id || '';
+          if (itemProductId === requiredItem.productId) {
+            existingItem = item;
             break;
           }
         }
         
-        if (!exists) {
-          console.log(`✗ No existing match found for ${key} (${requiredItem.name})`);
-        }
-        
-        if (!exists) {
+        if (existingItem) {
+          const currentAmount = parseFloat(existingItem.properties?.amount || '0');
+          const requiredAmount = parseFloat(requiredItem.price.toString());
+          
+          if (Math.abs(currentAmount - requiredAmount) >= 0.01) {
+            // Update existing line item with new amount
+            console.log(`Updating existing line item ${existingItem.id}: Product ID ${requiredItem.productId}, $${currentAmount} → $${requiredAmount}`);
+            await this.makeRequest(`/crm/v3/objects/line_items/${existingItem.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                properties: {
+                  amount: requiredAmount.toString()
+                }
+              })
+            });
+            console.log(`✓ Updated existing line item: ${existingItem.id} to $${requiredAmount}`);
+          } else {
+            console.log(`✓ Existing line item already correct: Product ID ${requiredItem.productId}, Amount $${currentAmount}`);
+          }
+        } else {
+          // Create new line item
           console.log(`Creating missing line item: ${requiredItem.name} - $${requiredItem.price}`);
           
           const lineItem = await this.makeRequest('/crm/v3/objects/line_items', {
