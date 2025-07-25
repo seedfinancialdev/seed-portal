@@ -731,8 +731,30 @@ Generated: ${new Date().toLocaleDateString()}`;
         }
       }
 
+      // Refresh line items list after price updates for accurate duplicate detection
+      const refreshedLineItemsResponse = await this.makeRequest(`/crm/v4/objects/quotes/${quoteId}/associations/line_items`, {
+        method: 'GET'
+      });
+
+      const refreshedLineItems: any[] = [];
+      if (refreshedLineItemsResponse && refreshedLineItemsResponse.results && refreshedLineItemsResponse.results.length > 0) {
+        for (const lineItemAssociation of refreshedLineItemsResponse.results) {
+          const lineItemId = lineItemAssociation.toObjectId;
+          const lineItemDetails = await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}`, {
+            method: 'GET'
+          });
+          
+          if (lineItemDetails && lineItemDetails.properties) {
+            refreshedLineItems.push({
+              id: lineItemId,
+              properties: lineItemDetails.properties
+            });
+          }
+        }
+      }
+
       // Handle service-specific line items based on quote configuration
-      await this.manageServiceLineItems(quoteId, existingLineItems, {
+      await this.manageServiceLineItems(quoteId, refreshedLineItems, {
         includesBookkeeping,
         includesTaas,
         taasMonthlyFee: taasMonthlyFee || 0,
