@@ -8,7 +8,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home.tsx";
 import AuthPage from "@/pages/auth-page";
-import Dashboard from "@/pages/dashboard";
+import Dashboard from "@/pages/dashboard-new";
 
 function Router() {
   return (
