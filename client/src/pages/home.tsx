@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
+import navLogoPath from "@assets/Nav Logo_1753431362883.png";
 
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
@@ -1255,13 +1256,24 @@ export default function Home() {
             </DropdownMenu>
           </div>
           
-          {/* Logo and Title - Center */}
-          <div className="text-center">
-            <img 
-              src={logoPath} 
-              alt="Seed Financial Logo" 
-              className="h-16 mx-auto mb-4"
-            />
+          {/* Back Button and Logo - Left */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+                onClick={() => window.location.href = '/'}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back to Portal
+              </Button>
+              <img 
+                src={navLogoPath} 
+                alt="Seed Financial Logo" 
+                className="h-10"
+              />
+            </div>
             <p className="text-lg text-gray-200">
               Internal Pricing Calculator
             </p>

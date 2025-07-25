@@ -2,13 +2,22 @@
 
 ## Overview
 
-This is a full-stack web application built with React, TypeScript, Express.js, and PostgreSQL. The application appears to be a quote generation system that calculates pricing based on various business parameters like revenue bands, transaction volumes, and industry complexity. It uses modern web development practices with a component-based frontend and RESTful API backend.
+This is a full-stack web application built with React, TypeScript, Express.js, and PostgreSQL. The application is a Seed Financial Internal Employee Portal featuring a sophisticated quote generation system that calculates pricing based on various business parameters like revenue bands, transaction volumes, and industry complexity. The portal provides a centralized dashboard for employees to access various tools, with the quote calculator being the primary integrated application. It uses modern web development practices with a component-based frontend and RESTful API backend.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
+
+✓ **Employee Portal Implementation** (July 25, 2025)
+  - Transformed application into Seed Financial Internal Employee Portal
+  - Created dashboard landing page with professional card-based navigation
+  - Quote calculator now accessible as a component within the portal at /calculator
+  - Added portal navigation with "Back to Portal" button in calculator
+  - Updated branding with new nav logo for consistent portal appearance
+  - Maintained all existing calculator functionality and features
+  - Portal dashboard ready for future feature integration
 
 ✓ **Complete Authentication System Implemented** (July 21, 2025)
   - Secure login system with automatic user registration for @seedfinancial.io emails
