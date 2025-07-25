@@ -745,12 +745,14 @@ Generated: ${new Date().toLocaleDateString()}`;
             method: 'GET'
           });
           
+          console.log(`Raw line item response for ${lineItemId}:`, JSON.stringify(lineItemDetails, null, 2));
+          
           if (lineItemDetails && lineItemDetails.properties) {
             refreshedLineItems.push({
               id: lineItemId,
               properties: lineItemDetails.properties
             });
-            console.log(`Refreshed line item: ${lineItemId} - ${lineItemDetails.properties.name} - $${lineItemDetails.properties.price}`);
+            console.log(`Refreshed line item: ${lineItemId} - ${lineItemDetails.properties.name || lineItemDetails.properties.hs_line_item_currency_code} - $${lineItemDetails.properties.price || lineItemDetails.properties.amount}`);
           }
         }
       }
@@ -949,8 +951,16 @@ Generated: ${new Date().toLocaleDateString()}`;
         
         // Check if this item already exists (more specific matching)
         for (const existingItem of existingLineItems) {
-          const itemName = existingItem.properties?.name || '';
-          const itemPrice = existingItem.properties?.price || '0';
+          // Try multiple property paths for line item name and price
+          const itemName = existingItem.properties?.name || 
+                           existingItem.properties?.hs_line_item_currency_code || 
+                           existingItem.properties?.description || '';
+          const itemPrice = existingItem.properties?.price || 
+                           existingItem.properties?.amount || 
+                           existingItem.properties?.hs_cost_of_goods_sold || '0';
+          
+          console.log(`Checking existing item: "${itemName}" ($${itemPrice}) against required "${requiredItem.name}"`);
+          console.log(`Full existing item properties:`, existingItem.properties);
           
           // More precise matching logic
           let isMatch = false;
