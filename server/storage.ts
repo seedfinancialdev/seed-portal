@@ -1,184 +1,258 @@
-import { users, quotes, approvalCodes, type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, updateQuoteSchema } from "@shared/schema";
-import { db } from "./db";
-import { eq, like, desc, asc, sql, and } from "drizzle-orm";
-import { z } from "zod";
-import session from "express-session";
-import MemoryStore from "memorystore";
+import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
+import { eq, and, desc, sql } from 'drizzle-orm';
+import * as schema from '../shared/schema.js';
+import { 
+  salesReps, 
+  deals, 
+  commissions, 
+  monthlyBonuses, 
+  milestoneBonuses, 
+  commissionAdjustments,
+  type SalesRep,
+  type Deal,
+  type Commission,
+  type MonthlyBonus,
+  type MilestoneBonus,
+  type CommissionAdjustment,
+  type InsertSalesRep,
+  type InsertDeal,
+  type InsertCommission,
+  type InsertMonthlyBonus,
+  type InsertMilestoneBonus,
+  type InsertCommissionAdjustment,
+} from '../shared/schema.js';
 
-type UpdateQuote = z.infer<typeof updateQuoteSchema>;
-
-export interface IStorage {
-  sessionStore: session.Store;
-  
-  getUser(id: number): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
-  // Quote methods - now filtered by owner
-  createQuote(quote: InsertQuote): Promise<Quote>;
-  updateQuote(quote: UpdateQuote): Promise<Quote>;
-  archiveQuote(id: number): Promise<Quote>;
-  getQuotesByEmail(email: string): Promise<Quote[]>;
-  getQuote(id: number): Promise<Quote | undefined>;
-  getAllQuotes(ownerId: number, search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]>;
-  getQuotesByOwner(ownerId: number): Promise<Quote[]>;
-  
-  // Approval code methods
-  createApprovalCode(approvalCode: InsertApprovalCode): Promise<ApprovalCode>;
-  validateApprovalCode(code: string, email: string): Promise<boolean>;
-  markApprovalCodeUsed(code: string, email: string): Promise<void>;
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is required');
 }
 
-export class DatabaseStorage implements IStorage {
-  sessionStore: session.Store;
+const sql_client = neon(DATABASE_URL);
+const db = drizzle(sql_client, { schema });
 
-  constructor() {
-    // Use memory store for sessions to avoid database connection complexity
-    const MemStore = MemoryStore(session);
-    this.sessionStore = new MemStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
+export class DatabaseStorage {
+  // Sales Rep operations
+  async createSalesRep(data: Omit<InsertSalesRep, 'id' | 'createdAt' | 'updatedAt'>): Promise<SalesRep> {
+    const [rep] = await db.insert(salesReps).values(data).returning();
+    return rep;
+  }
+
+  async getSalesRepById(id: number): Promise<SalesRep | undefined> {
+    return await db.query.salesReps.findFirst({
+      where: eq(salesReps.id, id),
     });
   }
 
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+  async getSalesRepByEmail(email: string): Promise<SalesRep | undefined> {
+    return await db.query.salesReps.findFirst({
+      where: eq(salesReps.email, email),
+    });
   }
 
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+  async getAllSalesReps(): Promise<SalesRep[]> {
+    return await db.query.salesReps.findMany({
+      where: eq(salesReps.isActive, true),
+      orderBy: [salesReps.firstName, salesReps.lastName],
+    });
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
+  // Deal operations
+  async createDeal(data: Omit<InsertDeal, 'id' | 'createdAt' | 'updatedAt'>): Promise<Deal> {
+    const [deal] = await db.insert(deals).values(data).returning();
+    return deal;
+  }
+
+  async updateDeal(id: number, data: Partial<InsertDeal>): Promise<Deal | undefined> {
+    const [deal] = await db.update(deals)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(deals.id, id))
       .returning();
-    return user;
+    return deal;
   }
 
-  async createQuote(insertQuote: InsertQuote): Promise<Quote> {
-    const [quote] = await db
-      .insert(quotes)
-      .values(insertQuote)
+  async getDealsByRep(salesRepId: number): Promise<Deal[]> {
+    return await db.query.deals.findMany({
+      where: eq(deals.salesRepId, salesRepId),
+      orderBy: desc(deals.closeDate),
+    });
+  }
+
+  async getDealByHubSpotId(hubspotDealId: string): Promise<Deal | undefined> {
+    return await db.query.deals.findFirst({
+      where: eq(deals.hubspotDealId, hubspotDealId),
+    });
+  }
+
+  // Commission operations
+  async createCommission(data: Omit<InsertCommission, 'id' | 'createdAt'>): Promise<Commission> {
+    const [commission] = await db.insert(commissions).values(data).returning();
+    return commission;
+  }
+
+  async getCommissionsByRep(salesRepId: number): Promise<Commission[]> {
+    return await db.query.commissions.findMany({
+      where: eq(commissions.salesRepId, salesRepId),
+      orderBy: desc(commissions.createdAt),
+    });
+  }
+
+  async getCommissionsByDeal(dealId: number): Promise<Commission[]> {
+    return await db.query.commissions.findMany({
+      where: eq(commissions.dealId, dealId),
+      orderBy: [commissions.commissionType, commissions.monthNumber],
+    });
+  }
+
+  async updateCommissionPaidStatus(id: number, isPaid: boolean, paidAt?: Date): Promise<Commission | undefined> {
+    const [commission] = await db.update(commissions)
+      .set({ isPaid, paidAt: paidAt || (isPaid ? new Date() : undefined) })
+      .where(eq(commissions.id, id))
       .returning();
-    return quote;
+    return commission;
   }
 
-  async updateQuote(updateQuote: UpdateQuote): Promise<Quote> {
-    try {
-      const [quote] = await db
-        .update(quotes)
-        .set({ ...updateQuote, updatedAt: new Date() })
-        .where(eq(quotes.id, updateQuote.id))
-        .returning();
-      
-      if (!quote) {
-        throw new Error(`Quote with ID ${updateQuote.id} not found or could not be updated`);
-      }
-      
-      return quote;
-    } catch (error: any) {
-      console.error('Error updating quote:', error);
-      throw error;
-    }
+  // Monthly bonus operations
+  async createMonthlyBonus(data: Omit<InsertMonthlyBonus, 'id' | 'createdAt'>): Promise<MonthlyBonus> {
+    const [bonus] = await db.insert(monthlyBonuses).values(data).returning();
+    return bonus;
   }
 
-  async archiveQuote(id: number): Promise<Quote> {
-    const [quote] = await db
-      .update(quotes)
-      .set({ archived: true, updatedAt: new Date() })
-      .where(eq(quotes.id, id))
-      .returning();
-    return quote;
+  async getMonthlyBonusesByRep(salesRepId: number): Promise<MonthlyBonus[]> {
+    return await db.query.monthlyBonuses.findMany({
+      where: eq(monthlyBonuses.salesRepId, salesRepId),
+      orderBy: [desc(monthlyBonuses.year), desc(monthlyBonuses.month)],
+    });
   }
 
-  async getQuotesByEmail(email: string): Promise<Quote[]> {
-    return await db.select().from(quotes).where(
-      and(eq(quotes.contactEmail, email), eq(quotes.archived, false))
-    );
+  async getMonthlyBonus(salesRepId: number, month: number, year: number): Promise<MonthlyBonus | undefined> {
+    return await db.query.monthlyBonuses.findFirst({
+      where: and(
+        eq(monthlyBonuses.salesRepId, salesRepId),
+        eq(monthlyBonuses.month, month),
+        eq(monthlyBonuses.year, year)
+      ),
+    });
   }
 
-  async getQuote(id: number): Promise<Quote | undefined> {
-    const [quote] = await db.select().from(quotes).where(
-      and(eq(quotes.id, id), eq(quotes.archived, false))
-    );
-    return quote || undefined;
+  // Milestone bonus operations
+  async createMilestoneBonus(data: Omit<InsertMilestoneBonus, 'id'>): Promise<MilestoneBonus> {
+    const [bonus] = await db.insert(milestoneBonuses).values(data).returning();
+    return bonus;
   }
 
-  async getAllQuotes(ownerId: number, search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]> {
-    const ownerFilter = eq(quotes.ownerId, ownerId);
-    const archivedFilter = eq(quotes.archived, false);
-    const baseFilter = and(ownerFilter, archivedFilter);
-    
-    if (search && sortField && sortOrder) {
-      const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
-                         sortField === 'updatedAt' ? quotes.updatedAt :
-                         sortField === 'monthlyFee' ? quotes.monthlyFee :
-                         sortField === 'setupFee' ? quotes.setupFee :
-                         quotes.updatedAt;
-      
-      return await db.select().from(quotes)
-        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
-        .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
-    } else if (search) {
-      return await db.select().from(quotes)
-        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
-        .orderBy(desc(quotes.updatedAt));
-    } else if (sortField && sortOrder) {
-      const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
-                         sortField === 'updatedAt' ? quotes.updatedAt :
-                         sortField === 'monthlyFee' ? quotes.monthlyFee :
-                         sortField === 'setupFee' ? quotes.setupFee :
-                         quotes.updatedAt;
-      
-      return await db.select().from(quotes)
-        .where(baseFilter)
-        .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
-    } else {
-      return await db.select().from(quotes)
-        .where(baseFilter)
-        .orderBy(desc(quotes.updatedAt));
-    }
+  async getMilestoneBonusesByRep(salesRepId: number): Promise<MilestoneBonus[]> {
+    return await db.query.milestoneBonuses.findMany({
+      where: eq(milestoneBonuses.salesRepId, salesRepId),
+      orderBy: desc(milestoneBonuses.achievedAt),
+    });
   }
 
-  async getQuotesByOwner(ownerId: number): Promise<Quote[]> {
-    return await db.select().from(quotes).where(
-      and(eq(quotes.ownerId, ownerId), eq(quotes.archived, false))
-    );
+  // Commission adjustment operations
+  async createCommissionAdjustment(data: Omit<InsertCommissionAdjustment, 'id'>): Promise<CommissionAdjustment> {
+    const [adjustment] = await db.insert(commissionAdjustments).values(data).returning();
+    return adjustment;
   }
 
-  async createApprovalCode(insertApprovalCode: InsertApprovalCode): Promise<ApprovalCode> {
-    const [approvalCode] = await db
-      .insert(approvalCodes)
-      .values(insertApprovalCode)
-      .returning();
-    return approvalCode;
+  async getCommissionAdjustmentsByRep(salesRepId: number): Promise<CommissionAdjustment[]> {
+    return await db.query.commissionAdjustments.findMany({
+      where: eq(commissionAdjustments.salesRepId, salesRepId),
+      orderBy: desc(commissionAdjustments.approvedAt),
+    });
   }
 
-  async validateApprovalCode(code: string, email: string): Promise<boolean> {
-    const [approvalCode] = await db.select().from(approvalCodes).where(
-      and(
-        eq(approvalCodes.code, code),
-        eq(approvalCodes.contactEmail, email),
-        eq(approvalCodes.used, false),
-        sql`${approvalCodes.expiresAt} > NOW()`
-      )
-    );
-    return !!approvalCode;
-  }
+  // Dashboard analytics
+  async getRepDashboardStats(salesRepId: number): Promise<{
+    totalEarnings: number;
+    thisMonthEarnings: number;
+    totalClients: number;
+    thisMonthClients: number;
+    unpaidCommissions: number;
+    nextMilestone: { threshold: number; current: number; bonusAmount: number };
+  }> {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
 
-  async markApprovalCodeUsed(code: string, email: string): Promise<void> {
-    await db
-      .update(approvalCodes)
-      .set({ used: true })
-      .where(
-        and(
-          eq(approvalCodes.code, code),
-          eq(approvalCodes.contactEmail, email)
-        )
-      );
+    // Get total earnings
+    const totalEarningsResult = await db
+      .select({ 
+        sum: sql<number>`COALESCE(SUM(${commissions.commissionAmount}), 0)` 
+      })
+      .from(commissions)
+      .where(and(
+        eq(commissions.salesRepId, salesRepId),
+        eq(commissions.isPaid, true)
+      ));
+
+    // Get this month's earnings
+    const thisMonthEarningsResult = await db
+      .select({ 
+        sum: sql<number>`COALESCE(SUM(${commissions.commissionAmount}), 0)` 
+      })
+      .from(commissions)
+      .where(and(
+        eq(commissions.salesRepId, salesRepId),
+        eq(commissions.isPaid, true),
+        sql`EXTRACT(YEAR FROM ${commissions.createdAt}) = ${currentYear}`,
+        sql`EXTRACT(MONTH FROM ${commissions.createdAt}) = ${currentMonth}`
+      ));
+
+    // Get total clients
+    const totalClientsResult = await db
+      .select({ 
+        count: sql<number>`COUNT(DISTINCT ${deals.id})` 
+      })
+      .from(deals)
+      .where(eq(deals.salesRepId, salesRepId));
+
+    // Get this month's clients
+    const thisMonthClientsResult = await db
+      .select({ 
+        count: sql<number>`COUNT(DISTINCT ${deals.id})` 
+      })
+      .from(deals)
+      .where(and(
+        eq(deals.salesRepId, salesRepId),
+        sql`EXTRACT(YEAR FROM ${deals.closeDate}) = ${currentYear}`,
+        sql`EXTRACT(MONTH FROM ${deals.closeDate}) = ${currentMonth}`
+      ));
+
+    // Get unpaid commissions
+    const unpaidCommissionsResult = await db
+      .select({ 
+        sum: sql<number>`COALESCE(SUM(${commissions.commissionAmount}), 0)` 
+      })
+      .from(commissions)
+      .where(and(
+        eq(commissions.salesRepId, salesRepId),
+        eq(commissions.isPaid, false)
+      ));
+
+    const totalEarnings = totalEarningsResult[0]?.sum || 0;
+    const thisMonthEarnings = thisMonthEarningsResult[0]?.sum || 0;
+    const totalClients = totalClientsResult[0]?.count || 0;
+    const thisMonthClients = thisMonthClientsResult[0]?.count || 0;
+    const unpaidCommissions = unpaidCommissionsResult[0]?.sum || 0;
+
+    // Calculate next milestone
+    const milestones = [25, 40, 60, 100];
+    const nextThreshold = milestones.find(m => totalClients < m) || 100;
+    const bonusAmounts = { 25: 1000, 40: 5000, 60: 7500, 100: 10000 };
+    const bonusAmount = bonusAmounts[nextThreshold as keyof typeof bonusAmounts] || 0;
+
+    return {
+      totalEarnings,
+      thisMonthEarnings,
+      totalClients,
+      thisMonthClients,
+      unpaidCommissions,
+      nextMilestone: {
+        threshold: nextThreshold,
+        current: totalClients,
+        bonusAmount,
+      },
+    };
   }
 }
 

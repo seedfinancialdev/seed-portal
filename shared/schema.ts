@@ -1,99 +1,113 @@
-import { pgTable, text, serial, integer, decimal, timestamp, boolean } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { pgTable, serial, text, decimal, integer, boolean, timestamp, varchar } from 'drizzle-orm/pg-core';
+import { createInsertSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
-export const quotes = pgTable("quotes", {
-  id: serial("id").primaryKey(),
-  contactEmail: text("contact_email").notNull(),
-  revenueBand: text("revenue_band").notNull(),
-  monthlyTransactions: text("monthly_transactions").notNull(),
-  industry: text("industry").notNull(),
-  cleanupMonths: integer("cleanup_months").notNull(),
-  cleanupComplexity: decimal("cleanup_complexity", { precision: 3, scale: 2 }).notNull(),
-  cleanupOverride: boolean("cleanup_override").default(false).notNull(),
-  overrideReason: text("override_reason"),
-  approvalRequired: boolean("approval_required").default(false).notNull(),
-  monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
-  setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).notNull(),
-  // TaaS pricing fields
-  taasMonthlyFee: decimal("taas_monthly_fee", { precision: 10, scale: 2 }).default("0").notNull(),
-  taasPriorYearsFee: decimal("taas_prior_years_fee", { precision: 10, scale: 2 }).default("0").notNull(),
-  // Combined service flags
-  includesBookkeeping: boolean("includes_bookkeeping").default(true).notNull(),
-  includesTaas: boolean("includes_taas").default(false).notNull(),
-  archived: boolean("archived").default(false).notNull(),
-  // Quote type - 'bookkeeping' or 'taas'
-  quoteType: text("quote_type").default("bookkeeping").notNull(),
-  // TaaS-specific fields
-  entityType: text("entity_type"), // LLC, S-Corp, C-Corp, Partnership, Sole Prop, Non-Profit
-  numEntities: integer("num_entities"),
-  statesFiled: integer("states_filed"),
-  internationalFiling: boolean("international_filing"),
-  numBusinessOwners: integer("num_business_owners"),
-  bookkeepingQuality: text("bookkeeping_quality"), // Outside CPA, Self-Managed, Not Done / Behind
-  include1040s: boolean("include_1040s"),
-  priorYearsUnfiled: integer("prior_years_unfiled"),
-  alreadyOnSeedBookkeeping: boolean("already_on_seed_bookkeeping"),
-  // User ownership
-  ownerId: integer("owner_id").notNull(),
-  // HubSpot integration fields
-  hubspotContactId: text("hubspot_contact_id"),
-  hubspotDealId: text("hubspot_deal_id"),
-  hubspotQuoteId: text("hubspot_quote_id"),
-  hubspotContactVerified: boolean("hubspot_contact_verified").default(false),
-  companyName: text("company_name"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+// Sales Representatives table
+export const salesReps = pgTable('sales_reps', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  hubspotUserId: text('hubspot_user_id'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const insertQuoteSchema = createInsertSchema(quotes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+// Deals table - synced from HubSpot
+export const deals = pgTable('deals', {
+  id: serial('id').primaryKey(),
+  hubspotDealId: text('hubspot_deal_id').notNull().unique(),
+  dealName: text('deal_name').notNull(),
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  monthlyValue: decimal('monthly_value', { precision: 10, scale: 2 }),
+  setupFee: decimal('setup_fee', { precision: 10, scale: 2 }),
+  closeDate: timestamp('close_date'),
+  dealStage: text('deal_stage').notNull(),
+  dealOwner: text('deal_owner').notNull(), // HubSpot user ID
+  salesRepId: integer('sales_rep_id').references(() => salesReps.id),
+  companyName: text('company_name'),
+  serviceType: text('service_type'), // 'bookkeeping', 'taas', 'combined'
+  isCollected: boolean('is_collected').default(false).notNull(), // Revenue recognition
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const updateQuoteSchema = createInsertSchema(quotes).omit({
-  createdAt: true,
-}).partial().required({ id: true });
-
-export type InsertQuote = z.infer<typeof insertQuoteSchema>;
-export type Quote = typeof quotes.$inferSelect;
-
-// Users with HubSpot integration
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(), // @seedfinancial.io email
-  password: text("password").notNull(),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  hubspotUserId: text("hubspot_user_id"), // HubSpot user ID for ownership
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+// Commission records
+export const commissions = pgTable('commissions', {
+  id: serial('id').primaryKey(),
+  dealId: integer('deal_id').references(() => deals.id).notNull(),
+  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
+  commissionType: text('commission_type').notNull(), // 'month_1', 'setup_fee', 'residual'
+  rate: decimal('rate', { precision: 5, scale: 4 }).notNull(), // 0.4000 for 40%
+  baseAmount: decimal('base_amount', { precision: 10, scale: 2 }).notNull(),
+  commissionAmount: decimal('commission_amount', { precision: 10, scale: 2 }).notNull(),
+  monthNumber: integer('month_number'), // 1-12 for tracking residuals
+  isPaid: boolean('is_paid').default(false).notNull(),
+  paidAt: timestamp('paid_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+// Monthly bonus tracking
+export const monthlyBonuses = pgTable('monthly_bonuses', {
+  id: serial('id').primaryKey(),
+  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
+  month: integer('month').notNull(), // 1-12
+  year: integer('year').notNull(),
+  clientsClosed: integer('clients_closed').notNull(),
+  bonusLevel: text('bonus_level'), // '5_clients', '10_clients', '15_plus_clients'
+  bonusAmount: decimal('bonus_amount', { precision: 10, scale: 2 }),
+  bonusDescription: text('bonus_description'),
+  isPaid: boolean('is_paid').default(false).notNull(),
+  paidAt: timestamp('paid_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
-// Approval codes for cleanup overrides
-export const approvalCodes = pgTable("approval_codes", {
-  id: serial("id").primaryKey(),
-  code: text("code").notNull(),
-  contactEmail: text("contact_email").notNull(),
-  used: boolean("used").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
+// Milestone bonus tracking
+export const milestoneBonuses = pgTable('milestone_bonuses', {
+  id: serial('id').primaryKey(),
+  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
+  milestoneType: text('milestone_type').notNull(), // '25_clients', '40_clients', '60_clients', '100_clients'
+  totalClients: integer('total_clients').notNull(),
+  bonusAmount: decimal('bonus_amount', { precision: 10, scale: 2 }).notNull(),
+  bonusDescription: text('bonus_description'),
+  achievedAt: timestamp('achieved_at').defaultNow().notNull(),
+  isPaid: boolean('is_paid').default(false).notNull(),
+  paidAt: timestamp('paid_at'),
 });
 
-export const insertApprovalCodeSchema = createInsertSchema(approvalCodes).omit({
-  id: true,
-  createdAt: true,
+// Commission adjustments (admin overrides)
+export const commissionAdjustments = pgTable('commission_adjustments', {
+  id: serial('id').primaryKey(),
+  salesRepId: integer('sales_rep_id').references(() => salesReps.id).notNull(),
+  adjustmentType: text('adjustment_type').notNull(), // 'bonus', 'deduction', 'override'
+  amount: decimal('amount', { precision: 10, scale: 2 }).notNull(),
+  reason: text('reason').notNull(),
+  adminUserId: text('admin_user_id').notNull(),
+  approvedAt: timestamp('approved_at').defaultNow().notNull(),
+  isPaid: boolean('is_paid').default(false).notNull(),
+  paidAt: timestamp('paid_at'),
 });
 
-export type InsertApprovalCode = z.infer<typeof insertApprovalCodeSchema>;
-export type ApprovalCode = typeof approvalCodes.$inferSelect;
+// Create insert schemas
+export const insertSalesRepSchema = createInsertSchema(salesReps);
+export const insertDealSchema = createInsertSchema(deals);
+export const insertCommissionSchema = createInsertSchema(commissions);
+export const insertMonthlyBonusSchema = createInsertSchema(monthlyBonuses);
+export const insertMilestoneBonusSchema = createInsertSchema(milestoneBonuses);
+export const insertCommissionAdjustmentSchema = createInsertSchema(commissionAdjustments);
+
+// Create types
+export type SalesRep = typeof salesReps.$inferSelect;
+export type Deal = typeof deals.$inferSelect;
+export type Commission = typeof commissions.$inferSelect;
+export type MonthlyBonus = typeof monthlyBonuses.$inferSelect;
+export type MilestoneBonus = typeof milestoneBonuses.$inferSelect;
+export type CommissionAdjustment = typeof commissionAdjustments.$inferSelect;
+
+export type InsertSalesRep = z.infer<typeof insertSalesRepSchema>;
+export type InsertDeal = z.infer<typeof insertDealSchema>;
+export type InsertCommission = z.infer<typeof insertCommissionSchema>;
+export type InsertMonthlyBonus = z.infer<typeof insertMonthlyBonusSchema>;
+export type InsertMilestoneBonus = z.infer<typeof insertMilestoneBonusSchema>;
+export type InsertCommissionAdjustment = z.infer<typeof insertCommissionAdjustmentSchema>;
