@@ -145,6 +145,12 @@ Preferred communication style: Simple, everyday language.
   - **Fixed HubSpot API Empty Response Handling**: DELETE requests now properly handle 204 No Content responses without JSON parsing errors
   - **Database Connection Monitoring**: App may occasionally lose connection to Neon PostgreSQL when loading old quotes (transient issue)
 
+✓ **Fixed Critical Session Management Bug** (July 25, 2025)
+  - **Root Cause**: Logout only cleared user data but not quotes cache, causing next user to see previous user's quotes
+  - **Solution**: Modified logout mutation to invalidate and remove all quotes-related queries from React Query cache
+  - **Security Impact**: Prevents data leakage between user sessions
+  - **User Experience**: Clean session switching without residual data from previous users
+
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
   - **Eliminated Code Duplication**: Created `/shared/pricing.ts` with unified pricing logic used by both frontend and backend
   - **Component Extraction**: Built reusable components (QuoteTable, ContactSection, BookkeepingSection, TaasSection, ServiceCards, PricingDisplay, FormNavigation)

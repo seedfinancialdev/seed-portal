@@ -97,6 +97,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
+      // Clear all quotes-related cache to prevent showing previous user's data
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.removeQueries({ queryKey: ["/api/quotes"] });
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
