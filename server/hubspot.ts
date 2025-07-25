@@ -942,7 +942,7 @@ Generated: ${new Date().toLocaleDateString()}`;
         let exists = false;
         
         // Check if this item already exists (more specific matching)
-        for (const existingItem of refreshedLineItems) {
+        for (const existingItem of existingLineItems) {
           const itemName = existingItem.properties?.name || '';
           const isMatch = requiredItem.identifiers.some((id: string) => {
             // More precise matching to avoid false negatives
