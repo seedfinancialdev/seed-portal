@@ -1256,7 +1256,7 @@ export default function Home() {
           </div>
           
           {/* Back Button and Logo - Left */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -1272,10 +1272,10 @@ export default function Home() {
                 alt="Seed Financial Logo" 
                 className="h-10"
               />
+              <p className="text-lg text-gray-200 ml-4">
+                Internal Pricing Calculator
+              </p>
             </div>
-            <p className="text-lg text-gray-200">
-              Internal Pricing Calculator
-            </p>
           </div>
         </div>
 
