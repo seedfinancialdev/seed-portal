@@ -57,7 +57,7 @@ export default function Dashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-100">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -174,27 +174,27 @@ export default function Dashboard() {
       </header>
 
       {/* Executive Summary Bar */}
-      <div className="bg-gray-50 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-gradient-to-r from-[#253e31] via-[#2d4937] to-[#3a5d47] text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              <h1 className="text-2xl font-bold text-white mb-1">
                 Welcome back, {user?.email?.split('@')[0]}
               </h1>
-              <p className="text-sm text-gray-600">{currentDate}</p>
+              <p className="text-sm text-green-100">{currentDate}</p>
             </div>
             <div className="flex items-center space-x-8">
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">$127.3K</p>
-                <p className="text-xs text-gray-600 uppercase tracking-wide">Pipeline</p>
+                <p className="text-2xl font-bold text-white">$127.3K</p>
+                <p className="text-xs text-green-200 uppercase tracking-wide">Pipeline</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">18</p>
-                <p className="text-xs text-gray-600 uppercase tracking-wide">Active Leads</p>
+                <p className="text-2xl font-bold text-white">18</p>
+                <p className="text-xs text-green-200 uppercase tracking-wide">Active Leads</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">$89.2K</p>
-                <p className="text-xs text-gray-600 uppercase tracking-wide">MTD Revenue</p>
+                <p className="text-2xl font-bold text-white">$89.2K</p>
+                <p className="text-xs text-green-200 uppercase tracking-wide">MTD Revenue</p>
               </div>
             </div>
           </div>
@@ -217,7 +217,7 @@ export default function Dashboard() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <Link href="/calculator">
-                <Card className="hover:shadow-md transition-all cursor-pointer border border-gray-200">
+                <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
@@ -247,7 +247,7 @@ export default function Dashboard() {
                 </Card>
               </Link>
 
-              <Card className="hover:shadow-md transition-all cursor-pointer border border-gray-200">
+              <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -276,7 +276,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-all cursor-pointer border border-gray-200">
+              <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -305,7 +305,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-all cursor-pointer border border-gray-200">
+              <Card className="hover:shadow-lg transition-all cursor-pointer border border-gray-200 bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -336,7 +336,7 @@ export default function Dashboard() {
             </div>
 
             {/* Sales Inbox Preview */}
-            <Card className="mb-6">
+            <Card className="mb-6 bg-white/70 backdrop-blur-sm border border-gray-200">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -406,7 +406,7 @@ export default function Dashboard() {
           {/* Right Column - Resources & Intelligence */}
           <div className="space-y-6">
             {/* Knowledge Resources */}
-            <Card>
+            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-indigo-600" />
@@ -439,7 +439,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Meeting Vault */}
-            <Card>
+            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <Video className="h-5 w-5 text-green-600" />
@@ -478,7 +478,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Seed Academy */}
-            <Card>
+            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5 text-purple-600" />
@@ -511,7 +511,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Announcements */}
-            <Card>
+            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <Megaphone className="h-5 w-5 text-orange-600" />
@@ -521,7 +521,7 @@ export default function Dashboard() {
               <CardContent>
                 <div className="space-y-3">
                   <div className="border-l-4 border-l-green-500 pl-3">
-                    <p className="text-sm font-medium">New Proposal Engine Shipped! 🚀</p>
+                    <p className="text-sm font-medium">New Proposal Engine Shipped!</p>
                     <p className="text-xs text-gray-500 mt-1">Enhanced automation features now live</p>
                     <Button variant="link" className="p-0 h-auto text-xs text-blue-600">View Demo</Button>
                   </div>
@@ -538,7 +538,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Slack Integration Preview */}
-            <Card>
+            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-2">
                   <Slack className="h-5 w-5 text-purple-600" />
