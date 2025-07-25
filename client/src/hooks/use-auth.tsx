@@ -1,91 +1,128 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useLocation } from 'wouter';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { createContext, ReactNode, useContext } from "react";
+import {
+  useQuery,
+  useMutation,
+  UseMutationResult,
+} from "@tanstack/react-query";
+import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
+import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-interface User {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-}
-
-interface AuthContextType {
-  user: User | null;
+type AuthContextType = {
+  user: SelectUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
+  error: Error | null;
+  loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
+  logoutMutation: UseMutationResult<void, Error, void>;
+  registerMutation: UseMutationResult<SelectUser, Error, RegisterData>;
+};
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+type LoginData = {
+  email: string;
+  password: string;
+};
 
+type RegisterData = {
+  email: string;
+  password?: string; // Optional since default password is used
+};
+
+export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
-
-  // Check current authentication status
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['/auth/me'],
-    retry: false,
-    refetchOnWindowFocus: false,
+  const { toast } = useToast();
+  const {
+    data: user,
+    error,
+    isLoading,
+  } = useQuery<SelectUser | undefined, Error>({
+    queryKey: ["/api/user"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const loginMutation = useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const response = await fetch('/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
-      }
-
-      return response.json();
+    mutationFn: async (credentials: LoginData) => {
+      const res = await apiRequest("POST", "/api/login", credentials);
+      return await res.json();
     },
-    onSuccess: (userData) => {
-      queryClient.setQueryData(['/auth/me'], userData);
-      setLocation('/');
+    onSuccess: (user: SelectUser) => {
+      queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully logged in.",
+      });
+    },
+    onError: (error: Error) => {
+      const errorMessage = error.message;
+      let title = "Login failed";
+      let description = errorMessage;
+      
+      // Provide specific error messages for common cases
+      if (errorMessage.includes("Invalid email or password")) {
+        title = "Incorrect Password";
+        description = "The password you entered is incorrect. If you don't know your password or need to reset it, please reach out to your administrator.";
+      }
+      
+      toast({
+        title,
+        description,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async (credentials: RegisterData) => {
+      const res = await apiRequest("POST", "/api/register", credentials);
+      return await res.json();
+    },
+    onSuccess: (user: SelectUser) => {
+      queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Account created!",
+        description: "Welcome to Seed Financial Quote Calculator.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/auth/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Logout failed');
-      }
+      await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
-      queryClient.setQueryData(['/auth/me'], null);
-      queryClient.clear(); // Clear all cached data
-      setLocation('/auth');
+      queryClient.setQueryData(["/api/user"], null);
+      // Clear all quotes-related cache to prevent showing previous user's data
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.removeQueries({ queryKey: ["/api/quotes"] });
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Logout failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
-
-  const login = async (email: string, password: string) => {
-    await loginMutation.mutateAsync({ email, password });
-  };
-
-  const logout = async () => {
-    await logoutMutation.mutateAsync();
-  };
 
   return (
     <AuthContext.Provider
       value={{
-        user: user || null,
+        user: user ?? null,
         isLoading,
-        login,
-        logout,
+        error,
+        loginMutation,
+        logoutMutation,
+        registerMutation,
       }}
     >
       {children}
@@ -95,8 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

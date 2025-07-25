@@ -164,21 +164,6 @@ Preferred communication style: Simple, everyday language.
   - **TaaS Discount Clarification**: Added "(provides 15% discount)" text to Seed Bookkeeping Package checkbox for clarity
   - **Entity Type Addition**: Added "Non-Profit" to entity type dropdown with same pricing as C-Corp
 
-✓ **Bookkeeping Quality Field Labels Fixed** (July 25, 2025)
-  - **Corrected Display Labels**: Updated dropdown to show "Outside CPA", "Self-Managed", "Not Done / Behind"
-  - **Standardized Values**: Both database values and display labels now match user's preferred terminology
-  - **Consistency Across Components**: Fixed both main form and TaaS section to use identical options
-  - **Updated Schema Documentation**: Reflected new field values in database schema comments
-
-✓ **Commission Tracking System Project Initiated** (July 25, 2025)
-  - **Project Fork Created**: Set up separate commission-tracker directory with same proven architecture
-  - **Database Schema Designed**: Complete schema for sales reps, deals, commissions, bonuses, and adjustments
-  - **Commission Calculator Built**: Implements Seed Financial's exact commission structure (40%/20%/10% model)
-  - **Bonus System Logic**: Monthly bonuses (5/10/15+ clients) and milestone bonuses (25/40/60/100 clients)
-  - **Technical Foundation**: React + TypeScript + Express + PostgreSQL with HubSpot integration ready
-  - **Revenue Recognition**: Commission paid as earned (when company receives payment)
-  - **Separate Dashboards**: Planned rep and admin interfaces with performance tracking
-
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
   - **Eliminated Code Duplication**: Created `/shared/pricing.ts` with unified pricing logic used by both frontend and backend
   - **Component Extraction**: Built reusable components (QuoteTable, ContactSection, BookkeepingSection, TaasSection, ServiceCards, PricingDisplay, FormNavigation)

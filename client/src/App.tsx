@@ -1,47 +1,35 @@
-import { Router, Route, Switch } from 'wouter'
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@/hooks/use-auth";
-import ProtectedRoute from "@/lib/protected-route";
-import HomePage from "@/pages/home";
-import AuthPage from "@/pages/auth-page";
-import NotFoundPage from "@/pages/not-found";
+import { Switch, Route } from "wouter";
+import { queryClient } from "./lib/queryClient";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import "./index.css";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
+import NotFound from "@/pages/not-found";
+import Home from "@/pages/home.tsx";
+import AuthPage from "@/pages/auth-page";
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      queryFn: async ({ queryKey }) => {
-        const res = await fetch(queryKey[0] as string, {
-          credentials: 'include'
-        });
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        return res.json();
-      },
-    },
-  },
-});
+function Router() {
+  return (
+    <Switch>
+      <ProtectedRoute path="/" component={Home} />
+      <Route path="/auth" component={AuthPage} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <div className="min-h-screen bg-gray-50">
-            <Switch>
-              <Route path="/auth" component={AuthPage} />
-              <ProtectedRoute path="/" component={HomePage} />
-              <Route component={NotFoundPage} />
-            </Switch>
-          </div>
-        </Router>
-        <Toaster />
-      </AuthProvider>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <Router />
+        </AuthProvider>
+      </TooltipProvider>
     </QueryClientProvider>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -1,42 +1,27 @@
 import { z } from "zod";
+import { insertQuoteSchema } from "@shared/schema";
 
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
 
-// Create comprehensive form schema for the quote form
-export const formSchema = z.object({
-  // Contact Information
+// Create form schema without the calculated fields
+export const formSchema = insertQuoteSchema.omit({
+  monthlyFee: true,
+  setupFee: true,
+  taasMonthlyFee: true,
+  taasPriorYearsFee: true,
+  hubspotContactId: true,
+  hubspotDealId: true,
+  hubspotQuoteId: true,
+  hubspotContactVerified: true,
+}).extend({
   contactEmail: z.string().min(1, "Email is required").email("Please enter a valid email address"),
-  companyName: z.string().optional(),
-  
-  // Basic Quote Information
-  revenueBand: z.string().min(1, "Please select a revenue band"),
-  entityType: z.string().min(1, "Please select an entity type"),
-  transactionVolume: z.string().min(1, "Please select transaction volume"),
-  industryType: z.string().min(1, "Please select an industry type"),
-  
-  // Bookkeeping Fields
-  bookkeepingComplexity: z.string().min(1, "Please select complexity level"),
-  bookkeepingQuality: z.string().min(1, "Please select current quality"),
-  cleanupMonths: z.number().min(0, "Cannot be negative").max(24, "Maximum 24 months"),
-  customSetupFee: z.string().optional(),
-  
-  // Service Flags
-  includesBookkeeping: z.boolean().default(true),
-  includesTaas: z.boolean().default(false),
-  
-  // TaaS Fields
-  taasEntityType: z.string().optional(),
-  taasRevenueBand: z.string().optional(),
-  taasPriorYearsBehind: z.number().min(0).max(10).default(0),
-  
-  // Package and Override Fields
-  hasSeedPackage: z.boolean().default(false),
-  overrideReason: z.string().optional(),
+  cleanupMonths: z.number().min(0, "Cannot be negative"),
   cleanupOverride: z.boolean().default(false),
+  overrideReason: z.string().optional(),
   customOverrideReason: z.string().optional(),
-  
-  // TaaS Specific Fields
+  companyName: z.string().optional(),
+  // TaaS fields
   numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
   statesFiled: z.number().min(1, "Must file in at least 1 state").optional(),
   internationalFiling: z.boolean().optional(),
@@ -64,7 +49,7 @@ export const formSchema = z.object({
   }
   
   // If override is not checked or not approved, enforce minimum cleanup months (only for bookkeeping)
-  if (data.includesBookkeeping && !data.cleanupOverride && data.cleanupMonths < currentMonth) {
+  if (data.quoteType === 'bookkeeping' && !data.cleanupOverride && data.cleanupMonths < currentMonth) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: `Minimum ${currentMonth} months required (current calendar year) unless override is approved`,
@@ -73,7 +58,14 @@ export const formSchema = z.object({
   }
   
   // TaaS validations
-  if (data.includesTaas) {
+  if (data.quoteType === 'taas') {
+    if (!data.entityType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Entity type is required for TaaS quotes",
+        path: ["entityType"],
+      });
+    }
     if (!data.numEntities) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -93,6 +85,13 @@ export const formSchema = z.object({
         code: z.ZodIssueCode.custom,
         message: "Number of business owners is required for TaaS quotes",
         path: ["numBusinessOwners"],
+      });
+    }
+    if (!data.bookkeepingQuality) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bookkeeping quality is required for TaaS quotes",
+        path: ["bookkeepingQuality"],
       });
     }
     if (data.include1040s === undefined) {
