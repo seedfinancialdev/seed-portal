@@ -2118,7 +2118,7 @@ export default function Home() {
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel>Seed Bookkeeping Package</FormLabel>
-                              <p className="text-sm text-gray-500">Check if client is interested in or already using Seed Bookkeeping services</p>
+                              <p className="text-sm text-gray-500">Check if client is interested in or already using Seed Bookkeeping services (provides 15% discount)</p>
                             </div>
                           </FormItem>
                         )}

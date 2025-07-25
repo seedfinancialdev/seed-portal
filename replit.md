@@ -159,6 +159,10 @@ Preferred communication style: Simple, everyday language.
   - **User-Friendly Design**: Clear warnings and intuitive unlock process prevent accidental approval bypass
   - **Robust Security**: Impossible to bypass approval requirements through any UI interaction
 
+✓ **Minor UX Improvements** (July 25, 2025)
+  - **Login Error Fix**: Changed login error from "email not authorized" to "incorrect password" with admin contact instructions
+  - **TaaS Discount Clarification**: Added "(provides 15% discount)" text to Seed Bookkeeping Package checkbox for clarity
+
 ✓ **Major Code Refactoring and Layout Fixes Completed** (July 22, 2025)
   - **Eliminated Code Duplication**: Created `/shared/pricing.ts` with unified pricing logic used by both frontend and backend
   - **Component Extraction**: Built reusable components (QuoteTable, ContactSection, BookkeepingSection, TaasSection, ServiceCards, PricingDisplay, FormNavigation)

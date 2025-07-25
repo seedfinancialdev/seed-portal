@@ -58,8 +58,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Provide specific error messages for common cases
       if (errorMessage.includes("Invalid email or password")) {
-        title = "Access denied";
-        description = "This email address is not authorized to access the quote calculator. Only Seed Financial team members with active HubSpot accounts can log in.";
+        title = "Incorrect Password";
+        description = "The password you entered is incorrect. If you don't know your password or need to reset it, please reach out to your administrator.";
       }
       
       toast({
