@@ -51,7 +51,7 @@ export default function Dashboard() {
             <div></div>
             <Link href="/">
               <div className="flex items-center cursor-pointer">
-                <img src={navLogoPath} alt="Seed Financial" className="h-10" />
+                <img src={navLogoPath} alt="Seed Financial" className="h-16" />
               </div>
             </Link>
             
