@@ -500,6 +500,12 @@ export default function Home() {
   const [hasRequestedApproval, setHasRequestedApproval] = useState(false);
   const [customSetupFee, setCustomSetupFee] = useState<string>("");
   
+  // Approved values tracking - prevents bypassing approval system
+  const [approvedCleanupMonths, setApprovedCleanupMonths] = useState<number | null>(null);
+  const [approvedSetupFee, setApprovedSetupFee] = useState<number | null>(null);
+  const [originalCleanupMonths, setOriginalCleanupMonths] = useState<number>(currentMonth);
+  const [showApprovalWarning, setShowApprovalWarning] = useState(false);
+  
   // Archive dialog state
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [selectedQuoteForArchive, setSelectedQuoteForArchive] = useState<{id: number, email: string} | null>(null);
@@ -1146,12 +1152,22 @@ export default function Home() {
       const result = await response.json();
       
       if (result.valid) {
+        const currentFormValues = form.getValues();
+        
+        // Store approved values to prevent bypassing approval system
+        setApprovedCleanupMonths(currentFormValues.cleanupMonths);
+        const currentCalculation = calculateFees(currentFormValues);
+        const approvedFee = currentFormValues.customSetupFee ? 
+          parseInt(currentFormValues.customSetupFee) : 
+          currentCalculation.setupFee;
+        setApprovedSetupFee(approvedFee);
+        
         setIsApproved(true);
         setIsApprovalDialogOpen(false);
         setApprovalCode("");
         toast({
           title: "Approval Granted",
-          description: "You can now modify cleanup months.",
+          description: "You can now modify cleanup months. Values are locked to prevent bypassing approval.",
         });
       } else {
         toast({
@@ -1169,6 +1185,34 @@ export default function Home() {
       });
     } finally {
       setIsValidatingCode(false);
+    }
+  };
+
+  // Check if current values would require new approval
+  const requiresNewApproval = (currentFormValues: any): boolean => {
+    if (!isApproved || approvedCleanupMonths === null || approvedSetupFee === null) return false;
+    
+    const currentCalculation = calculateFees(currentFormValues);
+    const currentSetupFee = currentFormValues.customSetupFee ? 
+      parseInt(currentFormValues.customSetupFee) : 
+      currentCalculation.setupFee;
+    
+    // Requires new approval if cleanup months decreased OR setup fee decreased
+    return currentFormValues.cleanupMonths < approvedCleanupMonths || 
+           currentSetupFee < approvedSetupFee;
+  };
+
+  // Show warning dialog when user tries to change approved values
+  const handleApprovalWarning = (revertFn: () => void, continueFn: () => void) => {
+    const currentFormValues = form.getValues();
+    
+    if (requiresNewApproval(currentFormValues)) {
+      setShowApprovalWarning(true);
+      // Store the revert function for the warning dialog
+      (window as any).revertToApprovedValues = revertFn;
+      (window as any).continueWithNewApproval = continueFn;
+    } else {
+      continueFn();
     }
   };
 
@@ -1663,11 +1707,29 @@ export default function Home() {
                             {...field}
                             onChange={(e) => {
                               const value = parseInt(e.target.value);
+                              const currentValue = field.value;
+                              
                               if (isNaN(value)) {
                                 field.onChange(form.watch("cleanupOverride") ? 0 : currentMonth);
                               } else {
                                 const minValue = form.watch("cleanupOverride") ? 0 : currentMonth;
-                                field.onChange(Math.max(minValue, value));
+                                const newValue = Math.max(minValue, value);
+                                
+                                // FIX 3: Check if this reduction requires new approval
+                                if (isApproved && approvedCleanupMonths !== null && newValue < approvedCleanupMonths) {
+                                  handleApprovalWarning(
+                                    () => field.onChange(currentValue), // Revert function
+                                    () => {
+                                      field.onChange(newValue);
+                                      setIsApproved(false);
+                                      setApprovedCleanupMonths(null);
+                                      setApprovedSetupFee(null);
+                                      setHasRequestedApproval(false);
+                                    }
+                                  );
+                                } else {
+                                  field.onChange(newValue);
+                                }
                               }
                             }}
                           />
@@ -1687,15 +1749,21 @@ export default function Home() {
                           <FormControl>
                             <Checkbox
                               checked={field.value}
+                              disabled={isApproved} // FIX 2: Lock checkbox after approval code entered
                               onCheckedChange={(checked) => {
                                 field.onChange(checked);
                                 if (!checked) {
+                                  // FIX 1: Reset cleanup months to original value when unchecking
+                                  form.setValue("cleanupMonths", originalCleanupMonths);
                                   form.setValue("overrideReason", "");
                                   form.setValue("customOverrideReason", "");
                                   form.setValue("customSetupFee", "");
                                   setIsApproved(false);
                                   setHasRequestedApproval(false);
                                   setCustomSetupFee("");
+                                  // Clear approved values tracking
+                                  setApprovedCleanupMonths(null);
+                                  setApprovedSetupFee(null);
                                 }
                               }}
                             />
@@ -1820,8 +1888,26 @@ export default function Home() {
                                   onChange={(e) => {
                                     // Ensure whole numbers only
                                     const value = Math.floor(parseFloat(e.target.value) || 0).toString();
-                                    field.onChange(value);
-                                    setCustomSetupFee(value);
+                                    const currentValue = field.value;
+                                    const numericValue = parseInt(value);
+                                    
+                                    // FIX 3: Check if this reduction requires new approval
+                                    if (isApproved && approvedSetupFee !== null && numericValue < approvedSetupFee) {
+                                      handleApprovalWarning(
+                                        () => field.onChange(currentValue), // Revert function
+                                        () => {
+                                          field.onChange(value);
+                                          setCustomSetupFee(value);
+                                          setIsApproved(false);
+                                          setApprovedCleanupMonths(null);
+                                          setApprovedSetupFee(null);
+                                          setHasRequestedApproval(false);
+                                        }
+                                      );
+                                    } else {
+                                      field.onChange(value);
+                                      setCustomSetupFee(value);
+                                    }
                                   }}
                                 />
                               </div>
@@ -2959,6 +3045,53 @@ export default function Home() {
               className="bg-orange-600 hover:bg-orange-700 focus:ring-orange-600"
             >
               Load Quote
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Approval Warning Dialog */}
+      <AlertDialog open={showApprovalWarning} onOpenChange={setShowApprovalWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              New Approval Required
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are trying to reduce values below what was previously approved. This requires a new approval code.
+              <br /><br />
+              <strong>Your options:</strong>
+              <br />• <strong>Revert:</strong> Keep the previously approved values
+              <br />• <strong>Continue:</strong> Clear approval status and request a new code
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowApprovalWarning(false);
+              // Call the revert function stored in window
+              if ((window as any).revertToApprovedValues) {
+                (window as any).revertToApprovedValues();
+              }
+            }}>
+              Revert to Approved Values
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowApprovalWarning(false);
+                // Call the continue function stored in window
+                if ((window as any).continueWithNewApproval) {
+                  (window as any).continueWithNewApproval();
+                }
+                toast({
+                  title: "Approval Cleared",
+                  description: "You'll need to request a new approval code before saving.",
+                  variant: "destructive",
+                });
+              }}
+              className="bg-amber-600 hover:bg-amber-700 focus:ring-amber-600"
+            >
+              Continue & Request New Approval
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
