@@ -812,170 +812,149 @@ Generated: ${new Date().toLocaleDateString()}`;
     bookkeepingSetupFee: number;
   }): Promise<void> {
     try {
-      // Define service patterns for identification and management
-      const servicePatterns = {
-        bookkeeping: {
-          identifiers: ['Monthly Bookkeeping', 'Clean-Up', 'Catch-Up Project'],
-          shouldInclude: serviceConfig.includesBookkeeping && (serviceConfig.bookkeepingMonthlyFee > 0 || serviceConfig.bookkeepingSetupFee > 0),
-          lineItems: [
-            {
-              condition: serviceConfig.bookkeepingMonthlyFee > 0,
-              name: 'Monthly Bookkeeping (Custom)',
-              price: serviceConfig.bookkeepingMonthlyFee,
-              productId: '25687054003',
-              description: 'Seed Financial Monthly Bookkeeping (Custom)'
-            },
-            {
-              condition: serviceConfig.bookkeepingSetupFee > 0,
-              name: 'Clean-Up / Catch-Up Project',
-              price: serviceConfig.bookkeepingSetupFee,
-              productId: '25683750263',
-              description: 'Seed Financial Clean-Up / Catch-Up Project'
-            }
-          ]
-        },
-        taas: {
-          identifiers: ['TaaS', 'Tax as a Service', 'Monthly TaaS', 'TaaS Prior Years'],
-          shouldInclude: serviceConfig.includesTaas && (serviceConfig.taasMonthlyFee > 0 || serviceConfig.taasPriorYearsFee > 0),
-          lineItems: [
-            {
-              condition: serviceConfig.taasMonthlyFee > 0,
-              name: 'Monthly TaaS (Custom)',
-              price: serviceConfig.taasMonthlyFee,
-              productId: '25687054003', // Using bookkeeping product ID as placeholder
-              description: 'Seed Financial Monthly TaaS (Custom)'
-            },
-            {
-              condition: serviceConfig.taasPriorYearsFee > 0,
-              name: 'TaaS Prior Years (Custom)',
-              price: serviceConfig.taasPriorYearsFee,
-              productId: '25683750263', // Using cleanup product ID as placeholder
-              description: 'Seed Financial TaaS Prior Years (Custom)'
-            }
-          ]
+      console.log(`Managing line items for quote ${quoteId} - Bookkeeping: ${serviceConfig.includesBookkeeping}, TaaS: ${serviceConfig.includesTaas}`);
+      
+      // Define what line items should exist based on current service configuration
+      const requiredLineItems = new Map<string, any>();
+      
+      // Add bookkeeping line items if service is included
+      if (serviceConfig.includesBookkeeping) {
+        if (serviceConfig.bookkeepingMonthlyFee > 0) {
+          requiredLineItems.set('bookkeeping_monthly', {
+            name: 'Monthly Bookkeeping (Custom)',
+            price: serviceConfig.bookkeepingMonthlyFee,
+            productId: '25687054003',
+            description: 'Seed Financial Monthly Bookkeeping (Custom)',
+            identifiers: ['Monthly Bookkeeping']
+          });
         }
-        // Future services can be added here following the same pattern
-        // payroll: {
-        //   identifiers: ['Payroll', 'Payroll Services'],
-        //   shouldInclude: serviceConfig.includesPayroll,
-        //   lineItems: [...]
-        // }
-      };
-
-      // Remove line items for services that are no longer included
-      for (const [serviceName, config] of Object.entries(servicePatterns)) {
-        if (!config.shouldInclude) {
-          const lineItemsToDelete = existingLineItems.filter(item => {
-            const itemName = item.properties?.name || '';
-            return config.identifiers.some(identifier => itemName.includes(identifier));
+        if (serviceConfig.bookkeepingSetupFee > 0) {
+          requiredLineItems.set('bookkeeping_setup', {
+            name: 'Clean-Up / Catch-Up Project',
+            price: serviceConfig.bookkeepingSetupFee,
+            productId: '25683750263',
+            description: 'Seed Financial Clean-Up / Catch-Up Project',
+            identifiers: ['Clean-Up', 'Catch-Up Project']
+          });
+        }
+      }
+      
+      // Add TaaS line items if service is included
+      if (serviceConfig.includesTaas) {
+        if (serviceConfig.taasMonthlyFee > 0) {
+          requiredLineItems.set('taas_monthly', {
+            name: 'Monthly TaaS (Custom)',
+            price: serviceConfig.taasMonthlyFee,
+            productId: '25687054003',
+            description: 'Seed Financial Monthly TaaS (Custom)',
+            identifiers: ['Monthly TaaS', 'TaaS (Custom)']
+          });
+        }
+        if (serviceConfig.taasPriorYearsFee > 0) {
+          requiredLineItems.set('taas_setup', {
+            name: 'TaaS Prior Years (Custom)',
+            price: serviceConfig.taasPriorYearsFee,
+            productId: '25683750263',
+            description: 'Seed Financial TaaS Prior Years (Custom)',
+            identifiers: ['TaaS Prior Years', 'Prior Years (Custom)']
+          });
+        }
+      }
+      
+      // Step 1: Remove line items that shouldn't exist anymore
+      const itemsToDelete = [];
+      for (const existingItem of existingLineItems) {
+        const itemName = existingItem.properties?.name || '';
+        let shouldKeep = false;
+        
+        // Check if this item matches any required line item
+        for (const [key, requiredItem] of requiredLineItems) {
+          if (requiredItem.identifiers.some((id: string) => itemName.includes(id))) {
+            shouldKeep = true;
+            break;
+          }
+        }
+        
+        if (!shouldKeep) {
+          // Check if it's a service-related item that should be removed
+          const isServiceItem = 
+            itemName.includes('Monthly Bookkeeping') || 
+            itemName.includes('Clean-Up') || 
+            itemName.includes('Catch-Up') ||
+            itemName.includes('TaaS') ||
+            itemName.includes('Tax as');
+            
+          if (isServiceItem) {
+            itemsToDelete.push(existingItem);
+          }
+        }
+      }
+      
+      // Delete unnecessary items
+      for (const item of itemsToDelete) {
+        console.log(`Deleting unnecessary line item: ${item.id} (${item.properties?.name})`);
+        await this.makeRequest(`/crm/v3/objects/line_items/${item.id}`, {
+          method: 'DELETE'
+        });
+      }
+      
+      // Step 2: Add missing line items
+      for (const [key, requiredItem] of requiredLineItems) {
+        let exists = false;
+        
+        // Check if this item already exists
+        for (const existingItem of existingLineItems) {
+          const itemName = existingItem.properties?.name || '';
+          if (requiredItem.identifiers.some((id: string) => itemName.includes(id))) {
+            exists = true;
+            break;
+          }
+        }
+        
+        if (!exists) {
+          console.log(`Creating missing line item: ${requiredItem.name} - $${requiredItem.price}`);
+          
+          const lineItem = await this.makeRequest('/crm/v3/objects/line_items', {
+            method: 'POST',
+            body: JSON.stringify({
+              properties: {
+                name: requiredItem.name,
+                price: requiredItem.price.toString(),
+                quantity: '1',
+                hs_product_id: requiredItem.productId,
+                hs_sku: requiredItem.productId,
+                description: requiredItem.description
+              }
+            })
           });
 
-          for (const lineItem of lineItemsToDelete) {
-            console.log(`Deleting ${serviceName} line item: ${lineItem.id} (${lineItem.properties?.name})`);
-            await this.makeRequest(`/crm/v3/objects/line_items/${lineItem.id}`, {
-              method: 'DELETE'
+          if (lineItem && lineItem.id) {
+            await this.makeRequest(`/crm/v4/associations/quotes/line_items/batch/create`, {
+              method: 'POST',
+              body: JSON.stringify({
+                inputs: [{
+                  from: { id: quoteId },
+                  to: { id: lineItem.id },
+                  types: [{
+                    associationCategory: "HUBSPOT_DEFINED",
+                    associationTypeId: 67
+                  }]
+                }]
+              })
             });
-            console.log(`Successfully deleted ${serviceName} line item: ${lineItem.id}`);
-          }
-
-          if (lineItemsToDelete.length > 0) {
-            console.log(`Removed ${lineItemsToDelete.length} ${serviceName} line items from quote`);
+            console.log(`Successfully added line item: ${requiredItem.name} - $${requiredItem.price}`);
           }
         }
       }
-
-      // Add missing line items for services that should be included
-      for (const [serviceName, config] of Object.entries(servicePatterns)) {
-        if (config.shouldInclude) {
-          console.log(`Adding missing ${serviceName} line items`);
-          await this.addMissingServiceLineItems(quoteId, serviceName, config, existingLineItems);
-        }
-      }
+      
+      console.log(`Line item management completed for quote ${quoteId}`);
     } catch (error) {
       console.error('Error managing service line items:', error);
       throw error;
     }
   }
 
-  private async addMissingServiceLineItems(quoteId: string, serviceName: string, serviceConfig: any, existingLineItems: any[]): Promise<void> {
-    try {
-      // Get existing line item names for this service - be more specific with matching
-      const existingServiceItems = new Set<string>();
-      for (const lineItem of existingLineItems) {
-        const lineItemName = lineItem.properties?.name || '';
-        if (serviceConfig.identifiers.some((id: string) => lineItemName.includes(id))) {
-          // More specific matching to avoid conflicts
-          if (serviceName === 'bookkeeping') {
-            if (lineItemName.includes('Monthly Bookkeeping')) {
-              existingServiceItems.add('monthly');
-            }
-            if (lineItemName.includes('Clean-Up') || lineItemName.includes('Catch-Up')) {
-              existingServiceItems.add('setup');
-            }
-          } else if (serviceName === 'taas') {
-            if (lineItemName.includes('Monthly TaaS') || lineItemName.includes('TaaS (Custom)')) {
-              existingServiceItems.add('monthly');
-            }
-            if (lineItemName.includes('TaaS Prior Years') || lineItemName.includes('Prior Years (Custom)')) {
-              existingServiceItems.add('setup');
-            }
-          }
-        }
-      }
 
-      // Add missing line items
-      for (const lineItemConfig of serviceConfig.lineItems) {
-        if (!lineItemConfig.condition) continue;
-
-        // Determine item type more specifically
-        let itemType = 'setup';
-        if (lineItemConfig.name.includes('Monthly')) {
-          itemType = 'monthly';
-        }
-
-        if (existingServiceItems.has(itemType)) {
-          console.log(`${serviceName} ${itemType} line item already exists, skipping`);
-          continue;
-        }
-
-        console.log(`Creating ${serviceName} ${itemType} line item: $${lineItemConfig.price}`);
-        const lineItem = await this.makeRequest('/crm/v3/objects/line_items', {
-          method: 'POST',
-          body: JSON.stringify({
-            properties: {
-              name: lineItemConfig.name,
-              price: lineItemConfig.price.toString(),
-              quantity: '1',
-              hs_product_id: lineItemConfig.productId,
-              hs_sku: lineItemConfig.productId,
-              description: lineItemConfig.description
-            }
-          })
-        });
-
-        if (lineItem && lineItem.id) {
-          // Associate with quote using the working pattern
-          await this.makeRequest(`/crm/v4/associations/quotes/line_items/batch/create`, {
-            method: 'POST',
-            body: JSON.stringify({
-              inputs: [{
-                from: { id: quoteId },
-                to: { id: lineItem.id },
-                types: [{
-                  associationCategory: "HUBSPOT_DEFINED",
-                  associationTypeId: 67
-                }]
-              }]
-            })
-          });
-          console.log(`Added ${serviceName} ${itemType} line item with quote: $${lineItemConfig.price}`);
-        }
-      }
-    } catch (error) {
-      console.error(`Error adding missing ${serviceName} line items:`, error);
-      throw error;
-    }
-  }
 
 
 
