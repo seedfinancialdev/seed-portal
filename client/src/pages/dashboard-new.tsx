@@ -45,50 +45,50 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] animate-in fade-in duration-1000">
       {/* Transparent Header */}
-      <header className="bg-transparent z-50 py-4">
+      <header className="bg-transparent z-50 py-4 relative">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="flex items-center justify-between h-20">
-            <div></div>
+          <div className="flex items-center justify-center h-20">
             <Link href="/">
               <div className="flex items-center cursor-pointer">
                 <img src={navLogoPath} alt="Seed Financial" className="h-16" />
               </div>
             </Link>
-            
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" className="relative p-2 hover:bg-white/10 text-white">
-                <Bell className="h-4 w-4" />
-                <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
-                    <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                      {user?.email?.charAt(0).toUpperCase()}
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <div className="px-3 py-2 border-b">
-                    <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
-                    <p className="text-xs text-gray-500">{user?.email}</p>
+          </div>
+          
+          {/* User Menu - Positioned Absolutely */}
+          <div className="absolute top-4 right-6 flex items-center space-x-2">
+            <Button variant="ghost" size="sm" className="relative p-2 hover:bg-white/10 text-white">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
+                  <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                    {user?.email?.charAt(0).toUpperCase()}
                   </div>
-                  <DropdownMenuItem className="text-sm">
-                    <User className="mr-2 h-3 w-3" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-sm">
-                    <Settings className="mr-2 h-3 w-3" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 text-sm">
-                    <LogOut className="mr-2 h-3 w-3" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <div className="px-3 py-2 border-b">
+                  <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+                <DropdownMenuItem className="text-sm">
+                  <User className="mr-2 h-3 w-3" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-sm">
+                  <Settings className="mr-2 h-3 w-3" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 text-sm">
+                  <LogOut className="mr-2 h-3 w-3" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>
