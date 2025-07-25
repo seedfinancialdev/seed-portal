@@ -769,8 +769,8 @@ Generated: ${new Date().toLocaleDateString()}`;
 
       // Handle service-specific line items based on quote configuration
       await this.manageServiceLineItems(quoteId, refreshedLineItems, {
-        includesBookkeeping,
-        includesTaas,
+        includesBookkeeping: includesBookkeeping ?? false,
+        includesTaas: includesTaas ?? false,
         taasMonthlyFee: taasMonthlyFee || 0,
         taasPriorYearsFee: taasPriorYearsFee || 0,
         bookkeepingMonthlyFee: bookkeepingMonthlyFee || 0,
@@ -905,7 +905,7 @@ Generated: ${new Date().toLocaleDateString()}`;
         let shouldKeep = false;
         
         // Check if this item matches any required line item by product ID
-        for (const [key, requiredItem] of requiredLineItems) {
+        for (const [key, requiredItem] of Array.from(requiredLineItems.entries())) {
           if (productId === requiredItem.productId) {
             shouldKeep = true;
             break;
@@ -940,7 +940,7 @@ Generated: ${new Date().toLocaleDateString()}`;
       
       // Step 2: Update existing line items or create missing ones
       console.log(`Processing line items. Required: ${requiredLineItems.size}`);
-      for (const [key, requiredItem] of requiredLineItems) {
+      for (const [key, requiredItem] of Array.from(requiredLineItems.entries())) {
         let existingItem = null;
         console.log(`Processing ${key} (${requiredItem.name})...`);
         

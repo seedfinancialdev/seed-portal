@@ -8,7 +8,7 @@ export interface PricingData {
   cleanupMonths?: number;
   cleanupComplexity?: string;
   cleanupOverride?: boolean;
-  overrideReason?: string;
+  overrideReason?: string | null;
   customSetupFee?: string;
   // TaaS specific fields
   includesTaas?: boolean;

@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updateTaasPriorYearsFee,
         updateBookkeepingMonthlyFee,
         updateBookkeepingSetupFee,
-        quote.hubspotDealId // Pass deal ID for updating deal name and value
+        quote.hubspotDealId || undefined // Pass deal ID for updating deal name and value
       );
 
       if (success) {
