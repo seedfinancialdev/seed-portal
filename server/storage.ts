@@ -1,5 +1,6 @@
 import { users, quotes, approvalCodes, type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, updateQuoteSchema } from "@shared/schema";
 import { db } from "./db";
+import { safeDbQuery } from "./db-utils";
 import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
 import session from "express-session";
@@ -41,13 +42,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return await safeDbQuery(async () => {
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user || undefined;
+    }, 'getUser');
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    return await safeDbQuery(async () => {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      return user || undefined;
+    }, 'getUserByEmail');
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -59,15 +64,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
-    const [quote] = await db
-      .insert(quotes)
-      .values(insertQuote)
-      .returning();
-    return quote;
+    return await safeDbQuery(async () => {
+      const [quote] = await db
+        .insert(quotes)
+        .values(insertQuote)
+        .returning();
+      return quote;
+    }, 'createQuote');
   }
 
   async updateQuote(updateQuote: UpdateQuote): Promise<Quote> {
-    try {
+    return await safeDbQuery(async () => {
       const [quote] = await db
         .update(quotes)
         .set({ ...updateQuote, updatedAt: new Date() })
@@ -79,10 +86,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       return quote;
-    } catch (error: any) {
-      console.error('Error updating quote:', error);
-      throw error;
-    }
+    }, 'updateQuote');
   }
 
   async archiveQuote(id: number): Promise<Quote> {

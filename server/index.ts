@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { checkDatabaseHealth, closeDatabaseConnections } from "./db";
 
 const app = express();
 app.use(express.json());
@@ -39,12 +40,27 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Enhanced error handler with database error handling
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    let message = err.message || "Internal Server Error";
 
+    // Handle database connection errors gracefully
+    if (err.code === 'ECONNRESET' || err.code === 'ENOTFOUND' || 
+        err.message?.includes('connection') || err.message?.includes('timeout')) {
+      console.error('Database connection error:', err);
+      message = "Database temporarily unavailable. Please try again.";
+      res.status(503).json({ message });
+      return; // Don't throw - just log and return error response
+    }
+
+    console.error('Server error:', err);
     res.status(status).json({ message });
-    throw err;
+    
+    // Only throw for critical errors that should crash the app
+    if (status >= 500 && !err.message?.includes('connection')) {
+      throw err;
+    }
   });
 
   // importantly only setup vite in development and after
@@ -61,11 +77,48 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+  
+  // Check database health on startup
+  const isDbHealthy = await checkDatabaseHealth();
+  if (!isDbHealthy) {
+    console.warn('Database health check failed - continuing with degraded functionality');
+  }
+  
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+  });
+
+  // Graceful shutdown handlers
+  process.on('SIGINT', async () => {
+    console.log('Received SIGINT, shutting down gracefully');
+    await closeDatabaseConnections();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', async () => {
+    console.log('Received SIGTERM, shutting down gracefully');
+    await closeDatabaseConnections();
+    process.exit(0);
+  });
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't exit on unhandled rejections - just log them
+  });
+
+  // Handle uncaught exceptions
+  process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    // For database errors, try to recover instead of crashing
+    if (error.message?.includes('connection') || error.message?.includes('timeout')) {
+      console.log('Database connection error detected - attempting recovery');
+      return; // Don't exit
+    }
+    process.exit(1); // Exit for other critical errors
   });
 })();
