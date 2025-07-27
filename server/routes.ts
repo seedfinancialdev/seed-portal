@@ -542,6 +542,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Return the enhanced data including Airtable fields
       const companyName = contact.properties?.company;
+      const { airtableService } = await import('./airtable.js');
       const airtableData = companyName ? await airtableService.getEnrichedCompanyData(companyName, contact.properties?.email) : null;
       
       res.json({ 
