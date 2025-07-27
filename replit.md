@@ -200,7 +200,10 @@ Preferred communication style: Simple, everyday language.
   - **Upsell Opportunity Detection**: AI identifies service gaps and generates estimated revenue opportunities
   - **Pre-call Snapshots**: AI-generated sales preparation summaries for SDR team
   - **Data Quality Handling**: Fixed "Unknown" industry tags with intelligent fallback display logic
-  - **Real-time Debug Logging**: Enhanced service detection debugging for accurate deal-to-service mapping
+  - **Lifecycle Stage Tagging**: Client/Prospect tags based on HubSpot lifecycle stage (customer = Client, others = Prospect)
+  - **Contact Ownership Filtering**: Users only see HubSpot contacts assigned to them
+  - **Real-time Data Refresh**: Disabled React Query caching to ensure fresh HubSpot data on every search
+  - **Data Consistency Fix**: Implemented fresh contact data fetching to prevent stale lifecycle stage information
 
 ✓ **Live Weather Integration and Enhanced Dashboard Polish** (July 27, 2025)
   - **Live Weather API Integration**: Connected to Open-Meteo API (free, no API key required) for real-time weather data

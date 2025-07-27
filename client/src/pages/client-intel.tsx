@@ -68,13 +68,15 @@ export default function ClientIntel() {
 
   // Search for clients/prospects
   const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["/api/client-intel/search", searchTerm],
+    queryKey: ["/api/client-intel/search", searchTerm, Date.now()], // Add timestamp to prevent caching
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
       const response = await apiRequest("GET", `/api/client-intel/search?q=${encodeURIComponent(searchTerm)}`);
       return response.json();
     },
-    enabled: searchTerm.length > 2
+    enabled: searchTerm.length > 2,
+    staleTime: 0, // Always consider data stale
+    gcTime: 0, // Don't cache results
   });
 
   // Generate AI insights for selected client
