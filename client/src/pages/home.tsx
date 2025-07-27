@@ -1939,6 +1939,29 @@ export default function Home() {
                       />
                     </>
                   )}
+
+                  {/* QBO Subscription Checkbox */}
+                  <FormField
+                    control={form.control}
+                    name="qboSubscription"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value || false}
+                            onCheckedChange={field.onChange}
+                            className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Add QBO Subscription?</FormLabel>
+                          <p className="text-sm text-gray-500">
+                            Adds $80/month to the bookkeeping monthly fee
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
                   </div>
                   )}
 
@@ -2426,6 +2449,12 @@ export default function Home() {
                                       <div className="flex justify-between pl-4 text-xs text-green-600">
                                         <span>Industry Multiplier ({feeCalculation.bookkeeping.breakdown.industryMultiplier.toFixed(1)}x):</span>
                                         <span>${feeCalculation.bookkeeping.breakdown.finalMonthly.toLocaleString()}</span>
+                                      </div>
+                                    )}
+                                    {form.watch('qboSubscription') && (
+                                      <div className="flex justify-between pl-4 text-xs text-green-600">
+                                        <span>QBO Subscription:</span>
+                                        <span>+$80</span>
                                       </div>
                                     )}
                                   </>

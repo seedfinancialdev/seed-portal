@@ -37,6 +37,7 @@ export const quotes = pgTable("quotes", {
   include1040s: boolean("include_1040s"),
   priorYearsUnfiled: integer("prior_years_unfiled"),
   alreadyOnSeedBookkeeping: boolean("already_on_seed_bookkeeping"),
+  qboSubscription: boolean("qbo_subscription").default(false),
   // User ownership
   ownerId: integer("owner_id").notNull(),
   // HubSpot integration fields

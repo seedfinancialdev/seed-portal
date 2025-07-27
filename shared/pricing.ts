@@ -22,6 +22,7 @@ export interface PricingData {
   include1040s?: boolean;
   priorYearsUnfiled?: number;
   alreadyOnSeedBookkeeping?: boolean;
+  qboSubscription?: boolean;
   entityType?: string;
   bookkeepingQuality?: string;
 }
@@ -106,7 +107,12 @@ export function calculateBookkeepingFees(data: PricingData): FeeResult {
   const industryData = PRICING_CONSTANTS.industryMultipliers[data.industry as keyof typeof PRICING_CONSTANTS.industryMultipliers] || { monthly: 1, cleanup: 1 };
   
   // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
-  const monthlyFee = Math.round((PRICING_CONSTANTS.baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  let monthlyFee = Math.round((PRICING_CONSTANTS.baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
+  
+  // Add QBO Subscription fee if selected
+  if (data.qboSubscription) {
+    monthlyFee += 80;
+  }
   
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
