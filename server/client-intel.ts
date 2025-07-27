@@ -10,6 +10,7 @@ interface ProspectProfile {
   industry: string;
   revenue?: string;
   employees?: number;
+  lifecycleStage?: string;
   hubspotProperties: any;
   dealHistory: any[];
   recentActivities: any[];
@@ -273,6 +274,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
             industry: contact.properties.industry || null,
             revenue: contact.properties.annualrevenue,
             employees: parseInt(contact.properties.numemployees) || undefined,
+            lifecycleStage: contact.properties.lifecyclestage || 'lead',
             hubspotProperties: contact.properties,
             dealHistory: [], // Would fetch from HubSpot deals API
             recentActivities: [] // Would fetch from HubSpot activities API

@@ -539,6 +539,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               industry: contact.properties.industry || null,
               revenue: contact.properties.annualrevenue,
               employees: parseInt(contact.properties.numemployees) || undefined,
+              lifecycleStage: contact.properties.lifecyclestage || 'lead',
               services: await clientIntelEngine.getContactServices(clientId),
               hubspotProperties: contact.properties,
               lastActivity: contact.properties.lastmodifieddate,

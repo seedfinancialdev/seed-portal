@@ -47,6 +47,7 @@ interface ClientSnapshot {
   industry: string;
   revenue: string;
   employees: number;
+  lifecycleStage?: string;
   hubspotContact: any;
   qboData: any;
   quotes: any[];
@@ -250,9 +251,17 @@ export default function ClientIntel() {
                             }{client.revenue || 'Revenue not specified'}
                           </p>
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          {client.services?.length || 0} services
-                        </Badge>
+                        <div className="flex gap-1">
+                          <Badge 
+                            variant={client.lifecycleStage === 'customer' ? "default" : "secondary"} 
+                            className="text-xs"
+                          >
+                            {client.lifecycleStage === 'customer' ? 'Client' : 'Prospect'}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {client.services?.length || 0} services
+                          </Badge>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -286,6 +295,17 @@ export default function ClientIntel() {
                         <div>
                           <CardTitle className="text-white text-xl">{selectedClient.companyName}</CardTitle>
                           <p className="text-white/80">{selectedClient.email}</p>
+                          <div className="flex gap-2 mt-2">
+                            <Badge 
+                              variant={selectedClient.lifecycleStage === 'customer' ? "default" : "secondary"} 
+                              className="px-2 py-1"
+                            >
+                              {selectedClient.lifecycleStage === 'customer' ? 'Client' : 'Prospect'}
+                            </Badge>
+                            <Badge variant="outline" className="px-2 py-1 text-white border-white/30">
+                              {selectedClient.services?.length || 0} Services
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                       <Button
