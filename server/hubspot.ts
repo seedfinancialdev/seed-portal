@@ -610,33 +610,107 @@ Services Include:
     }
   }
 
-  // Search contacts for Client Intelligence
-  async searchContacts(query: string): Promise<any[]> {
+  // Search contacts for Client Intelligence with owner filtering
+  async searchContacts(query: string, ownerEmail?: string): Promise<any[]> {
     try {
-      // Search using HubSpot's search API
-      const searchBody = {
-        query: query,
-        limit: 20,
-        properties: [
-          'email',
-          'firstname', 
-          'lastname',
-          'company',
-          'industry',
-          'annualrevenue',
-          'numemployees',
-          'phone',
-          'city',
-          'state',
-          'country',
-          'notes_last_contacted',
-          'notes_last_activity_date',
-          'hs_lead_status',
-          'lifecyclestage',
-          'createdate',
-          'lastmodifieddate'
-        ]
-      };
+      let searchBody: any;
+      
+      if (ownerEmail) {
+        // Get the HubSpot owner ID for the email first
+        const ownerId = await this.getOwnerByEmail(ownerEmail);
+        
+        if (ownerId) {
+          // Use advanced search with owner filter
+          searchBody = {
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName: 'hubspot_owner_id',
+                    operator: 'EQ',
+                    value: ownerId
+                  }
+                ]
+              }
+            ],
+            query: query,
+            limit: 20,
+            properties: [
+              'email',
+              'firstname', 
+              'lastname',
+              'company',
+              'industry',
+              'annualrevenue',
+              'numemployees',
+              'phone',
+              'city',
+              'state',
+              'country',
+              'notes_last_contacted',
+              'notes_last_activity_date',
+              'hs_lead_status',
+              'lifecyclestage',
+              'createdate',
+              'lastmodifieddate',
+              'hubspot_owner_id'
+            ]
+          };
+        } else {
+          console.log(`Owner not found for email ${ownerEmail}, searching all contacts`);
+          // Fallback to general search if owner not found
+          searchBody = {
+            query: query,
+            limit: 20,
+            properties: [
+              'email',
+              'firstname', 
+              'lastname',
+              'company',
+              'industry',
+              'annualrevenue',
+              'numemployees',
+              'phone',
+              'city',
+              'state',
+              'country',
+              'notes_last_contacted',
+              'notes_last_activity_date',
+              'hs_lead_status',
+              'lifecyclestage',
+              'createdate',
+              'lastmodifieddate',
+              'hubspot_owner_id'
+            ]
+          };
+        }
+      } else {
+        // No owner filter, search all contacts
+        searchBody = {
+          query: query,
+          limit: 20,
+          properties: [
+            'email',
+            'firstname', 
+            'lastname',
+            'company',
+            'industry',
+            'annualrevenue',
+            'numemployees',
+            'phone',
+            'city',
+            'state',
+            'country',
+            'notes_last_contacted',
+            'notes_last_activity_date',
+            'hs_lead_status',
+            'lifecyclestage',
+            'createdate',
+            'lastmodifieddate',
+            'hubspot_owner_id'
+          ]
+        };
+      }
 
       const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
         method: 'POST',

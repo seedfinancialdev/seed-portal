@@ -255,14 +255,14 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
   }
 
   // Search HubSpot contacts with enriched data
-  async searchHubSpotContacts(query: string): Promise<any[]> {
+  async searchHubSpotContacts(query: string, ownerEmail?: string): Promise<any[]> {
     try {
       if (!hubSpotService) {
         throw new Error("HubSpot not configured");
       }
 
-      // Search contacts in HubSpot
-      const contacts = await hubSpotService.searchContacts(query);
+      // Search contacts in HubSpot with owner filtering
+      const contacts = await hubSpotService.searchContacts(query, ownerEmail);
       
       // Enrich each contact with additional analysis
       const enrichedContacts = await Promise.all(

@@ -498,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client Intel API endpoints
   
-  // Search for clients/prospects using HubSpot
+  // Search for clients/prospects using HubSpot with owner filtering
   app.get("/api/client-intel/search", requireAuth, async (req, res) => {
     try {
       const query = req.query.q as string;
@@ -506,8 +506,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
-      // Search HubSpot contacts with AI enrichment
-      const results = await clientIntelEngine.searchHubSpotContacts(query);
+      // Get the logged-in user's email for owner filtering
+      const userEmail = (req as any).user?.email;
+      
+      // Search HubSpot contacts with AI enrichment, filtered by owner
+      const results = await clientIntelEngine.searchHubSpotContacts(query, userEmail);
       res.json(results);
     } catch (error) {
       console.error('Client search error:', error);
