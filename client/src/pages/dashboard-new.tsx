@@ -24,19 +24,47 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
+import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
 
 interface WeatherData {
-  temperature: number;
+  temperature: number | null;
   condition: string;
   location: string;
+  isLoading: boolean;
 }
+
+// Weather icon component
+const getWeatherIcon = (condition: string) => {
+  const iconProps = { className: "h-4 w-4 text-white/70" };
+  
+  switch (condition.toLowerCase()) {
+    case 'clear':
+    case 'sunny':
+      return <Sun {...iconProps} />;
+    case 'partly cloudy':
+      return <Cloud {...iconProps} />;
+    case 'cloudy':
+      return <Cloud {...iconProps} />;
+    case 'rainy':
+      return <CloudRain {...iconProps} />;
+    case 'showers':
+      return <CloudDrizzle {...iconProps} />;
+    case 'snowy':
+      return <CloudSnow {...iconProps} />;
+    case 'stormy':
+      return <Zap {...iconProps} />;
+    default:
+      return <Cloud {...iconProps} />;
+  }
+};
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   const [weather, setWeather] = useState<WeatherData>({
-    temperature: 72,
-    condition: 'loading...',
-    location: 'Marina Del Rey, CA'
+    temperature: null,
+    condition: '',
+    location: 'Marina Del Rey, CA',
+    isLoading: true
   });
 
   const handleLogout = () => {
@@ -84,12 +112,18 @@ export default function Dashboard() {
         setWeather({
           temperature: Math.round(currentWeather.temperature),
           condition: getCondition(currentWeather.weathercode),
-          location: 'Marina Del Rey, CA'
+          location: 'Marina Del Rey, CA',
+          isLoading: false
         });
       } catch (error) {
         console.error('Failed to fetch weather:', error);
-        // Keep default values on error
-        setWeather(prev => ({ ...prev, condition: 'sunny' }));
+        // Fallback to pleasant default on error
+        setWeather({
+          temperature: 72,
+          condition: 'clear',
+          location: 'Marina Del Rey, CA',
+          isLoading: false
+        });
       }
     };
 
@@ -157,7 +191,18 @@ export default function Dashboard() {
           <h1 className="text-3xl font-light text-white mb-2">
             {getGreeting()}, {user?.email?.split('@')[0]?.charAt(0).toUpperCase() + user?.email?.split('@')[0]?.slice(1)}!
           </h1>
-          <p className="text-white/70 text-sm">{weather.temperature}°F and {weather.condition} in {weather.location}</p>
+          <div className="flex items-center justify-center gap-2 text-white/70 text-sm">
+            {weather.isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-pulse">Loading weather...</div>
+              </div>
+            ) : (
+              <>
+                {getWeatherIcon(weather.condition)}
+                <span>{weather.temperature}°F and {weather.condition} in {weather.location}</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Key Metrics Cards */}
