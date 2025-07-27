@@ -304,6 +304,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
             industry: prospectProfile.industry,
             revenue: prospectProfile.revenue,
             employees: prospectProfile.employees,
+            lifecycleStage: prospectProfile.lifecycleStage,
             services: await this.getContactServices(contact.id),
             riskScore,
             painPoints,
