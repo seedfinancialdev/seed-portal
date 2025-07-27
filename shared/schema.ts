@@ -80,6 +80,131 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Sales Representatives (extends users)
+export const salesReps = pgTable("sales_reps", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  startDate: timestamp("start_date").defaultNow().notNull(),
+  endDate: timestamp("end_date"),
+  totalClientsClosedMonthly: integer("total_clients_closed_monthly").default(0).notNull(),
+  totalClientsClosedAllTime: integer("total_clients_closed_all_time").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Deals (imported from HubSpot)
+export const deals = pgTable("deals", {
+  id: serial("id").primaryKey(),
+  hubspotDealId: text("hubspot_deal_id").notNull().unique(),
+  dealName: text("deal_name").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  setupFee: decimal("setup_fee", { precision: 10, scale: 2 }).default("0").notNull(),
+  monthlyFee: decimal("monthly_fee", { precision: 10, scale: 2 }).notNull(),
+  stage: text("stage").notNull(), // HubSpot deal stage
+  status: text("status").notNull().default("open"), // open, closed_won, closed_lost
+  ownerId: integer("owner_id").notNull().references(() => users.id), // Sales rep
+  hubspotOwnerId: text("hubspot_owner_id"),
+  closedDate: timestamp("closed_date"),
+  serviceType: text("service_type").notNull(), // bookkeeping, taas, combined
+  companyName: text("company_name"),
+  contactEmail: text("contact_email"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastSyncedAt: timestamp("last_synced_at").defaultNow().notNull(),
+});
+
+// Commission Entries
+export const commissions = pgTable("commissions", {
+  id: serial("id").primaryKey(),
+  dealId: integer("deal_id").notNull().references(() => deals.id),
+  salesRepId: integer("sales_rep_id").notNull().references(() => salesReps.id),
+  type: text("type").notNull(), // month_1, residual
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  status: text("status").notNull().default("pending"), // pending, processing, paid
+  monthNumber: integer("month_number").notNull(), // 1, 2, 3, etc.
+  dateEarned: timestamp("date_earned").notNull(),
+  datePaid: timestamp("date_paid"),
+  paymentMethod: text("payment_method"), // direct_deposit, check, etc.
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Monthly Bonuses
+export const monthlyBonuses = pgTable("monthly_bonuses", {
+  id: serial("id").primaryKey(),
+  salesRepId: integer("sales_rep_id").notNull().references(() => salesReps.id),
+  month: text("month").notNull(), // YYYY-MM format
+  clientsClosedCount: integer("clients_closed_count").notNull(),
+  bonusAmount: decimal("bonus_amount", { precision: 10, scale: 2 }).notNull(),
+  bonusType: text("bonus_type").notNull(), // cash, airpods, apple_watch, macbook_air
+  status: text("status").notNull().default("pending"), // pending, processing, paid
+  dateEarned: timestamp("date_earned").notNull(),
+  datePaid: timestamp("date_paid"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Milestone Bonuses
+export const milestoneBonuses = pgTable("milestone_bonuses", {
+  id: serial("id").primaryKey(),
+  salesRepId: integer("sales_rep_id").notNull().references(() => salesReps.id),
+  milestone: integer("milestone").notNull(), // 25, 40, 60, 100
+  bonusAmount: decimal("bonus_amount", { precision: 10, scale: 2 }).notNull(),
+  includesEquity: boolean("includes_equity").default(false).notNull(),
+  status: text("status").notNull().default("pending"), // pending, processing, paid
+  dateEarned: timestamp("date_earned").notNull(),
+  datePaid: timestamp("date_paid"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Schema exports for commission tracking
+export const insertSalesRepSchema = createInsertSchema(salesReps).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDealSchema = createInsertSchema(deals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastSyncedAt: true,
+});
+
+export const insertCommissionSchema = createInsertSchema(commissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMonthlyBonusSchema = createInsertSchema(monthlyBonuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMilestoneBonusSchema = createInsertSchema(milestoneBonuses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSalesRep = z.infer<typeof insertSalesRepSchema>;
+export type SalesRep = typeof salesReps.$inferSelect;
+export type InsertDeal = z.infer<typeof insertDealSchema>;
+export type Deal = typeof deals.$inferSelect;
+export type InsertCommission = z.infer<typeof insertCommissionSchema>;
+export type Commission = typeof commissions.$inferSelect;
+export type InsertMonthlyBonus = z.infer<typeof insertMonthlyBonusSchema>;
+export type MonthlyBonus = typeof monthlyBonuses.$inferSelect;
+export type InsertMilestoneBonus = z.infer<typeof insertMilestoneBonusSchema>;
+export type MilestoneBonus = typeof milestoneBonuses.$inferSelect;
+
 // Approval codes for cleanup overrides
 export const approvalCodes = pgTable("approval_codes", {
   id: serial("id").primaryKey(),
