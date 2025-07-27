@@ -68,7 +68,7 @@ export default function ClientIntel() {
 
   // Search for clients/prospects
   const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["/api/client-intel/search", searchTerm, Date.now()], // Add timestamp to prevent caching
+    queryKey: ["/api/client-intel/search", searchTerm],
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
       const response = await apiRequest("GET", `/api/client-intel/search?q=${encodeURIComponent(searchTerm)}`);
@@ -77,6 +77,8 @@ export default function ClientIntel() {
     enabled: searchTerm.length > 2,
     staleTime: 0, // Always consider data stale
     gcTime: 0, // Don't cache results
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   // Generate AI insights for selected client
