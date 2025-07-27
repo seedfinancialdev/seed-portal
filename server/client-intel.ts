@@ -434,11 +434,15 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
       const airtableData = await airtableService.getEnrichedCompanyData(companyName, contactEmail);
       if (airtableData) {
         console.log(`✅ Found enriched data in Airtable for ${companyName}`);
-        return {
+        
+        // Filter out invalid values that would cause HubSpot validation errors
+        const cleanedData = this.sanitizeCompanyData({
           ...airtableData,
           domain: airtableData.website ? this.extractDomainFromWebsite(airtableData.website) : this.extractDomainFromCompanyName(companyName),
           country: 'US'
-        };
+        });
+        
+        return cleanedData;
       }
 
       console.log(`No Airtable data found for ${companyName}, using AI generation`);
@@ -487,7 +491,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
         console.log(`AI generated invalid industry "${aiData.industry}" for ${companyName}, using COMPUTER_SOFTWARE`);
       }
       
-      const enhancedData = {
+      const enhancedData = this.sanitizeCompanyData({
         name: companyName,
         domain: aiData.website ? this.extractDomainFromWebsite(aiData.website) : this.extractDomainFromCompanyName(companyName),
         city: aiData.city || contact.properties?.city,
@@ -498,7 +502,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
         numberofemployees: aiData.numberofemployees?.toString(),
         website: aiData.website,
         linkedin_company_page: aiData.linkedin_company_page
-      };
+      });
 
       // Store the AI-generated data in Airtable for future use
       await airtableService.createCompanyRecord(enhancedData);
@@ -536,6 +540,49 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
     } catch {
       return website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
     }
+  }
+
+  // Clean company data to remove invalid values that would cause HubSpot validation errors
+  private sanitizeCompanyData(data: any): any {
+    const invalidValues = ['Not found', 'not found', 'N/A', 'n/a', 'null', 'undefined', '', null, undefined];
+    
+    const cleanedData: any = {};
+    
+    // Always include required name field
+    cleanedData.name = data.name;
+    
+    // Only include other fields if they have valid values
+    Object.keys(data).forEach(key => {
+      if (key === 'name') return; // Already handled
+      
+      const value = data[key];
+      
+      // Skip invalid values
+      if (invalidValues.includes(value) || 
+          (typeof value === 'string' && invalidValues.includes(value.toLowerCase().trim()))) {
+        return;
+      }
+      
+      // Special validation for domain - must be valid domain format
+      if (key === 'domain' && typeof value === 'string') {
+        if (value.includes('Not found') || value.includes('not found') || !value.includes('.')) {
+          return; // Skip invalid domains
+        }
+      }
+      
+      // Special validation for website - must be valid URL format
+      if (key === 'website' && typeof value === 'string') {
+        if (value.includes('Not found') || value.includes('not found')) {
+          return; // Skip invalid websites
+        }
+      }
+      
+      // Include valid values
+      cleanedData[key] = value;
+    });
+    
+    console.log(`Sanitized company data for ${data.name}:`, Object.keys(cleanedData).join(', '));
+    return cleanedData;
   }
 
   // Enhance existing company data with missing fields
