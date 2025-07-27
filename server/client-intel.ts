@@ -268,6 +268,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
       // Enrich each contact with additional analysis
       const enrichedContacts = await Promise.all(
         contacts.map(async (contact: any) => {
+          console.log(`Contact ${contact.id} lifecycle stage: "${contact.properties.lifecyclestage}"`);
           const prospectProfile: ProspectProfile = {
             email: contact.properties.email,
             companyName: contact.properties.company || 'Unknown Company',

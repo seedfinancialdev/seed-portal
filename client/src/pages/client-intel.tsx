@@ -253,10 +253,10 @@ export default function ClientIntel() {
                         </div>
                         <div className="flex gap-1">
                           <Badge 
-                            variant={client.lifecycleStage === 'customer' ? "default" : "secondary"} 
+                            variant={client.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
                             className="text-xs"
                           >
-                            {client.lifecycleStage === 'customer' ? 'Client' : 'Prospect'}
+                            {client.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
                             {client.services?.length || 0} services
@@ -297,10 +297,10 @@ export default function ClientIntel() {
                           <p className="text-white/80">{selectedClient.email}</p>
                           <div className="flex gap-2 mt-2">
                             <Badge 
-                              variant={selectedClient.lifecycleStage === 'customer' ? "default" : "secondary"} 
+                              variant={selectedClient.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
                               className="px-2 py-1"
                             >
-                              {selectedClient.lifecycleStage === 'customer' ? 'Client' : 'Prospect'}
+                              {selectedClient.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
                             </Badge>
                             <Badge variant="outline" className="px-2 py-1 text-white border-white/30">
                               {selectedClient.services?.length || 0} Services
