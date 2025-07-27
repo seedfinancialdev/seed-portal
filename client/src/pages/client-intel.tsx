@@ -57,6 +57,14 @@ interface ClientSnapshot {
   riskScore: number;
   upsellOpportunities: string[];
   documents: any[];
+  airtableData?: {
+    lead_score?: number;
+    contact_verified?: string;
+    business_operational?: string;
+    urgency?: string;
+    description?: string;
+    [key: string]: any;
+  };
 }
 
 export default function ClientIntel() {
@@ -475,6 +483,48 @@ export default function ClientIntel() {
                         )) || <p className="text-white/70 text-sm">No services recorded</p>}
                       </div>
                     </div>
+
+                    {/* Prospect Intelligence from Airtable */}
+                    {selectedClient.lifecycleStage?.toLowerCase() !== 'customer' && selectedClient.airtableData && (
+                      <div className="mb-4">
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                          <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                            <Target className="h-4 w-4" />
+                            Prospect Intelligence
+                          </h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-blue-800">Lead Score:</span>
+                              <div className="mt-1 text-blue-700 font-semibold">{selectedClient.airtableData.lead_score || 'Not set'}</div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-blue-800">Contact Verified:</span>
+                              <div className="mt-1 text-blue-700">
+                                {selectedClient.airtableData.contact_verified === 'YES' ? '✅ Verified' : selectedClient.airtableData.contact_verified || 'Not verified'}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-blue-800">Business Operational:</span>
+                              <div className="mt-1 text-blue-700">
+                                {selectedClient.airtableData.business_operational === 'YES' ? '✅ Active' : selectedClient.airtableData.business_operational || 'Unknown'}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-blue-800">Urgency:</span>
+                              <div className="mt-1 text-blue-700 capitalize">{selectedClient.airtableData.urgency || 'Not set'}</div>
+                            </div>
+                          </div>
+                          {selectedClient.airtableData.description && (
+                            <div className="mt-4">
+                              <span className="font-medium text-blue-800">Reasoning Summary:</span>
+                              <p className="mt-1 text-blue-700 text-sm">
+                                {selectedClient.airtableData.description}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
