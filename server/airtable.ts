@@ -3,28 +3,32 @@ import Airtable from 'airtable';
 interface AirtableRecord {
   id: string;
   fields: {
-    'Company Name'?: string;
-    'Business Name'?: string;
-    'Industry'?: string;
-    'Annual Revenue'?: number;
-    'Employee Count'?: number;
-    'Website'?: string;
-    'LinkedIn'?: string;
-    'City'?: string;
-    'State'?: string;
-    'Postal Code'?: string;
-    'ZIP'?: string;
+    'Lead ID'?: number;
+    'Name'?: string;
+    'Email'?: string;
     'Phone'?: string;
-    'Description'?: string;
-    'Notes'?: string;
-    'Founded Year'?: number;
-    'Technology Stack'?: string[];
-    'Business Model'?: string;
-    'Target Market'?: string;
-    'Key Contacts'?: string[];
-    'Lead Source'?: string;
+    'Lead Type'?: string;
+    'Industry'?: string;
+    'Revenue'?: string;
     'Status'?: string;
-    'Last Updated'?: string;
+    'Date Added'?: string;
+    'Company Name'?: string;
+    'Delivered Count'?: number;
+    'Urgency'?: string;
+    'Fully Assigned'?: boolean;
+    'Enriched?'?: boolean;
+    'Lead Score'?: number;
+    'Contact Verified'?: string;
+    'Business Operational'?: string;
+    'Company Website'?: string;
+    'LinkedIn Company Page'?: string;
+    'Reasoning Summary'?: string;
+    'Location'?: string;
+    'Email (Formatted)'?: string;
+    'Phone (Formatted)'?: string;
+    'Lead Source'?: string;
+    'Bookkeeping Status'?: string;
+    'Date & Time Added'?: string;
   };
 }
 
@@ -53,30 +57,22 @@ export class AirtableService {
     try {
       console.log(`🔍 Searching Airtable BK Leads table for company: ${companyName}`);
       
-      // First, let's just get a few records to see what fields exist
+      // Search for matching company records using the correct field name
       const records = await this.base(this.tableName)
         .select({
-          maxRecords: 3
+          filterByFormula: `SEARCH("${companyName.toLowerCase()}", LOWER({Company Name})) > 0`,
+          maxRecords: 1
         })
         .firstPage();
-      
-      console.log(`📋 Available fields in first record:`, records.length > 0 ? Object.keys(records[0].fields) : 'No records found');
-      
-      // Try to find matching records with available fields
-      const matchingRecords = records.filter(record => {
-        const fields = record.fields;
-        const companyField = fields['Company'] || fields['Company Name'] || fields['Business Name'] || '';
-        return companyField.toString().toLowerCase().includes(companyName.toLowerCase());
-      });
 
-      if (matchingRecords.length > 0) {
-        console.log(`✅ Found matching Airtable record for ${companyName}`);
+      if (records.length > 0) {
+        console.log(`✅ Found Airtable record for ${companyName}`);
         return {
-          id: matchingRecords[0].id,
-          fields: matchingRecords[0].fields
+          id: records[0].id,
+          fields: records[0].fields
         };
       } else {
-        console.log(`❌ No matching record found for ${companyName} in ${records.length} records checked`);
+        console.log(`❌ No Airtable record found for ${companyName}`);
         return null;
       }
     } catch (error) {
@@ -94,23 +90,24 @@ export class AirtableService {
     
     // Map Airtable BK Leads fields to HubSpot field names
     return {
-      name: fields['Company Name'] || fields['Business Name'] || companyName,
+      name: fields['Company Name'] || companyName,
       industry: this.mapToHubSpotIndustry(fields['Industry']),
-      annualrevenue: fields['Annual Revenue']?.toString(),
-      numberofemployees: fields['Employee Count']?.toString(),
-      website: fields['Website'],
-      linkedin_company_page: fields['LinkedIn'],
-      city: fields['City'],
-      state: fields['State'],
-      zip: fields['Postal Code'] || fields['ZIP'],
-      phone: fields['Phone'],
-      description: fields['Description'] || fields['Notes'],
-      founded_year: fields['Founded Year']?.toString(),
-      web_technologies: fields['Technology Stack'] ? (Array.isArray(fields['Technology Stack']) ? fields['Technology Stack'].join(', ') : fields['Technology Stack']) : undefined,
-      business_model: fields['Business Model'],
-      target_market: fields['Target Market'],
+      annualrevenue: fields['Revenue'],
+      website: fields['Company Website'],
+      linkedin_company_page: fields['LinkedIn Company Page'],
+      phone: fields['Phone'] || fields['Phone (Formatted)'],
+      description: fields['Reasoning Summary'],
+      city: this.extractCityFromLocation(fields['Location']),
+      state: this.extractStateFromLocation(fields['Location']),
       lead_source: fields['Lead Source'],
+      lead_type: fields['Lead Type'],
       contact_status: fields['Status'],
+      bookkeeping_status: fields['Bookkeeping Status'],
+      lead_score: fields['Lead Score'],
+      contact_verified: fields['Contact Verified'],
+      business_operational: fields['Business Operational'],
+      urgency: fields['Urgency'],
+      enriched: fields['Enriched?'],
       airtable_id: record.id,
       last_enriched: new Date().toISOString()
     };
@@ -185,19 +182,19 @@ export class AirtableService {
       const record = await this.base(this.tableName).create([
         {
           fields: {
-            'Business Name': companyData.name,
             'Company Name': companyData.name,
             'Industry': companyData.industry,
-            'Annual Revenue': companyData.annualrevenue ? parseInt(companyData.annualrevenue) : undefined,
-            'Employee Count': companyData.numberofemployees ? parseInt(companyData.numberofemployees) : undefined,
-            'Website': companyData.website,
-            'LinkedIn': companyData.linkedin_company_page,
-            'City': companyData.city,
-            'State': companyData.state,
-            'ZIP': companyData.zip,
-            'Status': 'AI Enhanced',
+            'Revenue': companyData.annualrevenue,
+            'Company Website': companyData.website,
+            'LinkedIn Company Page': companyData.linkedin_company_page,
+            'Phone': companyData.phone,
+            'Location': companyData.city && companyData.state ? `${companyData.city}, ${companyData.state}` : undefined,
             'Lead Source': 'HubSpot Integration',
-            'Last Updated': new Date().toISOString()
+            'Status': 'Available',
+            'Enriched?': true,
+            'Date Added': new Date().toISOString().split('T')[0],
+            'Date & Time Added': new Date().toISOString(),
+            'Reasoning Summary': `AI-enhanced data from HubSpot integration for ${companyData.name}`
           }
         }
       ]);
@@ -229,6 +226,20 @@ export class AirtableService {
       console.error('Error updating Airtable record:', error);
       return false;
     }
+  }
+
+  // Helper method to extract city from location string
+  private extractCityFromLocation(location?: string): string | undefined {
+    if (!location) return undefined;
+    const parts = location.split(',');
+    return parts[0]?.trim();
+  }
+
+  // Helper method to extract state from location string  
+  private extractStateFromLocation(location?: string): string | undefined {
+    if (!location) return undefined;
+    const parts = location.split(',');
+    return parts[1]?.trim();
   }
 }
 
