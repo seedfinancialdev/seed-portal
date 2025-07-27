@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **QBO Subscription Feature Added** (July 27, 2025)
+  - Added QBO Subscription checkbox to bookkeeping section below Override Minimum Cleanup
+  - Checkbox adds flat $80/month to bookkeeping monthly fee when selected
+  - Updated database schema with qbo_subscription boolean field
+  - Integrated with both local calculateFees and shared pricing logic
+  - Added QBO subscription line item to pricing breakdown display
+  - Feature works for both new quotes and saved quote updates
+
 ✓ **Employee Portal Implementation** (July 25, 2025)
   - Transformed application into Seed Financial Internal Employee Portal
   - Created dashboard landing page with professional card-based navigation
