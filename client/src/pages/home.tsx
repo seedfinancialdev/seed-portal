@@ -90,6 +90,7 @@ const formSchema = insertQuoteSchema.omit({
   include1040s: z.boolean().optional(),
   priorYearsUnfiled: z.number().min(0, "Cannot be negative").max(5, "Maximum 5 years").optional(),
   alreadyOnSeedBookkeeping: z.boolean().optional(),
+  qboSubscription: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   // If cleanup override is checked, require a reason
   if (data.cleanupOverride && !data.overrideReason) {
@@ -294,7 +295,12 @@ function calculateFees(data: Partial<FormData>) {
   // Step-by-step calculation for breakdown
   const afterRevenue = baseMonthlyFee * revenueMultiplier;
   const afterTx = afterRevenue + txFee;
-  const monthlyFee = Math.round(afterTx * industryData.monthly);
+  let monthlyFee = Math.round(afterTx * industryData.monthly);
+  
+  // Add QBO Subscription fee if selected
+  if (data.qboSubscription) {
+    monthlyFee += 80;
+  }
   
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
@@ -618,6 +624,7 @@ export default function Home() {
       include1040s: false,
       priorYearsUnfiled: 0,
       alreadyOnSeedBookkeeping: false,
+      qboSubscription: false,
     },
   });
 
