@@ -97,6 +97,43 @@ export class HubSpotService {
 
     if (!response.ok) {
       const errorText = await response.text();
+      
+      // Handle rate limiting with retry
+      if (response.status === 429) {
+        console.log('Rate limited by HubSpot, waiting before retry...');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        
+        // Retry once after rate limit
+        const retryResponse = await fetch(`${this.baseUrl}${endpoint}`, {
+          ...options,
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+        });
+        
+        if (!retryResponse.ok) {
+          const retryErrorText = await retryResponse.text();
+          console.error('HubSpot API retry failed:', {
+            status: retryResponse.status,
+            statusText: retryResponse.statusText,
+            endpoint,
+            errorResponse: retryErrorText
+          });
+          throw new Error(`HubSpot API error: ${retryResponse.status} ${retryResponse.statusText} - ${retryErrorText}`);
+        }
+        
+        const contentType = retryResponse.headers.get('content-type');
+        const contentLength = retryResponse.headers.get('content-length');
+        
+        if (retryResponse.status === 204 || contentLength === '0' || !contentType?.includes('application/json')) {
+          return null;
+        }
+        
+        return retryResponse.json();
+      }
+      
       console.error(`HubSpot API error details:`, {
         status: response.status,
         statusText: response.statusText,
@@ -620,7 +657,7 @@ Services Include:
         const ownerId = await this.getOwnerByEmail(ownerEmail);
         
         if (ownerId) {
-          // Use advanced search with owner filter
+          // Use advanced search with owner filter and multiple field search
           searchBody = {
             filterGroups: [
               {
@@ -634,6 +671,12 @@ Services Include:
               }
             ],
             query: query,
+            sorts: [
+              {
+                propertyName: 'lastmodifieddate',
+                direction: 'DESCENDING'
+              }
+            ],
             limit: 20,
             properties: [
               'email',
@@ -661,6 +704,12 @@ Services Include:
           // Fallback to general search if owner not found
           searchBody = {
             query: query,
+            sorts: [
+              {
+                propertyName: 'lastmodifieddate',
+                direction: 'DESCENDING'
+              }
+            ],
             limit: 20,
             properties: [
               'email',
@@ -688,6 +737,12 @@ Services Include:
         // No owner filter, search all contacts
         searchBody = {
           query: query,
+          sorts: [
+            {
+              propertyName: 'lastmodifieddate',
+              direction: 'DESCENDING'
+            }
+          ],
           limit: 20,
           properties: [
             'email',
