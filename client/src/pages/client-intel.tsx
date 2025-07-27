@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Search, 
@@ -74,6 +74,17 @@ export default function ClientIntel() {
   const [selectedClient, setSelectedClient] = useState<ClientSnapshot | null>(null);
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
+  // Debounced search term to prevent excessive API calls
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   // Enhance prospect data mutation
   const enhanceDataMutation = useMutation({
     mutationFn: async (contactId: string) => {
@@ -129,20 +140,34 @@ export default function ClientIntel() {
     }
   };
 
-  // Search for clients/prospects
-  const { data: searchResults, isLoading: isSearching } = useQuery({
-    queryKey: ["/api/client-intel/search", searchTerm],
+  // Search for clients/prospects with error handling
+  const { data: searchResults, isLoading: isSearching, error: searchError } = useQuery({
+    queryKey: ["/api/client-intel/search", debouncedSearchTerm],
     queryFn: async () => {
-      if (!searchTerm.trim()) return [];
-      const response = await apiRequest("GET", `/api/client-intel/search?q=${encodeURIComponent(searchTerm)}`);
+      if (!debouncedSearchTerm.trim()) return [];
+      const response = await apiRequest("GET", `/api/client-intel/search?q=${encodeURIComponent(debouncedSearchTerm)}`);
       return response.json();
     },
-    enabled: searchTerm.length > 2,
-    staleTime: 0, // Always consider data stale
-    gcTime: 0, // Don't cache results
-    refetchOnMount: true,
+    enabled: debouncedSearchTerm.length > 2,
+    staleTime: 30000, // Cache for 30 seconds instead of 0
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: 1000,
   });
+
+  // Handle search errors with useEffect
+  useEffect(() => {
+    if (searchError) {
+      console.error('Search error:', searchError);
+      toast({
+        title: "Search Failed",
+        description: "Unable to search contacts. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [searchError, toast]);
 
   // Generate AI insights for selected client
   const generateInsightsMutation = useMutation({
@@ -154,12 +179,14 @@ export default function ClientIntel() {
       if (selectedClient) {
         setSelectedClient({ ...selectedClient, ...data });
       }
+      setIsGeneratingInsights(false);
       toast({
         title: "Insights Generated",
         description: "AI analysis complete with new recommendations."
       });
     },
     onError: (error: any) => {
+      setIsGeneratingInsights(false);
       toast({
         title: "Analysis Failed",
         description: error.message || "Failed to generate insights. Please try again.",

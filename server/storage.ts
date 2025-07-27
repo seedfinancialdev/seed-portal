@@ -56,11 +56,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
+    return await safeDbQuery(async () => {
+      const [user] = await db
+        .insert(users)
+        .values(insertUser)
+        .returning();
+      
+      if (!user) {
+        throw new Error('Failed to create user');
+      }
+      
+      return user;
+    }, 'createUser');
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
@@ -90,99 +97,128 @@ export class DatabaseStorage implements IStorage {
   }
 
   async archiveQuote(id: number): Promise<Quote> {
-    const [quote] = await db
-      .update(quotes)
-      .set({ archived: true, updatedAt: new Date() })
-      .where(eq(quotes.id, id))
-      .returning();
-    return quote;
+    return await safeDbQuery(async () => {
+      const [quote] = await db
+        .update(quotes)
+        .set({ archived: true, updatedAt: new Date() })
+        .where(eq(quotes.id, id))
+        .returning();
+      
+      if (!quote) {
+        throw new Error(`Quote with ID ${id} not found or could not be archived`);
+      }
+      
+      return quote;
+    }, 'archiveQuote');
   }
 
   async getQuotesByEmail(email: string): Promise<Quote[]> {
-    return await db.select().from(quotes).where(
-      and(eq(quotes.contactEmail, email), eq(quotes.archived, false))
-    );
+    return await safeDbQuery(async () => {
+      return await db.select().from(quotes).where(
+        and(eq(quotes.contactEmail, email), eq(quotes.archived, false))
+      );
+    }, 'getQuotesByEmail');
   }
 
   async getQuote(id: number): Promise<Quote | undefined> {
-    const [quote] = await db.select().from(quotes).where(
-      and(eq(quotes.id, id), eq(quotes.archived, false))
-    );
-    return quote || undefined;
+    return await safeDbQuery(async () => {
+      const [quote] = await db.select().from(quotes).where(
+        and(eq(quotes.id, id), eq(quotes.archived, false))
+      );
+      return quote || undefined;
+    }, 'getQuote');
   }
 
   async getAllQuotes(ownerId: number, search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]> {
-    const ownerFilter = eq(quotes.ownerId, ownerId);
-    const archivedFilter = eq(quotes.archived, false);
-    const baseFilter = and(ownerFilter, archivedFilter);
-    
-    if (search && sortField && sortOrder) {
-      const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
-                         sortField === 'updatedAt' ? quotes.updatedAt :
-                         sortField === 'monthlyFee' ? quotes.monthlyFee :
-                         sortField === 'setupFee' ? quotes.setupFee :
-                         quotes.updatedAt;
+    return await safeDbQuery(async () => {
+      const ownerFilter = eq(quotes.ownerId, ownerId);
+      const archivedFilter = eq(quotes.archived, false);
+      const baseFilter = and(ownerFilter, archivedFilter);
       
-      return await db.select().from(quotes)
-        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
-        .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
-    } else if (search) {
-      return await db.select().from(quotes)
-        .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
-        .orderBy(desc(quotes.updatedAt));
-    } else if (sortField && sortOrder) {
-      const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
-                         sortField === 'updatedAt' ? quotes.updatedAt :
-                         sortField === 'monthlyFee' ? quotes.monthlyFee :
-                         sortField === 'setupFee' ? quotes.setupFee :
-                         quotes.updatedAt;
-      
-      return await db.select().from(quotes)
-        .where(baseFilter)
-        .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
-    } else {
-      return await db.select().from(quotes)
-        .where(baseFilter)
-        .orderBy(desc(quotes.updatedAt));
-    }
+      if (search && sortField && sortOrder) {
+        const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
+                           sortField === 'updatedAt' ? quotes.updatedAt :
+                           sortField === 'monthlyFee' ? quotes.monthlyFee :
+                           sortField === 'setupFee' ? quotes.setupFee :
+                           quotes.updatedAt;
+        
+        return await db.select().from(quotes)
+          .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
+          .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
+      } else if (search) {
+        return await db.select().from(quotes)
+          .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
+          .orderBy(desc(quotes.updatedAt));
+      } else if (sortField && sortOrder) {
+        const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
+                           sortField === 'updatedAt' ? quotes.updatedAt :
+                           sortField === 'monthlyFee' ? quotes.monthlyFee :
+                           sortField === 'setupFee' ? quotes.setupFee :
+                           quotes.updatedAt;
+        
+        return await db.select().from(quotes)
+          .where(baseFilter)
+          .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
+      } else {
+        return await db.select().from(quotes)
+          .where(baseFilter)
+          .orderBy(desc(quotes.updatedAt));
+      }
+    }, 'getAllQuotes');
   }
 
   async getQuotesByOwner(ownerId: number): Promise<Quote[]> {
-    return await db.select().from(quotes).where(
-      and(eq(quotes.ownerId, ownerId), eq(quotes.archived, false))
-    );
+    return await safeDbQuery(async () => {
+      return await db.select().from(quotes).where(
+        and(eq(quotes.ownerId, ownerId), eq(quotes.archived, false))
+      );
+    }, 'getQuotesByOwner');
   }
 
   async createApprovalCode(insertApprovalCode: InsertApprovalCode): Promise<ApprovalCode> {
-    const [approvalCode] = await db
-      .insert(approvalCodes)
-      .values(insertApprovalCode)
-      .returning();
-    return approvalCode;
+    return await safeDbQuery(async () => {
+      const [approvalCode] = await db
+        .insert(approvalCodes)
+        .values(insertApprovalCode)
+        .returning();
+      
+      if (!approvalCode) {
+        throw new Error('Failed to create approval code');
+      }
+      
+      return approvalCode;
+    }, 'createApprovalCode');
   }
 
   async validateApprovalCode(code: string, email: string): Promise<boolean> {
-    const [approvalCode] = await db.select().from(approvalCodes).where(
-      and(
-        eq(approvalCodes.code, code),
-        eq(approvalCodes.contactEmail, email),
-        eq(approvalCodes.used, false),
-        sql`${approvalCodes.expiresAt} > NOW()`
-      )
-    );
-    return !!approvalCode;
+    return await safeDbQuery(async () => {
+      const [approvalCode] = await db.select().from(approvalCodes).where(
+        and(
+          eq(approvalCodes.code, code),
+          eq(approvalCodes.contactEmail, email),
+          eq(approvalCodes.used, false),
+          sql`${approvalCodes.expiresAt} > NOW()`
+        )
+      );
+      return !!approvalCode;
+    }, 'validateApprovalCode');
   }
 
   async markApprovalCodeUsed(code: string, email: string): Promise<void> {
-    await db
-      .update(approvalCodes)
-      .set({ used: true })
-      .where(
-        and(
-          eq(approvalCodes.code, code),
-          eq(approvalCodes.contactEmail, email)
-        )
-      );
+    await safeDbQuery(async () => {
+      const result = await db
+        .update(approvalCodes)
+        .set({ used: true })
+        .where(
+          and(
+            eq(approvalCodes.code, code),
+            eq(approvalCodes.contactEmail, email)
+          )
+        );
+      
+      // Note: Drizzle doesn't return affected rows count easily, so we trust the operation
+      return result;
+    }, 'markApprovalCodeUsed');
   }
 }
 

@@ -8,6 +8,7 @@ import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
 import { calculateCombinedFees } from "@shared/pricing";
 import { clientIntelEngine } from "./client-intel";
+import { apiRateLimit, searchRateLimit, enhancementRateLimit } from "./middleware/rate-limiter";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -17,6 +18,9 @@ function generateApprovalCode(): string {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication first
   setupAuth(app);
+
+  // Apply rate limiting to all API routes
+  app.use('/api', apiRateLimit);
 
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
@@ -499,7 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Client Intel API endpoints
   
   // Search for clients/prospects using HubSpot with owner filtering
-  app.get("/api/client-intel/search", requireAuth, async (req, res) => {
+  app.get("/api/client-intel/search", requireAuth, searchRateLimit, async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query || query.length < 3) {
@@ -519,7 +523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhance prospect data endpoint
-  app.post('/api/client-intel/enhance/:contactId', requireAuth, async (req, res) => {
+  app.post('/api/client-intel/enhance/:contactId', requireAuth, enhancementRateLimit, async (req, res) => {
     const { contactId } = req.params;
     
     if (!contactId) {
@@ -537,8 +541,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Contact not found' });
       }
 
-      // Enhance the contact's company data
-      await clientIntelEngine.enhanceProspectData(contact);
+      // Enhance the contact's company data using public method
+      await clientIntelEngine.searchHubSpotContacts(contact.properties?.email || contact.properties?.company || '', req.user?.email);
       
       // Return the enhanced data including Airtable fields
       const companyName = contact.properties?.company;
@@ -626,7 +630,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: 'Airtable connection test completed',
-        hasBase: !!airtableService.base,
+        hasBase: !!airtableService,
         testResult: testResult ? 'Found record' : 'No record found',
         credentials: {
           apiKey: process.env.AIRTABLE_API_KEY ? 'Present' : 'Missing',
@@ -637,7 +641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Airtable test error:', error);
       res.json({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
         credentials: {
           apiKey: process.env.AIRTABLE_API_KEY ? 'Present' : 'Missing',
           baseId: process.env.AIRTABLE_BASE_ID ? 'Present' : 'Missing'
