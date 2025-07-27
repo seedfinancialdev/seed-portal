@@ -40,9 +40,13 @@ export class AirtableService {
 
   // Search for company record by name
   async findCompanyByName(companyName: string): Promise<AirtableRecord | null> {
-    if (!this.base) return null;
+    if (!this.base) {
+      console.log('Airtable base not initialized - using AI fallback');
+      return null;
+    }
 
     try {
+      console.log(`🔍 Searching Airtable for company: ${companyName}`);
       const records = await this.base(this.tableName)
         .select({
           filterByFormula: `SEARCH("${companyName.toLowerCase()}", LOWER({Company Name})) > 0`,
@@ -50,12 +54,18 @@ export class AirtableService {
         })
         .firstPage();
 
-      return records.length > 0 ? {
-        id: records[0].id,
-        fields: records[0].fields
-      } : null;
+      if (records.length > 0) {
+        console.log(`✅ Found Airtable record for ${companyName}`);
+        return {
+          id: records[0].id,
+          fields: records[0].fields
+        };
+      } else {
+        console.log(`❌ No Airtable record found for ${companyName}`);
+        return null;
+      }
     } catch (error) {
-      console.error('Error searching Airtable:', error);
+      console.error('❌ Airtable search error:', error.message);
       return null;
     }
   }
@@ -148,9 +158,13 @@ export class AirtableService {
 
   // Create new company record in Airtable
   async createCompanyRecord(companyData: any): Promise<string | null> {
-    if (!this.base) return null;
+    if (!this.base) {
+      console.log('Airtable base not initialized - skipping record creation');
+      return null;
+    }
 
     try {
+      console.log(`💾 Creating Airtable record for ${companyData.name}`);
       const record = await this.base(this.tableName).create([
         {
           fields: {
@@ -168,9 +182,10 @@ export class AirtableService {
         }
       ]);
 
+      console.log(`✅ Created Airtable record: ${record[0].id}`);
       return record[0].id;
     } catch (error) {
-      console.error('Error creating Airtable record:', error);
+      console.error('❌ Airtable creation error:', error.message);
       return null;
     }
   }

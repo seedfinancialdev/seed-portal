@@ -595,6 +595,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Airtable connection endpoint
+  app.get('/api/test-airtable', async (req, res) => {
+    try {
+      // Import airtable service
+      const { airtableService } = await import('./airtable.js');
+      
+      console.log('Testing Airtable connection...');
+      const testResult = await airtableService.findCompanyByName('Test Company');
+      
+      res.json({
+        success: true,
+        message: 'Airtable connection test completed',
+        hasBase: !!airtableService.base,
+        testResult: testResult ? 'Found record' : 'No record found',
+        credentials: {
+          apiKey: process.env.AIRTABLE_API_KEY ? 'Present' : 'Missing',
+          baseId: process.env.AIRTABLE_BASE_ID ? 'Present' : 'Missing'
+        }
+      });
+    } catch (error) {
+      console.error('Airtable test error:', error);
+      res.json({
+        success: false,
+        error: error.message,
+        credentials: {
+          apiKey: process.env.AIRTABLE_API_KEY ? 'Present' : 'Missing',
+          baseId: process.env.AIRTABLE_BASE_ID ? 'Present' : 'Missing'
+        }
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
