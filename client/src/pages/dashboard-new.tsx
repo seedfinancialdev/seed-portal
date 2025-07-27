@@ -262,13 +262,15 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-3 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
-                <UserCheck className="h-5 w-5 text-white" />
+            <Link href="/client-intel">
+              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-3 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
+                  <UserCheck className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Client<br/>Intel</h3>
+                <p className="text-xs text-white/80 text-center leading-tight">AI snapshots</p>
               </div>
-              <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Client<br/>Intel</h3>
-              <p className="text-xs text-white/80 text-center leading-tight">AI snapshots</p>
-            </div>
+            </Link>
 
             <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
               <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-3 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">

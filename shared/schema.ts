@@ -222,3 +222,72 @@ export const insertApprovalCodeSchema = createInsertSchema(approvalCodes).omit({
 
 export type InsertApprovalCode = z.infer<typeof insertApprovalCodeSchema>;
 export type ApprovalCode = typeof approvalCodes.$inferSelect;
+
+// Client Intelligence data for AI snapshots
+export const clientIntelProfiles = pgTable("client_intel_profiles", {
+  id: serial("id").primaryKey(),
+  contactEmail: text("contact_email").notNull().unique(),
+  companyName: text("company_name").notNull(),
+  industry: text("industry"),
+  revenue: text("revenue"),
+  employees: integer("employees"),
+  hubspotContactId: text("hubspot_contact_id"),
+  qboCompanyId: text("qbo_company_id"),
+  painPoints: text("pain_points").array(), // JSON array of pain points
+  services: text("services").array(), // Current services array
+  riskScore: integer("risk_score").default(0), // 0-100 risk assessment
+  upsellOpportunities: text("upsell_opportunities").array(), // AI-generated opportunities
+  lastAnalyzed: timestamp("last_analyzed"),
+  lastActivity: timestamp("last_activity"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Client documents and uploaded files
+export const clientDocuments = pgTable("client_documents", {
+  id: serial("id").primaryKey(),
+  clientProfileId: integer("client_profile_id").notNull().references(() => clientIntelProfiles.id),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(), // pdf, xlsx, docx, etc.
+  fileSize: integer("file_size").notNull(), // bytes
+  uploadedBy: integer("uploaded_by").notNull().references(() => users.id),
+  fileUrl: text("file_url"), // Storage URL
+  extractedText: text("extracted_text"), // OCR/extracted content for AI analysis
+  summary: text("summary"), // AI-generated summary
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Client activity log
+export const clientActivities = pgTable("client_activities", {
+  id: serial("id").primaryKey(),
+  clientProfileId: integer("client_profile_id").notNull().references(() => clientIntelProfiles.id),
+  activityType: text("activity_type").notNull(), // email, call, meeting, quote, document_upload
+  description: text("description").notNull(),
+  userId: integer("user_id").references(() => users.id), // Who performed the activity
+  hubspotActivityId: text("hubspot_activity_id"), // If synced from HubSpot
+  activityDate: timestamp("activity_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertClientIntelProfileSchema = createInsertSchema(clientIntelProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClientDocumentSchema = createInsertSchema(clientDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClientActivitySchema = createInsertSchema(clientActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertClientIntelProfile = z.infer<typeof insertClientIntelProfileSchema>;
+export type ClientIntelProfile = typeof clientIntelProfiles.$inferSelect;
+export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
+export type ClientDocument = typeof clientDocuments.$inferSelect;
+export type InsertClientActivity = z.infer<typeof insertClientActivitySchema>;
+export type ClientActivity = typeof clientActivities.$inferSelect;

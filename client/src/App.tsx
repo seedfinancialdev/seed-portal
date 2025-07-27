@@ -10,6 +10,7 @@ import Home from "@/pages/home.tsx";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/dashboard-new";
 import CommissionTracker from "@/pages/commission-tracker";
+import ClientIntel from "@/pages/client-intel";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/calculator" component={Home} />
       <ProtectedRoute path="/commission-tracker" component={CommissionTracker} />
+      <ProtectedRoute path="/client-intel" component={ClientIntel} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
