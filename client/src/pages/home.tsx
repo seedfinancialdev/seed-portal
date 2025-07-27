@@ -2024,7 +2024,7 @@ export default function Home() {
                                   min="6"
                                   placeholder="Enter number of entities"
                                   className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                                  {...field}
+                                  value={field.value || ""}
                                   onChange={(e) => {
                                     const value = parseInt(e.target.value);
                                     field.onChange(isNaN(value) ? undefined : value);
@@ -2087,7 +2087,7 @@ export default function Home() {
                                   max="50"
                                   placeholder="Enter number of states"
                                   className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                                  {...field}
+                                  value={field.value || ""}
                                   onChange={(e) => {
                                     const value = parseInt(e.target.value);
                                     field.onChange(isNaN(value) ? undefined : value);
@@ -2169,7 +2169,7 @@ export default function Home() {
                                   min="6"
                                   placeholder="Enter number of business owners"
                                   className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                                  {...field}
+                                  value={field.value || ""}
                                   onChange={(e) => {
                                     const value = parseInt(e.target.value);
                                     field.onChange(isNaN(value) ? undefined : value);
@@ -2263,13 +2263,26 @@ export default function Home() {
                             <FormControl>
                               <Checkbox
                                 checked={field.value || false}
-                                onCheckedChange={field.onChange}
-                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                                onCheckedChange={(checked) => {
+                                  // Only allow checking if bookkeeping is active
+                                  if (feeCalculation.includesBookkeeping || !checked) {
+                                    field.onChange(checked);
+                                  }
+                                }}
+                                disabled={!feeCalculation.includesBookkeeping}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00] disabled:opacity-50"
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel>Seed Bookkeeping Package</FormLabel>
-                              <p className="text-sm text-gray-500">Check if client is interested in or already using Seed Bookkeeping services (provides 15% discount)</p>
+                              <FormLabel className={!feeCalculation.includesBookkeeping ? "text-gray-400" : ""}>
+                                Seed Bookkeeping Package
+                              </FormLabel>
+                              <p className={`text-sm ${!feeCalculation.includesBookkeeping ? "text-gray-300" : "text-gray-500"}`}>
+                                {!feeCalculation.includesBookkeeping 
+                                  ? "Only available when bookkeeping service is selected"
+                                  : "Check if client is interested in or already using Seed Bookkeeping services (provides 15% discount)"
+                                }
+                              </p>
                             </div>
                           </FormItem>
                         )}
@@ -2467,13 +2480,13 @@ export default function Home() {
                                     </div>
                                     {feeCalculation.taas.breakdown.entityUpcharge > 0 && (
                                       <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                        <span>Entity Upcharge ({form.watch('numEntities')} entities):</span>
+                                        <span>Entity Upcharge ({(form.watch('customNumEntities') || form.watch('numEntities'))} entities):</span>
                                         <span>+${feeCalculation.taas.breakdown.entityUpcharge.toLocaleString()}</span>
                                       </div>
                                     )}
                                     {feeCalculation.taas.breakdown.stateUpcharge > 0 && (
                                       <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                        <span>State Upcharge ({form.watch('statesFiled')} states):</span>
+                                        <span>State Upcharge ({(form.watch('customStatesFiled') || form.watch('statesFiled'))} states):</span>
                                         <span>+${feeCalculation.taas.breakdown.stateUpcharge.toLocaleString()}</span>
                                       </div>
                                     )}
@@ -2485,7 +2498,7 @@ export default function Home() {
                                     )}
                                     {feeCalculation.taas.breakdown.ownerUpcharge > 0 && (
                                       <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                        <span>Owner Upcharge ({form.watch('numBusinessOwners')} owners):</span>
+                                        <span>Owner Upcharge ({(form.watch('customNumBusinessOwners') || form.watch('numBusinessOwners'))} owners):</span>
                                         <span>+${feeCalculation.taas.breakdown.ownerUpcharge.toLocaleString()}</span>
                                       </div>
                                     )}
