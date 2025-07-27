@@ -33,6 +33,7 @@ export class AirtableService {
       return;
     }
     
+    console.log('Initializing Airtable service with provided credentials');
     this.base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
       .base(process.env.AIRTABLE_BASE_ID);
   }

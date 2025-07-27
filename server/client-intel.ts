@@ -432,7 +432,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
       // First priority: Check Airtable for existing enriched data
       const airtableData = await airtableService.getEnrichedCompanyData(companyName);
       if (airtableData) {
-        console.log(`Found enriched data in Airtable for ${companyName}`);
+        console.log(`✅ Found enriched data in Airtable for ${companyName}`);
         return {
           ...airtableData,
           domain: airtableData.website ? this.extractDomainFromWebsite(airtableData.website) : this.extractDomainFromCompanyName(companyName),
