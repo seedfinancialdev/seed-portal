@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import navLogoPath from "@assets/Nav Logo_1753431362883.png";
+import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import {
   Dialog,
   DialogContent,
