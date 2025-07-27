@@ -27,9 +27,12 @@ export const quotes = pgTable("quotes", {
   // TaaS-specific fields
   entityType: text("entity_type"), // LLC, S-Corp, C-Corp, Partnership, Sole Prop, Non-Profit
   numEntities: integer("num_entities"),
+  customNumEntities: integer("custom_num_entities"), // For when "more" is selected
   statesFiled: integer("states_filed"),
+  customStatesFiled: integer("custom_states_filed"), // For when "more" is selected
   internationalFiling: boolean("international_filing"),
   numBusinessOwners: integer("num_business_owners"),
+  customNumBusinessOwners: integer("custom_num_business_owners"), // For when "more" is selected
   bookkeepingQuality: text("bookkeeping_quality"), // Outside CPA, Self-Managed, Not Done / Behind
   include1040s: boolean("include_1040s"),
   priorYearsUnfiled: integer("prior_years_unfiled"),

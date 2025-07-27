@@ -81,9 +81,12 @@ const formSchema = insertQuoteSchema.omit({
   companyName: z.string().optional(),
   // TaaS fields
   numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
+  customNumEntities: z.number().min(6, "Custom entities must be at least 6").optional(),
   statesFiled: z.number().min(1, "Must file in at least 1 state").optional(),
+  customStatesFiled: z.number().min(7, "Custom states must be at least 7").max(50, "Maximum 50 states").optional(),
   internationalFiling: z.boolean().optional(),
   numBusinessOwners: z.number().min(1, "Must have at least 1 business owner").optional(),
+  customNumBusinessOwners: z.number().min(6, "Custom owners must be at least 6").optional(),
   include1040s: z.boolean().optional(),
   priorYearsUnfiled: z.number().min(0, "Cannot be negative").max(5, "Maximum 5 years").optional(),
   alreadyOnSeedBookkeeping: z.boolean().optional(),
@@ -367,24 +370,39 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
 
   const base = 150;
 
-  // Entity upcharge
-  const entityUpcharge = data.numEntities === 1 ? 0 : data.numEntities <= 3 ? 75 : 150;
+  // Get effective numbers (use custom values if "more" is selected)
+  const effectiveNumEntities = data.customNumEntities || data.numEntities;
+  const effectiveStatesFiled = data.customStatesFiled || data.statesFiled;
+  const effectiveNumBusinessOwners = data.customNumBusinessOwners || data.numBusinessOwners;
+
+  // Entity upcharge: Every entity above 5 adds $75/mo
+  let entityUpcharge = 0;
+  if (effectiveNumEntities > 5) {
+    entityUpcharge = (effectiveNumEntities - 5) * 75;
+  }
   
-  // State upcharge
-  const stateUpcharge = data.statesFiled <= 1 ? 0 : data.statesFiled <= 5 ? 50 : 150;
+  // State upcharge: $50 per state above 1, up to 50 states
+  let stateUpcharge = 0;
+  if (effectiveStatesFiled > 1) {
+    const additionalStates = Math.min(effectiveStatesFiled - 1, 49); // Cap at 49 additional states (50 total)
+    stateUpcharge = additionalStates * 50;
+  }
   
   // International filing upcharge
   const intlUpcharge = data.internationalFiling ? 200 : 0;
   
-  // Owner upcharge
-  const ownerUpcharge = data.numBusinessOwners <= 1 ? 0 : data.numBusinessOwners <= 3 ? 50 : 100;
+  // Owner upcharge: Every owner above 5 is $25/mo per owner
+  let ownerUpcharge = 0;
+  if (effectiveNumBusinessOwners > 5) {
+    ownerUpcharge = (effectiveNumBusinessOwners - 5) * 25;
+  }
   
   // Bookkeeping quality upcharge
   const bookUpcharge = data.bookkeepingQuality === 'Clean (Seed)' ? 0 : 
                        data.bookkeepingQuality === 'Outside CPA' ? 75 : 150;
   
   // Personal 1040s
-  const personal1040 = data.include1040s ? data.numBusinessOwners * 25 : 0;
+  const personal1040 = data.include1040s ? effectiveNumBusinessOwners * 25 : 0;
 
   // Use the same comprehensive industry multipliers as bookkeeping (monthly values)
   const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1.0, cleanup: 1.0 };
@@ -1965,7 +1983,14 @@ export default function Home() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Number of Entities</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                            <Select onValueChange={(value) => {
+                              const numValue = parseInt(value);
+                              field.onChange(numValue);
+                              // Clear custom value when selecting from dropdown
+                              if (numValue !== 999) {
+                                form.setValue('customNumEntities', undefined);
+                              }
+                            }} value={field.value?.toString() || ""}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                                   <SelectValue placeholder="Select number of entities" />
@@ -1976,13 +2001,41 @@ export default function Home() {
                                 <SelectItem value="2">2</SelectItem>
                                 <SelectItem value="3">3</SelectItem>
                                 <SelectItem value="4">4</SelectItem>
-                                <SelectItem value="5">5+</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="999">More</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
+                      {/* Custom Number of Entities - Show when "More" is selected */}
+                      {form.watch("numEntities") === 999 && (
+                        <FormField
+                          control={form.control}
+                          name="customNumEntities"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Enter exact number of entities (6 or more)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="6"
+                                  placeholder="Enter number of entities"
+                                  className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    field.onChange(isNaN(value) ? undefined : value);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
 
                       {/* States Filed */}
                       <FormField
@@ -1991,7 +2044,14 @@ export default function Home() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>States Filed</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                            <Select onValueChange={(value) => {
+                              const numValue = parseInt(value);
+                              field.onChange(numValue);
+                              // Clear custom value when selecting from dropdown
+                              if (numValue !== 999) {
+                                form.setValue('customStatesFiled', undefined);
+                              }
+                            }} value={field.value?.toString() || ""}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                                   <SelectValue placeholder="Select number of states" />
@@ -2003,13 +2063,42 @@ export default function Home() {
                                 <SelectItem value="3">3</SelectItem>
                                 <SelectItem value="4">4</SelectItem>
                                 <SelectItem value="5">5</SelectItem>
-                                <SelectItem value="6">6+</SelectItem>
+                                <SelectItem value="6">6</SelectItem>
+                                <SelectItem value="999">More</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
+                      {/* Custom States Filed - Show when "More" is selected */}
+                      {form.watch("statesFiled") === 999 && (
+                        <FormField
+                          control={form.control}
+                          name="customStatesFiled"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Enter exact number of states (7-50)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="7"
+                                  max="50"
+                                  placeholder="Enter number of states"
+                                  className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    field.onChange(isNaN(value) ? undefined : value);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
 
                       {/* International Filing */}
                       <FormField
@@ -2039,7 +2128,14 @@ export default function Home() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Number of Business Owners</FormLabel>
-                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                            <Select onValueChange={(value) => {
+                              const numValue = parseInt(value);
+                              field.onChange(numValue);
+                              // Clear custom value when selecting from dropdown
+                              if (numValue !== 999) {
+                                form.setValue('customNumBusinessOwners', undefined);
+                              }
+                            }} value={field.value?.toString() || ""}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
                                   <SelectValue placeholder="Select number of owners" />
@@ -2050,13 +2146,41 @@ export default function Home() {
                                 <SelectItem value="2">2</SelectItem>
                                 <SelectItem value="3">3</SelectItem>
                                 <SelectItem value="4">4</SelectItem>
-                                <SelectItem value="5">5+</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="999">More</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
+
+                      {/* Custom Number of Business Owners - Show when "More" is selected */}
+                      {form.watch("numBusinessOwners") === 999 && (
+                        <FormField
+                          control={form.control}
+                          name="customNumBusinessOwners"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Enter exact number of business owners (6 or more)</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min="6"
+                                  placeholder="Enter number of business owners"
+                                  className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                  {...field}
+                                  onChange={(e) => {
+                                    const value = parseInt(e.target.value);
+                                    field.onChange(isNaN(value) ? undefined : value);
+                                  }}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
 
                       {/* Include 1040s */}
                       <FormField

@@ -13,9 +13,12 @@ export interface PricingData {
   // TaaS specific fields
   includesTaas?: boolean;
   numEntities?: number;
+  customNumEntities?: number;
   statesFiled?: number;
+  customStatesFiled?: number;
   internationalFiling?: boolean;
   numBusinessOwners?: number;
+  customNumBusinessOwners?: number;
   include1040s?: boolean;
   priorYearsUnfiled?: number;
   alreadyOnSeedBookkeeping?: boolean;
@@ -135,24 +138,39 @@ export function calculateTaaSFees(data: PricingData): FeeResult {
 
   const base = 150;
 
-  // Entity upcharge
-  const entityUpcharge = data.numEntities === 1 ? 0 : data.numEntities <= 3 ? 75 : 150;
+  // Get effective numbers (use custom values if "more" is selected)
+  const effectiveNumEntities = data.customNumEntities || data.numEntities;
+  const effectiveStatesFiled = data.customStatesFiled || data.statesFiled;
+  const effectiveNumBusinessOwners = data.customNumBusinessOwners || data.numBusinessOwners;
+
+  // Entity upcharge: Every entity above 5 adds $75/mo
+  let entityUpcharge = 0;
+  if (effectiveNumEntities > 5) {
+    entityUpcharge = (effectiveNumEntities - 5) * 75;
+  }
   
-  // State upcharge
-  const stateUpcharge = data.statesFiled <= 1 ? 0 : data.statesFiled <= 5 ? 50 : 150;
+  // State upcharge: $50 per state above 1, up to 50 states
+  let stateUpcharge = 0;
+  if (effectiveStatesFiled > 1) {
+    const additionalStates = Math.min(effectiveStatesFiled - 1, 49); // Cap at 49 additional states (50 total)
+    stateUpcharge = additionalStates * 50;
+  }
   
   // International filing upcharge
   const intlUpcharge = data.internationalFiling ? 200 : 0;
   
-  // Owner upcharge
-  const ownerUpcharge = data.numBusinessOwners <= 1 ? 0 : data.numBusinessOwners <= 3 ? 50 : 100;
+  // Owner upcharge: Every owner above 5 is $25/mo per owner
+  let ownerUpcharge = 0;
+  if (effectiveNumBusinessOwners > 5) {
+    ownerUpcharge = (effectiveNumBusinessOwners - 5) * 25;
+  }
   
   // Bookkeeping quality upcharge
   const bookUpcharge = data.bookkeepingQuality === 'Clean (Seed)' ? 0 : 
                        data.bookkeepingQuality === 'Outside CPA' ? 75 : 150;
   
   // Personal 1040s
-  const personal1040 = data.include1040s ? data.numBusinessOwners * 25 : 0;
+  const personal1040 = data.include1040s ? effectiveNumBusinessOwners * 25 : 0;
 
   // Industry multiplier (simplified mapping from TaaS logic to our existing industries)
   const taasIndustryMult: Record<string, number> = {
