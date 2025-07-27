@@ -70,20 +70,26 @@ export default function ClientIntel() {
   const enhanceDataMutation = useMutation({
     mutationFn: async (contactId: string) => {
       const response = await apiRequest("POST", `/api/client-intel/enhance/${contactId}`, {});
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Enhancement failed with status ${response.status}`);
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Enhancement successful:', data);
       toast({
         title: "Data Enhanced",
-        description: "Contact and company data has been automatically populated in HubSpot.",
+        description: data.message || "Contact and company data has been automatically populated in HubSpot.",
       });
       // Invalidate search results to show updated data
       queryClient.invalidateQueries({ queryKey: ["/api/client-intel/search"] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Enhancement error:', error);
       toast({
         title: "Enhancement Failed",
-        description: "Unable to enhance data at this time. Please try again later.",
+        description: error.message || "Unable to enhance data at this time. Please try again later.",
         variant: "destructive",
       });
     }
@@ -98,6 +104,7 @@ export default function ClientIntel() {
     
     try {
       const result = await enhanceDataMutation.mutateAsync(selectedClient.id);
+      console.log('Enhancement result:', result);
       
       // Update selected client with Airtable data if available
       if (result?.airtableData) {
@@ -107,22 +114,13 @@ export default function ClientIntel() {
         });
       }
       
-      toast({
-        title: "Enhancement Complete",
-        description: `Successfully enhanced data for ${selectedClient.companyName}`,
-      });
-      
       // Refresh search results
       if (searchTerm.length > 2) {
         searchQuery.refetch();
       }
     } catch (error) {
       console.error(`Failed to enhance ${selectedClient.companyName}:`, error);
-      toast({
-        title: "Enhancement Failed",
-        description: "Unable to enhance contact data. Please try again.",
-        variant: "destructive"
-      });
+      // The mutation's onError handler will show the toast
     }
   };
 
