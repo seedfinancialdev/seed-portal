@@ -176,7 +176,8 @@ export class AirtableService {
       }
     }
     
-    // Default fallback
+    // Default fallback - only return valid HubSpot industry values
+    console.log(`No mapping found for industry: ${airtableIndustry}, using default COMPUTER_SOFTWARE`);
     return 'COMPUTER_SOFTWARE';
   }
 

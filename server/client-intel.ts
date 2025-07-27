@@ -469,13 +469,31 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
 
       const aiData = JSON.parse(response.choices[0].message.content || '{}');
       
+      // Validate industry value
+      const validIndustries = [
+        'COMPUTER_SOFTWARE', 'FINANCIAL_SERVICES', 'HEALTH_WELLNESS_FITNESS', 
+        'MARKETING_ADVERTISING', 'CONSULTING', 'REAL_ESTATE', 'RETAIL', 
+        'RESTAURANTS', 'ACCOUNTING', 'LEGAL_SERVICES', 'CONSTRUCTION', 
+        'AUTOMOTIVE', 'EDUCATION_MANAGEMENT', 'NONPROFIT_ORGANIZATION_MANAGEMENT',
+        'INFORMATION_TECHNOLOGY_SERVICES', 'HUMAN_RESOURCES', 'INSURANCE', 
+        'MANUFACTURING', 'TRANSPORTATION_TRUCKING_RAILROAD'
+      ];
+      
+      const validatedIndustry = validIndustries.includes(aiData.industry) 
+        ? aiData.industry 
+        : 'COMPUTER_SOFTWARE';
+      
+      if (aiData.industry && !validIndustries.includes(aiData.industry)) {
+        console.log(`AI generated invalid industry "${aiData.industry}" for ${companyName}, using COMPUTER_SOFTWARE`);
+      }
+      
       const enhancedData = {
         name: companyName,
         domain: aiData.website ? this.extractDomainFromWebsite(aiData.website) : this.extractDomainFromCompanyName(companyName),
         city: aiData.city || contact.properties?.city,
         state: aiData.state || contact.properties?.state,
         country: 'US',
-        industry: aiData.industry,
+        industry: validatedIndustry,
         annualrevenue: aiData.annualrevenue?.toString(),
         numberofemployees: aiData.numberofemployees?.toString(),
         website: aiData.website,
@@ -569,16 +587,48 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
 
       const enhancedData = JSON.parse(response.choices[0].message.content || '{}');
 
-      // Only update fields that have actual values (not null)
+      // Only update fields that have actual values (not null) and validate industry
       for (const field of missingFields) {
         if (enhancedData[field] && enhancedData[field] !== 'null' && enhancedData[field] !== null) {
-          updates[field] = enhancedData[field];
+          if (field === 'industry') {
+            // Validate industry against known HubSpot values
+            const validIndustries = [
+              'COMPUTER_SOFTWARE', 'FINANCIAL_SERVICES', 'HEALTH_WELLNESS_FITNESS', 
+              'MARKETING_ADVERTISING', 'CONSULTING', 'REAL_ESTATE', 'RETAIL', 
+              'RESTAURANTS', 'ACCOUNTING', 'LEGAL_SERVICES', 'CONSTRUCTION', 
+              'AUTOMOTIVE', 'EDUCATION_MANAGEMENT', 'NONPROFIT_ORGANIZATION_MANAGEMENT',
+              'INFORMATION_TECHNOLOGY_SERVICES', 'HUMAN_RESOURCES', 'INSURANCE', 
+              'MANUFACTURING', 'TRANSPORTATION_TRUCKING_RAILROAD'
+            ];
+            
+            if (validIndustries.includes(enhancedData[field])) {
+              updates[field] = enhancedData[field];
+            } else {
+              console.log(`Skipping invalid industry value: ${enhancedData[field]}`);
+              // Use default safe industry value
+              updates[field] = 'COMPUTER_SOFTWARE';
+            }
+          } else {
+            updates[field] = enhancedData[field];
+          }
         }
       }
 
       if (Object.keys(updates).length > 0) {
-        await hubSpotService.updateCompany(companyId, updates);
-        console.log(`Enhanced company ${companyName} with: ${Object.keys(updates).join(', ')}`);
+        try {
+          await hubSpotService.updateCompany(companyId, updates);
+          console.log(`Enhanced company ${companyName} with: ${Object.keys(updates).join(', ')}`);
+        } catch (error) {
+          console.error(`Failed to update company ${companyName}:`, error);
+          // Try again without industry field if that was the issue
+          if (updates.industry) {
+            delete updates.industry;
+            if (Object.keys(updates).length > 0) {
+              await hubSpotService.updateCompany(companyId, updates);
+              console.log(`Enhanced company ${companyName} (without industry) with: ${Object.keys(updates).join(', ')}`);
+            }
+          }
+        }
       }
 
     } catch (error) {
