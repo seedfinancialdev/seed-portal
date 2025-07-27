@@ -259,7 +259,6 @@ export default function ClientIntel() {
           </div>
         </div>
       </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Page Header */}
@@ -300,15 +299,15 @@ export default function ClientIntel() {
                     <Sparkles className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-white text-lg">AI Data Enhancement</CardTitle>
-                    <p className="text-orange-100 text-sm">Auto-populate missing fields</p>
+                    <CardTitle className="font-semibold tracking-tight text-lg text-[#212121]">AI Data Enhancement</CardTitle>
+                    <p className="text-sm text-[#212121]">Auto-populate missing fields</p>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {selectedClient ? (
                   <div className="space-y-3">
-                    <p className="text-orange-100 text-sm">
+                    <p className="text-sm text-[#212121]">
                       {selectedClient.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'} selected: {selectedClient.companyName}
                     </p>
                     <Button 
