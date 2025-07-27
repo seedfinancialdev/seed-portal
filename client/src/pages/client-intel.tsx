@@ -66,6 +66,33 @@ export default function ClientIntel() {
   const [selectedClient, setSelectedClient] = useState<ClientSnapshot | null>(null);
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
 
+  // Enhance prospect data mutation
+  const enhanceDataMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const response = await apiRequest("POST", `/api/client-intel/enhance/${contactId}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Data Enhanced",
+        description: "Contact and company data has been automatically populated in HubSpot.",
+      });
+      // Invalidate search results to show updated data
+      queryClient.invalidateQueries({ queryKey: ["/api/client-intel/search"] });
+    },
+    onError: () => {
+      toast({
+        title: "Enhancement Failed",
+        description: "Unable to enhance data at this time. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const enhanceProspectData = (contactId: string) => {
+    enhanceDataMutation.mutate(contactId);
+  };
+
   // Search for clients/prospects
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ["/api/client-intel/search", searchTerm],
@@ -255,16 +282,31 @@ export default function ClientIntel() {
                             }{client.revenue || 'Revenue not specified'}
                           </p>
                         </div>
-                        <div className="flex gap-1">
-                          <Badge 
-                            variant={client.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
-                            className="text-xs"
-                          >
-                            {client.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {client.services?.length || 0} services
-                          </Badge>
+                        <div className="flex gap-1 flex-col">
+                          <div className="flex gap-1">
+                            <Badge 
+                              variant={client.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
+                              className="text-xs"
+                            >
+                              {client.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {client.services?.length || 0} services
+                            </Badge>
+                          </div>
+                          {client.lifecycleStage?.toLowerCase() !== 'customer' && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                enhanceProspectData(client.id);
+                              }}
+                              disabled={enhanceDataMutation.isPending}
+                              className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded hover:bg-orange-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Auto-populate missing HubSpot fields"
+                            >
+                              {enhanceDataMutation.isPending ? 'Enhancing...' : 'Enhance Data'}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

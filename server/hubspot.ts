@@ -1254,6 +1254,105 @@ Generated: ${new Date().toLocaleDateString()}`;
     }
   }
 
+  // Company data enhancement methods
+  async createCompany(companyData: {
+    name: string;
+    domain?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    industry?: string;
+    annualrevenue?: string;
+    numberofemployees?: string;
+    linkedin_company_page?: string;
+    website?: string;
+    address?: string;
+    zip?: string;
+  }) {
+    try {
+      const response = await this.makeRequest('/crm/v3/objects/companies', {
+        method: 'POST',
+        body: JSON.stringify({
+          properties: {
+            name: companyData.name,
+            domain: companyData.domain,
+            city: companyData.city,
+            state: companyData.state,
+            country: companyData.country,
+            industry: companyData.industry,
+            annualrevenue: companyData.annualrevenue,
+            numberofemployees: companyData.numberofemployees,
+            linkedin_company_page: companyData.linkedin_company_page,
+            website: companyData.website,
+            address: companyData.address,
+            zip: companyData.zip,
+          }
+        })
+      });
+      return response;
+    } catch (error) {
+      console.error('Failed to create company:', error);
+      return null;
+    }
+  }
+
+  async getCompanyById(companyId: string) {
+    try {
+      const response = await this.makeRequest(`/crm/v3/objects/companies/${companyId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch company by ID:', error);
+      return null;
+    }
+  }
+
+  async updateCompany(companyId: string, properties: any) {
+    try {
+      const response = await this.makeRequest(`/crm/v3/objects/companies/${companyId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ properties })
+      });
+      return response;
+    } catch (error) {
+      console.error('Failed to update company:', error);
+      return null;
+    }
+  }
+
+  async associateContactWithCompany(contactId: string, companyId: string) {
+    try {
+      await this.makeRequest('/crm/v4/associations/contact/company/batch/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          inputs: [{
+            from: { id: contactId },
+            to: { id: companyId },
+            types: [{
+              associationCategory: "HUBSPOT_DEFINED",
+              associationTypeId: 1 // Contact to Company association
+            }]
+          }]
+        })
+      });
+      return true;
+    } catch (error) {
+      console.error('Failed to associate contact with company:', error);
+      return false;
+    }
+  }
+
+  async getContactAssociatedCompanies(contactId: string) {
+    try {
+      const response = await this.makeRequest(`/crm/v4/objects/contacts/${contactId}/associations/companies`);
+      return response.results || [];
+    } catch (error) {
+      console.error('Failed to get contact associations:', error);
+      return [];
+    }
+  }
+
+
+
 
 
 
@@ -1294,6 +1393,8 @@ Generated: ${new Date().toLocaleDateString()}`;
     }
   }
 }
+
+
 
 // Only create service if token is available
 export const hubSpotService = process.env.HUBSPOT_ACCESS_TOKEN ? new HubSpotService() : null;

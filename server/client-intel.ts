@@ -27,6 +27,11 @@ interface ClientSignal {
 }
 
 export class ClientIntelligenceEngine {
+  private openai: OpenAI;
+
+  constructor() {
+    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
   
   // Generate prospect scoring based on HubSpot data
   async scoreProspect(prospectProfile: ProspectProfile): Promise<{ score: number; tier: string; reasoning: string }> {
@@ -271,6 +276,11 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
           // Fetch fresh contact data to ensure consistency
           const freshContact = hubSpotService ? await hubSpotService.getContactById(contact.id) : null;
           const contactData = freshContact || contact;
+
+          // Auto-enhance HubSpot data if contact is a prospect with missing company association
+          if (hubSpotService && contactData.properties.lifecyclestage !== 'customer') {
+            await this.enhanceProspectData(contactData);
+          }
           
           const prospectProfile: ProspectProfile = {
             email: contactData.properties.email,
@@ -322,6 +332,246 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
     } catch (error) {
       console.error('HubSpot contact search failed:', error);
       return [];
+    }
+  }
+
+  // Auto-enhance prospect data by creating missing company associations and populating fields
+  private async enhanceProspectData(contact: any): Promise<void> {
+    if (!hubSpotService) return;
+
+    try {
+      const contactId = contact.id;
+      const companyName = contact.properties?.company;
+      
+      // Only proceed if contact has a company name but no associated company
+      if (!companyName) return;
+
+      // Check if contact already has company associations
+      const existingCompanies = await hubSpotService.getContactAssociatedCompanies(contactId);
+      if (existingCompanies.length > 0) {
+        // Contact already has company associations, enhance existing company data
+        for (const companyAssoc of existingCompanies) {
+          await this.enhanceCompanyData(companyAssoc.toObjectId, companyName, contact);
+        }
+        return;
+      }
+
+      console.log(`Creating missing company association for ${companyName} (Contact: ${contactId})`);
+
+      // Search for existing company by name first
+      const existingCompany = await this.findCompanyByName(companyName);
+      
+      let companyId: string;
+      if (existingCompany) {
+        companyId = existingCompany.id;
+        console.log(`Found existing company: ${companyName} (${companyId})`);
+      } else {
+        // Create new company with enhanced data
+        const enhancedCompanyData = await this.generateCompanyData(companyName, contact);
+        const newCompany = await hubSpotService.createCompany(enhancedCompanyData);
+        
+        if (!newCompany) {
+          console.error(`Failed to create company for ${companyName}`);
+          return;
+        }
+        
+        companyId = newCompany.id;
+        console.log(`Created new company: ${companyName} (${companyId})`);
+      }
+
+      // Associate contact with company
+      const associated = await hubSpotService.associateContactWithCompany(contactId, companyId);
+      if (associated) {
+        console.log(`Successfully associated contact ${contactId} with company ${companyId}`);
+        
+        // Enhance the company data with AI-generated information
+        await this.enhanceCompanyData(companyId, companyName, contact);
+      }
+      
+    } catch (error) {
+      console.error('Error enhancing prospect data:', error);
+    }
+  }
+
+  // Find existing company by name
+  private async findCompanyByName(companyName: string): Promise<any> {
+    if (!hubSpotService) return null;
+
+    try {
+      const searchResult = await this.makeHubSpotRequest('/crm/v3/objects/companies/search', {
+        method: 'POST',
+        body: JSON.stringify({
+          filterGroups: [{
+            filters: [{
+              propertyName: 'name',
+              operator: 'EQ',
+              value: companyName
+            }]
+          }],
+          properties: ['name', 'domain', 'industry', 'annualrevenue', 'numberofemployees'],
+          limit: 1
+        })
+      });
+
+      return searchResult.results?.[0] || null;
+    } catch (error) {
+      console.error('Error searching for company:', error);
+      return null;
+    }
+  }
+
+  // Generate enhanced company data using AI
+  private async generateCompanyData(companyName: string, contact: any): Promise<any> {
+    try {
+      // Use OpenAI to generate company information
+      const prompt = `Generate realistic business information for a company called "${companyName}". 
+      Contact details: ${contact.properties?.city || 'Unknown'} city, ${contact.properties?.state || 'Unknown'} state.
+      
+      Provide JSON response with these fields (use null for unknown values):
+      {
+        "industry": "specific industry category",
+        "annualrevenue": "estimated annual revenue number only (no currency)",
+        "numberofemployees": "estimated employee count number only",
+        "city": "city name",
+        "state": "state abbreviation", 
+        "website": "likely website URL",
+        "linkedin_company_page": "likely LinkedIn URL"
+      }`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        max_tokens: 300
+      });
+
+      const aiData = JSON.parse(response.choices[0].message.content || '{}');
+      
+      return {
+        name: companyName,
+        domain: this.extractDomainFromCompanyName(companyName),
+        city: aiData.city || contact.properties?.city,
+        state: aiData.state || contact.properties?.state,
+        country: 'US', // Default to US
+        industry: aiData.industry,
+        annualrevenue: aiData.annualrevenue?.toString(),
+        numberofemployees: aiData.numberofemployees?.toString(),
+        website: aiData.website,
+        linkedin_company_page: aiData.linkedin_company_page
+      };
+    } catch (error) {
+      console.error('Error generating company data:', error);
+      // Fallback to basic data
+      return {
+        name: companyName,
+        city: contact.properties?.city,
+        state: contact.properties?.state,
+        country: 'US'
+      };
+    }
+  }
+
+  // Extract likely domain from company name
+  private extractDomainFromCompanyName(companyName: string): string {
+    // Simple domain extraction logic
+    const cleanName = companyName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '')
+      .replace(/(inc|llc|corp|ltd|company|co)$/g, '');
+    
+    return `${cleanName}.com`;
+  }
+
+  // Enhance existing company data with missing fields
+  private async enhanceCompanyData(companyId: string, companyName: string, contact: any): Promise<void> {
+    if (!hubSpotService) return;
+
+    try {
+      // Get current company data
+      const company = await hubSpotService.getCompanyById(companyId);
+      if (!company) return;
+
+      const props = company.properties || {};
+      const updates: any = {};
+
+      // Check which fields are missing and need enhancement
+      const fieldsToEnhance = [
+        'annualrevenue', 'city', 'numberofemployees', 'industry',
+        'linkedin_company_page', 'website', 'state', 'zip'
+      ];
+
+      const missingFields = fieldsToEnhance.filter(field => !props[field] || props[field] === '');
+
+      if (missingFields.length === 0) {
+        console.log(`Company ${companyName} already has complete data`);
+        return;
+      }
+
+      console.log(`Enhancing ${missingFields.length} missing fields for ${companyName}: ${missingFields.join(', ')}`);
+
+      // Generate missing data using AI
+      const prompt = `Fill in missing business information for "${companyName}".
+      Current data: ${JSON.stringify(props)}
+      Missing fields: ${missingFields.join(', ')}
+      Contact location: ${contact.properties?.city || 'Unknown'}, ${contact.properties?.state || 'Unknown'}
+      
+      Provide JSON with only the missing fields (use null if truly unknown):
+      {
+        ${missingFields.map(field => `"${field}": "value or null"`).join(',\n        ')}
+      }`;
+
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        max_tokens: 200
+      });
+
+      const enhancedData = JSON.parse(response.choices[0].message.content || '{}');
+
+      // Only update fields that have actual values (not null)
+      for (const field of missingFields) {
+        if (enhancedData[field] && enhancedData[field] !== 'null' && enhancedData[field] !== null) {
+          updates[field] = enhancedData[field];
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await hubSpotService.updateCompany(companyId, updates);
+        console.log(`Enhanced company ${companyName} with: ${Object.keys(updates).join(', ')}`);
+      }
+
+    } catch (error) {
+      console.error('Error enhancing company data:', error);
+    }
+  }
+
+  // Helper method to make HubSpot requests
+  private async makeHubSpotRequest(endpoint: string, options?: any) {
+    if (!hubSpotService) throw new Error('HubSpot service not available');
+    
+    const url = `https://api.hubapi.com${endpoint}`;
+    const headers = {
+      'Authorization': `Bearer ${process.env.HUBSPOT_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+      ...options?.headers
+    };
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`HubSpot API error for ${endpoint}:`, error);
+      throw error;
     }
   }
 }

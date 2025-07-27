@@ -518,6 +518,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhance prospect data endpoint
+  app.post('/api/client-intel/enhance/:contactId', requireAuth, async (req, res) => {
+    const { contactId } = req.params;
+    
+    if (!contactId) {
+      return res.status(400).json({ error: 'Contact ID required' });
+    }
+
+    try {
+      // Fetch the contact data and enhance it
+      const contactData = { id: contactId, properties: req.body };
+      await clientIntelEngine.enhanceProspectData(contactData);
+      res.json({ success: true, message: 'Contact data enhanced successfully' });
+    } catch (error) {
+      console.error('Data enhancement error:', error);
+      res.status(500).json({ error: 'Enhancement failed' });
+    }
+  });
+
   // Generate AI insights for a client using real data
   app.post("/api/client-intel/generate-insights", requireAuth, async (req, res) => {
     try {
