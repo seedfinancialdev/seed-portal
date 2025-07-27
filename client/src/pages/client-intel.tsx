@@ -119,8 +119,8 @@ export default function ClientIntel() {
         searchQuery.refetch();
       }
     } catch (error) {
-      console.error(`Failed to enhance ${selectedClient.companyName}:`, error);
       // The mutation's onError handler will show the toast
+      console.log('Enhancement handled by mutation error handler');
     }
   };
 
