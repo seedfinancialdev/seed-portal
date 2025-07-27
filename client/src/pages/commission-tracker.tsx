@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
+import navLogoPath from "@assets/Nav Logo_1753431362883.png";
 import {
   Dialog,
   DialogContent,
@@ -361,7 +362,7 @@ export default function CommissionTracker() {
           {/* Centered Logo */}
           <div className="flex-1 flex justify-center">
             <img 
-              src="/attached_assets/Nav Logo_1753431362883.png" 
+              src={navLogoPath} 
               alt="Seed Financial" 
               className="h-12 w-auto"
             />
