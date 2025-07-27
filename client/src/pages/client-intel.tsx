@@ -289,6 +289,65 @@ export default function ClientIntel() {
           </Card>
         </div>
 
+        {/* Search Results - Top Priority */}
+        <div className="mb-8">
+          <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-semibold tracking-tight text-lg text-[#212121]">Search Results</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 max-h-96 overflow-y-auto">
+              {isSearching ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+                  <p className="text-white/70 mt-2">Searching...</p>
+                </div>
+              ) : searchResults?.length > 0 ? (
+                searchResults.map((client: any) => (
+                  <div
+                    key={client.id}
+                    onClick={() => handleClientSelect(client)}
+                    className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 border-l-blue-500"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm">{client.companyName}</h3>
+                        <p className="text-xs text-gray-600">{client.email}</p>
+                        <p className="text-xs text-gray-500">
+                          {client.industry && client.industry !== 'Unknown' && client.industry !== 'unknown' 
+                            ? `${client.industry} • ` 
+                            : ''
+                          }{client.revenue || 'Revenue not specified'}
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Badge 
+                          variant={client.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
+                          className="text-xs"
+                        >
+                          {client.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {client.services?.length || 0} services
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : searchTerm.length > 2 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="h-8 w-8 text-white/50 mx-auto mb-2" />
+                  <p className="text-white/70">No clients found</p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Search className="h-8 w-8 text-white/50 mx-auto mb-2" />
+                  <p className="text-white/70">Enter 3+ characters to search</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* AI Enhancement Card - Priority */}
           <div className="lg:col-span-1">
@@ -332,63 +391,6 @@ export default function ClientIntel() {
                   <p className="text-orange-200 text-sm">Select a contact to enhance</p>
                 ) : (
                   <p className="text-orange-200 text-sm">Search and select a contact to enable enhancement</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Search Results */}
-            <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-white">Search Results</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 max-h-96 overflow-y-auto">
-                {isSearching ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-                    <p className="text-white/70 mt-2">Searching...</p>
-                  </div>
-                ) : searchResults?.length > 0 ? (
-                  searchResults.map((client: any) => (
-                    <div
-                      key={client.id}
-                      onClick={() => handleClientSelect(client)}
-                      className="p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer border-l-4 border-l-blue-500"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-gray-900 text-sm">{client.companyName}</h3>
-                          <p className="text-xs text-gray-600">{client.email}</p>
-                          <p className="text-xs text-gray-500">
-                            {client.industry && client.industry !== 'Unknown' && client.industry !== 'unknown' 
-                              ? `${client.industry} • ` 
-                              : ''
-                            }{client.revenue || 'Revenue not specified'}
-                          </p>
-                        </div>
-                        <div className="flex gap-1">
-                          <Badge 
-                            variant={client.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
-                            className="text-xs"
-                          >
-                            {client.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {client.services?.length || 0} services
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : searchTerm.length > 2 ? (
-                  <div className="text-center py-8">
-                    <AlertCircle className="h-8 w-8 text-white/50 mx-auto mb-2" />
-                    <p className="text-white/70">No clients found</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Search className="h-8 w-8 text-white/50 mx-auto mb-2" />
-                    <p className="text-white/70">Enter 3+ characters to search</p>
-                  </div>
                 )}
               </CardContent>
             </Card>
