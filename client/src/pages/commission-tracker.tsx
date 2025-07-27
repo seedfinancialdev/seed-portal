@@ -32,7 +32,8 @@ import {
   BarChart3,
   Star,
   Gift,
-  PlusCircle
+  PlusCircle,
+  Eye
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -114,6 +115,9 @@ export default function CommissionTracker() {
   const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
+
+  // Commission history modal state
+  const [commissionHistoryModalOpen, setCommissionHistoryModalOpen] = useState(false);
 
   // Sample data matching the specifications
   useEffect(() => {
@@ -439,13 +443,26 @@ export default function CommissionTracker() {
         {/* Commission History - Primary Focus */}
         <Card className="bg-white/95 backdrop-blur border-0 shadow-xl mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              Commission History
-            </CardTitle>
-            <CardDescription>
-              View and manage all your commission earnings
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  Commission History
+                </CardTitle>
+                <CardDescription>
+                  View and manage all your commission earnings
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCommissionHistoryModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                View All
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border">
@@ -463,7 +480,7 @@ export default function CommissionTracker() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {commissions.map((commission) => (
+                  {commissions.slice(0, 5).map((commission) => (
                     <TableRow key={commission.id}>
                       <TableCell className="font-medium">
                         <div>
@@ -503,6 +520,13 @@ export default function CommissionTracker() {
                 </TableBody>
               </Table>
             </div>
+            {commissions.length > 5 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-500">
+                  Showing {Math.min(5, commissions.length)} of {commissions.length} commissions
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -754,6 +778,90 @@ export default function CommissionTracker() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Commission History Modal */}
+        <Dialog open={commissionHistoryModalOpen} onOpenChange={setCommissionHistoryModalOpen}>
+          <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Complete Commission History</DialogTitle>
+              <DialogDescription>
+                View all your commission earnings and manage adjustments
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="overflow-y-auto max-h-[60vh]">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Deal</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Month</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date Earned</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {commissions.map((commission) => (
+                      <TableRow key={commission.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <p className="font-medium">{commission.companyName}</p>
+                            <p className="text-sm text-gray-500">{commission.dealName}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getServiceTypeIcon(commission.serviceType)}
+                            <span className="capitalize">{commission.serviceType}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {commission.type.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{commission.monthNumber}</TableCell>
+                        <TableCell className="font-medium">
+                          ${commission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(commission.status)}</TableCell>
+                        <TableCell>{new Date(commission.dateEarned).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              setCommissionHistoryModalOpen(false);
+                              handleRequestAdjustment(commission);
+                            }}
+                          >
+                            Request Adjustment
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-sm text-gray-500">
+                  Total: {commissions.length} commission entries
+                </div>
+                <Button onClick={() => setCommissionHistoryModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Adjustment Request Dialog */}
         <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
