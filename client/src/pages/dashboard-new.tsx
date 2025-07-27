@@ -23,9 +23,21 @@ import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+
+interface WeatherData {
+  temperature: number;
+  condition: string;
+  location: string;
+}
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  const [weather, setWeather] = useState<WeatherData>({
+    temperature: 72,
+    condition: 'loading...',
+    location: 'Marina Del Rey, CA'
+  });
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -39,8 +51,53 @@ export default function Dashboard() {
     return "Good evening";
   };
 
-  // Mock weather data
-  const weather = { temp: 72, condition: 'sunny', location: 'Marina Del Rey, CA' };
+  // Fetch live weather data
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        // Marina Del Rey, CA coordinates
+        const lat = 33.9806;
+        const lon = -118.4416;
+        
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
+        );
+        
+        if (!response.ok) {
+          throw new Error('Weather fetch failed');
+        }
+        
+        const data = await response.json();
+        const currentWeather = data.current_weather;
+        
+        // Map weather codes to readable conditions
+        const getCondition = (code: number) => {
+          if (code === 0) return 'clear';
+          if (code <= 3) return 'partly cloudy';
+          if (code <= 48) return 'cloudy';
+          if (code <= 67) return 'rainy';
+          if (code <= 77) return 'snowy';
+          if (code <= 82) return 'showers';
+          return 'stormy';
+        };
+        
+        setWeather({
+          temperature: Math.round(currentWeather.temperature),
+          condition: getCondition(currentWeather.weathercode),
+          location: 'Marina Del Rey, CA'
+        });
+      } catch (error) {
+        console.error('Failed to fetch weather:', error);
+        // Keep default values on error
+        setWeather(prev => ({ ...prev, condition: 'sunny' }));
+      }
+    };
+
+    fetchWeather();
+    // Refresh weather every 30 minutes
+    const interval = setInterval(fetchWeather, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] animate-in fade-in duration-1000">
@@ -100,7 +157,7 @@ export default function Dashboard() {
           <h1 className="text-3xl font-light text-white mb-2">
             {getGreeting()}, {user?.email?.split('@')[0]?.charAt(0).toUpperCase() + user?.email?.split('@')[0]?.slice(1)}!
           </h1>
-          <p className="text-white/70 text-sm">{weather.temp}°F and {weather.condition} in {weather.location}</p>
+          <p className="text-white/70 text-sm">{weather.temperature}°F and {weather.condition} in {weather.location}</p>
         </div>
 
         {/* Key Metrics Cards */}
