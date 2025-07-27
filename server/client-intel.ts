@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { hubSpotService } from "./hubspot";
+import { airtableService } from "./airtable";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -384,8 +385,11 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
       if (associated) {
         console.log(`Successfully associated contact ${contactId} with company ${companyId}`);
         
-        // Enhance the company data with AI-generated information
+        // Enhance the company data with Airtable/AI-generated information
         await this.enhanceCompanyData(companyId, companyName, contact);
+        
+        // After enhancement, automatically generate sales insights
+        console.log(`Enhanced prospect ${contactId} - ready for insights generation`);
       }
       
     } catch (error) {
@@ -420,16 +424,33 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
     }
   }
 
-  // Generate enhanced company data using AI
+  // Generate enhanced company data prioritizing Airtable then AI
   private async generateCompanyData(companyName: string, contact: any): Promise<any> {
     try {
-      // Use OpenAI to generate company information
+      console.log(`Generating enhanced data for ${companyName}`);
+      
+      // First priority: Check Airtable for existing enriched data
+      const airtableData = await airtableService.getEnrichedCompanyData(companyName);
+      if (airtableData) {
+        console.log(`Found enriched data in Airtable for ${companyName}`);
+        return {
+          ...airtableData,
+          domain: airtableData.website ? this.extractDomainFromWebsite(airtableData.website) : this.extractDomainFromCompanyName(companyName),
+          country: 'US'
+        };
+      }
+
+      console.log(`No Airtable data found for ${companyName}, using AI generation`);
+
+      // Second priority: Use AI to generate missing information
       const prompt = `Generate realistic business information for a company called "${companyName}". 
       Contact details: ${contact.properties?.city || 'Unknown'} city, ${contact.properties?.state || 'Unknown'} state.
       
+      For industry, use ONLY these valid values: COMPUTER_SOFTWARE, FINANCIAL_SERVICES, HEALTH_WELLNESS_FITNESS, MARKETING_ADVERTISING, CONSULTING, REAL_ESTATE, RETAIL, RESTAURANTS, MEDICAL_PRACTICE, ACCOUNTING, LEGAL_SERVICES, CONSTRUCTION, AUTOMOTIVE, EDUCATION_MANAGEMENT, NONPROFIT_ORGANIZATION_MANAGEMENT, INFORMATION_TECHNOLOGY_SERVICES, HUMAN_RESOURCES, INSURANCE, MANUFACTURING, TRANSPORTATION_TRUCKING_RAILROAD
+      
       Provide JSON response with these fields (use null for unknown values):
       {
-        "industry": "specific industry category",
+        "industry": "industry value from list above",
         "annualrevenue": "estimated annual revenue number only (no currency)",
         "numberofemployees": "estimated employee count number only",
         "city": "city name",
@@ -447,18 +468,23 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
 
       const aiData = JSON.parse(response.choices[0].message.content || '{}');
       
-      return {
+      const enhancedData = {
         name: companyName,
-        domain: this.extractDomainFromCompanyName(companyName),
+        domain: aiData.website ? this.extractDomainFromWebsite(aiData.website) : this.extractDomainFromCompanyName(companyName),
         city: aiData.city || contact.properties?.city,
         state: aiData.state || contact.properties?.state,
-        country: 'US', // Default to US
+        country: 'US',
         industry: aiData.industry,
         annualrevenue: aiData.annualrevenue?.toString(),
         numberofemployees: aiData.numberofemployees?.toString(),
         website: aiData.website,
         linkedin_company_page: aiData.linkedin_company_page
       };
+
+      // Store the AI-generated data in Airtable for future use
+      await airtableService.createCompanyRecord(enhancedData);
+      
+      return enhancedData;
     } catch (error) {
       console.error('Error generating company data:', error);
       // Fallback to basic data
@@ -481,6 +507,16 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
       .replace(/(inc|llc|corp|ltd|company|co)$/g, '');
     
     return `${cleanName}.com`;
+  }
+
+  // Extract domain from website URL
+  private extractDomainFromWebsite(website: string): string {
+    try {
+      const url = new URL(website.startsWith('http') ? website : `https://${website}`);
+      return url.hostname.replace('www.', '');
+    } catch {
+      return website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0];
+    }
   }
 
   // Enhance existing company data with missing fields
@@ -510,11 +546,13 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
 
       console.log(`Enhancing ${missingFields.length} missing fields for ${companyName}: ${missingFields.join(', ')}`);
 
-      // Generate missing data using AI
+      // Generate missing data using AI with proper HubSpot industry values
       const prompt = `Fill in missing business information for "${companyName}".
       Current data: ${JSON.stringify(props)}
       Missing fields: ${missingFields.join(', ')}
       Contact location: ${contact.properties?.city || 'Unknown'}, ${contact.properties?.state || 'Unknown'}
+      
+      For industry field, use ONLY these HubSpot values: COMPUTER_SOFTWARE, FINANCIAL_SERVICES, HEALTH_WELLNESS_FITNESS, MARKETING_ADVERTISING, CONSULTING, REAL_ESTATE, RETAIL, RESTAURANTS, MEDICAL_PRACTICE, ACCOUNTING, LEGAL_SERVICES, CONSTRUCTION, AUTOMOTIVE, EDUCATION_MANAGEMENT, NONPROFIT_ORGANIZATION_MANAGEMENT, INFORMATION_TECHNOLOGY_SERVICES, HUMAN_RESOURCES, INSURANCE, MANUFACTURING, TRANSPORTATION_TRUCKING_RAILROAD
       
       Provide JSON with only the missing fields (use null if truly unknown):
       {

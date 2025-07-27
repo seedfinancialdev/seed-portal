@@ -93,6 +93,16 @@ export default function ClientIntel() {
     enhanceDataMutation.mutate(contactId);
   };
 
+  const enhanceAllProspects = () => {
+    const prospects = searchResults?.filter((client: any) => 
+      client.lifecycleStage?.toLowerCase() !== 'customer'
+    ) || [];
+    
+    prospects.forEach((prospect: any) => {
+      enhanceDataMutation.mutate(prospect.id);
+    });
+  };
+
   // Search for clients/prospects
   const { data: searchResults, isLoading: isSearching } = useQuery({
     queryKey: ["/api/client-intel/search", searchTerm],
@@ -252,8 +262,53 @@ export default function ClientIntel() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Search Results */}
+          {/* AI Enhancement Card - Priority */}
           <div className="lg:col-span-1">
+            <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/30 backdrop-blur-md border border-orange-300/40 shadow-xl mb-6">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-lg">AI Data Enhancement</CardTitle>
+                    <p className="text-orange-100 text-sm">Auto-populate missing fields</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {searchResults?.length > 0 ? (
+                  <div className="space-y-3">
+                    <p className="text-orange-100 text-sm">
+                      Found {searchResults.filter((c: any) => c.lifecycleStage?.toLowerCase() !== 'customer').length} prospects ready for enhancement
+                    </p>
+                    <Button 
+                      onClick={() => enhanceAllProspects()}
+                      disabled={enhanceDataMutation.isPending}
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white border-0"
+                    >
+                      {enhanceDataMutation.isPending ? (
+                        <div className="flex items-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Enhancing...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          Enhance All Prospects
+                        </div>
+                      )}
+                    </Button>
+                  </div>
+                ) : searchTerm.length > 2 ? (
+                  <p className="text-orange-200 text-sm">No prospects found to enhance</p>
+                ) : (
+                  <p className="text-orange-200 text-sm">Search for prospects to enable AI enhancement</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Search Results */}
             <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
               <CardHeader className="pb-4">
                 <CardTitle className="text-white">Search Results</CardTitle>
@@ -282,31 +337,16 @@ export default function ClientIntel() {
                             }{client.revenue || 'Revenue not specified'}
                           </p>
                         </div>
-                        <div className="flex gap-1 flex-col">
-                          <div className="flex gap-1">
-                            <Badge 
-                              variant={client.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
-                              className="text-xs"
-                            >
-                              {client.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {client.services?.length || 0} services
-                            </Badge>
-                          </div>
-                          {client.lifecycleStage?.toLowerCase() !== 'customer' && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                enhanceProspectData(client.id);
-                              }}
-                              disabled={enhanceDataMutation.isPending}
-                              className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded hover:bg-orange-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Auto-populate missing HubSpot fields"
-                            >
-                              {enhanceDataMutation.isPending ? 'Enhancing...' : 'Enhance Data'}
-                            </button>
-                          )}
+                        <div className="flex gap-1">
+                          <Badge 
+                            variant={client.lifecycleStage?.toLowerCase() === 'customer' ? "default" : "secondary"} 
+                            className="text-xs"
+                          >
+                            {client.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {client.services?.length || 0} services
+                          </Badge>
                         </div>
                       </div>
                     </div>
