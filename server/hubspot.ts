@@ -610,6 +610,57 @@ Services Include:
     }
   }
 
+  // Search contacts for Client Intelligence
+  async searchContacts(query: string): Promise<any[]> {
+    try {
+      // Search using HubSpot's search API
+      const searchBody = {
+        query: query,
+        limit: 20,
+        properties: [
+          'email',
+          'firstname', 
+          'lastname',
+          'company',
+          'industry',
+          'annualrevenue',
+          'numemployees',
+          'phone',
+          'city',
+          'state',
+          'country',
+          'notes_last_contacted',
+          'notes_last_activity_date',
+          'hs_lead_status',
+          'lifecyclestage',
+          'createdate',
+          'lastmodifieddate'
+        ]
+      };
+
+      const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
+        method: 'POST',
+        body: JSON.stringify(searchBody)
+      });
+
+      return searchResult.results || [];
+    } catch (error) {
+      console.error('Error searching HubSpot contacts:', error);
+      return [];
+    }
+  }
+
+  // Get contact by ID for detailed analysis
+  async getContactById(contactId: string): Promise<any> {
+    try {
+      const contact = await this.makeRequest(`/crm/v3/objects/contacts/${contactId}?properties=email,firstname,lastname,company,industry,annualrevenue,numemployees,phone,city,state,country,notes_last_contacted,notes_last_activity_date,hs_lead_status,lifecyclestage,createdate,lastmodifieddate`);
+      return contact;
+    } catch (error) {
+      console.error('Error fetching contact by ID:', error);
+      return null;
+    }
+  }
+
   private async updateDealWithQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<void> {
     const description = `Quote Details:
 Monthly Fee: $${monthlyFee.toLocaleString()}

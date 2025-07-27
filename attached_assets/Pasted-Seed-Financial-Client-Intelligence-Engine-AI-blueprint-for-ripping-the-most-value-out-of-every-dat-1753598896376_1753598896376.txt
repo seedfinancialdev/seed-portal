@@ -1,0 +1,112 @@
+Seed Financial “Client Intelligence Engine”
+AI blueprint for ripping the most value out of every data point—without creeping out clients or frying your SDR’s brain.
+
+1. High-Level Flow
+mathematica
+Copy
+Edit
+Clay ➜ Airtable  ─┐
+                  │   (Prospect Mode)   ┐
+HubSpot CRM ──────┤                     │
+Zoom AI Summary ──┤                     │
+QBO API───────────┤──►  AI Orchestration ►  Insight / Alert Fabric
+Client Docs (Box)─┘                     │
+                  │   (Client Mode)     │
+Slack / Portal / HubSpot Tasks ◄────────┘
+2. Core Modules & Logic
+Module	Key Inputs	Processing Logic	Key Outputs
+Enriched Prospect Loader	Airtable (Clay-enriched rows)	Normalize → geo/enums → JSON	prospect_profile object
+Prospect Scorer	prospect_profile	• Gradient Boost model (fit on 12-mo conversion data)
+• Backstop rules for no-data cases	convert_prob 0-1, tier label
+Pre-Call Snapshot Generator	prospect_profile, HubSpot deal fields	Prompt-engineered LLM summarization template (see §5)	Markdown + quick bullets
+Client Activity Harvester	HubSpot email metadata, Zoom transcript, Box docs, QBO ledger	nightly cron ETL → vector store & feature extractor	client_activity_vector
+Signal Miner	client_activity_vector + services matrix	- Rule engine (e.g., “Payroll > $50k & no Payroll Svc”)
+- Anomaly detection on QBO GL trends
+- Sentiment from email/Zoom	[signal] objects w/ severity + confidence
+Alert Router	[signal], user prefs	Slack mention, HubSpot task, portal card	Real-time nudge
+Feedback Loop	Sales “Accept / Snooze / Reject”	Write-back for model retrain + rule tuning	Continual improvement
+
+3. Prospect Mode – Detailed Logic
+Field Normalization
+
+python
+Copy
+Edit
+company_size = log10(revenue_usd)
+industry_code = NAICS_to_seed_group(raw_industry)
+urgency_weight = {"High":1.2,"Med":1,"Low":0.8}[urgency]
+Weighted Lead Score
+
+makefile
+Copy
+Edit
+score = 0.35*company_size
+      + 0.25*growth_rate
+      + 0.20*pain_point_match
+      + 0.10*social_signal_strength
+      + 0.10*urgency_weight
+tier =    "A" if score>8
+      else "B" if score>6
+      else "C"
+Snapshot Prompt (LLM)
+
+yaml
+Copy
+Edit
+SYSTEM: You are Seed’s SDR whisperer. Stay witty, concise, data-driven.
+USER: Prospect JSON { ... }. Summarize in ≤120 words:
+  • Revenue, growth & complexity
+  • Key pain points
+  • Top 3 hooks to open the call
+  • Likely objections & 1-line counters
+  • Upsell thermometer (0-5) – how much $$$ potential
+Surface to SDR in Slack thread & Portal “Today’s Calls.”
+
+4. Client Mode – Signal Logic
+4.1 Service Gap Rules (Examples)
+Trigger	Rule	Upsell CTA
+Payroll missing	QBO.payrollExpense > $50k AND services != "Payroll"	“Offer Payroll Add-On”
+Multi-state nexus risk	num_states > 3 AND no_nexus_package	“Pitch Nexus Compliance”
+High cash but ≠ CFO	avg_bank_bal > 6×monthly_burn	“Introduce Fractional CFO”
+
+4.2 Sentiment & Urgency
+python
+Copy
+Edit
+if email_sentiment <-0.4 or zoom_tone == "frustrated":
+    severity = "High"
+elif GL_variance_zscore > 2:
+    severity = "Medium"
+else:
+    severity = "Low"
+Slack message template:
+
+⚠️ Cross-Sell Alert (High)
+Client Acme LLC just mentioned “tax planning confusion” on Zoom.
+❓ They pay $60k/yr payroll but don’t have Payroll Add-On.
+💡 Recommend bundle: TaaS + Payroll (est. +$550/mo).
+(Click to create follow-up task)
+
+5. Prompt Engineering Snippets
+5.1 Zoom Transcript Insight
+yaml
+Copy
+Edit
+SYSTEM: Extract sales opportunities in JSON.
+USER: <<<Transcript>>>
+ASSISTANT JSON:
+{
+  "pain_points": [...],
+  "upsell_signals": [...],
+  "next_steps": [...]
+}
+5.2 Financial Anomaly Detector (LLM fallback)
+nginx
+Copy
+Edit
+Provide 3 bullets: unusual GL changes last 30 days & how Seed can help.
+6. Governance & Human-in-Loop
+Checkpoint	Human Owner	Why
+Model retrain cadence	RevOps	Avoid drift
+Rule override	Director of Tax	Compliance sanity
+Alert acceptance	SDR/AM	Quality control & learning

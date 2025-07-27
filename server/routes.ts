@@ -7,6 +7,7 @@ import { sendCleanupOverrideNotification } from "./slack";
 import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
 import { calculateCombinedFees } from "@shared/pricing";
+import { clientIntelEngine } from "./client-intel";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -497,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client Intel API endpoints
   
-  // Search for clients/prospects
+  // Search for clients/prospects using HubSpot
   app.get("/api/client-intel/search", requireAuth, async (req, res) => {
     try {
       const query = req.query.q as string;
@@ -505,62 +506,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
-      // For demo purposes, return some mock data
-      // In production, this would search HubSpot, QBO, and our database
-      const mockResults = [
-        {
-          id: "1",
-          email: "sarah@techflow.io",
-          companyName: "TechFlow Solutions",
-          industry: "Software/SaaS",
-          revenue: "$2M ARR",
-          employees: 25,
-          services: ["Bookkeeping"],
-          riskScore: 15,
-          painPoints: ["Manual processes", "Growing fast", "Need better reporting"],
-          upsellOpportunities: ["Tax preparation services", "Payroll management", "FP&A consulting"],
-          lastActivity: "2025-01-15"
-        },
-        {
-          id: "2", 
-          email: "mike@wellness-hub.com",
-          companyName: "Wellness Hub Inc",
-          industry: "Healthcare/Medical",
-          revenue: "$850K ARR",
-          employees: 12,
-          services: ["Tax"],
-          riskScore: 35,
-          painPoints: ["Compliance complexity", "Multiple state requirements", "Seasonal revenue"],
-          upsellOpportunities: ["Monthly bookkeeping", "Payroll services", "Financial planning"],
-          lastActivity: "2025-01-10"
-        },
-        {
-          id: "3",
-          email: "alex@greenleaf.com", 
-          companyName: "GreenLeaf Consulting",
-          industry: "Consulting",
-          revenue: "$1.2M ARR",
-          employees: 8,
-          services: ["Bookkeeping", "Tax"],
-          riskScore: 25,
-          painPoints: ["Cash flow management", "Project profitability", "Client billing efficiency"],
-          upsellOpportunities: ["AP/AR automation", "Project accounting", "Advanced reporting"],
-          lastActivity: "2025-01-20"
-        }
-      ].filter(client => 
-        client.companyName.toLowerCase().includes(query.toLowerCase()) ||
-        client.email.toLowerCase().includes(query.toLowerCase()) ||
-        client.industry.toLowerCase().includes(query.toLowerCase())
-      );
-
-      res.json(mockResults);
+      // Search HubSpot contacts with AI enrichment
+      const results = await clientIntelEngine.searchHubSpotContacts(query);
+      res.json(results);
     } catch (error) {
       console.error('Client search error:', error);
       res.status(500).json({ message: "Search failed" });
     }
   });
 
-  // Generate AI insights for a client
+  // Generate AI insights for a client using real data
   app.post("/api/client-intel/generate-insights", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.body;
@@ -569,25 +524,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Client ID is required" });
       }
 
-      // Simulate AI analysis delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Get client data from HubSpot first
+      let clientData: any = {};
+      
+      try {
+        if (hubSpotService) {
+          const contact = await hubSpotService.getContactById(clientId);
+          if (contact) {
+            clientData = {
+              companyName: contact.properties.company || 'Unknown Company',
+              industry: contact.properties.industry || 'Unknown',
+              revenue: contact.properties.annualrevenue,
+              employees: parseInt(contact.properties.numemployees) || undefined,
+              services: [], // Would determine from deal history
+              hubspotProperties: contact.properties,
+              lastActivity: contact.properties.lastmodifieddate,
+              recentActivities: [] // Would fetch from activities API
+            };
+          }
+        }
+      } catch (hubspotError) {
+        console.error('HubSpot data fetch failed:', hubspotError);
+        // Continue with limited data for analysis
+      }
 
-      // Mock AI-generated insights
+      // Generate AI insights using the intelligence engine
+      const [painPoints, serviceGaps, riskScore] = await Promise.all([
+        clientIntelEngine.extractPainPoints(clientData),
+        clientIntelEngine.detectServiceGaps(clientData),
+        clientIntelEngine.calculateRiskScore(clientData)
+      ]);
+
       const insights = {
-        painPoints: [
-          "Revenue growth outpacing operational efficiency",
-          "Manual financial processes creating bottlenecks", 
-          "Lack of real-time financial visibility",
-          "Compliance requirements becoming complex"
-        ],
-        upsellOpportunities: [
-          "Monthly financial statement automation - $2,500/mo additional revenue",
-          "Cash flow forecasting and management - $1,200/mo",
-          "Multi-entity consolidation services - $3,500/mo",
-          "AP/AR automation implementation - $800/mo"
-        ],
-        riskScore: Math.floor(Math.random() * 40) + 10, // 10-50% risk
-        lastAnalyzed: new Date().toISOString()
+        painPoints,
+        upsellOpportunities: serviceGaps.map(signal => 
+          `${signal.title} - ${signal.estimatedValue || 'Pricing TBD'}`
+        ),
+        riskScore,
+        lastAnalyzed: new Date().toISOString(),
+        signals: serviceGaps
       };
 
       res.json(insights);
