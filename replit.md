@@ -191,6 +191,17 @@ Preferred communication style: Simple, everyday language.
   - **User-Friendly Design**: Clear warnings and intuitive unlock process prevent accidental approval bypass
   - **Robust Security**: Impossible to bypass approval requirements through any UI interaction
 
+✓ **HubSpot-Powered Client Intelligence Engine with OpenAI Integration** (July 27, 2025)
+  - **Live HubSpot Integration**: Real-time contact search and data fetching from HubSpot CRM
+  - **OpenAI GPT-4o AI Analysis**: Implemented comprehensive AI analysis for prospect scoring, pain point detection, and service gap identification
+  - **Service Detection System**: Automated service identification from HubSpot deal names (Bookkeeping, Tax, Payroll, Consulting, AP/AR)
+  - **Prospect Scoring**: AI-generated A/B/C tier classification based on company size, growth potential, and engagement
+  - **Risk Assessment**: Intelligent risk scoring based on client behavior patterns and engagement frequency
+  - **Upsell Opportunity Detection**: AI identifies service gaps and generates estimated revenue opportunities
+  - **Pre-call Snapshots**: AI-generated sales preparation summaries for SDR team
+  - **Data Quality Handling**: Fixed "Unknown" industry tags with intelligent fallback display logic
+  - **Real-time Debug Logging**: Enhanced service detection debugging for accurate deal-to-service mapping
+
 ✓ **Live Weather Integration and Enhanced Dashboard Polish** (July 27, 2025)
   - **Live Weather API Integration**: Connected to Open-Meteo API (free, no API key required) for real-time weather data
   - **Weather Icons**: Added contextual weather icons (sun, clouds, rain) using Lucide React icons

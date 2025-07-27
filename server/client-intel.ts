@@ -270,7 +270,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
           const prospectProfile: ProspectProfile = {
             email: contact.properties.email,
             companyName: contact.properties.company || 'Unknown Company',
-            industry: contact.properties.industry || 'Unknown',
+            industry: contact.properties.industry || null,
             revenue: contact.properties.annualrevenue,
             employees: parseInt(contact.properties.numemployees) || undefined,
             hubspotProperties: contact.properties,

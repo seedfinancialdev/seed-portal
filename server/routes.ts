@@ -533,7 +533,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (contact) {
             clientData = {
               companyName: contact.properties.company || 'Unknown Company',
-              industry: contact.properties.industry || 'Unknown',
+              industry: contact.properties.industry || null,
               revenue: contact.properties.annualrevenue,
               employees: parseInt(contact.properties.numemployees) || undefined,
               services: await clientIntelEngine.getContactServices(clientId),

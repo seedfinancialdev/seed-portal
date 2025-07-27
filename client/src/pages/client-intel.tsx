@@ -243,7 +243,12 @@ export default function ClientIntel() {
                         <div>
                           <h3 className="font-semibold text-gray-900 text-sm">{client.companyName}</h3>
                           <p className="text-xs text-gray-600">{client.email}</p>
-                          <p className="text-xs text-gray-500">{client.industry} • {client.revenue}</p>
+                          <p className="text-xs text-gray-500">
+                            {client.industry && client.industry !== 'Unknown' && client.industry !== 'unknown' 
+                              ? `${client.industry} • ` 
+                              : ''
+                            }{client.revenue || 'Revenue not specified'}
+                          </p>
                         </div>
                         <Badge variant="outline" className="text-xs">
                           {client.services?.length || 0} services
@@ -316,7 +321,12 @@ export default function ClientIntel() {
                       </div>
                       <div className="bg-white/50 rounded-lg p-3 text-center">
                         <Target className="h-6 w-6 text-purple-600 mx-auto mb-1" />
-                        <p className="text-sm font-medium text-gray-900">{selectedClient.industry}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {selectedClient.industry && selectedClient.industry !== 'Unknown' && selectedClient.industry !== 'unknown' 
+                            ? selectedClient.industry 
+                            : 'Not specified'
+                          }
+                        </p>
                         <p className="text-xs text-gray-600">Industry</p>
                       </div>
                       <div className="bg-white/50 rounded-lg p-3 text-center">
