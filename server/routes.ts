@@ -527,10 +527,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // Fetch the contact data and enhance it
-      const contactData = { id: contactId, properties: req.body };
-      await clientIntelEngine.enhanceProspectData(contactData);
-      res.json({ success: true, message: 'Contact data enhanced successfully' });
+      if (!hubSpotService) {
+        return res.status(500).json({ error: 'HubSpot service not available' });
+      }
+
+      // Fetch the full contact data from HubSpot
+      const contact = await hubSpotService.getContactById(contactId);
+      if (!contact) {
+        return res.status(404).json({ error: 'Contact not found' });
+      }
+
+      // Enhance the contact's company data
+      await clientIntelEngine.enhanceProspectData(contact);
+      
+      // Return the enhanced data including Airtable fields
+      const companyName = contact.properties?.company;
+      const airtableData = companyName ? await airtableService.getEnrichedCompanyData(companyName, contact.properties?.email) : null;
+      
+      res.json({ 
+        success: true, 
+        message: 'Contact data enhanced successfully',
+        airtableData: airtableData
+      });
     } catch (error) {
       console.error('Data enhancement error:', error);
       res.status(500).json({ error: 'Enhancement failed' });

@@ -93,14 +93,37 @@ export default function ClientIntel() {
     enhanceDataMutation.mutate(contactId);
   };
 
-  const enhanceAllProspects = () => {
-    const prospects = searchResults?.filter((client: any) => 
-      client.lifecycleStage?.toLowerCase() !== 'customer'
-    ) || [];
+  const enhanceSelectedRecord = async () => {
+    if (!selectedClient?.id) return;
     
-    prospects.forEach((prospect: any) => {
-      enhanceDataMutation.mutate(prospect.id);
-    });
+    try {
+      const result = await enhanceDataMutation.mutateAsync(selectedClient.id);
+      
+      // Update selected client with Airtable data if available
+      if (result?.airtableData) {
+        setSelectedClient({
+          ...selectedClient,
+          airtableData: result.airtableData
+        });
+      }
+      
+      toast({
+        title: "Enhancement Complete",
+        description: `Successfully enhanced data for ${selectedClient.companyName}`,
+      });
+      
+      // Refresh search results
+      if (searchTerm.length > 2) {
+        searchQuery.refetch();
+      }
+    } catch (error) {
+      console.error(`Failed to enhance ${selectedClient.companyName}:`, error);
+      toast({
+        title: "Enhancement Failed",
+        description: "Unable to enhance contact data. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Search for clients/prospects
@@ -277,14 +300,14 @@ export default function ClientIntel() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {searchResults?.length > 0 ? (
+                {selectedClient ? (
                   <div className="space-y-3">
                     <p className="text-orange-100 text-sm">
-                      Found {searchResults.filter((c: any) => c.lifecycleStage?.toLowerCase() !== 'customer').length} prospects ready for enhancement
+                      {selectedClient.lifecycleStage?.toLowerCase() === 'customer' ? 'Client' : 'Prospect'} selected: {selectedClient.companyName}
                     </p>
                     <Button 
-                      onClick={() => enhanceAllProspects()}
-                      disabled={enhanceDataMutation.isPending}
+                      onClick={() => enhanceSelectedRecord()}
+                      disabled={enhanceDataMutation.isPending || !selectedClient}
                       className="w-full bg-orange-500 hover:bg-orange-600 text-white border-0"
                     >
                       {enhanceDataMutation.isPending ? (
@@ -295,15 +318,15 @@ export default function ClientIntel() {
                       ) : (
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4" />
-                          Enhance All Prospects
+                          Enhance Record
                         </div>
                       )}
                     </Button>
                   </div>
                 ) : searchTerm.length > 2 ? (
-                  <p className="text-orange-200 text-sm">No prospects found to enhance</p>
+                  <p className="text-orange-200 text-sm">Select a contact to enhance</p>
                 ) : (
-                  <p className="text-orange-200 text-sm">Search for prospects to enable AI enhancement</p>
+                  <p className="text-orange-200 text-sm">Search and select a contact to enable enhancement</p>
                 )}
               </CardContent>
             </Card>

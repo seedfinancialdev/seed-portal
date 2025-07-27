@@ -429,8 +429,9 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
     try {
       console.log(`Generating enhanced data for ${companyName}`);
       
-      // First priority: Check Airtable for existing enriched data
-      const airtableData = await airtableService.getEnrichedCompanyData(companyName);
+      // First priority: Check Airtable for existing enriched data using email-based search
+      const contactEmail = contact.properties?.email;
+      const airtableData = await airtableService.getEnrichedCompanyData(companyName, contactEmail);
       if (airtableData) {
         console.log(`✅ Found enriched data in Airtable for ${companyName}`);
         return {

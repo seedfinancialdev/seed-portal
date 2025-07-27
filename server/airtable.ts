@@ -47,20 +47,30 @@ export class AirtableService {
       .base(process.env.AIRTABLE_BASE_ID);
   }
 
-  // Search for company record by name
-  async findCompanyByName(companyName: string): Promise<AirtableRecord | null> {
+  // Search for company record by name or email
+  async findCompanyByName(companyName: string, email?: string): Promise<AirtableRecord | null> {
     if (!this.base) {
       console.log('Airtable base not initialized - using AI fallback');
       return null;
     }
 
     try {
-      console.log(`🔍 Searching Airtable BK Leads table for company: ${companyName}`);
+      console.log(`🔍 Searching Airtable BK Leads table for ${email ? `email: ${email}` : `company: ${companyName}`}`);
       
-      // Search for matching company records using the correct field name
+      // Search by email first (more accurate), then by company name as fallback
+      let filterFormula = '';
+      if (email) {
+        filterFormula = `OR(
+          SEARCH("${email.toLowerCase()}", LOWER({Email})) > 0,
+          SEARCH("${email.toLowerCase()}", LOWER({Email (Formatted)})) > 0
+        )`;
+      } else {
+        filterFormula = `SEARCH("${companyName.toLowerCase()}", LOWER({Company Name})) > 0`;
+      }
+      
       const records = await this.base(this.tableName)
         .select({
-          filterByFormula: `SEARCH("${companyName.toLowerCase()}", LOWER({Company Name})) > 0`,
+          filterByFormula: filterFormula,
           maxRecords: 1
         })
         .firstPage();
@@ -82,8 +92,8 @@ export class AirtableService {
   }
 
   // Get enriched company data from Airtable
-  async getEnrichedCompanyData(companyName: string): Promise<any> {
-    const record = await this.findCompanyByName(companyName);
+  async getEnrichedCompanyData(companyName: string, email?: string): Promise<any> {
+    const record = await this.findCompanyByName(companyName, email);
     if (!record) return null;
 
     const fields = record.fields;
@@ -92,7 +102,7 @@ export class AirtableService {
     return {
       name: fields['Company Name'] || companyName,
       industry: this.mapToHubSpotIndustry(fields['Industry']),
-      annualrevenue: fields['Revenue'],
+      annualrevenue: this.convertRevenueToNumber(fields['Revenue']),
       website: fields['Company Website'],
       linkedin_company_page: fields['LinkedIn Company Page'],
       phone: fields['Phone'] || fields['Phone (Formatted)'],
@@ -240,6 +250,21 @@ export class AirtableService {
     if (!location) return undefined;
     const parts = location.split(',');
     return parts[1]?.trim();
+  }
+
+  // Helper method to convert revenue text to number format for HubSpot
+  private convertRevenueToNumber(revenue?: string): string | undefined {
+    if (!revenue) return undefined;
+    
+    // Extract numbers from revenue ranges like "$50,000 - $200,000"
+    const match = revenue.match(/\$?([\d,]+)/);
+    if (match) {
+      // Remove commas and return as string number
+      return match[1].replace(/,/g, '');
+    }
+    
+    // If no match, return undefined to let AI fill this field
+    return undefined;
   }
 }
 
