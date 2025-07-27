@@ -661,6 +661,63 @@ Services Include:
     }
   }
 
+  // Get deals associated with a contact to determine services
+  async getContactDeals(contactId: string): Promise<any[]> {
+    try {
+      const dealsResponse = await this.makeRequest(`/crm/v4/objects/contacts/${contactId}/associations/deals`);
+      
+      if (!dealsResponse?.results?.length) {
+        return [];
+      }
+
+      // Get detailed deal information
+      const dealIds = dealsResponse.results.map((assoc: any) => assoc.toObjectId);
+      const dealDetails = await Promise.all(
+        dealIds.map(async (dealId: string) => {
+          try {
+            const deal = await this.makeRequest(`/crm/v3/objects/deals/${dealId}?properties=dealname,dealstage,amount,closedate,pipeline,deal_type,hs_object_id`);
+            return deal;
+          } catch (error) {
+            console.error(`Error fetching deal ${dealId}:`, error);
+            return null;
+          }
+        })
+      );
+
+      return dealDetails.filter(deal => deal !== null);
+    } catch (error) {
+      console.error('Error fetching contact deals:', error);
+      return [];
+    }
+  }
+
+  // Determine services from deal names and types
+  determineServicesFromDeals(deals: any[]): string[] {
+    const services = new Set<string>();
+    
+    deals.forEach(deal => {
+      const dealName = (deal.properties?.dealname || '').toLowerCase();
+      
+      if (dealName.includes('bookkeeping') || dealName.includes('bk')) {
+        services.add('Bookkeeping');
+      }
+      if (dealName.includes('tax') || dealName.includes('taas')) {
+        services.add('Tax');
+      }
+      if (dealName.includes('payroll')) {
+        services.add('Payroll');
+      }
+      if (dealName.includes('consulting') || dealName.includes('cfo')) {
+        services.add('Consulting');
+      }
+      if (dealName.includes('ap/ar') || dealName.includes('accounts')) {
+        services.add('AP/AR');
+      }
+    });
+
+    return Array.from(services);
+  }
+
   private async updateDealWithQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number): Promise<void> {
     const description = `Quote Details:
 Monthly Fee: $${monthlyFee.toLocaleString()}

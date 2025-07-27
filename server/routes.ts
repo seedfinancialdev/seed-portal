@@ -536,7 +536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               industry: contact.properties.industry || 'Unknown',
               revenue: contact.properties.annualrevenue,
               employees: parseInt(contact.properties.numemployees) || undefined,
-              services: [], // Would determine from deal history
+              services: await clientIntelEngine.getContactServices(clientId),
               hubspotProperties: contact.properties,
               lastActivity: contact.properties.lastmodifieddate,
               recentActivities: [] // Would fetch from activities API
