@@ -29,6 +29,7 @@ interface ClientSignal {
 
 export class ClientIntelligenceEngine {
   private openai: OpenAI;
+  private enhancementLocks: Set<string> = new Set(); // Track ongoing enhancements
 
   constructor() {
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -340,16 +341,26 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
   private async enhanceProspectData(contact: any): Promise<void> {
     if (!hubSpotService) return;
 
-    try {
-      const contactId = contact.id;
-      const companyName = contact.properties?.company;
-      
-      // Only proceed if contact has a company name but no associated company
-      if (!companyName) return;
+    const contactId = contact.id;
+    const companyName = contact.properties?.company;
+    
+    // Only proceed if contact has a company name
+    if (!companyName) return;
 
-      // Check if contact already has company associations
+    // Prevent duplicate enhancements for the same contact
+    const lockKey = `${contactId}-${companyName}`;
+    if (this.enhancementLocks.has(lockKey)) {
+      console.log(`Enhancement already in progress for ${companyName} (Contact: ${contactId})`);
+      return;
+    }
+
+    this.enhancementLocks.add(lockKey);
+
+    try {
+      // Check if contact already has company associations (fresh check)
       const existingCompanies = await hubSpotService.getContactAssociatedCompanies(contactId);
       if (existingCompanies.length > 0) {
+        console.log(`Contact ${contactId} already has ${existingCompanies.length} company association(s)`);
         // Contact already has company associations, enhance existing company data
         for (const companyAssoc of existingCompanies) {
           await this.enhanceCompanyData(companyAssoc.toObjectId, companyName, contact);
@@ -359,7 +370,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
 
       console.log(`Creating missing company association for ${companyName} (Contact: ${contactId})`);
 
-      // Search for existing company by name first
+      // Search for existing company by name first (with fresh search)
       const existingCompany = await this.findCompanyByName(companyName);
       
       let companyId: string;
@@ -367,8 +378,14 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
         companyId = existingCompany.id;
         console.log(`Found existing company: ${companyName} (${companyId})`);
       } else {
-        // Create new company with enhanced data
+        // Create new company with enhanced data and proper ownership
         const enhancedCompanyData = await this.generateCompanyData(companyName, contact);
+        
+        // Set company owner to the contact's owner if available
+        if (contact.properties?.hubspot_owner_id) {
+          enhancedCompanyData.hubspot_owner_id = contact.properties.hubspot_owner_id;
+        }
+        
         const newCompany = await hubSpotService.createCompany(enhancedCompanyData);
         
         if (!newCompany) {
@@ -377,7 +394,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
         }
         
         companyId = newCompany.id;
-        console.log(`Created new company: ${companyName} (${companyId})`);
+        console.log(`Created new company: ${companyName} (${companyId}) with owner ${contact.properties?.hubspot_owner_id || 'none'}`);
       }
 
       // Associate contact with company
@@ -394,6 +411,9 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
       
     } catch (error) {
       console.error('Error enhancing prospect data:', error);
+    } finally {
+      // Always release the lock
+      this.enhancementLocks.delete(lockKey);
     }
   }
 

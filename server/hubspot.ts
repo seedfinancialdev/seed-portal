@@ -1268,26 +1268,32 @@ Generated: ${new Date().toLocaleDateString()}`;
     website?: string;
     address?: string;
     zip?: string;
+    hubspot_owner_id?: string;
   }) {
     try {
+      const properties: any = {
+        name: companyData.name,
+        domain: companyData.domain,
+        city: companyData.city,
+        state: companyData.state,
+        country: companyData.country,
+        industry: companyData.industry,
+        annualrevenue: companyData.annualrevenue,
+        numberofemployees: companyData.numberofemployees,
+        linkedin_company_page: companyData.linkedin_company_page,
+        website: companyData.website,
+        address: companyData.address,
+        zip: companyData.zip,
+      };
+
+      // Add company owner if provided
+      if (companyData.hubspot_owner_id) {
+        properties.hubspot_owner_id = companyData.hubspot_owner_id;
+      }
+
       const response = await this.makeRequest('/crm/v3/objects/companies', {
         method: 'POST',
-        body: JSON.stringify({
-          properties: {
-            name: companyData.name,
-            domain: companyData.domain,
-            city: companyData.city,
-            state: companyData.state,
-            country: companyData.country,
-            industry: companyData.industry,
-            annualrevenue: companyData.annualrevenue,
-            numberofemployees: companyData.numberofemployees,
-            linkedin_company_page: companyData.linkedin_company_page,
-            website: companyData.website,
-            address: companyData.address,
-            zip: companyData.zip,
-          }
-        })
+        body: JSON.stringify({ properties })
       });
       return response;
     } catch (error) {
