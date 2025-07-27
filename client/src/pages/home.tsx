@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings } from "lucide-react";
 import { useLocation } from "wouter";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 
@@ -1245,26 +1245,40 @@ export default function Home() {
           </div>
           
           {/* User Menu - Top Right */}
-          <div className="absolute top-0 right-0">
+          <div className="absolute top-0 right-0 flex items-center gap-4">
+            <Button variant="ghost" size="sm" className="relative p-2 hover:bg-white/10 text-white">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
-                  <User className="h-4 w-4 mr-2" />
-                  {user?.email}
+                <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
+                  <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem disabled>
-                  <User className="h-4 w-4 mr-2" />
-                  {user?.email}
+              <DropdownMenuContent align="end" className="w-44">
+                <div className="px-3 py-2 border-b">
+                  <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+                <DropdownMenuItem className="text-sm">
+                  <User className="mr-2 h-3 w-3" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-sm">
+                  <Settings className="mr-2 h-3 w-3" />
+                  Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
+                  className="cursor-pointer text-red-600 text-sm"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+                  <LogOut className="mr-2 h-3 w-3" />
+                  {logoutMutation.isPending ? "Signing out..." : "Sign Out"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

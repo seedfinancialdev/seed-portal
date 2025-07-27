@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   ArrowLeft, 
   DollarSign, 
@@ -34,7 +35,11 @@ import {
   Star,
   Gift,
   PlusCircle,
-  Eye
+  Eye,
+  Bell,
+  User,
+  Settings,
+  LogOut
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -364,18 +369,44 @@ export default function CommissionTracker() {
             <img 
               src={navLogoPath} 
               alt="Seed Financial" 
-              className="h-12 w-auto"
+              className="h-16 w-auto"
             />
           </div>
           
           {/* Profile Menu */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                {user?.email?.[0]?.toUpperCase() || 'U'}
-              </div>
-              <span className="text-white font-medium">{user?.email?.split('@')[0] || 'User'}</span>
-            </div>
+            <Button variant="ghost" size="sm" className="relative p-2 hover:bg-white/10 text-white">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
+                  <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <div className="px-3 py-2 border-b">
+                  <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+                <DropdownMenuItem className="text-sm">
+                  <User className="mr-2 h-3 w-3" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-sm">
+                  <Settings className="mr-2 h-3 w-3" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {}} className="cursor-pointer text-red-600 text-sm">
+                  <LogOut className="mr-2 h-3 w-3" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
