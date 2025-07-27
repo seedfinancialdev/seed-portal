@@ -5,8 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   ArrowLeft, 
   DollarSign, 
@@ -99,6 +108,12 @@ export default function CommissionTracker() {
     totalClientsClosedAllTime: 42,
     currentMonthDeals: 3
   });
+
+  // Adjustment request dialog state
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [adjustmentAmount, setAdjustmentAmount] = useState('');
 
   // Sample data matching the specifications
   useEffect(() => {
@@ -226,6 +241,52 @@ export default function CommissionTracker() {
   const milestoneBonusEligibility = calculateMilestoneBonus(salesRepStats.totalClientsClosedAllTime);
   const nextMilestone = getNextMilestone(salesRepStats.totalClientsClosedAllTime);
 
+  // Calculate payroll periods and cycle amounts
+  const getNextPayrollDate = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const currentDay = now.getDate();
+    
+    let nextPayrollDate;
+    if (currentDay <= 1) {
+      nextPayrollDate = new Date(currentYear, currentMonth, 1);
+    } else if (currentDay <= 15) {
+      nextPayrollDate = new Date(currentYear, currentMonth, 15);
+    } else {
+      // Next month, 1st
+      nextPayrollDate = new Date(currentYear, currentMonth + 1, 1);
+    }
+    
+    return nextPayrollDate;
+  };
+
+  const nextPayrollDate = getNextPayrollDate();
+  
+  // Calculate current cycle commissions (since last payroll date)
+  const getCurrentCycleCommissions = () => {
+    const now = new Date();
+    const currentDay = now.getDate();
+    let cycleStartDate;
+    
+    if (currentDay >= 16) {
+      // Current cycle started on 15th
+      cycleStartDate = new Date(now.getFullYear(), now.getMonth(), 15);
+    } else {
+      // Current cycle started on 1st
+      cycleStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    
+    return commissions
+      .filter(c => new Date(c.dateEarned) >= cycleStartDate && c.status !== 'paid')
+      .reduce((sum, c) => sum + Number(c.amount), 0);
+  };
+
+  const currentCycleAmount = getCurrentCycleCommissions();
+  
+  // Last cycle paid (mock data - would come from last payroll)
+  const lastCyclePaid = 2840.00;
+
   const getStatusBadge = (status: Commission['status'] | MonthlyBonus['status'] | MilestoneBonus['status']) => {
     switch (status) {
       case 'paid':
@@ -252,31 +313,63 @@ export default function CommissionTracker() {
     }
   };
 
+  const handleRequestAdjustment = (commission: Commission) => {
+    setSelectedCommission(commission);
+    setAdjustmentReason('');
+    setAdjustmentAmount('');
+    setAdjustmentDialogOpen(true);
+  };
+
+  const handleSubmitAdjustment = () => {
+    if (!selectedCommission || !adjustmentReason) return;
+    
+    // Here you would typically send the adjustment request to the backend
+    console.log('Adjustment request submitted:', {
+      commissionId: selectedCommission.id,
+      originalAmount: selectedCommission.amount,
+      requestedAmount: adjustmentAmount || selectedCommission.amount,
+      reason: adjustmentReason,
+      salesRep: user?.email
+    });
+    
+    // Close dialog and reset form
+    setAdjustmentDialogOpen(false);
+    setSelectedCommission(null);
+    setAdjustmentReason('');
+    setAdjustmentAmount('');
+    
+    // Show success message (would typically be handled by a toast/notification system)
+    alert('Adjustment request submitted successfully!');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Portal
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Commission Tracker</h1>
-              <p className="text-white/70">Track your earnings and commission status</p>
-            </div>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Portal
+            </Button>
+          </Link>
+          
+          {/* Centered Logo */}
+          <div className="flex-1 flex justify-center">
+            <img 
+              src="/attached_assets/Nav Logo_1753431362883.png" 
+              alt="Seed Financial" 
+              className="h-12 w-auto"
+            />
           </div>
+          
+          {/* Profile Menu */}
           <div className="flex items-center gap-4">
-            <div className="text-white text-right">
-              <p className="text-sm opacity-75">Monthly Clients</p>
-              <p className="text-xl font-bold">{salesRepStats.totalClientsClosedMonthly}</p>
-            </div>
-            <div className="text-white text-right">
-              <p className="text-sm opacity-75">Total Clients</p>
-              <p className="text-xl font-bold">{salesRepStats.totalClientsClosedAllTime}</p>
+            <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2">
+              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {user?.email?.[0]?.toUpperCase() || 'U'}
+              </div>
+              <span className="text-white font-medium">{user?.email?.split('@')[0] || 'User'}</span>
             </div>
           </div>
         </div>
@@ -287,7 +380,7 @@ export default function CommissionTracker() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Earned</p>
+                  <p className="text-sm font-medium text-gray-600">Lifetime Commissions</p>
                   <p className="text-2xl font-bold text-gray-900">
                     ${totalEarnings.totalEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
@@ -301,9 +394,9 @@ export default function CommissionTracker() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Paid</p>
+                  <p className="text-sm font-medium text-gray-600">Last Cycle Paid</p>
                   <p className="text-2xl font-bold text-green-600">
-                    ${totalEarnings.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ${lastCyclePaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
                 <CheckCircle className="h-8 w-8 text-green-600" />
@@ -315,12 +408,12 @@ export default function CommissionTracker() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Processing</p>
-                  <p className="text-2xl font-bold text-yellow-600">
-                    ${totalEarnings.totalProcessing.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  <p className="text-sm font-medium text-gray-600">Current Cycle</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${currentCycleAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <Clock className="h-8 w-8 text-yellow-600" />
+                <TrendingUp className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
@@ -329,16 +422,89 @@ export default function CommissionTracker() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold text-gray-600">
-                    ${totalEarnings.totalPending.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  <p className="text-sm font-medium text-gray-600">Next Payroll Date</p>
+                  <p className="text-lg font-bold text-purple-600">
+                    {nextPayrollDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {Math.ceil((nextPayrollDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
                   </p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-gray-600" />
+                <Calendar className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Commission History - Primary Focus */}
+        <Card className="bg-white/95 backdrop-blur border-0 shadow-xl mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              Commission History
+            </CardTitle>
+            <CardDescription>
+              View and manage all your commission earnings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Deal</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date Earned</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {commissions.map((commission) => (
+                    <TableRow key={commission.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <p className="font-medium">{commission.companyName}</p>
+                          <p className="text-sm text-gray-500">{commission.dealName}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getServiceTypeIcon(commission.serviceType)}
+                          <span className="capitalize">{commission.serviceType}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {commission.type.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{commission.monthNumber}</TableCell>
+                      <TableCell className="font-medium">
+                        ${commission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(commission.status)}</TableCell>
+                      <TableCell>{new Date(commission.dateEarned).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="text-xs"
+                          onClick={() => handleRequestAdjustment(commission)}
+                        >
+                          Request Adjustment
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Bonus Tracking Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -444,69 +610,15 @@ export default function CommissionTracker() {
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
+        {/* Additional Content Tabs */}
         <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
           <CardContent className="p-6">
-            <Tabs defaultValue="commissions" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="commissions">Commissions</TabsTrigger>
+            <Tabs defaultValue="deals" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="deals">Recent Deals</TabsTrigger>
                 <TabsTrigger value="monthly-bonuses">Monthly Bonuses</TabsTrigger>
                 <TabsTrigger value="milestone-bonuses">Milestone Bonuses</TabsTrigger>
               </TabsList>
-
-              <TabsContent value="commissions" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Commission History</h3>
-                    <Badge variant="outline">{commissions.length} entries</Badge>
-                  </div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Deal</TableHead>
-                          <TableHead>Service</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Month</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date Earned</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {commissions.map((commission) => (
-                          <TableRow key={commission.id}>
-                            <TableCell className="font-medium">
-                              <div>
-                                <p className="font-medium">{commission.companyName}</p>
-                                <p className="text-sm text-gray-500">{commission.dealName}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {getServiceTypeIcon(commission.serviceType)}
-                                <span className="capitalize">{commission.serviceType}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="capitalize">
-                                {commission.type.replace('_', ' ')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{commission.monthNumber}</TableCell>
-                            <TableCell className="font-medium">
-                              ${commission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(commission.status)}</TableCell>
-                            <TableCell>{new Date(commission.dateEarned).toLocaleDateString()}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </TabsContent>
 
               <TabsContent value="deals" className="mt-6">
                 <div className="space-y-4">
@@ -642,6 +754,68 @@ export default function CommissionTracker() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Adjustment Request Dialog */}
+        <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Request Commission Adjustment</DialogTitle>
+              <DialogDescription>
+                Submit a request to adjust the commission amount for this deal.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedCommission && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-semibold">{selectedCommission.companyName}</h4>
+                  <p className="text-sm text-gray-600">{selectedCommission.dealName}</p>
+                  <p className="text-lg font-bold text-green-600">
+                    Current Amount: ${selectedCommission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="adjustment-amount">Requested Amount (optional)</Label>
+                  <Input
+                    id="adjustment-amount"
+                    type="number"
+                    step="0.01"
+                    placeholder="Leave blank if not requesting amount change"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="adjustment-reason">Reason for Adjustment *</Label>
+                  <Textarea
+                    id="adjustment-reason"
+                    placeholder="Please explain why this adjustment is needed..."
+                    value={adjustmentReason}
+                    onChange={(e) => setAdjustmentReason(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setAdjustmentDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitAdjustment}
+                disabled={!adjustmentReason.trim()}
+              >
+                Submit Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>
