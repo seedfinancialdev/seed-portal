@@ -122,10 +122,7 @@ export default function ClientIntel() {
         });
       }
       
-      // Refresh search results
-      if (searchTerm.length > 2) {
-        searchQuery.refetch();
-      }
+      // Search results will refresh automatically due to reactive query
     } catch (error) {
       // The mutation's onError handler will show the toast
       console.log('Enhancement handled by mutation error handler');
@@ -388,9 +385,9 @@ export default function ClientIntel() {
                     </Button>
                   </div>
                 ) : searchTerm.length > 2 ? (
-                  <p className="text-orange-200 text-sm">Select a contact to enhance</p>
+                  <p className="text-[#212121] text-sm">Select a contact to enhance</p>
                 ) : (
-                  <p className="text-orange-200 text-sm">Search and select a contact to enable enhancement</p>
+                  <p className="text-[#212121] text-sm">Search and select a contact to enable enhancement</p>
                 )}
               </CardContent>
             </Card>
