@@ -77,7 +77,11 @@ export class HubSpotService {
         method: 'GET'
       });
       
+      console.log(`Available owners:`, result.results?.map((o: any) => ({ id: o.id, email: o.email, firstName: o.firstName, lastName: o.lastName })));
+      
       const owner = result.results?.find((owner: any) => owner.email === email);
+      console.log(`Found owner for ${email}:`, owner ? { id: owner.id, email: owner.email } : 'Not found');
+      
       return owner?.id || null;
     } catch (error) {
       console.error('Error fetching HubSpot owner:', error);
@@ -658,7 +662,7 @@ Services Include:
               {
                 propertyName: 'lifecyclestage',
                 operator: 'IN',
-                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity']
+                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity', 'subscriber', 'other']
               }
             ]
           }
@@ -689,13 +693,18 @@ Services Include:
 
       // Filter by owner if provided
       if (ownerEmail) {
+        console.log(`Looking up owner ID for email: ${ownerEmail}`);
         const ownerId = await this.getOwnerByEmail(ownerEmail);
+        console.log(`Found owner ID: ${ownerId} for email: ${ownerEmail}`);
+        
         if (ownerId) {
           searchBody.filterGroups[0].filters.push({
             propertyName: 'hubspot_owner_id',
             operator: 'EQ',
             value: ownerId
           });
+        } else {
+          console.warn(`No owner ID found for email: ${ownerEmail}, showing all leads`);
         }
       }
 

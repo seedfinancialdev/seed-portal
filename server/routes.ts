@@ -510,8 +510,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const { limit = '20' } = req.query;
-      const leads = await hubSpotService.getSalesInboxLeads(req.user?.email, parseInt(limit.toString()));
+      console.log(`Current user requesting leads: ${req.user?.email}`);
+      
+      const { limit = '20', showAll = 'false' } = req.query;
+      
+      // For debugging, allow showing all leads regardless of owner
+      const userEmail = showAll === 'true' ? undefined : req.user?.email;
+      console.log(`Fetching leads for user: ${userEmail || 'ALL USERS'}`);
+      
+      const leads = await hubSpotService.getSalesInboxLeads(userEmail, parseInt(limit.toString()));
 
       res.json({ leads });
     } catch (error) {

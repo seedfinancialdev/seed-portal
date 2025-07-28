@@ -28,9 +28,9 @@ interface SalesInboxProps {
 
 export function SalesInbox({ limit = 20 }: SalesInboxProps) {
   const { data: leadsData, isLoading, error } = useQuery({
-    queryKey: ['/api/sales-inbox/leads', limit],
+    queryKey: ['/api/sales-inbox/leads', limit, 'showAll'],
     queryFn: async () => {
-      const response = await fetch(`/api/sales-inbox/leads?limit=${limit}`);
+      const response = await fetch(`/api/sales-inbox/leads?limit=${limit}&showAll=true`);
       if (!response.ok) {
         throw new Error('Failed to fetch sales inbox leads');
       }
