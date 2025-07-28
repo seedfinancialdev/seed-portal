@@ -780,6 +780,7 @@ Services Include:
           // First, let's see what stages exist by searching without stage filter
           if (objectId === 'leads') {
             console.log('DEBUG: First searching without stage filter to see what stages exist...');
+            const ownerId = await this.getOwnerByEmail(ownerEmail);
             const debugSearchBody = {
               filterGroups: [{
                 filters: ownerEmail && ownerId ? [{
@@ -814,16 +815,16 @@ Services Include:
             }
           }
           
-          // Now add the stage filter - but let's make it optional for now
+          // Now add the stage filter with the correct stage IDs
           const stageFilter = {
             propertyName: statusProperty,
             operator: 'IN',
-            values: ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']
+            values: ['new-stage-id', 'attempting-stage-id', '1108719384', 'connected-stage-id']  // Stage IDs for New, Assigned, Contact Attempted, Discovery Call Booked
           };
           
-          // Comment out the stage filter temporarily to see all leads
-          // leadsSearchBody.filterGroups[0].filters.push(stageFilter);
-          console.log('TEMPORARILY DISABLED STAGE FILTER to see all leads');
+          // Re-enable the stage filter with correct IDs
+          leadsSearchBody.filterGroups[0].filters.push(stageFilter);
+          console.log('Using stage IDs for filter:', stageFilter.values);
 
           console.log(`Searching ${objectId} with body:`, JSON.stringify(leadsSearchBody, null, 2));
 
