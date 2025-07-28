@@ -82,25 +82,43 @@ export default function Profile() {
   // Debounced search for address suggestions
   const searchAddresses = useCallback(
     debounce(async (query: string) => {
+      console.log('=== ADDRESS SEARCH START ===');
+      console.log('Search query:', query);
+      
       if (query.length < 3) {
+        console.log('Query too short, clearing suggestions');
         setAddressSuggestions([]);
         setShowSuggestions(false);
         return;
       }
 
       try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=us&q=${encodeURIComponent(query)}`
-        );
+        const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=us&q=${encodeURIComponent(query)}`;
+        console.log('Fetching from URL:', url);
+        
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
+          console.log('Search results:', data);
+          console.log('Number of results:', data.length);
+          
           setAddressSuggestions(data);
-          setShowSuggestions(true);
+          if (data.length > 0) {
+            setShowSuggestions(true);
+            console.log('Showing suggestions dropdown');
+          } else {
+            console.log('No results, hiding dropdown');
+            setShowSuggestions(false);
+          }
+        } else {
+          console.error('Search request failed:', response.statusText);
         }
       } catch (error) {
         console.error('Address search failed:', error);
       }
+      console.log('=== ADDRESS SEARCH END ===');
     }, 300),
     []
   );
@@ -114,10 +132,12 @@ export default function Profile() {
     }) as T;
   }
 
-  // Close suggestions when clicking outside
+  // Close suggestions when clicking outside (but not on suggestions)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (showSuggestions) {
+      const target = event.target as HTMLElement;
+      // Don't close if clicking on a suggestion button
+      if (showSuggestions && !target.closest('[data-suggestion-dropdown]')) {
         setShowSuggestions(false);
       }
     };
@@ -691,12 +711,21 @@ export default function Profile() {
                           
                           {/* Suggestions Dropdown */}
                           {showSuggestions && addressSuggestions.length > 0 && (
-                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                            <div 
+                              data-suggestion-dropdown 
+                              className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto"
+                            >
                               {addressSuggestions.map((suggestion, index) => (
                                 <button
                                   key={index}
                                   type="button"
-                                  onClick={() => {
+                                  onMouseDown={(e) => {
+                                    e.preventDefault(); // Prevent focus loss
+                                    console.log('Button mousedown event triggered');
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
                                     console.log('Address suggestion clicked:', suggestion);
                                     selectAddress(suggestion);
                                   }}
