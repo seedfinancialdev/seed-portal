@@ -10,6 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Sales Inbox HubSpot Integration Complete** (July 28, 2025)
+  - Connected sales inbox to real HubSpot contact data instead of static mock data
+  - Fixed owner filtering to show only leads assigned to logged-in user
+  - Updated styling to match original orange-themed design with proper borders and buttons
+  - Limited display to maximum 8 records with fixed card height for consistency
+  - Added debugging to verify owner ID mapping and lead assignment
+  - System correctly filters leads by HubSpot owner ID based on user email
+  - Current user (jon@seedfinancial.io) has 3 assigned leads, other leads owned by different team members
+
 ✓ **Complete Dashboard Integration and Bug Fixes** (July 28, 2025)
   - Fixed HubSpot dashboard integration to show correct pipeline data ($62.5K+ pipeline value)
   - Added cache invalidation to all "Back to Portal" buttons for real-time dashboard updates

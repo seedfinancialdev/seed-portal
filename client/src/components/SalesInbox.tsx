@@ -151,7 +151,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
           <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs">View All</Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3" style={{ minHeight: '400px' }}>
+      <CardContent className="space-y-3" style={{ minHeight: '520px' }}>
         {leads.length === 0 ? (
           <div className="text-center py-8">
             <Inbox className="h-12 w-12 text-white/40 mx-auto mb-4" />

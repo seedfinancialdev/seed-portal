@@ -512,7 +512,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Current user requesting leads: ${req.user?.email}`);
       
-      const { limit = '20', showAll = 'false' } = req.query;
+      const { limit = '8', showAll = 'false' } = req.query;
       
       // For debugging, allow showing all leads regardless of owner
       const userEmail = showAll === 'true' ? undefined : req.user?.email;
