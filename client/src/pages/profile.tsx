@@ -285,25 +285,14 @@ export default function Profile() {
                   Profile Information
                 </CardTitle>
                 <CardDescription>
-                  Update your address to get accurate weather information
+                  Manage your personal information and preferences
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* HubSpot Synced Fields (Read-Only) */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <RefreshCw className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-700">Synced from HubSpot</span>
-                  </div>
-                  
                   <div className="flex items-center justify-between">
-                    <Alert className="flex-1 mr-4">
-                      <Info className="h-4 w-4" />
-                      <AlertDescription>
-                        Name and email are synced from HubSpot. Phone number can be edited below.
-                      </AlertDescription>
-                    </Alert>
-                    
+                    <h3 className="text-sm font-medium text-gray-700">HubSpot Profile Data</h3>
                     <Button 
                       onClick={() => syncHubSpotMutation.mutate()}
                       disabled={syncHubSpotMutation.isPending}
@@ -360,10 +349,7 @@ export default function Profile() {
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     {/* Phone Number Field */}
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-600" />
-                        <span className="text-sm font-medium text-gray-700">Contact Information</span>
-                      </div>
+                      <h3 className="text-sm font-medium text-gray-700">Contact Information</h3>
 
                       <FormField
                         control={form.control}
@@ -378,9 +364,7 @@ export default function Profile() {
                                 className="bg-white border-gray-200"
                               />
                             </FormControl>
-                            <FormDescription>
-                              Your contact phone number (editable locally)
-                            </FormDescription>
+
                             <FormMessage />
                           </FormItem>
                         )}
@@ -391,10 +375,7 @@ export default function Profile() {
 
                     {/* Address Section */}
                     <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-gray-700">Address & Location</span>
-                      </div>
+                      <h3 className="text-sm font-medium text-gray-700">Address & Location</h3>
 
                     <FormField
                       control={form.control}
@@ -409,9 +390,7 @@ export default function Profile() {
                               className="bg-white border-gray-200"
                             />
                           </FormControl>
-                          <FormDescription>
-                            This address will be used to fetch weather information for your dashboard
-                          </FormDescription>
+
                           <FormMessage />
                         </FormItem>
                       )}
@@ -517,7 +496,7 @@ export default function Profile() {
                   Live Weather
                 </CardTitle>
                 <CardDescription>
-                  Based on your address
+                  Current weather conditions
                 </CardDescription>
               </CardHeader>
               <CardContent>
