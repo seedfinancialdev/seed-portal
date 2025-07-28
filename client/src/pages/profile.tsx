@@ -46,6 +46,20 @@ interface GeocodeResult {
   location: string;
 }
 
+interface AddressSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+  address: {
+    house_number?: string;
+    road?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+  };
+}
+
 export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -57,6 +71,84 @@ export default function Profile() {
     location: user?.city && user?.state ? `${user.city}, ${user.state}` : 'Marina Del Rey, CA',
     isLoading: false
   });
+
+  // Address autocomplete state
+  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addressQuery, setAddressQuery] = useState('');
+
+  // Debounced search for address suggestions
+  const searchAddresses = useCallback(
+    debounce(async (query: string) => {
+      if (query.length < 3) {
+        setAddressSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=us&q=${encodeURIComponent(query)}`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          setAddressSuggestions(data);
+          setShowSuggestions(true);
+        }
+      } catch (error) {
+        console.error('Address search failed:', error);
+      }
+    }, 300),
+    []
+  );
+
+  // Simple debounce function
+  function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+    let timeout: NodeJS.Timeout;
+    return ((...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    }) as T;
+  }
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showSuggestions) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSuggestions]);
+
+  // Select an address from suggestions
+  const selectAddress = (suggestion: AddressSuggestion) => {
+    const address = suggestion.address;
+    
+    // Parse and set form fields
+    const streetAddress = `${address.house_number || ''} ${address.road || ''}`.trim();
+    const city = address.city || address.state || '';
+    const state = address.state || '';
+    const zipCode = address.postcode || '';
+    
+    form.setValue('address', streetAddress);
+    form.setValue('city', city);
+    form.setValue('state', state);
+    form.setValue('zipCode', zipCode);
+    
+    setAddressQuery(suggestion.display_name);
+    setShowSuggestions(false);
+    
+    // Automatically fetch weather for the selected address
+    if (streetAddress && city && state) {
+      fetchWeatherForAddress(streetAddress, city, state, zipCode);
+    }
+  };
 
   const form = useForm<UpdateProfile>({
     resolver: zodResolver(updateProfileSchema),
@@ -108,6 +200,11 @@ export default function Profile() {
         country: user.country || 'US',
       });
       
+      // Initialize address query with existing address
+      if (user.address && user.city && user.state) {
+        setAddressQuery(`${user.address}, ${user.city}, ${user.state} ${user.zipCode || ''}`.trim());
+      }
+
       // If user has address but no coordinates, geocode and fetch weather
       if (user.address && user.city && user.state && (!user.latitude || !user.longitude)) {
         console.log('Address exists but coordinates missing, fetching weather...');
@@ -552,6 +649,56 @@ export default function Profile() {
                     <div className="space-y-4">
                       <h3 className="text-sm font-medium text-gray-700">Address & Location</h3>
 
+                      {/* Address Autocomplete */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">
+                          <MapPin className="inline h-4 w-4 mr-1" />
+                          Address Search
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            placeholder="Start typing your address..."
+                            value={addressQuery}
+                            onChange={(e) => {
+                              setAddressQuery(e.target.value);
+                              searchAddresses(e.target.value);
+                            }}
+                            onFocus={() => {
+                              if (addressSuggestions.length > 0) {
+                                setShowSuggestions(true);
+                              }
+                            }}
+                            className="bg-white border-gray-200"
+                          />
+                          
+                          {/* Suggestions Dropdown */}
+                          {showSuggestions && addressSuggestions.length > 0 && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                              {addressSuggestions.map((suggestion, index) => (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => selectAddress(suggestion)}
+                                  className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    <div className="text-sm">
+                                      <div className="text-gray-900 font-medium">
+                                        {suggestion.address.house_number} {suggestion.address.road}
+                                      </div>
+                                      <div className="text-gray-500">
+                                        {suggestion.address.city}, {suggestion.address.state} {suggestion.address.postcode}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                     <FormField
                       control={form.control}
                       name="address"
@@ -565,7 +712,6 @@ export default function Profile() {
                               className="bg-white border-gray-200"
                             />
                           </FormControl>
-
                           <FormMessage />
                         </FormItem>
                       )}
