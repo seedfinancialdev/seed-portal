@@ -54,6 +54,8 @@ interface AddressSuggestion {
     house_number?: string;
     road?: string;
     city?: string;
+    town?: string;
+    village?: string;
     state?: string;
     postcode?: string;
     country?: string;
@@ -130,18 +132,25 @@ export default function Profile() {
   const selectAddress = (suggestion: AddressSuggestion) => {
     const address = suggestion.address;
     
-    // Parse and set form fields
+    // Parse and set form fields with proper fallbacks
     const streetAddress = `${address.house_number || ''} ${address.road || ''}`.trim();
-    const city = address.city || address.state || '';
+    const city = address.city || address.town || address.village || '';
     const state = address.state || '';
     const zipCode = address.postcode || '';
     
-    form.setValue('address', streetAddress);
-    form.setValue('city', city);
-    form.setValue('state', state);
-    form.setValue('zipCode', zipCode);
+    console.log('Setting form values:', { streetAddress, city, state, zipCode });
     
-    setAddressQuery(suggestion.display_name);
+    // Use setValue with trigger to ensure form updates properly
+    form.setValue('address', streetAddress, { shouldValidate: true, shouldDirty: true });
+    form.setValue('city', city, { shouldValidate: true, shouldDirty: true });
+    form.setValue('state', state, { shouldValidate: true, shouldDirty: true });
+    form.setValue('zipCode', zipCode, { shouldValidate: true, shouldDirty: true });
+    
+    // Force form to re-render with new values
+    form.trigger(['address', 'city', 'state', 'zipCode']);
+    
+    // Update the search query to show selected address
+    setAddressQuery(`${streetAddress}, ${city}, ${state} ${zipCode}`.trim());
     setShowSuggestions(false);
     
     // Automatically fetch weather for the selected address
@@ -678,7 +687,10 @@ export default function Profile() {
                                 <button
                                   key={index}
                                   type="button"
-                                  onClick={() => selectAddress(suggestion)}
+                                  onClick={() => {
+                                    console.log('Address suggestion clicked:', suggestion);
+                                    selectAddress(suggestion);
+                                  }}
                                   className="w-full px-4 py-3 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
                                 >
                                   <div className="flex items-start gap-2">
@@ -688,7 +700,7 @@ export default function Profile() {
                                         {suggestion.address.house_number} {suggestion.address.road}
                                       </div>
                                       <div className="text-gray-500">
-                                        {suggestion.address.city}, {suggestion.address.state} {suggestion.address.postcode}
+                                        {suggestion.address.city || suggestion.address.town}, {suggestion.address.state} {suggestion.address.postcode}
                                       </div>
                                     </div>
                                   </div>
