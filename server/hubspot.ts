@@ -658,11 +658,10 @@ Services Include:
         filterGroups: [
           {
             filters: [
-              // Filter for leads/contacts with recent activity or specific lifecycle stages
+              // Filter for leads/contacts - remove lifecycle stage restriction to see all contacts
               {
-                propertyName: 'lifecyclestage',
-                operator: 'IN',
-                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity', 'subscriber', 'other']
+                propertyName: 'email',
+                operator: 'NOT_EMPTY'
               }
             ]
           }
@@ -687,7 +686,9 @@ Services Include:
           'notes_last_activity_date',
           'createdate',
           'lastmodifieddate',
-          'hubspot_owner_assigneddate'
+          'hubspot_owner_assigneddate',
+          'lead_type',
+          'hs_lead_source'
         ]
       };
 
@@ -722,6 +723,7 @@ Services Include:
         (searchResult.results || []).map(async (contact: any) => {
           try {
             console.log(`Processing contact: ${contact.properties?.company || 'Unknown'} (${contact.properties?.email})`);
+            console.log(`Contact lifecycle stage: ${contact.properties?.lifecyclestage}, Owner ID: ${contact.properties?.hubspot_owner_id}`);
             
             // Get associated deals to determine lead stage
             const deals = await this.getContactDeals(contact.id);
