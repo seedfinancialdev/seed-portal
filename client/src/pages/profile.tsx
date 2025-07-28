@@ -71,21 +71,6 @@ export default function Profile() {
     },
   });
 
-  // Update form when user data changes
-  useEffect(() => {
-    if (user) {
-      form.reset({
-        phoneNumber: formatPhoneNumber(user.phoneNumber || ''),
-        profilePhoto: user.profilePhoto || '',
-        address: user.address || '',
-        city: user.city || '',
-        state: user.state || '',
-        zipCode: user.zipCode || '',
-        country: user.country || 'US',
-      });
-    }
-  }, [user, form, formatPhoneNumber]);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Phone number formatting function
@@ -107,6 +92,21 @@ export default function Profile() {
       return phoneNumber;
     }
   }, []);
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        phoneNumber: formatPhoneNumber(user.phoneNumber || ''),
+        profilePhoto: user.profilePhoto || '',
+        address: user.address || '',
+        city: user.city || '',
+        state: user.state || '',
+        zipCode: user.zipCode || '',
+        country: user.country || 'US',
+      });
+    }
+  }, [user, form, formatPhoneNumber]);
 
   // Handle photo upload
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
