@@ -31,20 +31,39 @@ export default function KnowledgeBase() {
 
   const checkWikiStatus = async () => {
     try {
-      const response = await fetch('/wiki/', { 
-        method: 'HEAD',
+      // Check if we have a Vercel Wiki.js URL configured
+      const wikiUrl = import.meta.env.VITE_WIKI_URL || process.env.WIKI_URL;
+      
+      if (!wikiUrl) {
+        setWikiStatus('unavailable');
+        setShowSetupGuide(true);
+        return;
+      }
+
+      const response = await fetch(`${wikiUrl}/healthz`, { 
+        method: 'GET',
         timeout: 5000 
       } as any);
       
-      if (response.ok || response.status === 404) {
-        // 404 is expected for Wiki.js root, means it's responding
+      if (response.ok) {
         setWikiStatus('available');
       } else {
-        setWikiStatus('unavailable');
+        // Try the main URL if healthz fails
+        const mainResponse = await fetch(wikiUrl, { 
+          method: 'HEAD',
+          timeout: 5000 
+        } as any);
+        
+        if (mainResponse.ok || mainResponse.status === 404) {
+          setWikiStatus('available');
+        } else {
+          setWikiStatus('unavailable');
+        }
       }
     } catch (error) {
       console.error('Wiki status check failed:', error);
       setWikiStatus('unavailable');
+      setShowSetupGuide(true);
     }
   };
 
@@ -53,7 +72,13 @@ export default function KnowledgeBase() {
   };
 
   const openWiki = () => {
-    window.open('/wiki', '_blank');
+    const wikiUrl = import.meta.env.VITE_WIKI_URL || process.env.WIKI_URL;
+    if (wikiUrl) {
+      window.open(wikiUrl, '_blank');
+    } else {
+      // Fallback to local proxy if no external URL configured
+      window.open('/wiki', '_blank');
+    }
   };
 
   const quickLinks = [
@@ -240,19 +265,29 @@ export default function KnowledgeBase() {
                 </div>
                 <div className="space-y-4 text-white/80">
                   <div className="bg-black/20 rounded-lg p-4">
-                    <p className="font-medium text-white mb-2">Quick Start with Docker:</p>
-                    <div className="bg-black/40 rounded p-3 font-mono text-sm">
-                      <p># Navigate to project directory and start Wiki.js</p>
-                      <p>docker-compose -f docker-compose.wiki.yml up -d</p>
-                      <p className="mt-2"># Check if containers are running</p>
-                      <p>docker-compose -f docker-compose.wiki.yml ps</p>
+                    <p className="font-medium text-white mb-2">Deploy Wiki.js on Vercel (Recommended):</p>
+                    <div className="space-y-2 text-sm">
+                      <p><strong>1.</strong> Go to <a href="https://vercel.com/templates" target="_blank" className="text-orange-300 hover:text-orange-200 underline">vercel.com/templates</a></p>
+                      <p><strong>2.</strong> Search for "Wiki.js" and click "Deploy"</p>
+                      <p><strong>3.</strong> Connect your GitHub account and deploy</p>
+                      <p><strong>4.</strong> Add a PostgreSQL database (Vercel Postgres recommended)</p>
+                      <p><strong>5.</strong> Configure environment variables:</p>
+                      <div className="bg-black/40 rounded p-3 font-mono text-xs ml-4">
+                        <p>DB_TYPE=postgres</p>
+                        <p>DB_HOST=your-db-host</p>
+                        <p>DB_USER=your-db-user</p>
+                        <p>DB_PASS=your-db-password</p>
+                        <p>DB_NAME=wiki</p>
+                      </div>
+                      <p><strong>6.</strong> Once deployed, add your Wiki.js URL to environment variables:</p>
+                      <div className="bg-black/40 rounded p-3 font-mono text-xs ml-4">
+                        <p>VITE_WIKI_URL=https://your-wiki.vercel.app</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <p><strong>1.</strong> Wiki.js will be available at <code className="bg-black/20 px-1 rounded">http://localhost:3001</code></p>
-                    <p><strong>2.</strong> Complete the setup wizard in your browser</p>
-                    <p><strong>3.</strong> Create your admin account</p>
-                    <p><strong>4.</strong> The knowledge base will be accessible through this portal at <code className="bg-black/20 px-1 rounded">/wiki</code></p>
+                  <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+                    <p className="text-orange-200 font-medium mb-2">💡 Why Vercel?</p>
+                    <p className="text-sm">Vercel hosting avoids Docker requirements, provides SSL, and integrates seamlessly with your portal. Most plans include free PostgreSQL for small teams.</p>
                   </div>
                   <Button 
                     onClick={() => setShowSetupGuide(false)} 
