@@ -45,8 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: async (user: SelectUser) => {
-      // Don't set partial login data in cache - force fresh fetch of complete profile
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Clear all user-specific data to prevent cross-user data leakage
+      await queryClient.invalidateQueries();
+      
+      // Force fresh fetch of user profile
       await queryClient.refetchQueries({ queryKey: ["/api/user"] });
       
       toast({
@@ -99,10 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await apiRequest("POST", "/api/logout");
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
-      // Clear all quotes-related cache to prevent showing previous user's data
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      queryClient.removeQueries({ queryKey: ["/api/quotes"] });
+      // Clear ALL cached data on logout to prevent any cross-user data leakage
+      queryClient.clear();
+      
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",

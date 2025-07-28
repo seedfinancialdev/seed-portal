@@ -10,6 +10,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **User-Specific Dashboard Stats Fix** (July 28, 2025)
+  - **Fixed Cross-User Data Issue**: Dashboard metric cards were showing same data for all users
+  - **User-Specific Query Keys**: Added user email to query keys to ensure proper data isolation
+  - **Enhanced Cache Management**: Complete cache clearing on login/logout to prevent data leakage  
+  - **Authentication Guards**: Added proper enablement conditions to prevent unauthorized queries
+  - **Verified Working**: Jon shows $62.5K pipeline, Amanda shows $0 (correct user-specific data)
+  - **Complete Data Isolation**: Each user now sees only their own pipeline value, active deals, and MTD revenue
+  - **Result**: Dashboard stats cards now correctly display user-specific HubSpot deal data
+
 ✓ **Performance Optimizations for Faster Initial Loading** (July 28, 2025)
   - **Query Client Optimization**: Reduced staleTime to 1 minute and gcTime to 5 minutes for faster cache invalidation
   - **Weather API Deferral**: Delayed weather fetch by 500ms to prioritize core UI loading first
