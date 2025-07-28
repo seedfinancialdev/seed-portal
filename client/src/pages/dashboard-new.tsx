@@ -292,37 +292,45 @@ export default function Dashboard() {
           <h2 className="text-xl font-light text-white mb-6 text-center">Quick Actions</h2>
           <div className="grid grid-cols-4 gap-8 justify-items-center">
             <Link href="/calculator">
-              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 4} as React.CSSProperties}>
-                <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-4 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
-                  <Calculator className="h-5 w-5 text-white" />
+              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce action-card-rotate" style={{"--delay": 4} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-4 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
+                    <Calculator className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Quote Calculator</h3>
                 </div>
-                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Quote Calculator</h3>
               </div>
             </Link>
 
             <Link href="/commission-tracker">
-              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 5} as React.CSSProperties}>
-                <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-4 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
-                  <DollarSign className="h-5 w-5 text-white" />
+              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce action-card-rotate" style={{"--delay": 5} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-4 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
+                    <DollarSign className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Commission Tracker</h3>
                 </div>
-                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Commission Tracker</h3>
               </div>
             </Link>
 
             <Link href="/client-intel">
-              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 6} as React.CSSProperties}>
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-4 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
-                  <UserCheck className="h-5 w-5 text-white" />
+              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce action-card-rotate" style={{"--delay": 6} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-4 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
+                    <UserCheck className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Client<br/>Intel</h3>
                 </div>
-                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Client<br/>Intel</h3>
               </div>
             </Link>
 
-            <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 7} as React.CSSProperties}>
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-4 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
-                <Video className="h-5 w-5 text-white" />
+            <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce action-card-rotate" style={{"--delay": 7} as React.CSSProperties}>
+              <div className="action-card-content">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-4 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
+                  <Video className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Meeting<br/>Vault</h3>
               </div>
-              <h3 className="text-base font-bold text-center text-white leading-tight px-1">Meeting<br/>Vault</h3>
             </div>
           </div>
         </div>

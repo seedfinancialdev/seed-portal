@@ -87,6 +87,33 @@
     animation: cardBounceIn 0.375s ease-out calc(var(--delay, 0) * 0.075s) both;
   }
   
+  /* Action card hover rotation */
+  .action-card-rotate {
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  
+  .action-card-rotate:hover {
+    transform: rotate(5deg);
+  }
+  
+  .action-card-rotate:active {
+    transform: rotate(8deg) scale(0.98);
+  }
+  
+  /* Keep content stationary during rotation */
+  .action-card-content {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  
+  .action-card-rotate:hover .action-card-content {
+    transform: rotate(-5deg);
+  }
+  
+  .action-card-rotate:active .action-card-content {
+    transform: rotate(-8deg);
+  }
+  
   @keyframes cardBounceIn {
     0% {
       opacity: 0;
