@@ -717,12 +717,12 @@ Services Include:
 
       console.log('Fetching sales inbox leads with body:', JSON.stringify(searchBody, null, 2));
 
-      const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
+      const searchResult = await this.makeRequest('/crm/v3/objects/leads/search', {
         method: 'POST',
         body: JSON.stringify(searchBody)
       });
 
-      console.log(`Found ${searchResult.results?.length || 0} contacts for sales inbox`);
+      console.log(`Found ${searchResult.results?.length || 0} leads for sales inbox`);
 
       // Enrich each contact with deal information for lead stage
       const enrichedContacts = await Promise.all(
@@ -750,7 +750,7 @@ Services Include:
               ...contact,
               leadStage,
               activeDealId: activeDeal?.id || null,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/contact/${contact.id}`
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/lead/${contact.id}`
             };
           } catch (error) {
             console.error(`Error enriching contact ${contact.id}:`, error);
@@ -758,7 +758,7 @@ Services Include:
               ...contact,
               leadStage: contact.properties?.lifecyclestage || 'New Lead',
               activeDealId: null,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/contact/${contact.id}`
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/lead/${contact.id}`
             };
           }
         })
