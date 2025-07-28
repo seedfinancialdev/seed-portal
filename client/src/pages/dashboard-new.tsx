@@ -23,6 +23,7 @@ import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { SalesInbox } from "@/components/SalesInbox";
 import { useState, useEffect } from "react";
 import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
@@ -337,132 +338,9 @@ export default function Dashboard() {
 
         {/* Sales Dashboard */}
         <div className="grid grid-cols-3 gap-8 mb-16">
-          {/* Main Sales Inbox */}
+          {/* Dynamic Sales Inbox */}
           <div className="col-span-2">
-            <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl h-fit">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-medium text-white">Sales Inbox</CardTitle>
-                    <CardDescription className="text-sm text-white/80">Active leads requiring attention</CardDescription>
-                  </div>
-                  <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs">View All</Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Lead 1 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">🔥</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">TechFlow Solutions</h3>
-                      <p className="text-xs text-gray-600">Software Startup • $2M ARR • Ready to buy</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-
-                {/* Lead 2 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">⚡</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Wellness Hub Inc</h3>
-                      <p className="text-xs text-gray-600">Healthcare • $850K ARR • Warm prospect</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-
-                {/* Lead 3 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">💼</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Local Bakery Co</h3>
-                      <p className="text-xs text-gray-600">Food Service • $125K ARR • Price shopper</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-
-                {/* Lead 4 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">💰</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Quantum Dynamics</h3>
-                      <p className="text-xs text-gray-600">Manufacturing • $3.5M ARR • Needs consultation</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-
-                {/* Lead 5 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">📈</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Elite Consulting Group</h3>
-                      <p className="text-xs text-gray-600">Professional Services • $1.2M ARR • Follow up needed</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-
-                {/* Lead 6 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">🏢</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Urban Property Management</h3>
-                      <p className="text-xs text-gray-600">Real Estate • $890K ARR • Proposal requested</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-
-                {/* Lead 7 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">⭐</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Digital Marketing Pro</h3>
-                      <p className="text-xs text-gray-600">Marketing • $650K ARR • Hot lead</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-
-                {/* Lead 8 */}
-                <div className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">🎯</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">Green Energy Solutions</h3>
-                      <p className="text-xs text-gray-600">Clean Tech • $2.1M ARR • Decision maker meeting</p>
-                    </div>
-                  </div>
-                  <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">Open in HubSpot</Button>
-                </div>
-              </CardContent>
-            </Card>
+            <SalesInbox limit={20} />
           </div>
 
           {/* Sidebar Tools */}
