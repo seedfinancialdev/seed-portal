@@ -1,0 +1,60 @@
+Storage & versioning: PostgreSQL + Git sync for critical spaces (SOPs/Policies) → code-like reviews and rollbacks.
+	•	Permissions model (keep it simple):
+	•	Readers: Everyone @ Seed.
+	•	Contributors: Function teams (Tax, Bookkeeping, CFO, Sales, Ops).
+	•	Maintainers: Team leads (approve/publish).
+	•	Admins: Ops + 1 backup.
+	•	Search: turn on full-text + synonyms (e.g., “QBO” = “QuickBooks”), alias common tax jargon, highlight result snippets.
+	•	Analytics: enable page + search analytics; create a weekly “content debt” report.
+	•	Backups: daily DB snapshots + weekly Git mirror; retention 30/90 days.
+
+Editorial workflow
+	•	Content types (use page templates + labels): SOP, Playbook, Runbook, Policy, How-to, Checklist, ADR (Decision Record), Template, FAQ, Reference.
+	•	Lifecycle: Draft → Review → Publish → Auto-stale at 90 days → Re-review. Owners are required for every top-200 page.
+	•	Change safety: PR-style review for SOPs/Policies; lightweight review for How-tos/FAQs.
+
+Brand & tone
+	•	Headings that sound like you: “What this is,” “Good fit / Not a fit,” “Time-savers,” “Gotchas,” “Receipts (evidence/links).”
+	•	Microcopy: witty, never snarky. Finance, but make it human.
+
+⸻
+
+3) Information Architecture (opinionated, scalable)
+
+Top-level spaces (keep to ~10). Each space uses the same sub-structure so no one gets lost.
+	1.	Services (Your “APIs”)
+	•	TaaS (Tax-as-a-Service)
+	•	What it is, scope, SLAs, engagement flow, Tax SWAT Hotline playbook, state nexus matrix, filing calendars, letters/templates, multi-state workflows, audit response kits, R&D credits guide.
+	•	Bookkeeping
+	•	QBO setup, monthly close checklist, reconciliations, cleanup playbook, KPI definitions, dashboard standards.
+	•	Fractional CFO
+	•	Rolling 13-week cash, budget templates, scenario models, board pack format, fundraising data room checklist.
+	•	White-Label Back Office
+	•	Partnership SOPs, “who does what,” intake → delivery blueprint, brandable assets.
+	•	Add-ons
+	•	Payroll (Gusto) playbook, sales-tax automation matrix, entity restructuring checklist.
+	2.	Client Operations (Delivery Machine)
+	•	Intake & onboarding (HubSpot → ClickUp handoff), data fetch automation, client comms SLAs, renewal/upsell moments.
+	•	Monthly/Quarterly rhythms: close calendar, pre-close tasks, variance analysis workflow, review/approval.
+	3.	Industry Playbooks (SaaS, Agencies, E-com, Real Estate, Creators)
+	•	Standard Chart of Accounts by vertical, revenue recognition nuances, common KPIs, typical pitfalls, sample reports.
+	4.	Chart of Accounts (CoA) Library
+	•	Seed Standard CoA (global), Vertical Variants, mapping guides, CoA Review Report template (client-facing), before/after examples, migration steps.
+	5.	AI & Automation
+	•	n8n flows (diagrams + step-by-step), HubSpot/ClickUp automations, agent prompts, retry/backoff patterns, incident runbooks, datasets/fields dictionary.
+	6.	Sales & Marketing
+	•	ICPs, messaging, pricing guardrails, objection handling, ROI calculators, case studies, brand voice guide, legal disclaimers.
+	7.	Quality, Risk & Compliance
+	•	Definition of Done per service, QA checklists, PII handling, security policies, data retention, vendor list & DPA notes.
+	8.	People & Onboarding
+	•	Role guides, ladders, 30/60/90 plans by function, interview rubrics, enablement tracks with “learn this next” paths.
+	9.	Internal IT & Tooling
+	•	Access maps (who needs what), SSO setup, device policy, secrets management, incident comms.
+	10.	Glossary & KPI Library
+	•	Tax terms, accounting terms, acronyms, KPI definitions with formulas and example screenshots.
+
+Navigation principles
+	•	Keep menu shallow (≤3 levels).
+	•	Every space has a Start Here page + a Top 20 Tasks quick links page.
+	•	Cross-link aggressively (especially to SOPs and templates).
+	•	Tags: service/*, industry/*, stage/* (onboarding, close, review), tool/* (qbo, gusto, hubspot, clickup, n8n), type/*.

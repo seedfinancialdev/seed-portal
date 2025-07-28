@@ -27,54 +27,130 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'wiki-public')));
 
-// Create sample pages if they don't exist
-const samplePages = {
-  'home.md': `# Welcome to Seed Financial Knowledge Base
+// Create comprehensive knowledge base structure
+const knowledgeSpaces = {
+  'home.md': `# Seed Financial Knowledge Base
+*Finance, but make it human* 🧠
 
-This is your company knowledge base where you can store:
+Welcome to your comprehensive company knowledge hub. This system follows a **PostgreSQL + Git sync** model for critical content with code-like reviews and rollbacks.
 
-- Employee handbooks and policies
-- API documentation and technical guides  
-- Sales playbooks and processes
-- Training materials and onboarding guides
-- Company procedures and best practices
+## What This Is
+Your single source of truth for all operational knowledge - from SOPs to playbooks, with smart search, full versioning, and editorial workflows.
 
-## Getting Started
+## Content Types & Lifecycle
+- **Draft** → **Review** → **Publish** → **Auto-stale at 90 days** → **Re-review**
+- Templates: SOP, Playbook, Runbook, Policy, How-to, Checklist, ADR, Template, FAQ, Reference
 
-1. **Create Pages**: Use the simple interface to create new documentation
-2. **Edit Content**: All content is stored in Markdown format
-3. **Search**: Find information quickly across all pages
-4. **Organize**: Structure your knowledge with categories
+## Quick Navigation
+### 🎯 **Top Spaces** (10 Core Areas)
+1. [Services (Your APIs)](#services) - TaaS, Bookkeeping, Fractional CFO, White-Label
+2. [Client Operations](#client-ops) - Delivery machine workflows
+3. [Industry Playbooks](#industry) - SaaS, Agencies, E-com, Real Estate, Creators  
+4. [Chart of Accounts Library](#coa) - Standard & vertical variants
+5. [AI & Automation](#automation) - n8n flows, HubSpot automations
+6. [Sales & Marketing](#sales) - ICPs, messaging, objection handling
+7. [Quality, Risk & Compliance](#compliance) - QA checklists, security policies
+8. [People & Onboarding](#people) - Role guides, 30/60/90 plans
+9. [Internal IT & Tooling](#it) - Access maps, SSO setup
+10. [Glossary & KPI Library](#glossary) - Terms, formulas, screenshots
 
-## Quick Links
+### ⚡ **Time-Savers** (Top 20 Tasks)
+- [Monthly Close Checklist](monthly-close-checklist)
+- [Client Onboarding SOP](client-onboarding-sop)  
+- [QBO Setup Playbook](qbo-setup-playbook)
+- [Tax Filing Calendar](tax-filing-calendar)
+- [Sales Objection Scripts](sales-objection-scripts)
 
-- [Employee Handbook](employee-handbook)
-- [Sales Processes](sales-processes)
-- [Technical Documentation](tech-docs)
-- [Training Materials](training)
+### 🔍 **Search Tips**
+- Use synonyms: "QBO" = "QuickBooks", "TaaS" = "Tax as a Service"
+- Tags: service/*, industry/*, stage/*, tool/*, type/*
+- Full-text search with highlighted snippets enabled
 `,
-  'employee-handbook.md': `# Employee Handbook
+  'services.md': `# Services (Your "APIs")
+*What we deliver, how we deliver it*
 
-## Company Overview
-Seed Financial provides comprehensive accounting and tax services to growing businesses.
+## TaaS (Tax-as-a-Service)
+### What It Is
+Full-service tax preparation, filing, and strategic planning for growing businesses.
 
-## Core Values
-- Client-first approach
-- Continuous learning
-- Collaborative teamwork
-- Data-driven decisions
+### Good Fit / Not a Fit
+**✅ Good Fit:** Multi-state businesses, complex entities, R&D credits, compliance-heavy industries  
+**❌ Not a Fit:** Simple personal returns, one-off filings without ongoing relationship
 
-## Policies
-- Remote work guidelines
-- Communication standards
-- Time off and benefits
-- Professional development
+### Core Components
+- **Tax SWAT Hotline** - Emergency tax questions within 4 hours
+- **State Nexus Matrix** - Multi-state compliance tracking
+- **Filing Calendars** - Automated deadline management
+- **Audit Response Kits** - Full documentation packages
+- **R&D Credits Guide** - Qualification and optimization
 
-## Tools & Systems
-- HubSpot CRM
-- Internal Employee Portal
-- Slack for team communication
-- QuickBooks for client services
+### Time-Savers
+- Pre-built letter templates for all common scenarios
+- Multi-state workflow automation in ClickUp
+- Real-time nexus monitoring dashboard
+
+### Gotchas
+- State filing requirements change quarterly - review nexus matrix monthly
+- R&D documentation must be contemporaneous (can't backdate)
+- Estimated payment calculations require Q-1 actual data
+
+---
+
+## Bookkeeping
+### What It Is
+Monthly financial statement preparation with cleanup, reconciliation, and KPI dashboards.
+
+### Engagement Flow
+1. **QBO Setup** - Chart of accounts standardization
+2. **Monthly Close** - Reconciliations + variance analysis  
+3. **Cleanup** - Historical corrections and reclassifications
+4. **Dashboards** - Real-time KPI monitoring
+
+### Standard Deliverables
+- P&L with variance analysis
+- Balance sheet with aging details
+- Cash flow statement (indirect method)
+- KPI dashboard (industry-specific)
+- Monthly executive summary
+
+### Time-Savers
+- [QBO Setup Checklist](qbo-setup-checklist) 
+- [Monthly Close SOP](monthly-close-sop)
+- [Reconciliation Templates](reconciliation-templates)
+
+---
+
+## Fractional CFO
+### What It Is
+Strategic financial leadership: budgeting, forecasting, fundraising support, board reporting.
+
+### Core Deliverables
+- **Rolling 13-Week Cash Flow** - Weekly updates with scenario planning
+- **Budget Templates** - Annual + quarterly reforecasting  
+- **Board Pack Format** - Standardized executive reporting
+- **Fundraising Data Room** - Due diligence preparation
+- **Scenario Models** - What-if analysis for major decisions
+
+### Good Fit / Not a Fit
+**✅ Good Fit:** $2M+ revenue, fundraising stage, board reporting requirements  
+**❌ Not a Fit:** <$500K revenue, simple bookkeeping needs only
+
+---
+
+## White-Label Back Office
+### What It Is
+Partnership model where Seed delivers services under partner's brand.
+
+### Partnership SOPs
+- **Who Does What** - Clear role definitions and handoff points
+- **Intake → Delivery Blueprint** - Standardized workflow from lead to delivery
+- **Brandable Assets** - Templates, proposals, reports with partner branding
+- **Quality Standards** - SLA definitions and performance metrics
+
+### Time-Savers
+- Partner onboarding checklist (30-day implementation)
+- White-label template library (instantly rebrandable)
+- Performance dashboard (real-time delivery metrics)
 `,
   'sales-processes.md': `# Sales Processes & Playbooks
 
