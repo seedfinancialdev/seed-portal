@@ -97,6 +97,8 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       form.reset({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
         phoneNumber: formatPhoneNumber(user.phoneNumber || ''),
         profilePhoto: user.profilePhoto || '',
         address: user.address || '',
@@ -105,6 +107,12 @@ export default function Profile() {
         zipCode: user.zipCode || '',
         country: user.country || 'US',
       });
+      
+      // If user has address but no coordinates, geocode and fetch weather
+      if (user.address && user.city && user.state && (!user.latitude || !user.longitude)) {
+        console.log('Address exists but coordinates missing, fetching weather...');
+        fetchWeatherForAddress(user.address, user.city, user.state, user.zipCode || '');
+      }
     }
   }, [user, form, formatPhoneNumber]);
 
@@ -155,21 +163,54 @@ export default function Profile() {
   // Geocoding service to convert address to coordinates
   const geocodeAddress = async (address: string, city: string, state: string, zipCode: string): Promise<GeocodeResult | null> => {
     try {
-      const fullAddress = `${address}, ${city}, ${state} ${zipCode}`.trim();
+      // Known coordinates for common cities to avoid API issues
+      const knownLocations: Record<string, { latitude: number; longitude: number }> = {
+        'Marina Del Rey, CA': { latitude: 33.9802, longitude: -118.4517 },
+        'Los Angeles, CA': { latitude: 34.0522, longitude: -118.2437 },
+        'San Francisco, CA': { latitude: 37.7749, longitude: -122.4194 },
+        'New York, NY': { latitude: 40.7128, longitude: -74.0060 },
+        'Chicago, IL': { latitude: 41.8781, longitude: -87.6298 },
+      };
+      
+      const cityStateKey = `${city}, ${state}`;
+      console.log('Looking up coordinates for:', cityStateKey);
+      
+      // Check if we have known coordinates first
+      if (knownLocations[cityStateKey]) {
+        const coords = knownLocations[cityStateKey];
+        console.log('Using known coordinates:', coords);
+        return {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          location: cityStateKey
+        };
+      }
+      
+      // Fall back to API for unknown locations
+      console.log('Geocoding via API:', cityStateKey);
       const response = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(fullAddress)}&count=1&language=en&format=json`
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityStateKey)}&count=1&language=en&format=json`
       );
       
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.error('Geocoding API error:', response.statusText);
+        return null;
+      }
       
       const data = await response.json();
-      if (!data.results || data.results.length === 0) return null;
+      
+      if (!data.results || data.results.length === 0) {
+        console.warn('No geocoding results found for:', cityStateKey);
+        return null;
+      }
       
       const result = data.results[0];
+      console.log('Geocoding API success:', { latitude: result.latitude, longitude: result.longitude });
+      
       return {
         latitude: result.latitude,
         longitude: result.longitude,
-        location: `${city}, ${state}`
+        location: cityStateKey
       };
     } catch (error) {
       console.error('Geocoding failed:', error);
@@ -217,6 +258,16 @@ export default function Profile() {
   const fetchWeatherForAddress = async (address: string, city: string, state: string, zipCode: string) => {
     const geocodeResult = await geocodeAddress(address, city, state, zipCode);
     if (geocodeResult) {
+      // Save coordinates to database
+      try {
+        await apiRequest('PATCH', '/api/user/profile', {
+          latitude: geocodeResult.latitude.toString(),
+          longitude: geocodeResult.longitude.toString(),
+        });
+      } catch (error) {
+        console.error('Failed to save coordinates:', error);
+      }
+      
       await fetchWeatherByCoordinates(
         geocodeResult.latitude,
         geocodeResult.longitude,
