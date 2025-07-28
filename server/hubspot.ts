@@ -750,29 +750,19 @@ Services Include:
             properties: [] // Will be filled based on object type
           };
 
-          // Try different property names based on object ID
-          const isCustomObject = objectId.startsWith('2-');
-          const ownerProperty = isCustomObject ? 'hs_lead_owner' : 'hubspot_owner_id';
-          const statusProperty = isCustomObject ? 'hs_lead_status' : 'lead_stage';
+          // For the standard leads object, use the correct property names
+          const ownerProperty = 'hubspot_owner_id';
+          const statusProperty = 'hs_lead_status';
           
-          // Set properties based on object type
-          if (isCustomObject) {
-            leadsSearchBody.properties = [
-              'hs_lead_name',
-              'hs_lead_status', 
-              'hs_lead_owner',
-              'hs_createdate',
-              'hs_lastmodifieddate'
-            ];
-          } else {
-            leadsSearchBody.properties = [
-              'lead_name',
-              'lead_stage',
-              'hubspot_owner_id',
-              'createdate',
-              'lastmodifieddate'
-            ];
-          }
+          // Set properties - standard leads object uses these property names
+          leadsSearchBody.properties = [
+            'hs_lead_name',
+            'hs_lead_status', 
+            'hubspot_owner_id',
+            'hs_createdate',
+            'hs_lastmodifieddate',
+            'hubspot_owner_assigneddate'
+          ];
 
           // Add owner filter if provided
           if (ownerEmail) {
@@ -786,11 +776,11 @@ Services Include:
             }
           }
 
-          // Add lead status filter for active leads (exclude Qualified and Disqualified)
+          // Add lead status filter for active leads (include only specific stages)
           leadsSearchBody.filterGroups[0].filters.push({
             propertyName: statusProperty,
-            operator: 'NOT_IN',
-            values: ['Qualified', 'Disqualified']
+            operator: 'IN',
+            values: ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']
           });
 
           console.log(`Searching ${objectId} with body:`, JSON.stringify(leadsSearchBody, null, 2));
