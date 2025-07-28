@@ -1427,7 +1427,7 @@ Generated: ${new Date().toLocaleDateString()}`;
                 {
                   propertyName: 'pipeline',
                   operator: 'EQ',
-                  value: 'default' // This is typically the default pipeline ID, may need adjustment
+                  value: '761069086' // Seed Sales Pipeline ID from debug output
                 }
               ]
             }
@@ -1502,10 +1502,12 @@ Generated: ${new Date().toLocaleDateString()}`;
         const stageName = dealStageInfo[stage] || stage;
         const amount = parseFloat(deal.properties.amount || '0');
         
-        // Exclude closed won and closed lost stages - 1108547153 is closed won per user
-        const closedWonStageIds = ['1108547153']; // User confirmed this is closed won
+        // Exclude closed won and closed lost stages based on actual Seed Sales Pipeline stages
+        const closedWonStageIds = ['1108547153']; // Closed Won from debug
+        const closedLostStageIds = ['1108547154']; // Closed Lost from debug
+        const allClosedStageIds = [...closedWonStageIds, ...closedLostStageIds];
         const closedStages = ['closedwon', 'closedlost', 'closed won', 'closed lost'];
-        const isClosedStage = closedWonStageIds.includes(stage) ||
+        const isClosedStage = allClosedStageIds.includes(stage) ||
                              closedStages.some(closedStage => 
                                stage.toLowerCase().includes(closedStage) || 
                                stageName.toLowerCase().includes(closedStage)
