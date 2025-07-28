@@ -72,19 +72,19 @@
 @layer components {
   /* Subtle card entrance animations */
   .card-bounce-in-1 {
-    animation: cardBounceIn 0.6s ease-out 0.1s both;
+    animation: cardBounceIn 0.45s ease-out 0.075s both;
   }
   
   .card-bounce-in-2 {
-    animation: cardBounceIn 0.6s ease-out 0.2s both;
+    animation: cardBounceIn 0.45s ease-out 0.15s both;
   }
   
   .card-bounce-in-3 {
-    animation: cardBounceIn 0.6s ease-out 0.3s both;
+    animation: cardBounceIn 0.45s ease-out 0.225s both;
   }
   
   .action-card-bounce {
-    animation: cardBounceIn 0.5s ease-out calc(var(--delay, 0) * 0.1s) both;
+    animation: cardBounceIn 0.375s ease-out calc(var(--delay, 0) * 0.075s) both;
   }
   
   @keyframes cardBounceIn {
