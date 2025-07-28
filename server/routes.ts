@@ -731,6 +731,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUser = await storage.updateUserProfile(req.user.id, updateData);
       
+      // Update the session with the new user data
+      req.user = updatedUser;
+      
       res.json({
         success: true,
         message: "Profile synced with HubSpot",
@@ -787,6 +790,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedUser = await storage.updateUserProfile(req.user.id, updateData);
       
+      // Update the session with the new user data
+      req.user = updatedUser;
+      
       res.json({
         id: updatedUser.id,
         email: updatedUser.email,
@@ -829,7 +835,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const photoUrl = `/uploads/profiles/${req.file.filename}`;
 
       // Update user profile with new photo URL
-      await storage.updateUserProfile(req.user.id, { profilePhoto: photoUrl });
+      const updatedUser = await storage.updateUserProfile(req.user.id, { profilePhoto: photoUrl });
+      
+      // Update the session with the new user data
+      req.user = updatedUser;
 
       res.json({ photoUrl });
     } catch (error) {
