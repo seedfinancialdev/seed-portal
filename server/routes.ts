@@ -500,6 +500,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sales Inbox API endpoints
+  
+  // Get active leads for sales inbox
+  app.get("/api/sales-inbox/leads", requireAuth, async (req, res) => {
+    try {
+      if (!hubSpotService) {
+        res.status(400).json({ message: "HubSpot integration not configured" });
+        return;
+      }
+
+      const { limit = '20' } = req.query;
+      const leads = await hubSpotService.getSalesInboxLeads(req.user?.email, parseInt(limit.toString()));
+
+      res.json({ leads });
+    } catch (error) {
+      console.error('Error fetching sales inbox leads:', error);
+      res.status(500).json({ message: "Failed to fetch sales inbox leads" });
+    }
+  });
+
   // Client Intel API endpoints
   
   // Search for clients/prospects using HubSpot with owner filtering

@@ -647,6 +647,130 @@ Services Include:
     }
   }
 
+  // Get sales inbox leads (active contacts with recent activity)
+  async getSalesInboxLeads(ownerEmail?: string, limit: number = 20): Promise<any[]> {
+    try {
+      let searchBody: any = {
+        filterGroups: [
+          {
+            filters: [
+              // Filter for leads/contacts with recent activity or specific lifecycle stages
+              {
+                propertyName: 'lifecyclestage',
+                operator: 'IN',
+                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity']
+              }
+            ]
+          }
+        ],
+        sorts: [
+          {
+            propertyName: 'notes_last_activity_date',
+            direction: 'DESCENDING'
+          }
+        ],
+        limit: limit,
+        properties: [
+          'email',
+          'firstname',
+          'lastname', 
+          'company',
+          'phone',
+          'hs_lead_status',
+          'lifecyclestage',
+          'hubspot_owner_id',
+          'hs_avatar_filemanager_key',
+          'notes_last_activity_date',
+          'createdate',
+          'lastmodifieddate',
+          'hubspot_owner_assigneddate'
+        ]
+      };
+
+      // Filter by owner if provided
+      if (ownerEmail) {
+        const ownerId = await this.getOwnerByEmail(ownerEmail);
+        if (ownerId) {
+          searchBody.filterGroups[0].filters.push({
+            propertyName: 'hubspot_owner_id',
+            operator: 'EQ',
+            value: ownerId
+          });
+        }
+      }
+
+      const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
+        method: 'POST',
+        body: JSON.stringify(searchBody)
+      });
+
+      // Enrich each contact with deal information for lead stage
+      const enrichedContacts = await Promise.all(
+        (searchResult.results || []).map(async (contact: any) => {
+          try {
+            // Get associated deals to determine lead stage
+            const deals = await this.getContactDeals(contact.id);
+            const activeDeal = deals.find((deal: any) => 
+              deal.properties?.dealstage && 
+              !['closedwon', 'closedlost'].includes(deal.properties.dealstage.toLowerCase())
+            );
+
+            // Get stage name from pipeline info if available
+            let leadStage = 'New Lead';
+            if (activeDeal?.properties?.dealstage) {
+              // Try to get human-readable stage name
+              const stageInfo = await this.getDealStageInfo(activeDeal.properties.dealstage);
+              leadStage = stageInfo?.label || activeDeal.properties.dealstage;
+            }
+
+            return {
+              ...contact,
+              leadStage,
+              activeDealId: activeDeal?.id || null,
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/contact/${contact.id}`
+            };
+          } catch (error) {
+            console.error(`Error enriching contact ${contact.id}:`, error);
+            return {
+              ...contact,
+              leadStage: 'New Lead',
+              activeDealId: null,
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/contact/${contact.id}`
+            };
+          }
+        })
+      );
+
+      return enrichedContacts;
+    } catch (error) {
+      console.error('Error fetching sales inbox leads:', error);
+      return [];
+    }
+  }
+
+  // Get deal stage information for human-readable stage names
+  async getDealStageInfo(stageId: string): Promise<{ label: string; id: string } | null> {
+    try {
+      // Get all pipelines to find stage info
+      const pipelines = await this.getPipelines();
+      if (!pipelines?.results) return null;
+
+      for (const pipeline of pipelines.results) {
+        const stage = pipeline.stages?.find((s: any) => s.id === stageId);
+        if (stage) {
+          return {
+            id: stage.id,
+            label: stage.label
+          };
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting deal stage info:', error);
+      return null;
+    }
+  }
+
   // Search contacts for Client Intelligence with owner filtering
   async searchContacts(query: string, ownerEmail?: string): Promise<any[]> {
     try {

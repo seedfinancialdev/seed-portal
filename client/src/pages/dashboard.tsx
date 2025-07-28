@@ -45,6 +45,7 @@ import navLogoPath from "@assets/Nav Logo_1753431362883.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { SalesInbox } from "@/components/SalesInbox";
 import { useState, useEffect } from 'react';
 
 export default function Dashboard() {
@@ -296,116 +297,8 @@ export default function Dashboard() {
               <p className="text-gray-600">Your central command center for lead management and sales operations</p>
             </div>
 
-            {/* Enhanced Sales Inbox */}
-            <Card className="bg-white/70 backdrop-blur-sm border border-gray-200 mb-6">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                      <Inbox className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl">Active Leads</CardTitle>
-                      <CardDescription>18 leads requiring attention</CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filter
-                    </Button>
-                    <Button size="sm" className="bg-[#e24c00] hover:bg-[#d63c00]">
-                      Add Lead
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Lead 1 - Hot */}
-                  <div className="flex items-center justify-between p-4 bg-red-50 border-l-4 border-l-red-500 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                        <span className="text-red-600 font-bold text-lg">🔥</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">TechFlow Solutions</h3>
-                        <p className="text-sm text-gray-600">Software Startup • $2M ARR • Ready to buy</p>
-                        <p className="text-xs text-red-600 font-medium">Hot Lead - Requires immediate attention</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">$45K</p>
-                        <p className="text-xs text-gray-500">Est. Value</p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">HubSpot</Button>
-                        <Button size="sm" variant="outline">Call</Button>
-                        <Button size="sm" className="bg-[#e24c00] hover:bg-[#d63c00]">Book Meeting</Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Lead 2 - Warm */}
-                  <div className="flex items-center justify-between p-4 bg-orange-50 border-l-4 border-l-orange-400 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                        <span className="text-orange-600 font-bold text-lg">⚡</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Wellness Hub Inc</h3>
-                        <p className="text-sm text-gray-600">Healthcare • $850K ARR • Warm prospect</p>
-                        <p className="text-xs text-orange-600 font-medium">Follow-up due in 2 days</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">$28K</p>
-                        <p className="text-xs text-gray-500">Est. Value</p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">HubSpot</Button>
-                        <Button size="sm" variant="outline">Text</Button>
-                        <Button size="sm" variant="outline">Follow Up</Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Lead 3 - Cold */}
-                  <div className="flex items-center justify-between p-4 bg-blue-50 border-l-4 border-l-blue-400 rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-bold text-lg">🧊</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Local Bakery Co</h3>
-                        <p className="text-sm text-gray-600">Food Service • $125K ARR • Price shopper</p>
-                        <p className="text-xs text-blue-600 font-medium">Quote requested - Price sensitive</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-900">$8K</p>
-                        <p className="text-xs text-gray-500">Est. Value</p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">HubSpot</Button>
-                        <Button size="sm" variant="outline">Email</Button>
-                        <Button size="sm" variant="outline">Quote</Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* More leads indicator */}
-                  <div className="text-center py-4 border-t border-gray-200">
-                    <Button variant="outline" className="w-full">
-                      View All 18 Leads
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Dynamic Sales Inbox */}
+            <SalesInbox limit={20} />
           </div>
 
           {/* Compact Sidebar - Secondary Tools */}
