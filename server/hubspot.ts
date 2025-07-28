@@ -663,11 +663,11 @@ Services Include:
                 propertyName: 'email',
                 operator: 'HAS_PROPERTY'
               },
-              // Temporarily remove lead status filter to debug what values exist
+              // Remove all filtering except email to see what leads exist
               {
                 propertyName: 'lifecyclestage',
                 operator: 'IN',
-                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity', 'subscriber', 'other']
+                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity', 'subscriber', 'other', 'customer']
               }
             ]
           }

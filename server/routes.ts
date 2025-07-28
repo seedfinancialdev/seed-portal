@@ -515,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { limit = '8', showAll = 'false' } = req.query;
       
       // For debugging, allow showing all leads regardless of owner
-      const userEmail = showAll === 'true' ? undefined : req.user?.email;
+      const userEmail = showAll === 'true' ? undefined : undefined; // Temporarily show all leads
       console.log(`Fetching leads for user: ${userEmail || 'ALL USERS'}`);
       
       const leads = await hubSpotService.getSalesInboxLeads(userEmail, parseInt(limit.toString()));
