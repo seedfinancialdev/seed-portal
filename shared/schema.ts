@@ -71,6 +71,21 @@ export const users = pgTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   hubspotUserId: text("hubspot_user_id"), // HubSpot user ID for ownership
+  // Profile information
+  profilePhoto: text("profile_photo"), // HubSpot profile photo URL
+  phoneNumber: text("phone_number"), // Synced from HubSpot
+  address: text("address"), // User-editable for weather
+  city: text("city"),
+  state: text("state"),
+  zipCode: text("zip_code"),
+  country: text("country").default("US"),
+  // Weather preferences
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  lastWeatherUpdate: timestamp("last_weather_update"),
+  // HubSpot sync status
+  lastHubspotSync: timestamp("last_hubspot_sync"),
+  hubspotSyncEnabled: boolean("hubspot_sync_enabled").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -81,8 +96,18 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
+// Profile update schema (only editable fields)
+export const updateProfileSchema = z.object({
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zipCode: z.string().optional(),
+  country: z.string().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 
 // Sales Representatives (extends users)
 export const salesReps = pgTable("sales_reps", {

@@ -1,0 +1,515 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hooks/use-auth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { updateProfileSchema, type UpdateProfile } from "@shared/schema";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
+import { 
+  ArrowLeft, 
+  User, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Camera, 
+  RefreshCw,
+  Info,
+  Cloud,
+  Sun,
+  CloudRain,
+  CloudSnow,
+  CloudDrizzle,
+  Zap
+} from "lucide-react";
+import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
+import { useState, useEffect } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface WeatherData {
+  temperature: number | null;
+  condition: string;
+  location: string;
+  isLoading: boolean;
+}
+
+interface GeocodeResult {
+  latitude: number;
+  longitude: number;
+  location: string;
+}
+
+export default function Profile() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const [weather, setWeather] = useState<WeatherData>({
+    temperature: null,
+    condition: '',
+    location: user?.city && user?.state ? `${user.city}, ${user.state}` : 'Marina Del Rey, CA',
+    isLoading: false
+  });
+
+  const form = useForm<UpdateProfile>({
+    resolver: zodResolver(updateProfileSchema),
+    defaultValues: {
+      address: user?.address || '',
+      city: user?.city || '',
+      state: user?.state || '',
+      zipCode: user?.zipCode || '',
+      country: user?.country || 'US',
+    },
+  });
+
+  // Geocoding service to convert address to coordinates
+  const geocodeAddress = async (address: string, city: string, state: string, zipCode: string): Promise<GeocodeResult | null> => {
+    try {
+      const fullAddress = `${address}, ${city}, ${state} ${zipCode}`.trim();
+      const response = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(fullAddress)}&count=1&language=en&format=json`
+      );
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (!data.results || data.results.length === 0) return null;
+      
+      const result = data.results[0];
+      return {
+        latitude: result.latitude,
+        longitude: result.longitude,
+        location: `${city}, ${state}`
+      };
+    } catch (error) {
+      console.error('Geocoding failed:', error);
+      return null;
+    }
+  };
+
+  // Fetch weather based on coordinates
+  const fetchWeatherByCoordinates = async (lat: number, lon: number, location: string) => {
+    try {
+      setWeather(prev => ({ ...prev, isLoading: true }));
+      
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
+      );
+      
+      if (!response.ok) throw new Error('Weather fetch failed');
+      
+      const data = await response.json();
+      const currentWeather = data.current_weather;
+      
+      const getCondition = (code: number) => {
+        if (code === 0) return 'clear';
+        if (code <= 3) return 'partly cloudy';
+        if (code <= 48) return 'cloudy';
+        if (code <= 67) return 'rainy';
+        if (code <= 77) return 'snowy';
+        if (code <= 82) return 'showers';
+        return 'stormy';
+      };
+      
+      setWeather({
+        temperature: Math.round(currentWeather.temperature),
+        condition: getCondition(currentWeather.weathercode),
+        location,
+        isLoading: false
+      });
+    } catch (error) {
+      console.error('Failed to fetch weather:', error);
+      setWeather(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: UpdateProfile) => {
+      const response = await apiRequest('PATCH', '/api/user/profile', data);
+      return response.json();
+    },
+    onSuccess: async (updatedUser, variables) => {
+      // Invalidate user query
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      
+      // If address was updated, geocode and fetch weather
+      if (variables.address || variables.city || variables.state) {
+        const geocodeResult = await geocodeAddress(
+          variables.address || '',
+          variables.city || '',
+          variables.state || '',
+          variables.zipCode || ''
+        );
+        
+        if (geocodeResult) {
+          await fetchWeatherByCoordinates(
+            geocodeResult.latitude,
+            geocodeResult.longitude,
+            geocodeResult.location
+          );
+        }
+      }
+      
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Load weather on component mount if coordinates exist
+  useEffect(() => {
+    if (user?.latitude && user?.longitude) {
+      const location = user.city && user.state ? `${user.city}, ${user.state}` : 'Unknown Location';
+      fetchWeatherByCoordinates(
+        parseFloat(user.latitude),
+        parseFloat(user.longitude),
+        location
+      );
+    }
+  }, [user?.latitude, user?.longitude]);
+
+  const onSubmit = (data: UpdateProfile) => {
+    updateProfileMutation.mutate(data);
+  };
+
+  const getWeatherIcon = (condition: string) => {
+    const iconProps = { className: "h-4 w-4 text-blue-600" };
+    
+    switch (condition.toLowerCase()) {
+      case 'clear':
+      case 'sunny':
+        return <Sun {...iconProps} className="h-4 w-4 text-yellow-500" />;
+      case 'partly cloudy':
+        return <Cloud {...iconProps} className="h-4 w-4 text-gray-500" />;
+      case 'cloudy':
+        return <Cloud {...iconProps} className="h-4 w-4 text-gray-600" />;
+      case 'rainy':
+        return <CloudRain {...iconProps} />;
+      case 'showers':
+        return <CloudDrizzle {...iconProps} />;
+      case 'snowy':
+        return <CloudSnow {...iconProps} />;
+      case 'stormy':
+        return <Zap {...iconProps} />;
+      default:
+        return <Cloud {...iconProps} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
+      {/* Header */}
+      <header className="bg-transparent py-4">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="flex items-center justify-between h-20">
+            {/* Back Button */}
+            <Link href="/">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Portal
+              </Button>
+            </Link>
+            
+            {/* Centered Logo */}
+            <div className="flex-1 flex justify-center">
+              <img 
+                src={navLogoPath} 
+                alt="Seed Financial" 
+                className="h-16 w-auto"
+              />
+            </div>
+            
+            {/* Spacer for balance */}
+            <div className="w-32"></div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-light text-white mb-2">My Profile</h1>
+          <p className="text-white/70">Manage your personal information and preferences</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Profile Information Card */}
+          <div className="md:col-span-2">
+            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
+                  <User className="h-5 w-5 text-orange-500" />
+                  Profile Information
+                </CardTitle>
+                <CardDescription>
+                  Update your address to get accurate weather information
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* HubSpot Synced Fields (Read-Only) */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <RefreshCw className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-gray-700">Synced from HubSpot</span>
+                  </div>
+                  
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      To update your name, photo, or phone number, please make changes in HubSpot. 
+                      Changes will sync automatically.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="firstName" className="text-gray-700">First Name</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input 
+                          id="firstName"
+                          value={user?.firstName || ''} 
+                          disabled 
+                          className="bg-gray-50 text-gray-600"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="lastName" className="text-gray-700">Last Name</Label>
+                      <Input 
+                        id="lastName"
+                        value={user?.lastName || ''} 
+                        disabled 
+                        className="bg-gray-50 text-gray-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="email" className="text-gray-700">Email</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                        <Input 
+                          id="email"
+                          value={user?.email || ''} 
+                          disabled 
+                          className="bg-gray-50 text-gray-600"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="phone" className="text-gray-700">Phone Number</Label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Phone className="h-4 w-4 text-gray-400" />
+                        <Input 
+                          id="phone"
+                          value={user?.phoneNumber || 'Not set'} 
+                          disabled 
+                          className="bg-gray-50 text-gray-600"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Editable Address Fields */}
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <MapPin className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium text-gray-700">Address & Location</span>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Street Address</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="123 Main Street" 
+                              {...field} 
+                              className="bg-white border-gray-200"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            This address will be used to fetch weather information for your dashboard
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Marina Del Rey" 
+                                {...field}
+                                className="bg-white border-gray-200"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="state"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="CA" 
+                                {...field}
+                                className="bg-white border-gray-200"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="zipCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ZIP Code</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="90292" 
+                                {...field}
+                                className="bg-white border-gray-200"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="country"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="US" 
+                                {...field}
+                                className="bg-white border-gray-200"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      {updateProfileMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                      Update Profile
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Weather Preview Card */}
+          <div className="space-y-6">
+            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg text-gray-900">
+                  <Cloud className="h-5 w-5 text-blue-500" />
+                  Live Weather
+                </CardTitle>
+                <CardDescription>
+                  Based on your address
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {weather.isLoading ? (
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Loading weather...</span>
+                  </div>
+                ) : weather.temperature ? (
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      {getWeatherIcon(weather.condition)}
+                      <span className="text-2xl font-bold text-gray-900">
+                        {weather.temperature}°F
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 capitalize">{weather.condition}</p>
+                    <p className="text-xs text-gray-500 mt-1">{weather.location}</p>
+                  </div>
+                ) : (
+                  <div className="text-center text-gray-500">
+                    <Cloud className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm">Add your address to see weather</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Profile Photo Placeholder */}
+            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg text-gray-900">
+                  <Camera className="h-5 w-5 text-gray-600" />
+                  Profile Photo
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
+                  {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                </div>
+                <p className="text-sm text-gray-500">
+                  Profile photo syncs from HubSpot
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

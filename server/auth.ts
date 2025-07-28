@@ -241,7 +241,18 @@ export function setupAuth(app: Express) {
       id: req.user.id,
       email: req.user.email,
       firstName: req.user.firstName,
-      lastName: req.user.lastName
+      lastName: req.user.lastName,
+      profilePhoto: req.user.profilePhoto,
+      phoneNumber: req.user.phoneNumber,
+      address: req.user.address,
+      city: req.user.city,
+      state: req.user.state,
+      zipCode: req.user.zipCode,
+      country: req.user.country,
+      latitude: req.user.latitude,
+      longitude: req.user.longitude,
+      lastWeatherUpdate: req.user.lastWeatherUpdate,
+      lastHubspotSync: req.user.lastHubspotSync
     });
   });
 

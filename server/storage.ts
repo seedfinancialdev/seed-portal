@@ -1,4 +1,4 @@
-import { users, quotes, approvalCodes, type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, updateQuoteSchema } from "@shared/schema";
+import { users, quotes, approvalCodes, type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, updateQuoteSchema, type UpdateProfile } from "@shared/schema";
 import { db } from "./db";
 import { safeDbQuery } from "./db-utils";
 import { eq, like, desc, asc, sql, and } from "drizzle-orm";
@@ -14,6 +14,8 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUserProfile(userId: number, profile: UpdateProfile): Promise<User>;
+  updateUserHubSpotData(userId: number, hubspotData: Partial<User>): Promise<User>;
   
   // Quote methods - now filtered by owner
   createQuote(quote: InsertQuote): Promise<Quote>;
@@ -68,6 +70,46 @@ export class DatabaseStorage implements IStorage {
       
       return user;
     }, 'createUser');
+  }
+
+  async updateUserProfile(userId: number, profile: UpdateProfile): Promise<User> {
+    return await safeDbQuery(async () => {
+      const [user] = await db
+        .update(users)
+        .set({ 
+          ...profile, 
+          updatedAt: new Date(),
+          lastWeatherUpdate: profile.address || profile.city ? new Date() : undefined
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found or could not be updated`);
+      }
+      
+      return user;
+    }, 'updateUserProfile');
+  }
+
+  async updateUserHubSpotData(userId: number, hubspotData: Partial<User>): Promise<User> {
+    return await safeDbQuery(async () => {
+      const [user] = await db
+        .update(users)
+        .set({ 
+          ...hubspotData, 
+          lastHubspotSync: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found or could not be updated`);
+      }
+      
+      return user;
+    }, 'updateUserHubSpotData');
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {

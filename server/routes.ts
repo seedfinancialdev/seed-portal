@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertQuoteSchema, updateQuoteSchema } from "@shared/schema";
+import { insertQuoteSchema, updateQuoteSchema, updateProfileSchema } from "@shared/schema";
 import { z } from "zod";
 import { sendCleanupOverrideNotification } from "./slack";
 import { hubSpotService } from "./hubspot";
@@ -666,6 +666,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Insight generation error:', error);
       res.status(500).json({ message: "Failed to generate insights" });
+    }
+  });
+
+  // Update user profile
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const profileData = updateProfileSchema.parse(req.body);
+      
+      // If address information is provided, geocode to get coordinates
+      let updateData: any = { ...profileData };
+      
+      if (profileData.address || profileData.city || profileData.state) {
+        try {
+          const fullAddress = `${profileData.address || ''}, ${profileData.city || ''}, ${profileData.state || ''} ${profileData.zipCode || ''}`.trim();
+          
+          if (fullAddress.length > 3) { // Basic validation
+            const geocodeResponse = await fetch(
+              `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(fullAddress)}&count=1&language=en&format=json`
+            );
+            
+            if (geocodeResponse.ok) {
+              const geocodeData = await geocodeResponse.json();
+              if (geocodeData.results && geocodeData.results.length > 0) {
+                const result = geocodeData.results[0];
+                updateData = {
+                  ...updateData,
+                  latitude: result.latitude.toString(),
+                  longitude: result.longitude.toString()
+                };
+              }
+            }
+          }
+        } catch (geocodeError) {
+          console.error('Geocoding failed, continuing without coordinates:', geocodeError);
+        }
+      }
+
+      const updatedUser = await storage.updateUserProfile(req.user.id, updateData);
+      
+      res.json({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        profilePhoto: updatedUser.profilePhoto,
+        phoneNumber: updatedUser.phoneNumber,
+        address: updatedUser.address,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        zipCode: updatedUser.zipCode,
+        country: updatedUser.country,
+        latitude: updatedUser.latitude,
+        longitude: updatedUser.longitude,
+        lastWeatherUpdate: updatedUser.lastWeatherUpdate,
+        lastHubspotSync: updatedUser.lastHubspotSync
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid profile data", errors: error.errors });
+      } else {
+        console.error('Profile update error:', error);
+        res.status(500).json({ message: "Failed to update profile" });
+      }
     }
   });
 

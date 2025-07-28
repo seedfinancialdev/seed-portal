@@ -105,13 +105,20 @@ export default function Dashboard() {
     return "Good evening";
   };
 
-  // Fetch live weather data
+  // Fetch live weather data based on user's location or default
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        // Marina Del Rey, CA coordinates
-        const lat = 33.9806;
-        const lon = -118.4416;
+        // Use user's coordinates if available, otherwise default to Marina Del Rey, CA
+        let lat = 33.9806;
+        let lon = -118.4416;
+        let locationName = 'Marina Del Rey, CA';
+        
+        if (user?.latitude && user?.longitude) {
+          lat = parseFloat(user.latitude);
+          lon = parseFloat(user.longitude);
+          locationName = user.city && user.state ? `${user.city}, ${user.state}` : 'Your Location';
+        }
         
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
@@ -138,7 +145,7 @@ export default function Dashboard() {
         setWeather({
           temperature: Math.round(currentWeather.temperature),
           condition: getCondition(currentWeather.weathercode),
-          location: 'Marina Del Rey, CA',
+          location: locationName,
           isLoading: false
         });
       } catch (error) {
@@ -147,7 +154,7 @@ export default function Dashboard() {
         setWeather({
           temperature: 72,
           condition: 'clear',
-          location: 'Marina Del Rey, CA',
+          location: user?.city && user?.state ? `${user.city}, ${user.state}` : 'Marina Del Rey, CA',
           isLoading: false
         });
       }
@@ -157,7 +164,7 @@ export default function Dashboard() {
     // Refresh weather every 30 minutes
     const interval = setInterval(fetchWeather, 30 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user?.latitude, user?.longitude, user?.city, user?.state]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
@@ -191,9 +198,11 @@ export default function Dashboard() {
                   <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
-                <DropdownMenuItem className="text-sm">
-                  <User className="mr-2 h-3 w-3" />
-                  Profile
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center text-sm w-full">
+                    <User className="mr-2 h-3 w-3" />
+                    My Profile
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem className="text-sm">
                   <Settings className="mr-2 h-3 w-3" />
