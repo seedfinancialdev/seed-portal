@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Building2, ExternalLink, Filter, Inbox, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
+import { useState } from 'react';
 
 interface SalesLead {
   id: string;
@@ -16,6 +19,7 @@ interface SalesLead {
     company?: string;
     hs_avatar_filemanager_key?: string;
     hubspot_owner_assigneddate?: string;
+    hs_createdate?: string;
     lifecyclestage?: string;
     hs_lead_status?: string;
   };
@@ -29,6 +33,7 @@ interface SalesInboxProps {
 
 export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   const { user } = useAuth();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const { data: leadsData, isLoading, error } = useQuery({
     queryKey: ['/api/sales-inbox/leads', limit, user?.email],
@@ -43,6 +48,23 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
     gcTime: 0, // Don't cache data to prevent user data leakage
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid excessive requests
+  });
+
+  // Separate query for all leads (for modal)
+  const { data: allLeadsData, isLoading: isLoadingAll } = useQuery({
+    queryKey: ['/api/sales-inbox/leads', 'all', user?.email],
+    queryFn: async () => {
+      const response = await fetch('/api/sales-inbox/leads?limit=100'); // Get up to 100 leads
+      if (!response.ok) {
+        throw new Error('Failed to fetch all sales inbox leads');
+      }
+      return response.json();
+    },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
+    enabled: isModalOpen, // Only fetch when modal is opened
   });
 
   const leads: SalesLead[] = (leadsData?.leads || []).sort((a: SalesLead, b: SalesLead) => {
@@ -159,7 +181,80 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
             <CardTitle className="text-lg font-medium text-white">Sales Inbox</CardTitle>
             <CardDescription className="text-sm text-white/80">Active leads requiring attention</CardDescription>
           </div>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs">View All</Button>
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                View All ({leads.length})
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh]">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">All Active Leads</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="h-[70vh] pr-4">
+                {isLoadingAll ? (
+                  <div className="space-y-4">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-gray-50 border rounded-lg animate-pulse">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                          <div>
+                            <div className="h-4 bg-gray-300 rounded w-32 mb-2"></div>
+                            <div className="h-3 bg-gray-300 rounded w-48"></div>
+                          </div>
+                        </div>
+                        <div className="h-8 bg-gray-300 rounded w-24"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {((allLeadsData?.leads || []) as SalesLead[])
+                      .sort((a: SalesLead, b: SalesLead) => {
+                        const dateA = new Date(a.properties.hubspot_owner_assigneddate || a.properties.hs_createdate || '1970-01-01');
+                        const dateB = new Date(b.properties.hubspot_owner_assigneddate || b.properties.hs_createdate || '1970-01-01');
+                        return dateB.getTime() - dateA.getTime();
+                      })
+                      .map((lead) => (
+                        <div
+                          key={lead.id}
+                          className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                              <Building2 className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900 text-base">
+                                {lead.properties.company || 'Unknown Company'}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                {formatContactName(lead)} • {formatCreateDate(lead.properties.hubspot_owner_assigneddate || lead.properties.hs_createdate)} • {lead.leadStage}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => window.open(lead.hubspotContactUrl, '_blank')}
+                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open in HubSpot
+                          </Button>
+                        </div>
+                      ))}
+                    {allLeadsData?.leads?.length === 0 && (
+                      <div className="text-center py-12">
+                        <Inbox className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">No active leads</h3>
+                        <p className="text-gray-500">All caught up! No leads requiring attention at the moment.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent className="space-y-3" style={{ minHeight: '520px' }}>
