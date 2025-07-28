@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
+import { useCounterAnimation } from "@/hooks/useCounterAnimation";
 
 interface WeatherData {
   temperature: number | null;
@@ -62,6 +63,28 @@ const getWeatherIcon = (condition: string) => {
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = useDashboardMetrics();
+  
+  // Counter animations for metrics cards
+  const pipelineCounter = useCounterAnimation({ 
+    target: metrics?.pipelineValue || 0, 
+    duration: 2000, 
+    delay: 300,
+    enabled: !metricsLoading && !metricsError 
+  });
+  
+  const mtdRevenueCounter = useCounterAnimation({ 
+    target: metrics?.mtdRevenue || 0, 
+    duration: 2000, 
+    delay: 600,
+    enabled: !metricsLoading && !metricsError 
+  });
+  
+  const activeDealsCounter = useCounterAnimation({ 
+    target: metrics?.activeDeals || 0, 
+    duration: 1500, 
+    delay: 900,
+    enabled: !metricsLoading && !metricsError 
+  });
   const [weather, setWeather] = useState<WeatherData>({
     temperature: null,
     condition: '',
@@ -220,7 +243,7 @@ export default function Dashboard() {
                 ) : metricsError ? (
                   'Error'
                 ) : (
-                  `$${metrics?.pipelineValue?.toLocaleString() || '0'}`
+                  `$${pipelineCounter.count.toLocaleString()}`
                 )}
               </p>
               <p className="text-xs text-white/80 uppercase tracking-wide">Pipeline Value</p>
@@ -238,7 +261,7 @@ export default function Dashboard() {
                 ) : metricsError ? (
                   'Error'
                 ) : (
-                  `$${metrics?.mtdRevenue?.toLocaleString() || '0'}`
+                  `$${mtdRevenueCounter.count.toLocaleString()}`
                 )}
               </p>
               <p className="text-xs text-white/80 uppercase tracking-wide">MTD Revenue</p>
@@ -256,7 +279,7 @@ export default function Dashboard() {
                 ) : metricsError ? (
                   'Error'
                 ) : (
-                  metrics?.activeDeals || '0'
+                  activeDealsCounter.count.toString()
                 )}
               </p>
               <p className="text-xs text-white/80 uppercase tracking-wide">Active Deals</p>
