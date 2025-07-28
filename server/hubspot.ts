@@ -777,11 +777,53 @@ Services Include:
           }
 
           // Add lead status filter for active leads (include only specific stages)
-          leadsSearchBody.filterGroups[0].filters.push({
+          // First, let's see what stages exist by searching without stage filter
+          if (objectId === 'leads') {
+            console.log('DEBUG: First searching without stage filter to see what stages exist...');
+            const debugSearchBody = {
+              filterGroups: [{
+                filters: ownerEmail && ownerId ? [{
+                  propertyName: ownerProperty,
+                  operator: 'EQ',
+                  value: ownerId
+                }] : []
+              }],
+              sorts: [{
+                propertyName: 'hs_lastmodifieddate',
+                direction: 'DESCENDING'
+              }],
+              limit: 10,
+              properties: leadsSearchBody.properties
+            };
+            
+            try {
+              const debugResult = await this.makeRequest(`/crm/v3/objects/${objectId}/search`, {
+                method: 'POST',
+                body: JSON.stringify(debugSearchBody)
+              });
+              
+              console.log(`DEBUG: Found ${debugResult.results?.length || 0} total leads for owner`);
+              if (debugResult.results && debugResult.results.length > 0) {
+                console.log('DEBUG: Sample lead stages:');
+                debugResult.results.slice(0, 5).forEach((lead: any) => {
+                  console.log(`  - Lead: ${lead.properties?.hs_lead_name || 'Unknown'}, Stage: ${lead.properties?.hs_pipeline_stage || 'NO STAGE'}`);
+                });
+              }
+            } catch (debugError) {
+              console.log('DEBUG: Error in debug search:', (debugError as any).message);
+            }
+          }
+          
+          // Now add the stage filter - but let's make it optional for now
+          const stageFilter = {
             propertyName: statusProperty,
             operator: 'IN',
             values: ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']
-          });
+          };
+          
+          // Comment out the stage filter temporarily to see all leads
+          // leadsSearchBody.filterGroups[0].filters.push(stageFilter);
+          console.log('TEMPORARILY DISABLED STAGE FILTER to see all leads');
 
           console.log(`Searching ${objectId} with body:`, JSON.stringify(leadsSearchBody, null, 2));
 
