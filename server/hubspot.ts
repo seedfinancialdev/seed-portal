@@ -724,7 +724,7 @@ Services Include:
 
       // If dynamic discovery fails, try common IDs as fallback
       console.log('Dynamic discovery failed, trying fallback IDs...');
-      const possibleLeadObjectIds = ['2-18298094', 'p149640503_leads', '2-20169374', '2-5890328'];
+      const possibleLeadObjectIds = ['leads'];
       let leadsObjectId = null;
       let searchResult = null;
       
@@ -899,7 +899,10 @@ Services Include:
     try {
       console.log(`Searching Leads object ${objectId}...`);
 
-      // Build search body for Leads object
+      // Determine if this is a custom object or standard leads object
+      const isStandardLeads = objectId === 'leads';
+      
+      // Build search body for Leads object with correct property names
       let leadsSearchBody: any = {
         filterGroups: [
           {
@@ -908,15 +911,22 @@ Services Include:
         ],
         sorts: [
           {
-            propertyName: 'hs_lastmodifieddate',
+            propertyName: isStandardLeads ? 'hs_lastmodifieddate' : 'hs_lastmodifieddate',
             direction: 'DESCENDING'
           }
         ],
         limit: limit,
-        properties: [
+        properties: isStandardLeads ? [
           'hs_lead_name',
           'hs_lead_status', 
-          'hs_lead_owner',
+          'hubspot_owner_id',  // Standard leads use hubspot_owner_id
+          'hs_createdate',
+          'hs_lastmodifieddate',
+          'hubspot_owner_assigneddate'
+        ] : [
+          'hs_lead_name',
+          'hs_lead_status', 
+          'hs_lead_owner',  // Custom objects use hs_lead_owner
           'hs_createdate',
           'hs_lastmodifieddate'
         ]
@@ -927,7 +937,7 @@ Services Include:
         const ownerId = await this.getOwnerByEmail(ownerEmail);
         if (ownerId) {
           leadsSearchBody.filterGroups[0].filters.push({
-            propertyName: 'hs_lead_owner',
+            propertyName: isStandardLeads ? 'hubspot_owner_id' : 'hs_lead_owner',
             operator: 'EQ',
             value: ownerId
           });
@@ -937,8 +947,8 @@ Services Include:
       // Add lead status filter for active leads (exclude Qualified and Disqualified)
       leadsSearchBody.filterGroups[0].filters.push({
         propertyName: 'hs_lead_status',
-        operator: 'NOT_IN',
-        values: ['Qualified', 'Disqualified']
+        operator: 'IN',
+        values: ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']  // Include only active stages
       });
 
       console.log(`Searching ${objectId} with filters:`, JSON.stringify(leadsSearchBody, null, 2));
