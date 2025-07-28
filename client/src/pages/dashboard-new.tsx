@@ -115,8 +115,8 @@ export default function Dashboard() {
         let locationName = 'Marina Del Rey, CA';
         
         if (user?.latitude && user?.longitude) {
-          lat = parseFloat(user.latitude);
-          lon = parseFloat(user.longitude);
+          lat = parseFloat(user.latitude.toString());
+          lon = parseFloat(user.longitude.toString());
           locationName = user.city && user.state ? `${user.city}, ${user.state}` : 'Your Location';
         }
         

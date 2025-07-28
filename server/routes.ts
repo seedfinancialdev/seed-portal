@@ -9,11 +9,44 @@ import { setupAuth, requireAuth } from "./auth";
 import { calculateCombinedFees } from "@shared/pricing";
 import { clientIntelEngine } from "./client-intel";
 import { apiRateLimit, searchRateLimit, enhancementRateLimit } from "./middleware/rate-limiter";
+import multer from "multer";
+import path from "path";
+import { promises as fs } from "fs";
+import express from "express";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: async (req, file, cb) => {
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'profiles');
+      try {
+        await fs.mkdir(uploadsDir, { recursive: true });
+        cb(null, uploadsDir);
+      } catch (error) {
+        cb(error, uploadsDir);
+      }
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication first
@@ -21,6 +54,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Apply rate limiting to all API routes
   app.use('/api', apiRateLimit);
+
+  // Serve uploaded files
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
@@ -775,6 +811,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Profile update error:', error);
         res.status(500).json({ message: "Failed to update profile" });
       }
+    }
+  });
+
+  // Upload profile photo
+  app.post("/api/user/upload-photo", requireAuth, upload.single('photo'), async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "No photo uploaded" });
+      }
+
+      // Generate URL for uploaded file
+      const photoUrl = `/uploads/profiles/${req.file.filename}`;
+
+      // Update user profile with new photo URL
+      await storage.updateUserProfile(req.user.id, { profilePhoto: photoUrl });
+
+      res.json({ photoUrl });
+    } catch (error) {
+      console.error('Photo upload error:', error);
+      res.status(500).json({ message: "Failed to upload photo" });
     }
   });
 

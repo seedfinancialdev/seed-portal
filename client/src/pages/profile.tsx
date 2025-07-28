@@ -29,8 +29,9 @@ import {
   Zap
 } from "lucide-react";
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface WeatherData {
   temperature: number | null;
@@ -61,6 +62,7 @@ export default function Profile() {
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
       phoneNumber: user?.phoneNumber || '',
+      profilePhoto: user?.profilePhoto || '',
       address: user?.address || '',
       city: user?.city || '',
       state: user?.state || '',
@@ -68,6 +70,48 @@ export default function Profile() {
       country: user?.country || 'US',
     },
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle photo upload
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    try {
+      const response = await fetch('/api/user/upload-photo', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Update the form and user data
+        form.setValue('profilePhoto', result.photoUrl);
+        queryClient.setQueryData(['user'], (oldData: any) => ({
+          ...oldData,
+          profilePhoto: result.photoUrl
+        }));
+        
+        toast({
+          title: "Success",
+          description: "Profile photo updated successfully",
+        });
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload photo. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Geocoding service to convert address to coordinates
   const geocodeAddress = async (address: string, city: string, state: string, zipCode: string): Promise<GeocodeResult | null> => {
@@ -129,6 +173,30 @@ export default function Profile() {
       setWeather(prev => ({ ...prev, isLoading: false }));
     }
   };
+
+  // Combined address fetch function
+  const fetchWeatherForAddress = async (address: string, city: string, state: string, zipCode: string) => {
+    const geocodeResult = await geocodeAddress(address, city, state, zipCode);
+    if (geocodeResult) {
+      await fetchWeatherByCoordinates(
+        geocodeResult.latitude,
+        geocodeResult.longitude,
+        geocodeResult.location
+      );
+    }
+  };
+
+  // Fetch weather when form values change OR when user data loads
+  useEffect(() => {
+    const address = form.watch('address') || user?.address;
+    const city = form.watch('city') || user?.city;
+    const state = form.watch('state') || user?.state;
+    const zipCode = form.watch('zipCode') || user?.zipCode;
+    
+    if (address && city && state && zipCode) {
+      fetchWeatherForAddress(address, city, state, zipCode);
+    }
+  }, [form.watch('address'), form.watch('city'), form.watch('state'), form.watch('zipCode'), user?.address, user?.city, user?.state, user?.zipCode]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -284,11 +352,43 @@ export default function Profile() {
                   <User className="h-5 w-5 text-orange-500" />
                   Profile Information
                 </CardTitle>
-                <CardDescription>
-                  Manage your personal information and preferences
-                </CardDescription>
+
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Profile Photo Section */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-medium text-gray-700">Profile Photo</h3>
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={user?.profilePhoto || ''} alt="Profile" />
+                      <AvatarFallback className="text-lg">
+                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Change Photo
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
                 {/* HubSpot Synced Fields (Read-Only) */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
