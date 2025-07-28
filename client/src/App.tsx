@@ -7,9 +7,9 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
-import Home from "@/pages/home.tsx";
+import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
 import AuthPage from "@/pages/auth-page";
-import Dashboard from "@/pages/dashboard-new";
+import Dashboard from "@/pages/dashboard-new"; // Main dashboard home page
 import CommissionTracker from "@/pages/commission-tracker";
 import ClientIntel from "@/pages/client-intel";
 import Profile from "@/pages/profile";
@@ -19,7 +19,7 @@ function Router() {
     <ErrorBoundary>
       <Switch>
         <ProtectedRoute path="/" component={Dashboard} />
-        <ProtectedRoute path="/calculator" component={Home} />
+        <ProtectedRoute path="/calculator" component={Calculator} />
         <ProtectedRoute path="/commission-tracker" component={CommissionTracker} />
         <ProtectedRoute path="/client-intel" component={ClientIntel} />
         <ProtectedRoute path="/profile" component={Profile} />

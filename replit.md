@@ -2,13 +2,25 @@
 
 ## Overview
 
-This is a full-stack web application built with React, TypeScript, Express.js, and PostgreSQL. The application is a Seed Financial Internal Employee Portal featuring a sophisticated quote generation system that calculates pricing based on various business parameters like revenue bands, transaction volumes, and industry complexity. The portal provides a centralized dashboard for employees to access various tools, with the quote calculator being the primary integrated application. It uses modern web development practices with a component-based frontend and RESTful API backend.
+This is a comprehensive Seed Financial Internal Employee Portal built with React, TypeScript, Express.js, and PostgreSQL. The application features a centralized dashboard as the home page (/) with integrated tools including a sophisticated quote calculator (/calculator), commission tracker, client intelligence engine, and profile management. The portal provides HubSpot integration, real-time weather services, address autocomplete, and advanced sales analytics. The quote calculator calculates pricing based on various business parameters like revenue bands, transaction volumes, and industry complexity. It uses modern web development practices with a component-based frontend and RESTful API backend.
 
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
+
+✓ **Project Organization and Routing Clarification** (July 28, 2025)
+  - **Proper Home Page**: Dashboard is correctly configured as home page (/) - no changes needed to routing
+  - **Clear Component Naming**: Updated App.tsx imports with descriptive comments for clarity
+  - **Portal Structure**: Dashboard serves as central hub with navigation to specialized tools
+  - **Route Organization**: 
+    - `/` → Dashboard (main employee portal home)
+    - `/calculator` → Quote Calculator (specialized pricing tool)
+    - `/commission-tracker` → Commission tracking and analytics
+    - `/client-intel` → HubSpot-powered client intelligence
+    - `/profile` → User profile and settings
+  - **Architecture Integrity**: All existing functionality preserved, just clarified naming and documentation
 
 ✓ **Address Autocomplete System for Enhanced Weather Integration** (July 28, 2025)
   - **OpenStreetMap Integration**: Implemented comprehensive address autocomplete using Nominatim API (free geocoding service)
