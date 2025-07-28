@@ -46,11 +46,7 @@ app.use((req, res, next) => {
     target: 'http://localhost:3001',
     changeOrigin: true,
     timeout: 30000,
-    proxyTimeout: 30000,
-    onProxyReq: (proxyReq: any, req: any, res: any) => {
-      // Log wiki requests for debugging
-      log(`Wiki proxy: ${req.method} ${req.path}`);
-    }
+    proxyTimeout: 30000
   }));
 
   // Enhanced error handler with database error handling
