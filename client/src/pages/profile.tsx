@@ -132,8 +132,9 @@ export default function Profile() {
           profilePhoto: result.photoUrl
         }));
         
-        // Also invalidate to ensure fresh data
+        // Also invalidate and refetch to ensure fresh data
         await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        await queryClient.refetchQueries({ queryKey: ['/api/user'] });
         
         toast({
           title: "Success",
@@ -243,8 +244,9 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: async (updatedUser, variables) => {
-      // Invalidate user query
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      // Force refresh user data immediately
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       
       // If address was updated, geocode and fetch weather
       if (variables.address || variables.city || variables.state) {
@@ -284,13 +286,14 @@ export default function Profile() {
       const response = await apiRequest('POST', '/api/user/sync-hubspot', {});
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: "HubSpot sync completed",
         description: `Updated: ${data.syncedFields?.join(', ') || 'No changes'}`,
       });
-      // Invalidate user query to get updated data
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      // Force refresh user data immediately
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
     },
     onError: (error: any) => {
       toast({
