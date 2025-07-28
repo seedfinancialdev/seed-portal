@@ -1262,7 +1262,11 @@ export default function Home() {
               variant="ghost"
               size="sm"
               className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-              onClick={() => setLocation('/')}
+              onClick={() => {
+                // Invalidate dashboard metrics to refresh data
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                setLocation('/');
+              }}
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back to Portal

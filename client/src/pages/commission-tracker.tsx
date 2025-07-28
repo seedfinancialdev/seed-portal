@@ -51,6 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { calculateMonthlyBonus, calculateMilestoneBonus, getNextMilestone, calculateTotalEarnings } from "@shared/commission-calculator";
+import { queryClient } from "@/lib/queryClient";
 
 interface Commission {
   id: string;
@@ -357,12 +358,19 @@ export default function CommissionTracker() {
       <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Portal
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-white hover:bg-white/10"
+            onClick={() => {
+              // Invalidate dashboard metrics to refresh data
+              queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+              window.location.href = '/';
+            }}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Portal
+          </Button>
           
           {/* Centered Logo */}
           <div className="flex-1 flex justify-center">

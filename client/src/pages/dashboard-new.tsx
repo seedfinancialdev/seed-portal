@@ -216,7 +216,7 @@ export default function Dashboard() {
               </div>
               <p className="text-2xl font-light text-white mb-1">
                 {metricsLoading ? (
-                  <div className="animate-pulse">Loading...</div>
+                  <span className="animate-pulse">Loading...</span>
                 ) : metricsError ? (
                   'Error'
                 ) : (
@@ -234,7 +234,7 @@ export default function Dashboard() {
               </div>
               <p className="text-2xl font-light text-white mb-1">
                 {metricsLoading ? (
-                  <div className="animate-pulse">Loading...</div>
+                  <span className="animate-pulse">Loading...</span>
                 ) : metricsError ? (
                   'Error'
                 ) : (
@@ -252,7 +252,7 @@ export default function Dashboard() {
               </div>
               <p className="text-2xl font-light text-white mb-1">
                 {metricsLoading ? (
-                  <div className="animate-pulse">Loading...</div>
+                  <span className="animate-pulse">Loading...</span>
                 ) : metricsError ? (
                   'Error'
                 ) : (

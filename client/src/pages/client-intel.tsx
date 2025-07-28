@@ -229,12 +229,19 @@ export default function ClientIntel() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between h-20">
             {/* Back Button */}
-            <Link href="/">
-              <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Portal
-              </Button>
-            </Link>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+              onClick={() => {
+                // Invalidate dashboard metrics to refresh data
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                window.location.href = '/';
+              }}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Portal
+            </Button>
             
             {/* Centered Logo */}
             <div className="flex-1 flex justify-center">
