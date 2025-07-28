@@ -51,9 +51,63 @@ If settings look correct but it's still not working:
 3. **Check Commits**: Ensure your latest changes are committed and pushed
 4. **Vercel Logs**: Check deployment logs for specific error messages
 
-## If Still Having Issues
-- Check if your repository has any deployment restrictions
-- Verify you have admin access to both GitHub repo and Vercel project
-- Try creating a new commit and pushing to trigger deployment
+## Wiki.js Specific Build Configuration
+
+### Build Settings for Wiki.js on Vercel
+Based on your screenshot, you need to configure these settings:
+
+**Framework Preset**: Other (keep as selected)
+
+**Build Command**: 
+```bash
+npm run build
+```
+
+**Output Directory**: 
+```bash
+.
+```
+(Just a single dot - Wiki.js builds in place)
+
+**Install Command**: 
+```bash
+npm install
+```
+
+**Development Command**: 
+```bash
+npm run dev
+```
+
+### Alternative Build Configuration
+If the above doesn't work, try:
+
+**Build Command**: 
+```bash
+npm ci && npm run build
+```
+
+**Output Directory**: 
+```bash
+dist
+```
+
+### Root Directory Setting
+- Leave "Root Directory" empty (should show just "/" or be blank)
+- Make sure "Include files outside the root directory in the Build Step" is ENABLED
+
+## Step-by-Step Fix
+1. In your Vercel project, go to Settings → Build and Development Settings
+2. Set Framework Preset to "Other"
+3. Set Build Command to `npm run build`
+4. Set Output Directory to `.` (single dot)
+5. Set Install Command to `npm install`
+6. Click "Save"
+7. Go to Deployments and trigger a new deployment
+
+## If Build Still Fails
+- Check if your Wiki.js repository has a `package.json` with proper build scripts
+- Verify your Neon database environment variables are correctly set
+- Check deployment logs for specific error messages
 
 Let me know which solution works for your setup!
