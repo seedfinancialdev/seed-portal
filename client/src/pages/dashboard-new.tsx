@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
+import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 
 interface WeatherData {
   temperature: number | null;
@@ -60,6 +61,7 @@ const getWeatherIcon = (condition: string) => {
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useDashboardMetrics();
   const [weather, setWeather] = useState<WeatherData>({
     temperature: null,
     condition: '',
@@ -212,7 +214,15 @@ export default function Dashboard() {
               <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-3">
                 <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
-              <p className="text-2xl font-light text-white mb-1">$127.3K</p>
+              <p className="text-2xl font-light text-white mb-1">
+                {metricsLoading ? (
+                  <div className="animate-pulse">Loading...</div>
+                ) : metricsError ? (
+                  'Error'
+                ) : (
+                  `$${metrics?.pipelineValue?.toLocaleString() || '0'}`
+                )}
+              </p>
               <p className="text-xs text-white/80 uppercase tracking-wide">Pipeline Value</p>
             </CardContent>
           </Card>
@@ -222,7 +232,15 @@ export default function Dashboard() {
               <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
                 <Target className="h-6 w-6 text-blue-600" />
               </div>
-              <p className="text-2xl font-light text-white mb-1">18</p>
+              <p className="text-2xl font-light text-white mb-1">
+                {metricsLoading ? (
+                  <div className="animate-pulse">Loading...</div>
+                ) : metricsError ? (
+                  'Error'
+                ) : (
+                  metrics?.activeLeads || '0'
+                )}
+              </p>
               <p className="text-xs text-white/80 uppercase tracking-wide">Active Leads</p>
             </CardContent>
           </Card>
@@ -232,7 +250,15 @@ export default function Dashboard() {
               <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
                 <Activity className="h-6 w-6 text-purple-600" />
               </div>
-              <p className="text-2xl font-light text-white mb-1">$89.2K</p>
+              <p className="text-2xl font-light text-white mb-1">
+                {metricsLoading ? (
+                  <div className="animate-pulse">Loading...</div>
+                ) : metricsError ? (
+                  'Error'
+                ) : (
+                  `$${metrics?.mtdRevenue?.toLocaleString() || '0'}`
+                )}
+              </p>
               <p className="text-xs text-white/80 uppercase tracking-wide">MTD Revenue</p>
             </CardContent>
           </Card>

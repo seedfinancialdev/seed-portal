@@ -1398,6 +1398,132 @@ Generated: ${new Date().toLocaleDateString()}`;
       return { exists: false };
     }
   }
+
+  // Get dashboard metrics for a specific user
+  async getDashboardMetrics(userEmail: string) {
+    try {
+      const ownerId = await this.getOwnerByEmail(userEmail);
+      if (!ownerId) {
+        return {
+          pipelineValue: 0,
+          activeLeads: 0,
+          mtdRevenue: 0
+        };
+      }
+
+      // Get all open deals for this user (pipeline value)
+      const openDealsResponse = await this.makeRequest('/crm/v3/objects/deals/search', {
+        method: 'POST',
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: 'hubspot_owner_id',
+                  operator: 'EQ',
+                  value: ownerId
+                },
+                {
+                  propertyName: 'dealstage',
+                  operator: 'IN',
+                  values: ['appointmentscheduled', 'qualifiedtobuy', 'presentationscheduled', 'decisionmakerboughtin', 'contractsent']
+                }
+              ]
+            }
+          ],
+          properties: ['amount', 'dealstage'],
+          limit: 100
+        })
+      });
+
+      // Calculate pipeline value
+      const pipelineValue = openDealsResponse.results?.reduce((total: number, deal: any) => {
+        const amount = parseFloat(deal.properties.amount || '0');
+        return total + amount;
+      }, 0) || 0;
+
+      // Get all contacts assigned to this user (active leads)
+      const contactsResponse = await this.makeRequest('/crm/v3/objects/contacts/search', {
+        method: 'POST',
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: 'hubspot_owner_id',
+                  operator: 'EQ',
+                  value: ownerId
+                },
+                {
+                  propertyName: 'lifecyclestage',
+                  operator: 'IN',
+                  values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead']
+                }
+              ]
+            }
+          ],
+          properties: ['email'],
+          limit: 100
+        })
+      });
+
+      const activeLeads = contactsResponse.results?.length || 0;
+
+      // Get MTD revenue from closed-won deals
+      const firstOfMonth = new Date();
+      firstOfMonth.setDate(1);
+      firstOfMonth.setHours(0, 0, 0, 0);
+      
+      const closedWonDealsResponse = await this.makeRequest('/crm/v3/objects/deals/search', {
+        method: 'POST',
+        body: JSON.stringify({
+          filterGroups: [
+            {
+              filters: [
+                {
+                  propertyName: 'hubspot_owner_id',
+                  operator: 'EQ',
+                  value: ownerId
+                },
+                {
+                  propertyName: 'dealstage',
+                  operator: 'EQ',
+                  value: 'closedwon'
+                },
+                {
+                  propertyName: 'closedate',
+                  operator: 'GTE',
+                  value: firstOfMonth.getTime()
+                }
+              ]
+            }
+          ],
+          properties: ['amount', 'closedate'],
+          limit: 100
+        })
+      });
+
+      // Calculate MTD revenue
+      const mtdRevenue = closedWonDealsResponse.results?.reduce((total: number, deal: any) => {
+        const amount = parseFloat(deal.properties.amount || '0');
+        return total + amount;
+      }, 0) || 0;
+
+      return {
+        pipelineValue: Math.round(pipelineValue),
+        activeLeads,
+        mtdRevenue: Math.round(mtdRevenue)
+      };
+
+    } catch (error) {
+      console.error('Error fetching dashboard metrics:', error);
+      return {
+        pipelineValue: 0,
+        activeLeads: 0,
+        mtdRevenue: 0
+      };
+    }
+  }
 }
 
 

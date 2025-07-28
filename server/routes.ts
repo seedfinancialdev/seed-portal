@@ -618,6 +618,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get dashboard metrics for the logged-in user
+  app.get("/api/dashboard/metrics", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      if (!hubSpotService) {
+        return res.status(500).json({ message: "HubSpot integration not configured" });
+      }
+
+      const metrics = await hubSpotService.getDashboardMetrics(req.user.email);
+      res.json(metrics);
+    } catch (error) {
+      console.error('Error fetching dashboard metrics:', error);
+      res.status(500).json({ message: "Failed to fetch dashboard metrics" });
+    }
+  });
+
   // Test Airtable connection endpoint
   app.get('/api/test-airtable', async (req, res) => {
     try {
