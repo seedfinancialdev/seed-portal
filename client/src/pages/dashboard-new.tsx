@@ -292,7 +292,7 @@ export default function Dashboard() {
           <h2 className="text-xl font-light text-white mb-6 text-center">Quick Actions</h2>
           <div className="grid grid-cols-4 gap-8 justify-items-center">
             <Link href="/calculator">
-              <div className="group relative w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card-rotate" style={{"--delay": 4} as React.CSSProperties}>
+              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 4} as React.CSSProperties}>
                 <div className="action-card-content">
                   <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-4 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
                     <Calculator className="h-5 w-5 text-white" />
@@ -303,7 +303,7 @@ export default function Dashboard() {
             </Link>
 
             <Link href="/commission-tracker">
-              <div className="group relative w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card-rotate" style={{"--delay": 5} as React.CSSProperties}>
+              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 5} as React.CSSProperties}>
                 <div className="action-card-content">
                   <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-4 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
                     <DollarSign className="h-5 w-5 text-white" />
@@ -314,7 +314,7 @@ export default function Dashboard() {
             </Link>
 
             <Link href="/client-intel">
-              <div className="group relative w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card-rotate" style={{"--delay": 6} as React.CSSProperties}>
+              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 6} as React.CSSProperties}>
                 <div className="action-card-content">
                   <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-4 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
                     <UserCheck className="h-5 w-5 text-white" />
@@ -324,7 +324,7 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            <div className="group relative w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card-rotate" style={{"--delay": 7} as React.CSSProperties}>
+            <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 7} as React.CSSProperties}>
               <div className="action-card-content">
                 <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-4 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
                   <Video className="h-5 w-5 text-white" />
