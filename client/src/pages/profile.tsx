@@ -130,7 +130,11 @@ export default function Profile() {
 
   // Select an address from suggestions
   const selectAddress = (suggestion: AddressSuggestion) => {
+    console.log('=== ADDRESS SELECTION START ===');
+    console.log('Full suggestion object:', suggestion);
+    
     const address = suggestion.address;
+    console.log('Address object:', address);
     
     // Parse and set form fields with proper fallbacks
     const streetAddress = `${address.house_number || ''} ${address.road || ''}`.trim();
@@ -138,7 +142,8 @@ export default function Profile() {
     const state = address.state || '';
     const zipCode = address.postcode || '';
     
-    console.log('Setting form values:', { streetAddress, city, state, zipCode });
+    console.log('Parsed values:', { streetAddress, city, state, zipCode });
+    console.log('Current form values before setting:', form.getValues());
     
     // Use setValue with trigger to ensure form updates properly
     form.setValue('address', streetAddress, { shouldValidate: true, shouldDirty: true });
@@ -146,12 +151,16 @@ export default function Profile() {
     form.setValue('state', state, { shouldValidate: true, shouldDirty: true });
     form.setValue('zipCode', zipCode, { shouldValidate: true, shouldDirty: true });
     
+    console.log('Form values after setting:', form.getValues());
+    
     // Force form to re-render with new values
     form.trigger(['address', 'city', 'state', 'zipCode']);
     
     // Update the search query to show selected address
     setAddressQuery(`${streetAddress}, ${city}, ${state} ${zipCode}`.trim());
     setShowSuggestions(false);
+    
+    console.log('=== ADDRESS SELECTION END ===');
     
     // Automatically fetch weather for the selected address
     if (streetAddress && city && state) {
