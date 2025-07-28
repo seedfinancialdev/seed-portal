@@ -1453,23 +1453,26 @@ Generated: ${new Date().toLocaleDateString()}`;
         console.log('Could not fetch deal stage info');
       }
 
-      // Calculate pipeline value - only include deals in specific "open" stages
-      // Based on your screenshot, we need to match HubSpot's "Open Deal Amount" calculation
+      // Calculate pipeline value - include ALL deals except Closed Won and Closed Lost
+      // Per user: "any deal NOT in a closed won or closed lost stage"
+      // This includes: Assigned, Responded, Discovery Call Scheduled, Qualified, Proposal Sent, Negotiation
       const pipelineValue = allDealsResponse.results?.reduce((total: number, deal: any) => {
         const stage = deal.properties?.dealstage || '';
         const stageName = dealStageInfo[stage] || stage;
         const amount = parseFloat(deal.properties.amount || '0');
         
-        // Include deals that are in active pipeline stages (not closed won, closed lost, or qualified)
-        // Based on your HubSpot screenshot showing $50.06K as "Open Deal Amount"
-        // From console logs: 1108547153 appears to be "qualified" stage (excluded from open deals)
-        const openStages = ['presentationscheduled', '1108547148', '1108547151']; // Exclude 1108547153 (qualified)
+        // Exclude only closed won and closed lost stages
+        const closedStages = ['closedwon', 'closedlost', 'closed won', 'closed lost'];
+        const isClosedStage = closedStages.some(closedStage => 
+          stage.toLowerCase().includes(closedStage) || 
+          stageName.toLowerCase().includes(closedStage)
+        );
         
-        if (openStages.includes(stage)) {
+        if (!isClosedStage) {
           console.log(`Including in pipeline: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - Amount: $${amount}`);
           return total + amount;
         } else {
-          console.log(`Excluding from pipeline: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - Amount: $${amount}`);
+          console.log(`Excluding from pipeline (closed stage): ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - Amount: $${amount}`);
         }
         return total;
       }, 0) || 0;
@@ -1534,20 +1537,22 @@ Generated: ${new Date().toLocaleDateString()}`;
       firstOfMonth.setDate(1);
       firstOfMonth.setHours(0, 0, 0, 0);
 
-      // Calculate MTD revenue from the all deals we already fetched
-      // Looking for deals that match HubSpot's "Closed Deal Amount" of $8.42K
+      // Calculate MTD revenue from closed won deals with close date in current month
+      // Per user: "Sum of deal value from all Deals in a Closed Won stage, and have a Close Date in the current calendar month"
       const mtdRevenue = allDealsResponse.results?.reduce((total: number, deal: any) => {
         const stage = deal.properties?.dealstage || '';
         const stageName = dealStageInfo[stage] || stage;
         const closeDate = deal.properties?.closedate;
         const amount = parseFloat(deal.properties.amount || '0');
         
-        // Check if it's a closed won deal - need to identify the exact closed won stage ID
-        const closedWonStages = ['closedwon', 'closed won', '1108547154']; // Add potential stage IDs
+        // Check if it's a closed won deal
+        const isClosedWonStage = stage.toLowerCase().includes('closedwon') || 
+                                stage.toLowerCase().includes('closed won') ||
+                                stageName.toLowerCase().includes('closed won');
         
-        if (closedWonStages.includes(stage.toLowerCase()) && closeDate) {
+        if (isClosedWonStage && closeDate) {
           const dealCloseDate = new Date(closeDate);
-          if (dealCloseDate >= firstOfMonth) {
+          if (dealCloseDate >= firstOfMonth && dealCloseDate <= new Date()) {
             console.log(`Including in MTD revenue: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - $${amount} - Closed: ${dealCloseDate.toDateString()}`);
             return total + amount;
           } else {
