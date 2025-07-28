@@ -978,13 +978,20 @@ Services Include:
       }
 
       // Add lead status filter for active leads (exclude Qualified and Disqualified)
+      // Use stage IDs for standard leads object
+      const stageValues = isStandardLeads 
+        ? ['new-stage-id', 'attempting-stage-id', '1108719384', 'connected-stage-id'] // Stage IDs for New, Assigned, Contact Attempted, Discovery Call Booked
+        : ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']; // Keep names for custom objects
+      
       leadsSearchBody.filterGroups[0].filters.push({
         propertyName: isStandardLeads ? 'hs_pipeline_stage' : 'hs_lead_status',
         operator: 'IN',
-        values: ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']  // Include only active stages
+        values: stageValues
       });
 
       console.log(`Searching ${objectId} with filters:`, JSON.stringify(leadsSearchBody, null, 2));
+      console.log('Stage values being used:', stageValues);
+      console.log('Is Standard Leads?', isStandardLeads);
 
       const searchResult = await this.makeRequest(`/crm/v3/objects/${objectId}/search`, {
         method: 'POST',
