@@ -5,8 +5,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Building2, ExternalLink, Filter, Inbox, Calendar, User } from 'lucide-react';
-import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Building2, ExternalLink, Filter, Inbox, Calendar, User, X } from 'lucide-react';
+import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
 
@@ -34,6 +37,8 @@ interface SalesInboxProps {
 export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [stageFilter, setStageFilter] = useState<string>('all');
   
   const { data: leadsData, isLoading, error } = useQuery({
     queryKey: ['/api/sales-inbox/leads', limit, user?.email],
@@ -76,6 +81,42 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
 
   const allLeads: SalesLead[] = (allLeadsData?.leads || []);
   const totalLeadCount = allLeads.length > 0 ? allLeads.length : leads.length;
+
+  // Filter function for modal leads
+  const filteredLeads = allLeads.filter((lead) => {
+    // Stage filter
+    if (stageFilter !== 'all' && lead.leadStage !== stageFilter) {
+      return false;
+    }
+
+    // Date range filter
+    if (dateFilter.start || dateFilter.end) {
+      const leadDate = lead.properties.hubspot_owner_assigneddate || lead.properties.hs_createdate;
+      if (!leadDate) return false;
+
+      const leadDateObj = parseISO(leadDate);
+      
+      if (dateFilter.start) {
+        const startDate = startOfDay(parseISO(dateFilter.start));
+        if (isBefore(leadDateObj, startDate)) return false;
+      }
+      
+      if (dateFilter.end) {
+        const endDate = endOfDay(parseISO(dateFilter.end));
+        if (isAfter(leadDateObj, endDate)) return false;
+      }
+    }
+
+    return true;
+  });
+
+  // Get unique lead stages for filter dropdown
+  const uniqueStages = Array.from(new Set(allLeads.map(lead => lead.leadStage)));
+
+  const clearFilters = () => {
+    setDateFilter({ start: '', end: '' });
+    setStageFilter('all');
+  };
 
   const formatContactName = (lead: SalesLead) => {
     const firstName = lead.properties.firstname || '';
@@ -190,11 +231,75 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
                 View All ({totalLeadCount})
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh]">
+            <DialogContent className="max-w-5xl max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle className="text-xl font-semibold">All Active Leads</DialogTitle>
               </DialogHeader>
-              <ScrollArea className="h-[70vh] pr-4">
+              
+              {/* Filter Controls */}
+              <div className="border-b pb-4 mb-4 space-y-4">
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium">Filters:</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="stage-filter" className="text-sm">Stage:</Label>
+                    <Select value={stageFilter} onValueChange={setStageFilter}>
+                      <SelectTrigger className="w-48" id="stage-filter">
+                        <SelectValue placeholder="All stages" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All stages</SelectItem>
+                        {uniqueStages.map(stage => (
+                          <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="date-start" className="text-sm">From:</Label>
+                    <Input
+                      id="date-start"
+                      type="date"
+                      value={dateFilter.start}
+                      onChange={(e) => setDateFilter(prev => ({ ...prev, start: e.target.value }))}
+                      className="w-36"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="date-end" className="text-sm">To:</Label>
+                    <Input
+                      id="date-end"
+                      type="date"
+                      value={dateFilter.end}
+                      onChange={(e) => setDateFilter(prev => ({ ...prev, end: e.target.value }))}
+                      className="w-36"
+                    />
+                  </div>
+
+                  {(stageFilter !== 'all' || dateFilter.start || dateFilter.end) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="h-9"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                
+                <div className="text-sm text-gray-600">
+                  Showing {filteredLeads.length} of {allLeads.length} leads
+                </div>
+              </div>
+
+              <ScrollArea className="h-[60vh] pr-4">
                 {isLoadingAll ? (
                   <div className="space-y-4">
                     {[...Array(6)].map((_, i) => (
@@ -212,7 +317,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {((allLeadsData?.leads || []) as SalesLead[])
+                    {filteredLeads
                       .sort((a: SalesLead, b: SalesLead) => {
                         const dateA = new Date(a.properties.hubspot_owner_assigneddate || a.properties.hs_createdate || '1970-01-01');
                         const dateB = new Date(b.properties.hubspot_owner_assigneddate || b.properties.hs_createdate || '1970-01-01');
@@ -246,7 +351,14 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
                           </Button>
                         </div>
                       ))}
-                    {allLeadsData?.leads?.length === 0 && (
+                    {filteredLeads.length === 0 && allLeads.length > 0 && (
+                      <div className="text-center py-12">
+                        <Filter className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-700 mb-2">No leads match your filters</h3>
+                        <p className="text-gray-500">Try adjusting your date range or stage selection.</p>
+                      </div>
+                    )}
+                    {allLeads.length === 0 && (
                       <div className="text-center py-12">
                         <Inbox className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">No active leads</h3>
