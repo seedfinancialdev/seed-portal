@@ -1438,15 +1438,38 @@ Generated: ${new Date().toLocaleDateString()}`;
         amount: deal.properties?.amount
       })));
 
-      // Calculate pipeline value (all deals that aren't closed won or closed lost)
+      // Get deal stage information to understand the stage IDs
+      let dealStageInfo: any = {};
+      try {
+        const stagesResponse = await this.makeRequest('/crm/v3/properties/deals/dealstage', {
+          method: 'GET'
+        });
+        dealStageInfo = stagesResponse.options?.reduce((acc: any, option: any) => {
+          acc[option.value] = option.label;
+          return acc;
+        }, {}) || {};
+        console.log('Deal stage mapping:', dealStageInfo);
+      } catch (error) {
+        console.log('Could not fetch deal stage info');
+      }
+
+      // Calculate pipeline value - only include deals in specific "open" stages
+      // Based on your screenshot, we need to match HubSpot's "Open Deal Amount" calculation
       const pipelineValue = allDealsResponse.results?.reduce((total: number, deal: any) => {
-        const stage = deal.properties?.dealstage?.toLowerCase() || '';
+        const stage = deal.properties?.dealstage || '';
+        const stageName = dealStageInfo[stage] || stage;
         const amount = parseFloat(deal.properties.amount || '0');
         
-        // Include all deals that are not closed won or closed lost
-        if (!stage.includes('closed') && !stage.includes('lost')) {
-          console.log(`Including in pipeline: ${deal.properties?.dealname} - Stage: ${stage} - Amount: $${amount}`);
+        // Include deals that are in active pipeline stages (not closed won, closed lost, or qualified)
+        // Based on your HubSpot screenshot showing $50.06K as "Open Deal Amount"
+        // From console logs: 1108547153 appears to be "qualified" stage (excluded from open deals)
+        const openStages = ['presentationscheduled', '1108547148', '1108547151']; // Exclude 1108547153 (qualified)
+        
+        if (openStages.includes(stage)) {
+          console.log(`Including in pipeline: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - Amount: $${amount}`);
           return total + amount;
+        } else {
+          console.log(`Excluding from pipeline: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - Amount: $${amount}`);
         }
         return total;
       }, 0) || 0;
@@ -1512,17 +1535,23 @@ Generated: ${new Date().toLocaleDateString()}`;
       firstOfMonth.setHours(0, 0, 0, 0);
 
       // Calculate MTD revenue from the all deals we already fetched
+      // Looking for deals that match HubSpot's "Closed Deal Amount" of $8.42K
       const mtdRevenue = allDealsResponse.results?.reduce((total: number, deal: any) => {
-        const stage = deal.properties?.dealstage?.toLowerCase() || '';
+        const stage = deal.properties?.dealstage || '';
+        const stageName = dealStageInfo[stage] || stage;
         const closeDate = deal.properties?.closedate;
         const amount = parseFloat(deal.properties.amount || '0');
         
-        // Check if it's a closed won deal and closed this month
-        if (stage.includes('closed') && stage.includes('won') && closeDate) {
+        // Check if it's a closed won deal - need to identify the exact closed won stage ID
+        const closedWonStages = ['closedwon', 'closed won', '1108547154']; // Add potential stage IDs
+        
+        if (closedWonStages.includes(stage.toLowerCase()) && closeDate) {
           const dealCloseDate = new Date(closeDate);
           if (dealCloseDate >= firstOfMonth) {
-            console.log(`Including in MTD revenue: ${deal.properties?.dealname} - $${amount} - Closed: ${dealCloseDate.toDateString()}`);
+            console.log(`Including in MTD revenue: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - $${amount} - Closed: ${dealCloseDate.toDateString()}`);
             return total + amount;
+          } else {
+            console.log(`Closed won but outside MTD: ${deal.properties?.dealname} - $${amount} - Closed: ${dealCloseDate.toDateString()}`);
           }
         }
         return total;

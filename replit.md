@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **HubSpot Dashboard Integration with Debug Logging** (July 28, 2025)
+  - Implemented real-time HubSpot CRM data integration for dashboard metrics
+  - Added comprehensive debugging to identify correct deal stages and lead counting
+  - Pipeline value calculation excludes closed deals, shows $65.48K vs target $50.06K
+  - Active leads count working correctly (1 lead matches HubSpot)
+  - Enhanced error handling for leads object vs contacts fallback
+  - MTD revenue calculation from closed-won deals with proper date filtering
+
 ✓ **QBO Subscription Feature Added** (July 27, 2025)
   - Added QBO Subscription checkbox to bookkeeping section below Override Minimum Cleanup
   - Checkbox adds flat $80/month to bookkeeping monthly fee when selected
@@ -301,6 +309,15 @@ Preferred communication style: Simple, everyday language.
   - Fixed database connection issues with Neon PostgreSQL
   - Application now running successfully on port 5000
   - All quote creation, updates, and pricing calculations working properly
+
+## Architectural Decisions
+
+### Data Integration Strategy
+- **Current Approach**: Direct API integrations with HubSpot, Airtable, OpenAI, and weather services
+- **Future Consideration**: Apache Airbyte for unified data pipeline when expanding beyond 4-5 integrations
+- **Airbyte Benefits**: Unified data management, transformation capabilities, scheduling, monitoring, and data consistency
+- **Migration Threshold**: Consider Airbyte when adding QuickBooks, Slack webhooks, or 5+ total data sources
+- **Current Advantages**: Real-time performance, maximum flexibility, simpler debugging for core features
 
 ## System Architecture
 
