@@ -66,7 +66,7 @@ export function createRateLimit(options: {
         if (res.statusCode < 400) {
           store[key].count++;
         }
-        return originalEnd.apply(this, args);
+        return (originalEnd as any).apply(this, args);
       };
     }
 

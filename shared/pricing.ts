@@ -13,16 +13,16 @@ export interface PricingData {
   // TaaS specific fields
   includesTaas?: boolean;
   numEntities?: number;
-  customNumEntities?: number;
+  customNumEntities?: number | null;
   statesFiled?: number;
-  customStatesFiled?: number;
+  customStatesFiled?: number | null;
   internationalFiling?: boolean;
   numBusinessOwners?: number;
-  customNumBusinessOwners?: number;
+  customNumBusinessOwners?: number | null;
   include1040s?: boolean;
   priorYearsUnfiled?: number;
   alreadyOnSeedBookkeeping?: boolean;
-  qboSubscription?: boolean;
+  qboSubscription?: boolean | null;
   entityType?: string;
   bookkeepingQuality?: string;
 }

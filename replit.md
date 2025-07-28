@@ -10,14 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-✓ **HubSpot Dashboard Integration Successfully Completed** (July 28, 2025)
-  - Implemented real-time HubSpot CRM data integration for dashboard metrics
-  - Fixed pipeline filtering to target "Seed Sales Pipeline" (ID: 761069086) specifically
-  - Pipeline Value: $50.06K (correctly excludes Closed Won/Lost deals - stages 1108547153, 1108547154)
-  - MTD Revenue: $8.42K (correctly includes Closed Won deals from current month)
-  - Active Leads: 1 (from HubSpot leads object with fallback to contacts)
-  - Dashboard now displays accurate real-time HubSpot data matching CRM exactly
-  - Comprehensive debugging system for deal stage mapping and revenue calculation
+✓ **Complete Dashboard Integration and Bug Fixes** (July 28, 2025)
+  - Fixed HubSpot dashboard integration to show correct pipeline data ($62.5K+ pipeline value)
+  - Added cache invalidation to all "Back to Portal" buttons for real-time dashboard updates
+  - Fixed DOM nesting validation error (div inside p elements) in dashboard cards
+  - Resolved TypeScript compatibility issues in pricing interface and rate limiter
+  - Dashboard now refreshes automatically when navigating back from Calculator/Commission Tracker/Client Intel
+  - All console errors eliminated and application running without TypeScript compilation errors
+  - Pipeline correctly targets "Seed Sales Pipeline" (ID: 761069086) with proper stage filtering
 
 ✓ **QBO Subscription Feature Added** (July 27, 2025)
   - Added QBO Subscription checkbox to bookkeeping section below Override Minimum Cleanup
