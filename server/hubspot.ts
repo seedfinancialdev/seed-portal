@@ -8,6 +8,10 @@ export interface HubSpotContact {
     company?: string;
     phone?: string;
     mobilephone?: string;
+    hs_phone?: string;
+    phone_number?: string;
+    work_phone?: string;
+    mobile_phone?: string;
   };
 }
 
@@ -309,7 +313,13 @@ export class HubSpotService {
             ]
           }
         ],
-        properties: ['email', 'firstname', 'lastname', 'company']
+        properties: [
+          'email', 'firstname', 'lastname', 'company', 
+          // All possible phone field variations
+          'phone', 'mobilephone', 'hs_phone', 'phone_number', 
+          'work_phone', 'mobile_phone', 'home_phone', 'fax', 
+          'secondary_phone', 'phone_ext', 'phonenumber'
+        ]
       };
 
       const result = await this.makeRequest('/crm/v3/objects/contacts/search', {
@@ -327,7 +337,13 @@ export class HubSpotService {
               email: contact.properties?.email || email,
               firstname: contact.properties?.firstname || '',
               lastname: contact.properties?.lastname || '',
-              company: contact.properties?.company || ''
+              company: contact.properties?.company || '',
+              phone: contact.properties?.phone || '',
+              mobilephone: contact.properties?.mobilephone || '',
+              hs_phone: contact.properties?.hs_phone || '',
+              phone_number: contact.properties?.phone_number || '',
+              work_phone: contact.properties?.work_phone || '',
+              mobile_phone: contact.properties?.mobile_phone || ''
             }
           }
         };
@@ -1705,6 +1721,14 @@ Generated: ${new Date().toLocaleDateString()}`;
         );
         
         if (owner) {
+          console.log('Owner data found:', {
+            firstName: owner.firstName,
+            lastName: owner.lastName,
+            email: owner.email,
+            phone: owner.phone,
+            allFields: Object.keys(owner)
+          });
+          
           return {
             firstName: owner.firstName || '',
             lastName: owner.lastName || '',
@@ -1718,11 +1742,32 @@ Generated: ${new Date().toLocaleDateString()}`;
       const contactResult = await this.verifyContactByEmail(email);
       if (contactResult.verified && contactResult.contact) {
         const props = contactResult.contact.properties;
+        
+        console.log('Contact properties found:', {
+          firstname: props.firstname,
+          lastname: props.lastname,
+          email: props.email,
+          phone: (props as any).phone,
+          mobilephone: (props as any).mobilephone,
+          hs_phone: (props as any).hs_phone,
+          phone_number: (props as any).phone_number,
+          allContactProps: Object.keys(props)
+        });
+        
+        // Try multiple phone field variations
+        const phoneNumber = (props as any).phone || 
+                           (props as any).mobilephone || 
+                           (props as any).hs_phone || 
+                           (props as any).phone_number ||
+                           (props as any).work_phone ||
+                           (props as any).mobile_phone ||
+                           '';
+        
         return {
           firstName: props.firstname || '',
           lastName: props.lastname || '',
           email: props.email || email,
-          phoneNumber: (props as any).phone || (props as any).mobilephone || ''
+          phoneNumber: phoneNumber
         };
       }
 
