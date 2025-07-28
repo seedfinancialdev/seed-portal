@@ -717,7 +717,35 @@ Services Include:
 
       console.log('Fetching sales inbox leads with body:', JSON.stringify(searchBody, null, 2));
 
-      const searchResult = await this.makeRequest('/crm/v3/objects/leads/search', {
+      // Search contacts with lifecycle stage = 'lead' and proper filtering
+      console.log('Searching contacts with lifecycle stage = lead');
+      
+      // Override search to focus on contacts that are leads
+      searchBody.filterGroups[0].filters = [
+        {
+          propertyName: 'email',
+          operator: 'HAS_PROPERTY'
+        },
+        {
+          propertyName: 'lifecyclestage',
+          operator: 'EQ',
+          value: 'lead'
+        }
+      ];
+      
+      // Add owner filter if provided
+      if (ownerEmail) {
+        const ownerId = await this.getOwnerByEmail(ownerEmail);
+        if (ownerId) {
+          searchBody.filterGroups[0].filters.push({
+            propertyName: 'hubspot_owner_id',
+            operator: 'EQ',
+            value: ownerId
+          });
+        }
+      }
+      
+      const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
         method: 'POST',
         body: JSON.stringify(searchBody)
       });
