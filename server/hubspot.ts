@@ -663,11 +663,11 @@ Services Include:
                 propertyName: 'email',
                 operator: 'HAS_PROPERTY'
               },
-              // Filter for specific lead stages: New, Assigned, Contact Attempted, Discovery Call Booked
+              // Temporarily remove lead status filter to debug what values exist
               {
-                propertyName: 'hs_lead_status',
+                propertyName: 'lifecyclestage',
                 operator: 'IN',
-                values: ['NEW', 'ASSIGNED', 'CONTACT_ATTEMPTED', 'DISCOVERY_CALL_BOOKED']
+                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity', 'subscriber', 'other']
               }
             ]
           }
@@ -729,7 +729,7 @@ Services Include:
         (searchResult.results || []).map(async (contact: any) => {
           try {
             console.log(`Processing contact: ${contact.properties?.company || 'Unknown'} (${contact.properties?.email})`);
-            console.log(`Contact lifecycle stage: ${contact.properties?.lifecyclestage}, Owner ID: ${contact.properties?.hubspot_owner_id}`);
+            console.log(`Contact lifecycle stage: ${contact.properties?.lifecyclestage}, Owner ID: ${contact.properties?.hubspot_owner_id}, Lead Status: ${contact.properties?.hs_lead_status}`);
             
             // Get associated deals to determine lead stage
             const deals = await this.getContactDeals(contact.id);
