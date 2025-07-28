@@ -71,7 +71,7 @@ npm run build
 
 **Install Command**: 
 ```bash
-npm install
+npm install --legacy-peer-deps
 ```
 
 **Development Command**: 
@@ -84,7 +84,12 @@ If the above doesn't work, try:
 
 **Build Command**: 
 ```bash
-npm ci && npm run build
+npm run build
+```
+
+**Install Command (Alternative)**: 
+```bash
+npm install --force
 ```
 
 **Output Directory**: 
@@ -96,14 +101,19 @@ dist
 - Leave "Root Directory" empty (should show just "/" or be blank)
 - Make sure "Include files outside the root directory in the Build Step" is ENABLED
 
-## Step-by-Step Fix
+## Step-by-Step Fix for GraphQL Dependency Issue
 1. In your Vercel project, go to Settings → Build and Development Settings
 2. Set Framework Preset to "Other"
 3. Set Build Command to `npm run build`
 4. Set Output Directory to `.` (single dot)
-5. Set Install Command to `npm install`
+5. Set Install Command to `npm install --legacy-peer-deps`
 6. Click "Save"
 7. Go to Deployments and trigger a new deployment
+
+## Alternative Fixes if Legacy Peer Deps Doesn't Work
+- Try Install Command: `npm install --force`
+- Or try Install Command: `npm ci --legacy-peer-deps`
+- Check if you're using an older Wiki.js version (the error suggests GraphQL version conflicts)
 
 ## If Build Still Fails
 - Check if your Wiki.js repository has a `package.json` with proper build scripts

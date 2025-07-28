@@ -1,0 +1,33 @@
+[01:16:43.113] Running build in Washington, D.C., USA (East) – iad1
+[01:16:43.113] Build machine configuration: 2 cores, 8 GB
+[01:16:43.186] Cloning github.com/seedfinancialdev/wiki (Branch: main, Commit: d96bbaf)
+[01:16:43.206] Skipping build cache, deployment was triggered without cache.
+[01:16:44.133] Cloning completed: 947.000ms
+[01:16:44.667] Running "vercel build"
+[01:16:45.842] Vercel CLI 44.5.0
+[01:16:46.977] Warning: Detected "engines": { "node": ">=10.12" } in your `package.json` that will automatically upgrade when a new major Node.js Version is released. Learn More: http://vercel.link/node-version
+[01:16:46.982] Running "install" command: `npm install`...
+[01:16:54.310] npm error code ERESOLVE
+[01:16:54.311] npm error ERESOLVE unable to resolve dependency tree
+[01:16:54.312] npm error
+[01:16:54.312] npm error While resolving: wiki@2.0.0
+[01:16:54.312] npm error Found: graphql@15.3.0
+[01:16:54.312] npm error node_modules/graphql
+[01:16:54.313] npm error   graphql@"15.3.0" from the root project
+[01:16:54.313] npm error
+[01:16:54.313] npm error Could not resolve dependency:
+[01:16:54.314] npm error peer graphql@"^0.10.5 || ^0.11.3 || ^0.12.0 || ^0.13.0 || ^14.0.0" from graphql-subscriptions@1.1.0
+[01:16:54.314] npm error node_modules/graphql-subscriptions
+[01:16:54.314] npm error   graphql-subscriptions@"1.1.0" from the root project
+[01:16:54.314] npm error
+[01:16:54.315] npm error Fix the upstream dependency conflict, or retry
+[01:16:54.315] npm error this command with --force or --legacy-peer-deps
+[01:16:54.315] npm error to accept an incorrect (and potentially broken) dependency resolution.
+[01:16:54.315] npm error
+[01:16:54.315] npm error
+[01:16:54.315] npm error For a full report see:
+[01:16:54.316] npm error /vercel/.npm/_logs/2025-07-28T08_16_47_286Z-eresolve-report.txt
+[01:16:54.316] npm error A complete log of this run can be found in: /vercel/.npm/_logs/2025-07-28T08_16_47_286Z-debug-0.log
+[01:16:54.346] Error: Command "npm install" exited with 1
+[01:16:54.571] 
+[01:16:57.512] Exiting build container
