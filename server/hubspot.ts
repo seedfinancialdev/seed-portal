@@ -715,13 +715,15 @@ Services Include:
           'hubspot_owner_id',  // Standard leads use hubspot_owner_id
           'hs_createdate',
           'hs_lastmodifieddate',
-          'hubspot_owner_assigneddate'
+          'hubspot_owner_assigneddate',
+          'hs_object_id'
         ] : [
           'hs_lead_name',
           'hs_lead_status', 
           'hs_lead_owner',  // Custom objects use hs_lead_owner
           'hs_createdate',
-          'hs_lastmodifieddate'
+          'hs_lastmodifieddate',
+          'hs_object_id'
         ]
       };
 
@@ -799,10 +801,11 @@ Services Include:
                 ...contactInfo,
                 hs_createdate: createDate,
                 hubspot_owner_assigneddate: lead.properties?.hubspot_owner_assigneddate,
-                hs_lead_status: leadStatus
+                hs_lead_status: leadStatus,
+                hs_object_id: lead.properties?.hs_object_id || lead.id
               },
               leadStage: leadStatus,
-              hubspotContactUrl: `https://app.hubspot.com/lead-overview/149640503/?leadId=${lead.id}`
+              hubspotContactUrl: `https://app.hubspot.com/lead-overview/48880113/?leadId=${lead.id}`
             };
           } catch (error) {
             console.error(`Error enriching lead ${lead.id}:`, error);
@@ -819,10 +822,11 @@ Services Include:
                 email: '',
                 hs_createdate: createDate,
                 hubspot_owner_assigneddate: lead.properties?.hubspot_owner_assigneddate,
-                hs_lead_status: leadStatus
+                hs_lead_status: leadStatus,
+                hs_object_id: lead.properties?.hs_object_id || lead.id
               },
               leadStage: leadStatus,
-              hubspotContactUrl: `https://app.hubspot.com/lead-overview/149640503/?leadId=${lead.id}`
+              hubspotContactUrl: `https://app.hubspot.com/lead-overview/48880113/?leadId=${lead.id}`
             };
           }
         })

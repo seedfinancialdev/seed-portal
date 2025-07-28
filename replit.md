@@ -20,7 +20,7 @@ Preferred communication style: Simple, everyday language.
   - Added user email to query key to ensure proper data isolation between users
   - Cleaned up excessive logging for better performance
   - Sales inbox now loads instantly when switching between users without 30-second delays
-  - Fixed HubSpot "Open in HubSpot" button URLs to use correct lead overview format with leadId parameter
+  - Fixed HubSpot "Open in HubSpot" button URLs to use correct static format: https://app.hubspot.com/lead-overview/48880113/?leadId={leadId}
   - Added frontend sorting to display leads by most recent assigned date first
   - Changed date property to use hubspot_owner_assigneddate for more reliable sorting (hs_createdate was less reliable)
   - Both date fields are now available with fallback logic for maximum reliability
