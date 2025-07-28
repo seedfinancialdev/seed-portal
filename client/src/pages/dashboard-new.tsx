@@ -111,14 +111,13 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        console.log('Dashboard weather useEffect triggered');
-        console.log('Current user object:', user);
-        console.log('User latitude:', user?.latitude);
-        console.log('User longitude:', user?.longitude);
+        // Reduce console spam - only log once per session
+        if (weather.isLoading) {
+          console.log('Fetching weather data for user coordinates:', user?.latitude, user?.longitude);
+        }
         
         // Only fetch weather if user has coordinates set
         if (!user?.latitude || !user?.longitude) {
-          console.log('No user coordinates available, skipping weather fetch');
           setWeather({
             temperature: null,
             condition: '',
@@ -131,8 +130,6 @@ export default function Dashboard() {
         const lat = parseFloat(user.latitude.toString());
         const lon = parseFloat(user.longitude.toString());
         const locationName = user.city && user.state ? `${user.city}, ${user.state}` : 'Your Location';
-        
-        console.log('Dashboard fetching weather for:', locationName, 'at coordinates:', lat, lon);
         
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
@@ -163,8 +160,10 @@ export default function Dashboard() {
           isLoading: false
         });
       } catch (error) {
-        console.error('Failed to fetch weather:', error);
-        // Fallback without hardcoded location
+        // Only log actual network errors, not expected timeouts
+        if (error instanceof Error && !error.message.includes('abort')) {
+          console.error('Weather API error:', error.message);
+        }
         setWeather({
           temperature: null,
           condition: 'clear',
@@ -174,11 +173,14 @@ export default function Dashboard() {
       }
     };
 
-    fetchWeather();
-    // Refresh weather every 30 minutes
-    const interval = setInterval(fetchWeather, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [user?.latitude, user?.longitude, user?.city, user?.state]);
+    // Only fetch weather if user data exists
+    if (user) {
+      fetchWeather();
+      // Refresh weather every 30 minutes
+      const interval = setInterval(fetchWeather, 30 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [user?.latitude, user?.longitude, user?.city, user?.state, user?.id]); // Add user.id to prevent duplicate calls
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">

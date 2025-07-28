@@ -64,7 +64,13 @@ export const queryClient = new QueryClient({
         return false;
       },
       onError: (error) => {
-        console.error('Mutation error:', error);
+        // Only log unexpected errors, not auth/validation errors
+        if (error instanceof Error && 
+            !error.message.includes('401') && 
+            !error.message.includes('400') &&
+            !error.message.includes('422')) {
+          console.error('Unexpected mutation error:', error.message);
+        }
       },
     },
   },

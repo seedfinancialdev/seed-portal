@@ -40,28 +40,42 @@ export default function KnowledgeBase() {
         return;
       }
 
-      const response = await fetch(`${wikiUrl}/healthz`, { 
-        method: 'GET',
-        timeout: 5000 
-      } as any);
-      
-      if (response.ok) {
-        setWikiStatus('available');
-      } else {
-        // Try the main URL if healthz fails
-        const mainResponse = await fetch(wikiUrl, { 
-          method: 'HEAD',
-          timeout: 5000 
-        } as any);
+      // Use AbortController for proper timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      try {
+        const response = await fetch(`${wikiUrl}/healthz`, { 
+          method: 'GET',
+          signal: controller.signal
+        });
         
-        if (mainResponse.ok || mainResponse.status === 404) {
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
           setWikiStatus('available');
         } else {
-          setWikiStatus('unavailable');
+          // Try the main URL if healthz fails
+          const mainResponse = await fetch(wikiUrl, { 
+            method: 'HEAD',
+            signal: controller.signal
+          });
+          
+          if (mainResponse.ok || mainResponse.status === 404) {
+            setWikiStatus('available');
+          } else {
+            setWikiStatus('unavailable');
+          }
         }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
     } catch (error) {
-      console.error('Wiki status check failed:', error);
+      // Only log error if it's not an abort error (expected for timeout/unmount)
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Wiki status check failed:', error.message);
+      }
       setWikiStatus('unavailable');
       setShowSetupGuide(true);
     }
