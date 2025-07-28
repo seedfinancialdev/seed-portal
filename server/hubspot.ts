@@ -77,11 +77,7 @@ export class HubSpotService {
         method: 'GET'
       });
       
-      console.log(`Available owners:`, result.results?.map((o: any) => ({ id: o.id, email: o.email, firstName: o.firstName, lastName: o.lastName })));
-      
       const owner = result.results?.find((owner: any) => owner.email === email);
-      console.log(`Found owner for ${email}:`, owner ? { id: owner.id, email: owner.email } : 'Not found');
-      
       return owner?.id || null;
     } catch (error) {
       console.error('Error fetching HubSpot owner:', error);
@@ -680,247 +676,12 @@ Services Include:
     }
   }
 
-  // Get sales inbox leads (from custom Leads object)
+  // Get sales inbox leads - optimized version
   async getSalesInboxLeads(ownerEmail?: string, limit: number = 20): Promise<any[]> {
     try {
-      // First, discover the actual Leads object dynamically
-      console.log('Starting getSalesInboxLeads...');
-      
-      // Try the standard leads object first
-      try {
-        console.log('Trying standard leads object...');
-        const searchResult = await this.searchLeadsObject('leads', ownerEmail, limit);
-        if (searchResult) {
-          console.log('Successfully found leads using standard object');
-          return searchResult;
-        }
-      } catch (error) {
-        console.log('Standard leads object failed:', (error as any).message);
-      }
-
-      // Then try custom object discovery
-      console.log('Discovering custom Leads object...');
-      const customObjects = await this.getCustomObjects();
-      console.log(`Found ${customObjects.length} custom objects:`, customObjects.map(obj => ({
-        id: obj.objectTypeId,
-        name: obj.name,
-        labels: obj.labels
-      })));
-
-      // Find the Leads object by name variations
-      const leadsObject = customObjects.find(obj => 
-        obj.labels?.singular?.toLowerCase().includes('lead') || 
-        obj.name?.toLowerCase().includes('lead') ||
-        obj.labels?.plural?.toLowerCase().includes('lead')
-      );
-
-      if (leadsObject) {
-        console.log(`Found Leads object: ${leadsObject.objectTypeId} (${leadsObject.name})`);
-        const searchResult = await this.searchLeadsObject(leadsObject.objectTypeId, ownerEmail, limit);
-        if (searchResult) {
-          return searchResult;
-        }
-      }
-
-      // If dynamic discovery fails, try common IDs as fallback
-      console.log('Dynamic discovery failed, trying fallback IDs...');
-      const possibleLeadObjectIds = ['leads'];
-      let leadsObjectId = null;
-      let searchResult = null;
-      
-      // Try each possible ID until one works
-      for (const objectId of possibleLeadObjectIds) {
-        try {
-          console.log(`Trying to search Leads object with ID: ${objectId}`);
-
-          // Build search body for Leads object
-          let leadsSearchBody: any = {
-            filterGroups: [
-              {
-                filters: []
-              }
-            ],
-            sorts: [
-              {
-                propertyName: 'hs_lastmodifieddate',
-                direction: 'DESCENDING'
-              }
-            ],
-            limit: limit,
-            properties: [] // Will be filled based on object type
-          };
-
-          // For the standard leads object, use the correct property names
-          const ownerProperty = 'hubspot_owner_id';
-          const statusProperty = 'hs_pipeline_stage';
-          
-          // Set properties - standard leads object uses these property names
-          leadsSearchBody.properties = [
-            'hs_lead_name',
-            'hs_pipeline_stage', 
-            'hubspot_owner_id',
-            'hs_createdate',
-            'hs_lastmodifieddate',
-            'hubspot_owner_assigneddate'
-          ];
-
-          // Add owner filter if provided
-          if (ownerEmail) {
-            const ownerId = await this.getOwnerByEmail(ownerEmail);
-            if (ownerId) {
-              leadsSearchBody.filterGroups[0].filters.push({
-                propertyName: ownerProperty,
-                operator: 'EQ',
-                value: ownerId
-              });
-            }
-          }
-
-          // Add lead status filter for active leads (include only specific stages)
-          // First, let's see what stages exist by searching without stage filter
-          if (objectId === 'leads') {
-            console.log('DEBUG: First searching without stage filter to see what stages exist...');
-            const ownerId = await this.getOwnerByEmail(ownerEmail);
-            const debugSearchBody = {
-              filterGroups: [{
-                filters: ownerEmail && ownerId ? [{
-                  propertyName: ownerProperty,
-                  operator: 'EQ',
-                  value: ownerId
-                }] : []
-              }],
-              sorts: [{
-                propertyName: 'hs_lastmodifieddate',
-                direction: 'DESCENDING'
-              }],
-              limit: 10,
-              properties: leadsSearchBody.properties
-            };
-            
-            try {
-              const debugResult = await this.makeRequest(`/crm/v3/objects/${objectId}/search`, {
-                method: 'POST',
-                body: JSON.stringify(debugSearchBody)
-              });
-              
-              console.log(`DEBUG: Found ${debugResult.results?.length || 0} total leads for owner`);
-              if (debugResult.results && debugResult.results.length > 0) {
-                console.log('DEBUG: Sample lead stages:');
-                debugResult.results.slice(0, 5).forEach((lead: any) => {
-                  console.log(`  - Lead: ${lead.properties?.hs_lead_name || 'Unknown'}, Stage: ${lead.properties?.hs_pipeline_stage || 'NO STAGE'}`);
-                });
-              }
-            } catch (debugError) {
-              console.log('DEBUG: Error in debug search:', (debugError as any).message);
-            }
-          }
-          
-          // Now add the stage filter with the correct stage IDs
-          const stageFilter = {
-            propertyName: statusProperty,
-            operator: 'IN',
-            values: ['new-stage-id', 'attempting-stage-id', '1108719384', 'connected-stage-id']  // Stage IDs for New, Assigned, Contact Attempted, Discovery Call Booked
-          };
-          
-          // Re-enable the stage filter with correct IDs
-          leadsSearchBody.filterGroups[0].filters.push(stageFilter);
-          console.log('Using stage IDs for filter:', stageFilter.values);
-
-          console.log(`Searching ${objectId} with body:`, JSON.stringify(leadsSearchBody, null, 2));
-
-          searchResult = await this.makeRequest(`/crm/v3/objects/${objectId}/search`, {
-            method: 'POST',
-            body: JSON.stringify(leadsSearchBody)
-          });
-          
-          leadsObjectId = objectId;
-          console.log(`Successfully found Leads object with ID: ${objectId}`);
-          break;
-        } catch (error) {
-          console.log(`Failed to search with object ID ${objectId}:`, (error as any).message);
-          continue;
-        }
-      }
-      
-      if (!searchResult || !leadsObjectId) {
-        console.warn('Could not find Leads object, falling back to contacts');
-        return this.getSalesInboxLeadsFromContacts(ownerEmail, limit);
-      }
-
-      console.log(`Found ${searchResult.results?.length || 0} leads from Leads object`);
-
-      // Get associated contacts for each lead
-      const enrichedLeads = await Promise.all(
-        (searchResult.results || []).map(async (lead: any) => {
-          try {
-            const isCustomObject = leadsObjectId.startsWith('2-');
-            const leadName = lead.properties?.hs_lead_name || lead.properties?.lead_name || 'Unknown';
-            const leadStatus = lead.properties?.hs_lead_status || lead.properties?.lead_stage || 'New';
-            const createDate = lead.properties?.hs_createdate || lead.properties?.createdate;
-            
-            console.log(`Processing lead: ${leadName} (Status: ${leadStatus})`);
-            
-            // Get associated contact
-            const associations = await this.makeRequest(`/crm/v3/objects/${leadsObjectId}/${lead.id}/associations/contacts`, {
-              method: 'GET'
-            });
-            
-            let contactInfo = {
-              company: 'Unknown Company',
-              firstName: '',
-              lastName: '',
-              email: ''
-            };
-            
-            if (associations.results?.length > 0) {
-              const contactId = associations.results[0].id;
-              const contact = await this.makeRequest(`/crm/v3/objects/contacts/${contactId}?properties=company,firstname,lastname,email`, {
-                method: 'GET'
-              });
-              
-              contactInfo = {
-                company: contact.properties?.company || 'Unknown Company',
-                firstName: contact.properties?.firstname || '',
-                lastName: contact.properties?.lastname || '',
-                email: contact.properties?.email || ''
-              };
-            }
-
-            return {
-              id: lead.id,
-              properties: {
-                ...contactInfo,
-                hubspot_owner_assigneddate: createDate,
-                hs_lead_status: leadStatus
-              },
-              leadStage: leadStatus,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${leadsObjectId}/${lead.id}`
-            };
-          } catch (error) {
-            console.error(`Error enriching lead ${lead.id}:`, error);
-            const leadName = lead.properties?.hs_lead_name || lead.properties?.lead_name || 'Unknown';
-            const leadStatus = lead.properties?.hs_lead_status || lead.properties?.lead_stage || 'New';
-            const createDate = lead.properties?.hs_createdate || lead.properties?.createdate;
-            
-            return {
-              id: lead.id,
-              properties: {
-                company: leadName,
-                firstName: '',
-                lastName: '',
-                email: '',
-                hubspot_owner_assigneddate: createDate,
-                hs_lead_status: leadStatus
-              },
-              leadStage: leadStatus,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${leadsObjectId}/${lead.id}`
-            };
-          }
-        })
-      );
-
-      console.log(`Returning ${enrichedLeads.length} enriched leads`);
-      return enrichedLeads;
+      // We know HubSpot uses the standard 'leads' object, so go straight to it
+      const searchResult = await this.searchLeadsObject('leads', ownerEmail, limit);
+      return searchResult || [];
     } catch (error) {
       console.error('Error fetching sales inbox leads:', error);
       return [];
@@ -930,7 +691,6 @@ Services Include:
   // Helper method to search a specific Leads object
   private async searchLeadsObject(objectId: string, ownerEmail?: string, limit: number = 20): Promise<any[] | null> {
     try {
-      console.log(`Searching Leads object ${objectId}...`);
 
       // Determine if this is a custom object or standard leads object
       const isStandardLeads = objectId === 'leads';
@@ -989,16 +749,15 @@ Services Include:
         values: stageValues
       });
 
-      console.log(`Searching ${objectId} with filters:`, JSON.stringify(leadsSearchBody, null, 2));
-      console.log('Stage values being used:', stageValues);
-      console.log('Is Standard Leads?', isStandardLeads);
+      // Only log essential information in production
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Searching ${objectId} with ${leadsSearchBody.filterGroups[0].filters.length} filters`);
+      }
 
       const searchResult = await this.makeRequest(`/crm/v3/objects/${objectId}/search`, {
         method: 'POST',
         body: JSON.stringify(leadsSearchBody)
       });
-
-      console.log(`Found ${searchResult.results?.length || 0} leads from object ${objectId}`);
 
       // Get associated contacts for each lead
       const enrichedLeads = await Promise.all(
@@ -1007,8 +766,6 @@ Services Include:
             const leadName = lead.properties?.hs_lead_name || 'Unknown';
             const leadStatus = lead.properties?.hs_lead_status || 'New';
             const createDate = lead.properties?.hs_createdate;
-            
-            console.log(`Processing lead: ${leadName} (Status: ${leadStatus})`);
             
             // Get associated contact
             const associations = await this.makeRequest(`/crm/v3/objects/${objectId}/${lead.id}/associations/contacts`, {

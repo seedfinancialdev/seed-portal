@@ -37,6 +37,8 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
       return response.json();
     },
     refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 20000, // Consider data fresh for 20 seconds
+    cacheTime: 300000, // Keep in cache for 5 minutes
   });
 
   const leads: SalesLead[] = leadsData?.leads || [];
