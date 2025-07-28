@@ -667,7 +667,32 @@ Services Include:
   // Get sales inbox leads (from custom Leads object)
   async getSalesInboxLeads(ownerEmail?: string, limit: number = 20): Promise<any[]> {
     try {
-      // Try common custom object IDs for Leads
+      // First, discover the actual Leads object dynamically
+      console.log('Discovering custom Leads object...');
+      const customObjects = await this.getCustomObjects();
+      console.log(`Found ${customObjects.length} custom objects:`, customObjects.map(obj => ({
+        id: obj.objectTypeId,
+        name: obj.name,
+        labels: obj.labels
+      })));
+
+      // Find the Leads object by name variations
+      const leadsObject = customObjects.find(obj => 
+        obj.labels?.singular?.toLowerCase().includes('lead') || 
+        obj.name?.toLowerCase().includes('lead') ||
+        obj.labels?.plural?.toLowerCase().includes('lead')
+      );
+
+      if (leadsObject) {
+        console.log(`Found Leads object: ${leadsObject.objectTypeId} (${leadsObject.name})`);
+        const searchResult = await this.searchLeadsObject(leadsObject.objectTypeId, ownerEmail, limit);
+        if (searchResult) {
+          return searchResult;
+        }
+      }
+
+      // If dynamic discovery fails, try common IDs as fallback
+      console.log('Dynamic discovery failed, trying fallback IDs...');
       const possibleLeadObjectIds = ['leads', '2-20169374', '2-5890328'];
       let leadsObjectId = null;
       let searchResult = null;
@@ -835,6 +860,138 @@ Services Include:
     } catch (error) {
       console.error('Error fetching sales inbox leads:', error);
       return [];
+    }
+  }
+
+  // Helper method to search a specific Leads object
+  private async searchLeadsObject(objectId: string, ownerEmail?: string, limit: number = 20): Promise<any[] | null> {
+    try {
+      console.log(`Searching Leads object ${objectId}...`);
+
+      // Build search body for Leads object
+      let leadsSearchBody: any = {
+        filterGroups: [
+          {
+            filters: []
+          }
+        ],
+        sorts: [
+          {
+            propertyName: 'hs_lastmodifieddate',
+            direction: 'DESCENDING'
+          }
+        ],
+        limit: limit,
+        properties: [
+          'hs_lead_name',
+          'hs_lead_status', 
+          'hs_lead_owner',
+          'hs_createdate',
+          'hs_lastmodifieddate'
+        ]
+      };
+
+      // Add owner filter if provided
+      if (ownerEmail) {
+        const ownerId = await this.getOwnerByEmail(ownerEmail);
+        if (ownerId) {
+          leadsSearchBody.filterGroups[0].filters.push({
+            propertyName: 'hs_lead_owner',
+            operator: 'EQ',
+            value: ownerId
+          });
+        }
+      }
+
+      // Add lead status filter for active leads (exclude Qualified and Disqualified)
+      leadsSearchBody.filterGroups[0].filters.push({
+        propertyName: 'hs_lead_status',
+        operator: 'NOT_IN',
+        values: ['Qualified', 'Disqualified']
+      });
+
+      console.log(`Searching ${objectId} with filters:`, JSON.stringify(leadsSearchBody, null, 2));
+
+      const searchResult = await this.makeRequest(`/crm/v3/objects/${objectId}/search`, {
+        method: 'POST',
+        body: JSON.stringify(leadsSearchBody)
+      });
+
+      console.log(`Found ${searchResult.results?.length || 0} leads from object ${objectId}`);
+
+      // Get associated contacts for each lead
+      const enrichedLeads = await Promise.all(
+        (searchResult.results || []).map(async (lead: any) => {
+          try {
+            const leadName = lead.properties?.hs_lead_name || 'Unknown';
+            const leadStatus = lead.properties?.hs_lead_status || 'New';
+            const createDate = lead.properties?.hs_createdate;
+            
+            console.log(`Processing lead: ${leadName} (Status: ${leadStatus})`);
+            
+            // Get associated contact
+            const associations = await this.makeRequest(`/crm/v3/objects/${objectId}/${lead.id}/associations/contacts`, {
+              method: 'GET'
+            });
+            
+            let contactInfo = {
+              company: 'Unknown Company',
+              firstName: '',
+              lastName: '',
+              email: ''
+            };
+            
+            if (associations.results?.length > 0) {
+              const contactId = associations.results[0].id;
+              const contact = await this.makeRequest(`/crm/v3/objects/contacts/${contactId}?properties=company,firstname,lastname,email`, {
+                method: 'GET'
+              });
+              
+              contactInfo = {
+                company: contact.properties?.company || 'Unknown Company',
+                firstName: contact.properties?.firstname || '',
+                lastName: contact.properties?.lastname || '',
+                email: contact.properties?.email || ''
+              };
+            }
+
+            return {
+              id: lead.id,
+              properties: {
+                ...contactInfo,
+                hubspot_owner_assigneddate: createDate,
+                hs_lead_status: leadStatus
+              },
+              leadStage: leadStatus,
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${objectId}/${lead.id}`
+            };
+          } catch (error) {
+            console.error(`Error enriching lead ${lead.id}:`, error);
+            const leadName = lead.properties?.hs_lead_name || 'Unknown';
+            const leadStatus = lead.properties?.hs_lead_status || 'New';
+            const createDate = lead.properties?.hs_createdate;
+            
+            return {
+              id: lead.id,
+              properties: {
+                company: leadName,
+                firstName: '',
+                lastName: '',
+                email: '',
+                hubspot_owner_assigneddate: createDate,
+                hs_lead_status: leadStatus
+              },
+              leadStage: leadStatus,
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${objectId}/${lead.id}`
+            };
+          }
+        })
+      );
+
+      return enrichedLeads;
+    } catch (error) {
+      console.error(`Error searching Leads object ${objectId}:`, error);
+      return null;
     }
   }
 
