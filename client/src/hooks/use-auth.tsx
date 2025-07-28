@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",
+        duration: 2000, // 2 seconds instead of default 5 seconds
       });
     },
     onError: (error: Error) => {
@@ -107,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
+        duration: 2000, // 2 seconds instead of default 5 seconds
       });
     },
     onError: (error: Error) => {

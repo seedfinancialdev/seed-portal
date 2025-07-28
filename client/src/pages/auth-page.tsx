@@ -7,7 +7,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 const loginSchema = z.object({
@@ -22,6 +23,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect if already logged in
   if (user) {
@@ -87,12 +89,28 @@ export default function AuthPage() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          {...field} 
-                          type="password"
-                          disabled={loginMutation.isPending}
-                          className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                        />
+                        <div className="relative">
+                          <Input 
+                            {...field} 
+                            type={showPassword ? "text" : "password"}
+                            disabled={loginMutation.isPending}
+                            className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={loginMutation.isPending}
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4 text-gray-500" />
+                            ) : (
+                              <Eye className="h-4 w-4 text-gray-500" />
+                            )}
+                          </Button>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
