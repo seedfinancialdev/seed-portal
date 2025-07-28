@@ -24,7 +24,7 @@ import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { SalesInbox } from "@/components/SalesInbox";
+import { LazySalesInbox } from "@/components/LazyDashboard";
 import { useState, useEffect } from "react";
 import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
@@ -107,25 +107,22 @@ export default function Dashboard() {
     return "Good evening";
   };
 
-  // Fetch live weather data based on user's location
+  // Fetch live weather data based on user's location - defer until after initial load
   useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        // Reduce console spam - only log once per session
-        if (weather.isLoading) {
-          console.log('Fetching weather data for user coordinates:', user?.latitude, user?.longitude);
-        }
-        
-        // Only fetch weather if user has coordinates set
-        if (!user?.latitude || !user?.longitude) {
-          setWeather({
-            temperature: null,
-            condition: '',
-            location: 'Set address in profile for weather',
-            isLoading: false
-          });
-          return;
-        }
+    // Defer weather fetch by 500ms to prioritize core UI loading
+    const timeoutId = setTimeout(() => {
+      const fetchWeather = async () => {
+        try {
+          // Only fetch weather if user has coordinates set
+          if (!user?.latitude || !user?.longitude) {
+            setWeather({
+              temperature: null,
+              condition: '',
+              location: 'Set address in profile for weather',
+              isLoading: false
+            });
+            return;
+          }
         
         const lat = parseFloat(user.latitude.toString());
         const lon = parseFloat(user.longitude.toString());
@@ -173,13 +170,19 @@ export default function Dashboard() {
       }
     };
 
-    // Only fetch weather if user data exists
-    if (user) {
-      fetchWeather();
-      // Refresh weather every 30 minutes
-      const interval = setInterval(fetchWeather, 30 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
+      // Only fetch weather if user data exists
+      if (user) {
+        fetchWeather();
+        // Refresh weather every 30 minutes
+        const interval = setInterval(fetchWeather, 30 * 60 * 1000);
+        return () => {
+          clearTimeout(timeoutId);
+          clearInterval(interval);
+        };
+      }
+    }, 500); // 500ms delay for initial load performance
+
+    return () => clearTimeout(timeoutId);
   }, [user?.latitude, user?.longitude, user?.city, user?.state, user?.id]); // Add user.id to prevent duplicate calls
 
   return (
@@ -373,7 +376,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-3 gap-8 mb-16">
           {/* Dynamic Sales Inbox */}
           <div className="col-span-2">
-            <SalesInbox limit={8} />
+            <LazySalesInbox limit={8} />
           </div>
 
           {/* Sidebar Tools */}
