@@ -1403,6 +1403,7 @@ Generated: ${new Date().toLocaleDateString()}`;
   async getDashboardMetrics(userEmail: string) {
     try {
       const ownerId = await this.getOwnerByEmail(userEmail);
+      console.log(`Getting dashboard metrics for ${userEmail}, ownerId: ${ownerId}`);
       if (!ownerId) {
         return {
           pipelineValue: 0,
@@ -1411,8 +1412,8 @@ Generated: ${new Date().toLocaleDateString()}`;
         };
       }
 
-      // Get all open deals for this user (pipeline value)
-      const openDealsResponse = await this.makeRequest('/crm/v3/objects/deals/search', {
+      // First, get ALL deals for this user to see what stages exist
+      const allDealsResponse = await this.makeRequest('/crm/v3/objects/deals/search', {
         method: 'POST',
         body: JSON.stringify({
           filterGroups: [
@@ -1422,91 +1423,109 @@ Generated: ${new Date().toLocaleDateString()}`;
                   propertyName: 'hubspot_owner_id',
                   operator: 'EQ',
                   value: ownerId
-                },
-                {
-                  propertyName: 'dealstage',
-                  operator: 'IN',
-                  values: ['appointmentscheduled', 'qualifiedtobuy', 'presentationscheduled', 'decisionmakerboughtin', 'contractsent']
                 }
               ]
             }
           ],
-          properties: ['amount', 'dealstage'],
+          properties: ['amount', 'dealstage', 'dealname', 'closedate'],
           limit: 100
         })
       });
 
-      // Calculate pipeline value
-      const pipelineValue = openDealsResponse.results?.reduce((total: number, deal: any) => {
+      console.log('All deals found:', allDealsResponse.results?.map((deal: any) => ({
+        name: deal.properties?.dealname,
+        stage: deal.properties?.dealstage,
+        amount: deal.properties?.amount
+      })));
+
+      // Calculate pipeline value (all deals that aren't closed won or closed lost)
+      const pipelineValue = allDealsResponse.results?.reduce((total: number, deal: any) => {
+        const stage = deal.properties?.dealstage?.toLowerCase() || '';
         const amount = parseFloat(deal.properties.amount || '0');
-        return total + amount;
+        
+        // Include all deals that are not closed won or closed lost
+        if (!stage.includes('closed') && !stage.includes('lost')) {
+          console.log(`Including in pipeline: ${deal.properties?.dealname} - Stage: ${stage} - Amount: $${amount}`);
+          return total + amount;
+        }
+        return total;
       }, 0) || 0;
 
-      // Get all contacts assigned to this user (active leads)
-      const contactsResponse = await this.makeRequest('/crm/v3/objects/contacts/search', {
-        method: 'POST',
-        body: JSON.stringify({
-          filterGroups: [
-            {
-              filters: [
-                {
-                  propertyName: 'hubspot_owner_id',
-                  operator: 'EQ',
-                  value: ownerId
-                },
-                {
-                  propertyName: 'lifecyclestage',
-                  operator: 'IN',
-                  values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead']
-                }
-              ]
-            }
-          ],
-          properties: ['email'],
-          limit: 100
-        })
-      });
+      // Pipeline value already calculated above
 
-      const activeLeads = contactsResponse.results?.length || 0;
+      // Try to get leads - this might fail if leads object doesn't exist, so try contacts as fallback
+      let activeLeads = 0;
+      try {
+        const leadsResponse = await this.makeRequest('/crm/v3/objects/leads/search', {
+          method: 'POST',
+          body: JSON.stringify({
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName: 'hubspot_owner_id',
+                    operator: 'EQ',
+                    value: ownerId
+                  }
+                ]
+              }
+            ],
+            properties: ['email', 'lead_stage'],
+            limit: 100
+          })
+        });
+        activeLeads = leadsResponse.results?.length || 0;
+        console.log(`Found ${activeLeads} leads using leads object`);
+      } catch (error) {
+        console.log('Leads object not available, trying contacts with lead lifecycle stage');
+        // Fallback to contacts with lead lifecycle stage
+        const contactsResponse = await this.makeRequest('/crm/v3/objects/contacts/search', {
+          method: 'POST',
+          body: JSON.stringify({
+            filterGroups: [
+              {
+                filters: [
+                  {
+                    propertyName: 'hubspot_owner_id',
+                    operator: 'EQ',
+                    value: ownerId
+                  },
+                  {
+                    propertyName: 'lifecyclestage',
+                    operator: 'EQ',
+                    value: 'lead'
+                  }
+                ]
+              }
+            ],
+            properties: ['email', 'lifecyclestage'],
+            limit: 100
+          })
+        });
+        activeLeads = contactsResponse.results?.length || 0;
+        console.log(`Found ${activeLeads} leads using contacts with lifecycle stage`);
+      }
 
       // Get MTD revenue from closed-won deals
       const firstOfMonth = new Date();
       firstOfMonth.setDate(1);
       firstOfMonth.setHours(0, 0, 0, 0);
-      
-      const closedWonDealsResponse = await this.makeRequest('/crm/v3/objects/deals/search', {
-        method: 'POST',
-        body: JSON.stringify({
-          filterGroups: [
-            {
-              filters: [
-                {
-                  propertyName: 'hubspot_owner_id',
-                  operator: 'EQ',
-                  value: ownerId
-                },
-                {
-                  propertyName: 'dealstage',
-                  operator: 'EQ',
-                  value: 'closedwon'
-                },
-                {
-                  propertyName: 'closedate',
-                  operator: 'GTE',
-                  value: firstOfMonth.getTime()
-                }
-              ]
-            }
-          ],
-          properties: ['amount', 'closedate'],
-          limit: 100
-        })
-      });
 
-      // Calculate MTD revenue
-      const mtdRevenue = closedWonDealsResponse.results?.reduce((total: number, deal: any) => {
+      // Calculate MTD revenue from the all deals we already fetched
+      const mtdRevenue = allDealsResponse.results?.reduce((total: number, deal: any) => {
+        const stage = deal.properties?.dealstage?.toLowerCase() || '';
+        const closeDate = deal.properties?.closedate;
         const amount = parseFloat(deal.properties.amount || '0');
-        return total + amount;
+        
+        // Check if it's a closed won deal and closed this month
+        if (stage.includes('closed') && stage.includes('won') && closeDate) {
+          const dealCloseDate = new Date(closeDate);
+          if (dealCloseDate >= firstOfMonth) {
+            console.log(`Including in MTD revenue: ${deal.properties?.dealname} - $${amount} - Closed: ${dealCloseDate.toDateString()}`);
+            return total + amount;
+          }
+        }
+        return total;
       }, 0) || 0;
 
       return {
