@@ -1300,7 +1300,10 @@ export default function Home() {
                   <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
-                <DropdownMenuItem className="text-sm">
+                <DropdownMenuItem 
+                  onClick={() => setLocation('/profile')}
+                  className="text-sm cursor-pointer"
+                >
                   <User className="mr-2 h-3 w-3" />
                   Profile
                 </DropdownMenuItem>

@@ -280,6 +280,52 @@ export default function ClientIntel() {
                     <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
                     <p className="text-xs text-gray-500">{user?.email}</p>
                   </div>
+                  <DropdownMenuItem 
+                    onClick={() => setLocation('/profile')}
+                    className="text-sm cursor-pointer"
+                  >
+                    <User className="mr-2 h-3 w-3" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm">
+                    <Settings className="mr-2 h-3 w-3" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      // Invalidate dashboard metrics to refresh data
+                      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                      setLocation('/auth');
+                    }} 
+                    className="cursor-pointer text-red-600 text-sm"
+                  >
+                    <LogOut className="mr-2 h-3 w-3" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
+                    {user?.profilePhoto ? (
+                      <img 
+                        src={user.profilePhoto} 
+                        alt="Profile" 
+                        className="w-7 h-7 rounded-full object-cover border border-white/20"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                        {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-44">
+                  <div className="px-3 py-2 border-b">
+                    <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
+                    <p className="text-xs text-gray-500">{user?.email}</p>
+                  </div>
                   <DropdownMenuItem className="text-sm">
                     <User className="mr-2 h-3 w-3" />
                     Profile

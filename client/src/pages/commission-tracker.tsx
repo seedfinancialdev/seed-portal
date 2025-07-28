@@ -409,7 +409,10 @@ export default function CommissionTracker() {
                   <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
-                <DropdownMenuItem className="text-sm">
+                <DropdownMenuItem 
+                  onClick={() => setLocation('/profile')}
+                  className="text-sm cursor-pointer"
+                >
                   <User className="mr-2 h-3 w-3" />
                   Profile
                 </DropdownMenuItem>
@@ -418,7 +421,14 @@ export default function CommissionTracker() {
                   Settings
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => {}} className="cursor-pointer text-red-600 text-sm">
+                <DropdownMenuItem 
+                  onClick={() => {
+                    // Invalidate dashboard metrics to refresh data
+                    queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                    setLocation('/auth');
+                  }} 
+                  className="cursor-pointer text-red-600 text-sm"
+                >
                   <LogOut className="mr-2 h-3 w-3" />
                   Sign Out
                 </DropdownMenuItem>
