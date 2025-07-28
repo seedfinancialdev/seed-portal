@@ -45,7 +45,12 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
     refetchOnWindowFocus: false, // Don't refetch on window focus to avoid excessive requests
   });
 
-  const leads: SalesLead[] = leadsData?.leads || [];
+  const leads: SalesLead[] = (leadsData?.leads || []).sort((a: SalesLead, b: SalesLead) => {
+    // Sort by assigned date (most recent first)
+    const dateA = new Date(a.properties.hubspot_owner_assigneddate || '1970-01-01');
+    const dateB = new Date(b.properties.hubspot_owner_assigneddate || '1970-01-01');
+    return dateB.getTime() - dateA.getTime();
+  });
 
   const formatContactName = (lead: SalesLead) => {
     const firstName = lead.properties.firstname || '';

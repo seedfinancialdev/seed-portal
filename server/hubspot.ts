@@ -801,7 +801,7 @@ Services Include:
                 hs_lead_status: leadStatus
               },
               leadStage: leadStatus,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${objectId}/${lead.id}`
+              hubspotContactUrl: `https://app.hubspot.com/lead-overview/149640503/?leadId=${lead.id}`
             };
           } catch (error) {
             console.error(`Error enriching lead ${lead.id}:`, error);
@@ -820,7 +820,7 @@ Services Include:
                 hs_lead_status: leadStatus
               },
               leadStage: leadStatus,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${objectId}/${lead.id}`
+              hubspotContactUrl: `https://app.hubspot.com/lead-overview/149640503/?leadId=${lead.id}`
             };
           }
         })
