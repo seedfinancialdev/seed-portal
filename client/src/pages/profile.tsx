@@ -303,6 +303,8 @@ export default function Profile() {
         'Marina Del Rey, CA': { latitude: 33.9802, longitude: -118.4517 },
         'Los Angeles, CA': { latitude: 34.0522, longitude: -118.2437 },
         'San Francisco, CA': { latitude: 37.7749, longitude: -122.4194 },
+        'Cupertino, CA': { latitude: 37.3318, longitude: -122.0312 },
+        'Cupertino, California': { latitude: 37.3318, longitude: -122.0312 },
         'New York, NY': { latitude: 40.7128, longitude: -74.0060 },
         'Chicago, IL': { latitude: 41.8781, longitude: -87.6298 },
       };
@@ -393,12 +395,19 @@ export default function Profile() {
   const fetchWeatherForAddress = async (address: string, city: string, state: string, zipCode: string) => {
     const geocodeResult = await geocodeAddress(address, city, state, zipCode);
     if (geocodeResult) {
+      console.log('Geocoding successful:', geocodeResult);
       // Save coordinates to database
       try {
+        console.log('Saving coordinates to database:', geocodeResult.latitude, geocodeResult.longitude);
         await apiRequest('PATCH', '/api/user/profile', {
           latitude: geocodeResult.latitude.toString(),
           longitude: geocodeResult.longitude.toString(),
         });
+        console.log('Coordinates saved successfully');
+        
+        // Invalidate user cache to trigger dashboard weather update
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        console.log('User cache invalidated for dashboard weather update');
       } catch (error) {
         console.error('Failed to save coordinates:', error);
       }
@@ -408,6 +417,8 @@ export default function Profile() {
         geocodeResult.longitude,
         geocodeResult.location
       );
+    } else {
+      console.log('Geocoding failed for address:', address, city, state, zipCode);
     }
   };
 
@@ -460,8 +471,10 @@ export default function Profile() {
       }
       
       // Force refresh user data immediately after all updates
+      console.log('Invalidating user cache for dashboard weather update...');
       await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       await queryClient.refetchQueries({ queryKey: ['/api/user'] });
+      console.log('User cache invalidated and refetched - dashboard should update');
       
       toast({
         title: "Profile Updated",
