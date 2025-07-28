@@ -1412,7 +1412,7 @@ Generated: ${new Date().toLocaleDateString()}`;
         };
       }
 
-      // First, get ALL deals for this user to see what stages exist
+      // Get deals from Seed Sales Pipeline only
       const allDealsResponse = await this.makeRequest('/crm/v3/objects/deals/search', {
         method: 'POST',
         body: JSON.stringify({
@@ -1423,11 +1423,16 @@ Generated: ${new Date().toLocaleDateString()}`;
                   propertyName: 'hubspot_owner_id',
                   operator: 'EQ',
                   value: ownerId
+                },
+                {
+                  propertyName: 'pipeline',
+                  operator: 'EQ',
+                  value: 'default' // This is typically the default pipeline ID, may need adjustment
                 }
               ]
             }
           ],
-          properties: ['amount', 'dealstage', 'dealname', 'closedate', 'hs_deal_stage_probability'],
+          properties: ['amount', 'dealstage', 'dealname', 'closedate', 'pipeline', 'hs_deal_stage_probability'],
           limit: 100
         })
       });
@@ -1453,12 +1458,35 @@ Generated: ${new Date().toLocaleDateString()}`;
         console.log('Could not fetch deal stage info, will use raw stage values');
       }
 
+      // Get pipeline information to find "Seed Sales Pipeline"
+      let pipelineInfo: any = {};
+      try {
+        const pipelinesResponse = await this.makeRequest('/crm/v3/pipelines/deals', {
+          method: 'GET'
+        });
+        pipelineInfo = pipelinesResponse.results?.reduce((acc: any, pipeline: any) => {
+          acc[pipeline.id] = pipeline.label;
+          return acc;
+        }, {}) || {};
+        console.log('Available pipelines:', pipelineInfo);
+        
+        // Find Seed Sales Pipeline ID
+        const seedPipelineEntry = pipelinesResponse.results?.find((p: any) => 
+          p.label && p.label.toLowerCase().includes('seed')
+        );
+        console.log('Seed Sales Pipeline found:', seedPipelineEntry);
+      } catch (error) {
+        console.log('Could not fetch pipeline info');
+      }
+
       // Also get all deals with more properties to understand the discrepancy
       console.log('\n=== DETAILED DEAL ANALYSIS ===');
       allDealsResponse.results?.forEach((deal: any) => {
         const stage = deal.properties?.dealstage || '';
         const stageName = dealStageInfo[stage] || stage;
+        const pipelineName = pipelineInfo[deal.properties?.pipeline] || deal.properties?.pipeline;
         console.log(`Deal: ${deal.properties?.dealname}`);
+        console.log(`  Pipeline: ${deal.properties?.pipeline} (${pipelineName})`);
         console.log(`  Stage ID: ${stage}`);
         console.log(`  Stage Name: ${stageName}`);
         console.log(`  Amount: $${deal.properties?.amount || '0'}`);
@@ -1474,12 +1502,14 @@ Generated: ${new Date().toLocaleDateString()}`;
         const stageName = dealStageInfo[stage] || stage;
         const amount = parseFloat(deal.properties.amount || '0');
         
-        // Exclude only closed won and closed lost stages
+        // Exclude closed won and closed lost stages - 1108547153 is closed won per user
+        const closedWonStageIds = ['1108547153']; // User confirmed this is closed won
         const closedStages = ['closedwon', 'closedlost', 'closed won', 'closed lost'];
-        const isClosedStage = closedStages.some(closedStage => 
-          stage.toLowerCase().includes(closedStage) || 
-          stageName.toLowerCase().includes(closedStage)
-        );
+        const isClosedStage = closedWonStageIds.includes(stage) ||
+                             closedStages.some(closedStage => 
+                               stage.toLowerCase().includes(closedStage) || 
+                               stageName.toLowerCase().includes(closedStage)
+                             );
         
         if (!isClosedStage) {
           console.log(`Including in pipeline: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - Amount: $${amount}`);
@@ -1566,9 +1596,10 @@ Generated: ${new Date().toLocaleDateString()}`;
         console.log(`  Close Date: ${closeDate || 'None'}`);
         console.log(`  Amount: $${amount}`);
         
-        // Check if it's a closed won deal
-        const isClosedWonStage = stage.toLowerCase().includes('closedwon') || 
-                                stage.toLowerCase().includes('closed won') ||
+        // Check if it's a closed won deal - stage 1108547153 appears to be closed won based on user feedback
+        const closedWonStageIds = ['1108547153', 'closedwon', 'closed won'];
+        const isClosedWonStage = closedWonStageIds.includes(stage.toLowerCase()) ||
+                                closedWonStageIds.some(id => stage === id) ||
                                 stageName.toLowerCase().includes('closed won') ||
                                 stageName.toLowerCase().includes('closedwon');
         
