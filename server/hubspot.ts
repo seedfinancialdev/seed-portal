@@ -1729,11 +1729,47 @@ Generated: ${new Date().toLocaleDateString()}`;
             allFields: Object.keys(owner)
           });
           
+          // Owner found but no phone - also check if this user exists as a contact
+          console.log('Owner phone is undefined, checking contacts for phone number...');
+          const contactResult = await this.verifyContactByEmail(email);
+          if (contactResult.verified && contactResult.contact) {
+            const props = contactResult.contact.properties;
+            
+            console.log('Contact properties found for owner:', {
+              firstname: props.firstname,
+              lastname: props.lastname,
+              email: props.email,
+              phone: (props as any).phone,
+              mobilephone: (props as any).mobilephone,
+              hs_phone: (props as any).hs_phone,
+              phone_number: (props as any).phone_number,
+              work_phone: (props as any).work_phone,
+              mobile_phone: (props as any).mobile_phone,
+              allContactProps: Object.keys(props)
+            });
+            
+            // Try multiple phone field variations
+            const phoneNumber = (props as any).phone || 
+                               (props as any).mobilephone || 
+                               (props as any).hs_phone || 
+                               (props as any).phone_number ||
+                               (props as any).work_phone ||
+                               (props as any).mobile_phone ||
+                               '';
+            
+            return {
+              firstName: owner.firstName || '',
+              lastName: owner.lastName || '',
+              email: owner.email || email,
+              phoneNumber: phoneNumber
+            };
+          }
+          
           return {
             firstName: owner.firstName || '',
             lastName: owner.lastName || '',
             email: owner.email || email,
-            phoneNumber: owner.phone || ''
+            phoneNumber: ''
           };
         }
       }
