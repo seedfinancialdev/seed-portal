@@ -159,7 +159,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] dashboard-enter">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       {/* Transparent Header */}
       <header className="bg-transparent z-50 py-4 relative">
         <div className="max-w-5xl mx-auto px-6">
@@ -232,7 +232,7 @@ export default function Dashboard() {
 
         {/* Key Metrics Cards */}
         <div className="grid grid-cols-3 gap-6 mb-12">
-          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
+          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl card-bounce-in-1">
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-3">
                 <TrendingUp className="h-6 w-6 text-green-600" />
@@ -250,7 +250,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
+          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl card-bounce-in-2">
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
                 <Activity className="h-6 w-6 text-purple-600" />
@@ -268,7 +268,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
+          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl card-bounce-in-3">
             <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
                 <Target className="h-6 w-6 text-blue-600" />
@@ -292,7 +292,7 @@ export default function Dashboard() {
           <h2 className="text-xl font-light text-white mb-6 text-center">Quick Actions</h2>
           <div className="grid grid-cols-4 gap-8 justify-items-center">
             <Link href="/calculator">
-              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
+              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 4} as React.CSSProperties}>
                 <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-4 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
                   <Calculator className="h-5 w-5 text-white" />
                 </div>
@@ -301,7 +301,7 @@ export default function Dashboard() {
             </Link>
 
             <Link href="/commission-tracker">
-              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
+              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 5} as React.CSSProperties}>
                 <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-4 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
                   <DollarSign className="h-5 w-5 text-white" />
                 </div>
@@ -310,7 +310,7 @@ export default function Dashboard() {
             </Link>
 
             <Link href="/client-intel">
-              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
+              <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 6} as React.CSSProperties}>
                 <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-4 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
                   <UserCheck className="h-5 w-5 text-white" />
                 </div>
@@ -318,7 +318,7 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
+            <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3 action-card-bounce" style={{"--delay": 7} as React.CSSProperties}>
               <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-4 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
                 <Video className="h-5 w-5 text-white" />
               </div>
