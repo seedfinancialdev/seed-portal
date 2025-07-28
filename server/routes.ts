@@ -669,6 +669,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sync profile data from HubSpot
+  app.post("/api/user/sync-hubspot", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      if (!hubSpotService) {
+        return res.status(500).json({ message: "HubSpot service not available" });
+      }
+
+      const hubspotData = await hubSpotService.getUserDetails(req.user.email);
+      
+      if (!hubspotData) {
+        return res.status(404).json({ message: "User not found in HubSpot" });
+      }
+
+      // Update user with HubSpot data (excluding photo)
+      const updateData = {
+        firstName: hubspotData.firstName,
+        lastName: hubspotData.lastName,
+        phoneNumber: hubspotData.phoneNumber,
+        lastHubspotSync: new Date().toISOString()
+      };
+
+      const updatedUser = await storage.updateUserProfile(req.user.id, updateData);
+      
+      res.json({
+        success: true,
+        message: "Profile synced with HubSpot",
+        syncedFields: Object.keys(updateData).filter(key => key !== 'lastHubspotSync'),
+        data: {
+          firstName: updatedUser.firstName,
+          lastName: updatedUser.lastName,
+          phoneNumber: updatedUser.phoneNumber,
+          lastHubspotSync: updatedUser.lastHubspotSync
+        }
+      });
+    } catch (error) {
+      console.error('HubSpot sync error:', error);
+      res.status(500).json({ message: "Failed to sync with HubSpot" });
+    }
+  });
+
   // Update user profile
   app.patch("/api/user/profile", requireAuth, async (req, res) => {
     try {

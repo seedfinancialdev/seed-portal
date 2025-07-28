@@ -96,13 +96,18 @@ export const insertUserSchema = createInsertSchema(users).omit({
   updatedAt: true,
 });
 
-// Profile update schema (only editable fields)
+// Profile update schema (includes HubSpot sync fields)
 export const updateProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  phoneNumber: z.string().optional(),
+  profilePhoto: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   zipCode: z.string().optional(),
   country: z.string().optional(),
+  lastHubspotSync: z.string().optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

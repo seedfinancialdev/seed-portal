@@ -74,13 +74,30 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserProfile(userId: number, profile: UpdateProfile): Promise<User> {
     return await safeDbQuery(async () => {
+      // Properly type the update data
+      const updateData: any = {
+        updatedAt: new Date()
+      };
+
+      if (profile.firstName !== undefined) updateData.firstName = profile.firstName;
+      if (profile.lastName !== undefined) updateData.lastName = profile.lastName;
+      if (profile.phoneNumber !== undefined) updateData.phoneNumber = profile.phoneNumber;
+      if (profile.profilePhoto !== undefined) updateData.profilePhoto = profile.profilePhoto;
+      if (profile.address !== undefined) updateData.address = profile.address;
+      if (profile.city !== undefined) updateData.city = profile.city;
+      if (profile.state !== undefined) updateData.state = profile.state;
+      if (profile.zipCode !== undefined) updateData.zipCode = profile.zipCode;
+      if (profile.country !== undefined) updateData.country = profile.country;
+      if (profile.lastHubspotSync !== undefined) updateData.lastHubspotSync = new Date(profile.lastHubspotSync);
+      
+      // Update weather timestamp if location changed
+      if (profile.address || profile.city || profile.state) {
+        updateData.lastWeatherUpdate = new Date();
+      }
+
       const [user] = await db
         .update(users)
-        .set({ 
-          ...profile, 
-          updatedAt: new Date(),
-          lastWeatherUpdate: profile.address || profile.city ? new Date() : undefined
-        })
+        .set(updateData)
         .where(eq(users.id, userId))
         .returning();
       

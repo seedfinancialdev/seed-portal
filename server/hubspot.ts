@@ -6,6 +6,8 @@ export interface HubSpotContact {
     firstname?: string;
     lastname?: string;
     company?: string;
+    phone?: string;
+    mobilephone?: string;
   };
 }
 
@@ -1690,6 +1692,46 @@ Generated: ${new Date().toLocaleDateString()}`;
 
 
 
+
+  // Get user details for profile syncing
+  async getUserDetails(email: string): Promise<{ firstName?: string; lastName?: string; phoneNumber?: string; email?: string } | null> {
+    try {
+      // First try to get from owners (internal team members)
+      const ownersResponse = await this.makeRequest('/crm/v3/owners');
+      
+      if (ownersResponse && ownersResponse.results) {
+        const owner = ownersResponse.results.find((o: any) => 
+          o.email && o.email.toLowerCase() === email.toLowerCase()
+        );
+        
+        if (owner) {
+          return {
+            firstName: owner.firstName || '',
+            lastName: owner.lastName || '',
+            email: owner.email || email,
+            phoneNumber: owner.phone || ''
+          };
+        }
+      }
+
+      // Fallback to contacts if not found in owners
+      const contactResult = await this.verifyContactByEmail(email);
+      if (contactResult.verified && contactResult.contact) {
+        const props = contactResult.contact.properties;
+        return {
+          firstName: props.firstname || '',
+          lastName: props.lastname || '',
+          email: props.email || email,
+          phoneNumber: (props as any).phone || (props as any).mobilephone || ''
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error fetching user details from HubSpot:', error);
+      return null;
+    }
+  }
 
   async verifyUser(email: string): Promise<{ exists: boolean; userData?: any }> {
     try {

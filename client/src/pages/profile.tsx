@@ -171,6 +171,29 @@ export default function Profile() {
     },
   });
 
+  // HubSpot sync mutation
+  const syncHubSpotMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/user/sync-hubspot', {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "HubSpot sync completed",
+        description: `Updated: ${data.syncedFields?.join(', ') || 'No changes'}`,
+      });
+      // Invalidate user query to get updated data
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync failed", 
+        description: error.message || "Failed to sync with HubSpot",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Load weather on component mount if coordinates exist
   useEffect(() => {
     if (user?.latitude && user?.longitude) {
@@ -272,13 +295,25 @@ export default function Profile() {
                     <span className="text-sm font-medium text-gray-700">Synced from HubSpot</span>
                   </div>
                   
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      To update your name, photo, or phone number, please make changes in HubSpot. 
-                      Changes will sync automatically.
-                    </AlertDescription>
-                  </Alert>
+                  <div className="flex items-center justify-between">
+                    <Alert className="flex-1 mr-4">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription>
+                        To update your name or phone number, please make changes in HubSpot.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <Button 
+                      onClick={() => syncHubSpotMutation.mutate()}
+                      disabled={syncHubSpotMutation.isPending}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${syncHubSpotMutation.isPending ? 'animate-spin' : ''}`} />
+                      {syncHubSpotMutation.isPending ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                  </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
@@ -490,7 +525,7 @@ export default function Profile() {
               </CardContent>
             </Card>
 
-            {/* Profile Photo Placeholder */}
+            {/* Profile Photo */}
             <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg text-gray-900">
@@ -499,12 +534,49 @@ export default function Profile() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <div className="w-24 h-24 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
-                  {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                <div className="relative">
+                  {user?.profilePhoto ? (
+                    <img 
+                      src={user.profilePhoto} 
+                      alt="Profile" 
+                      className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-2 border-gray-200"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-2xl font-bold">
+                      {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="photo-upload"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // For demo purposes, we'll use a placeholder URL
+                          // In production, you'd upload to cloud storage
+                          toast({
+                            title: "Photo upload",
+                            description: "Photo upload feature coming soon",
+                          });
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="photo-upload"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md cursor-pointer transition-colors"
+                    >
+                      <Camera className="h-3 w-3" />
+                      Change Photo
+                    </label>
+                    <p className="text-xs text-gray-500">
+                      Upload a new profile photo (local only)
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500">
-                  Profile photo syncs from HubSpot
-                </p>
               </CardContent>
             </Card>
           </div>
