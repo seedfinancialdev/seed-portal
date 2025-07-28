@@ -684,6 +684,21 @@ Services Include:
   async getSalesInboxLeads(ownerEmail?: string, limit: number = 20): Promise<any[]> {
     try {
       // First, discover the actual Leads object dynamically
+      console.log('Starting getSalesInboxLeads...');
+      
+      // Try the standard leads object first
+      try {
+        console.log('Trying standard leads object...');
+        const searchResult = await this.searchLeadsObject('leads', ownerEmail, limit);
+        if (searchResult) {
+          console.log('Successfully found leads using standard object');
+          return searchResult;
+        }
+      } catch (error) {
+        console.log('Standard leads object failed:', (error as any).message);
+      }
+
+      // Then try custom object discovery
       console.log('Discovering custom Leads object...');
       const customObjects = await this.getCustomObjects();
       console.log(`Found ${customObjects.length} custom objects:`, customObjects.map(obj => ({
@@ -709,7 +724,7 @@ Services Include:
 
       // If dynamic discovery fails, try common IDs as fallback
       console.log('Dynamic discovery failed, trying fallback IDs...');
-      const possibleLeadObjectIds = ['leads', '2-18298094', 'p149640503_leads', '2-20169374', '2-5890328'];
+      const possibleLeadObjectIds = ['2-18298094', 'p149640503_leads', '2-20169374', '2-5890328'];
       let leadsObjectId = null;
       let searchResult = null;
       
