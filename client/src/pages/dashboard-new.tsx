@@ -244,40 +244,36 @@ export default function Dashboard() {
           <div className="grid grid-cols-4 gap-8 justify-items-center">
             <Link href="/calculator">
               <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
-                <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-3 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
+                <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-4 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
                   <Calculator className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Quote Calculator</h3>
-                <p className="text-xs text-white/80 text-center leading-tight">Generate pricing</p>
+                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Quote Calculator</h3>
               </div>
             </Link>
 
             <Link href="/commission-tracker">
               <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
-                <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-3 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
+                <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-4 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
                   <DollarSign className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Commission Tracker</h3>
-                <p className="text-xs text-white/80 text-center leading-tight">Track earnings</p>
+                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Commission Tracker</h3>
               </div>
             </Link>
 
             <Link href="/client-intel">
               <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-3 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-4 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
                   <UserCheck className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Client<br/>Intel</h3>
-                <p className="text-xs text-white/80 text-center leading-tight">AI snapshots</p>
+                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Client<br/>Intel</h3>
               </div>
             </Link>
 
             <div className="group flex flex-col items-center justify-center w-40 h-40 bg-white/20 backdrop-blur-md border border-white/30 rounded-full hover:bg-white/30 hover:border-orange-500/50 hover:scale-110 transition-all duration-300 cursor-pointer shadow-xl hover:shadow-2xl px-4 py-3">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-3 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-4 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
                 <Video className="h-5 w-5 text-white" />
               </div>
-              <h3 className="text-sm font-bold text-center text-white mb-2 leading-tight px-1">Meeting<br/>Vault</h3>
-              <p className="text-xs text-white/80 text-center leading-tight">View recordings</p>
+              <h3 className="text-base font-bold text-center text-white leading-tight px-1">Meeting<br/>Vault</h3>
             </div>
           </div>
         </div>
