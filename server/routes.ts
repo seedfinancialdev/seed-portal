@@ -500,6 +500,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // HubSpot OAuth callback endpoint for redirect URL
+  app.get('/api/hubspot/oauth/callback', async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      console.log('HubSpot OAuth callback received:', { code: code ? 'present' : 'missing', state });
+      
+      // In a real implementation, you'd exchange the code for tokens here
+      // For now, just return success since we're using private app tokens
+      res.send(`
+        <html>
+          <body>
+            <h1>HubSpot OAuth Callback</h1>
+            <p>Authorization code received successfully.</p>
+            <p>You can close this window and return to your app configuration.</p>
+            <script>
+              // Optional: Auto-close window after 3 seconds
+              setTimeout(() => window.close(), 3000);
+            </script>
+          </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error('OAuth callback error:', error);
+      res.status(500).send('OAuth callback failed');
+    }
+  });
+
   // Sales Inbox API endpoints
   
   // Get active leads for sales inbox
