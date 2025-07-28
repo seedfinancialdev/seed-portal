@@ -658,10 +658,16 @@ Services Include:
         filterGroups: [
           {
             filters: [
-              // Filter for leads/contacts - remove lifecycle stage restriction to see all contacts
+              // Filter for leads/contacts with email
               {
                 propertyName: 'email',
-                operator: 'NOT_EMPTY'
+                operator: 'HAS_PROPERTY'
+              },
+              // Filter for specific lead stages: New, Assigned, Contact Attempted, Discovery Call Booked
+              {
+                propertyName: 'hs_lead_status',
+                operator: 'IN',
+                values: ['NEW', 'ASSIGNED', 'CONTACT_ATTEMPTED', 'DISCOVERY_CALL_BOOKED']
               }
             ]
           }
