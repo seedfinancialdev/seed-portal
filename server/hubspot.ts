@@ -1427,7 +1427,7 @@ Generated: ${new Date().toLocaleDateString()}`;
               ]
             }
           ],
-          properties: ['amount', 'dealstage', 'dealname', 'closedate'],
+          properties: ['amount', 'dealstage', 'dealname', 'closedate', 'hs_deal_stage_probability'],
           limit: 100
         })
       });
@@ -1450,8 +1450,21 @@ Generated: ${new Date().toLocaleDateString()}`;
         }, {}) || {};
         console.log('Deal stage mapping:', dealStageInfo);
       } catch (error) {
-        console.log('Could not fetch deal stage info');
+        console.log('Could not fetch deal stage info, will use raw stage values');
       }
+
+      // Also get all deals with more properties to understand the discrepancy
+      console.log('\n=== DETAILED DEAL ANALYSIS ===');
+      allDealsResponse.results?.forEach((deal: any) => {
+        const stage = deal.properties?.dealstage || '';
+        const stageName = dealStageInfo[stage] || stage;
+        console.log(`Deal: ${deal.properties?.dealname}`);
+        console.log(`  Stage ID: ${stage}`);
+        console.log(`  Stage Name: ${stageName}`);
+        console.log(`  Amount: $${deal.properties?.amount || '0'}`);
+        console.log(`  Close Date: ${deal.properties?.closedate || 'None'}`);
+        console.log('---');
+      });
 
       // Calculate pipeline value - include ALL deals except Closed Won and Closed Lost
       // Per user: "any deal NOT in a closed won or closed lost stage"
@@ -1539,28 +1552,50 @@ Generated: ${new Date().toLocaleDateString()}`;
 
       // Calculate MTD revenue from closed won deals with close date in current month
       // Per user: "Sum of deal value from all Deals in a Closed Won stage, and have a Close Date in the current calendar month"
+      console.log('\n=== MTD REVENUE ANALYSIS ===');
+      console.log(`Looking for deals closed since: ${firstOfMonth.toDateString()}`);
+      
       const mtdRevenue = allDealsResponse.results?.reduce((total: number, deal: any) => {
         const stage = deal.properties?.dealstage || '';
         const stageName = dealStageInfo[stage] || stage;
         const closeDate = deal.properties?.closedate;
         const amount = parseFloat(deal.properties.amount || '0');
         
+        console.log(`\nAnalyzing deal: ${deal.properties?.dealname}`);
+        console.log(`  Stage: ${stage} (${stageName})`);
+        console.log(`  Close Date: ${closeDate || 'None'}`);
+        console.log(`  Amount: $${amount}`);
+        
         // Check if it's a closed won deal
         const isClosedWonStage = stage.toLowerCase().includes('closedwon') || 
                                 stage.toLowerCase().includes('closed won') ||
-                                stageName.toLowerCase().includes('closed won');
+                                stageName.toLowerCase().includes('closed won') ||
+                                stageName.toLowerCase().includes('closedwon');
+        
+        console.log(`  Is Closed Won? ${isClosedWonStage}`);
         
         if (isClosedWonStage && closeDate) {
           const dealCloseDate = new Date(closeDate);
-          if (dealCloseDate >= firstOfMonth && dealCloseDate <= new Date()) {
-            console.log(`Including in MTD revenue: ${deal.properties?.dealname} - Stage: ${stage} (${stageName}) - $${amount} - Closed: ${dealCloseDate.toDateString()}`);
+          const isThisMonth = dealCloseDate >= firstOfMonth && dealCloseDate <= new Date();
+          console.log(`  Close date in current month? ${isThisMonth}`);
+          
+          if (isThisMonth) {
+            console.log(`  ✓ INCLUDING in MTD revenue: $${amount}`);
             return total + amount;
           } else {
-            console.log(`Closed won but outside MTD: ${deal.properties?.dealname} - $${amount} - Closed: ${dealCloseDate.toDateString()}`);
+            console.log(`  ✗ Closed won but outside MTD: ${dealCloseDate.toDateString()}`);
           }
+        } else if (!closeDate && isClosedWonStage) {
+          console.log(`  ✗ Closed won but no close date`);
+        } else {
+          console.log(`  ✗ Not a closed won deal`);
         }
+        
         return total;
       }, 0) || 0;
+      
+      console.log(`\nFinal MTD Revenue: $${mtdRevenue}`);
+      console.log('=== END MTD ANALYSIS ===\n');
 
       return {
         pipelineValue: Math.round(pipelineValue),
