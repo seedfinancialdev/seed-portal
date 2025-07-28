@@ -159,7 +159,7 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] animate-in fade-in duration-1000">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] dashboard-enter">
       {/* Transparent Header */}
       <header className="bg-transparent z-50 py-4 relative">
         <div className="max-w-5xl mx-auto px-6">
