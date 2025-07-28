@@ -92,10 +92,13 @@ export default function Profile() {
         const result = await response.json();
         // Update the form and user data
         form.setValue('profilePhoto', result.photoUrl);
-        queryClient.setQueryData(['user'], (oldData: any) => ({
+        queryClient.setQueryData(['/api/user'], (oldData: any) => ({
           ...oldData,
           profilePhoto: result.photoUrl
         }));
+        
+        // Also invalidate to ensure fresh data
+        await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         
         toast({
           title: "Success",

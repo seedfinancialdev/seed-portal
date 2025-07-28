@@ -391,9 +391,17 @@ export default function CommissionTracker() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
-                  <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                    {user?.email?.charAt(0).toUpperCase()}
-                  </div>
+                  {user?.profilePhoto ? (
+                    <img 
+                      src={user.profilePhoto} 
+                      alt="Profile" 
+                      className="w-7 h-7 rounded-full object-cover border border-white/20"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                      {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
