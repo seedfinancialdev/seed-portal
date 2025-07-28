@@ -30,6 +30,8 @@ Preferred communication style: Simple, everyday language.
   - Added comprehensive filter system to modal with date range and lead stage filtering
   - Filter controls include stage dropdown, start/end date pickers, and clear filters button
   - Real-time filtering with "Showing X of Y leads" count display
+  - Added search functionality to filter by company name, email, or contact name
+  - Search bar with search icon and comprehensive text matching across multiple fields
 
 ✓ **Complete Dashboard Integration and Bug Fixes** (July 28, 2025)
   - Fixed HubSpot dashboard integration to show correct pipeline data ($62.5K+ pipeline value)

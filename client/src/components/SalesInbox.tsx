@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, ExternalLink, Filter, Inbox, Calendar, User, X } from 'lucide-react';
+import { Building2, ExternalLink, Filter, Inbox, Calendar, User, X, Search } from 'lucide-react';
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
 import { useState } from 'react';
@@ -39,6 +39,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [stageFilter, setStageFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   const { data: leadsData, isLoading, error } = useQuery({
     queryKey: ['/api/sales-inbox/leads', limit, user?.email],
@@ -84,6 +85,22 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
 
   // Filter function for modal leads
   const filteredLeads = allLeads.filter((lead) => {
+    // Search filter (company name or email)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const companyName = (lead.properties.company || '').toLowerCase();
+      const email = (lead.properties.email || '').toLowerCase();
+      const firstName = (lead.properties.firstname || '').toLowerCase();
+      const lastName = (lead.properties.lastname || '').toLowerCase();
+      const fullName = `${firstName} ${lastName}`.trim();
+      
+      if (!companyName.includes(query) && 
+          !email.includes(query) && 
+          !fullName.includes(query)) {
+        return false;
+      }
+    }
+
     // Stage filter
     if (stageFilter !== 'all' && lead.leadStage !== stageFilter) {
       return false;
@@ -116,6 +133,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   const clearFilters = () => {
     setDateFilter({ start: '', end: '' });
     setStageFilter('all');
+    setSearchQuery('');
   };
 
   const formatContactName = (lead: SalesLead) => {
@@ -238,6 +256,17 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
               
               {/* Filter Controls */}
               <div className="border-b pb-4 mb-4 space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search by company name, email, or contact name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
+                
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4 text-gray-500" />
@@ -281,7 +310,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
                     />
                   </div>
 
-                  {(stageFilter !== 'all' || dateFilter.start || dateFilter.end) && (
+                  {(stageFilter !== 'all' || dateFilter.start || dateFilter.end || searchQuery) && (
                     <Button
                       variant="outline"
                       size="sm"
