@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Building2, ExternalLink, Filter, Inbox, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/use-auth';
 
 interface SalesLead {
   id: string;
@@ -27,8 +28,10 @@ interface SalesInboxProps {
 }
 
 export function SalesInbox({ limit = 8 }: SalesInboxProps) {
+  const { user } = useAuth();
+  
   const { data: leadsData, isLoading, error } = useQuery({
-    queryKey: ['/api/sales-inbox/leads', limit],
+    queryKey: ['/api/sales-inbox/leads', limit, user?.email],
     queryFn: async () => {
       const response = await fetch(`/api/sales-inbox/leads?limit=${limit}`);
       if (!response.ok) {
@@ -36,9 +39,10 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
       }
       return response.json();
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
-    staleTime: 20000, // Consider data fresh for 20 seconds
-    cacheTime: 300000, // Keep in cache for 5 minutes
+    staleTime: 0, // Always consider data stale - fetch fresh data every time
+    gcTime: 0, // Don't cache data to prevent user data leakage
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus to avoid excessive requests
   });
 
   const leads: SalesLead[] = leadsData?.leads || [];

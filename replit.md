@@ -15,9 +15,11 @@ Preferred communication style: Simple, everyday language.
   - Fixed owner filtering to show only leads assigned to logged-in user
   - Updated styling to match original orange-themed design with proper borders and buttons
   - Limited display to maximum 8 records with fixed card height for consistency
-  - Added debugging to verify owner ID mapping and lead assignment
   - System correctly filters leads by HubSpot owner ID based on user email
-  - Current user (jon@seedfinancial.io) has 3 assigned leads, other leads owned by different team members
+  - Fixed caching issue preventing fast user switching with staleTime: 0 and gcTime: 0 settings
+  - Added user email to query key to ensure proper data isolation between users
+  - Cleaned up excessive logging for better performance
+  - Sales inbox now loads instantly when switching between users without 30-second delays
 
 ✓ **Complete Dashboard Integration and Bug Fixes** (July 28, 2025)
   - Fixed HubSpot dashboard integration to show correct pipeline data ($62.5K+ pipeline value)
