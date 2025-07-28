@@ -10,6 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Complete Wiki.js Knowledge Base Integration** (July 28, 2025)
+  - **Docker Compose Setup**: Created docker-compose.wiki.yml for Wiki.js and PostgreSQL containers
+  - **Express Proxy Integration**: Added /wiki route proxy to Wiki.js instance on port 3001
+  - **Knowledge Base Portal Page**: Built comprehensive /knowledge-base page with status monitoring
+  - **Dashboard Integration**: Added "Open Wiki.js" button and navigation from dashboard
+  - **Smart Setup Guide**: Automatic setup instructions when Wiki.js is not running
+  - **Portal Navigation**: Full avatar menu and consistent UX across knowledge base
+  - **Documentation**: Complete WIKI_SETUP.md with troubleshooting and production tips
+  - **Route Structure**: /knowledge-base for portal interface, /wiki for direct Wiki.js access
+
 ✓ **Project Organization and Routing Clarification** (July 28, 2025)
   - **Proper Home Page**: Dashboard is correctly configured as home page (/) - no changes needed to routing
   - **Clear Component Naming**: Updated App.tsx imports with descriptive comments for clarity

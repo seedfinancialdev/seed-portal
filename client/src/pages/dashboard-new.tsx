@@ -64,6 +64,7 @@ const getWeatherIcon = (condition: string) => {
 
 export default function Dashboard() {
   const { user, logoutMutation } = useAuth();
+  const [, setLocation] = useLocation();
   const { data: metrics, isLoading: metricsLoading, error: metricsError } = useDashboardMetrics();
   
   // Counter animations for metrics cards - fast timing for responsive feel

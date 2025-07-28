@@ -7,11 +7,11 @@ This project includes a Wiki.js knowledge base integration accessible at `/knowl
 ### 1. Start Wiki.js with Docker
 
 ```bash
-# Start Wiki.js and PostgreSQL database
-docker-compose -f docker-compose.wiki.yml up -d
+# Start Wiki.js and PostgreSQL database (choose option 2 when prompted for docker-compose)
+docker compose -f docker-compose.wiki.yml up -d
 
 # Check if containers are running
-docker-compose -f docker-compose.wiki.yml ps
+docker compose -f docker-compose.wiki.yml ps
 ```
 
 ### 2. Initial Setup
@@ -66,17 +66,17 @@ The Express server automatically proxies `/wiki` requests to the Wiki.js instanc
 ### Wiki.js Not Starting
 ```bash
 # Check container logs
-docker-compose -f docker-compose.wiki.yml logs wiki
+docker compose -f docker-compose.wiki.yml logs wiki
 
 # Restart services
-docker-compose -f docker-compose.wiki.yml restart
+docker compose -f docker-compose.wiki.yml restart
 ```
 
 ### Database Issues
 ```bash
 # Reset database (WARNING: This will delete all data)
-docker-compose -f docker-compose.wiki.yml down -v
-docker-compose -f docker-compose.wiki.yml up -d
+docker compose -f docker-compose.wiki.yml down -v
+docker compose -f docker-compose.wiki.yml up -d
 ```
 
 ### Port Conflicts
