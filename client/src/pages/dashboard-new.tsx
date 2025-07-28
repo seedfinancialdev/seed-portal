@@ -229,24 +229,6 @@ export default function Dashboard() {
 
           <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
             <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
-                <Target className="h-6 w-6 text-blue-600" />
-              </div>
-              <p className="text-2xl font-light text-white mb-1">
-                {metricsLoading ? (
-                  <span className="animate-pulse">Loading...</span>
-                ) : metricsError ? (
-                  'Error'
-                ) : (
-                  metrics?.activeLeads || '0'
-                )}
-              </p>
-              <p className="text-xs text-white/80 uppercase tracking-wide">Active Leads</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-            <CardContent className="p-6 text-center">
               <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
                 <Activity className="h-6 w-6 text-purple-600" />
               </div>
@@ -260,6 +242,24 @@ export default function Dashboard() {
                 )}
               </p>
               <p className="text-xs text-white/80 uppercase tracking-wide">MTD Revenue</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
+                <Target className="h-6 w-6 text-blue-600" />
+              </div>
+              <p className="text-2xl font-light text-white mb-1">
+                {metricsLoading ? (
+                  <span className="animate-pulse">Loading...</span>
+                ) : metricsError ? (
+                  'Error'
+                ) : (
+                  metrics?.activeDeals || '0'
+                )}
+              </p>
+              <p className="text-xs text-white/80 uppercase tracking-wide">Active Deals</p>
             </CardContent>
           </Card>
         </div>

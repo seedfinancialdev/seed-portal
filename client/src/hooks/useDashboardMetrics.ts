@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 interface DashboardMetrics {
   pipelineValue: number;
-  activeLeads: number;
+  activeDeals: number;
   mtdRevenue: number;
 }
 

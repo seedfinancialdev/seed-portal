@@ -1407,7 +1407,7 @@ Generated: ${new Date().toLocaleDateString()}`;
       if (!ownerId) {
         return {
           pipelineValue: 0,
-          activeLeads: 0,
+          activeDeals: 0,
           mtdRevenue: 0
         };
       }
@@ -1522,60 +1522,27 @@ Generated: ${new Date().toLocaleDateString()}`;
         return total;
       }, 0) || 0;
 
-      // Pipeline value already calculated above
-
-      // Try to get leads - this might fail if leads object doesn't exist, so try contacts as fallback
-      let activeLeads = 0;
-      try {
-        const leadsResponse = await this.makeRequest('/crm/v3/objects/leads/search', {
-          method: 'POST',
-          body: JSON.stringify({
-            filterGroups: [
-              {
-                filters: [
-                  {
-                    propertyName: 'hubspot_owner_id',
-                    operator: 'EQ',
-                    value: ownerId
-                  }
-                ]
-              }
-            ],
-            properties: ['email', 'lead_stage'],
-            limit: 100
-          })
-        });
-        activeLeads = leadsResponse.results?.length || 0;
-        console.log(`Found ${activeLeads} leads using leads object`);
-      } catch (error) {
-        console.log('Leads object not available, trying contacts with lead lifecycle stage');
-        // Fallback to contacts with lead lifecycle stage
-        const contactsResponse = await this.makeRequest('/crm/v3/objects/contacts/search', {
-          method: 'POST',
-          body: JSON.stringify({
-            filterGroups: [
-              {
-                filters: [
-                  {
-                    propertyName: 'hubspot_owner_id',
-                    operator: 'EQ',
-                    value: ownerId
-                  },
-                  {
-                    propertyName: 'lifecyclestage',
-                    operator: 'EQ',
-                    value: 'lead'
-                  }
-                ]
-              }
-            ],
-            properties: ['email', 'lifecyclestage'],
-            limit: 100
-          })
-        });
-        activeLeads = contactsResponse.results?.length || 0;
-        console.log(`Found ${activeLeads} leads using contacts with lifecycle stage`);
-      }
+      // Calculate active deals count - deals NOT in closed won or closed lost stages
+      // This is the same logic as pipeline value but just counting deals instead of summing amounts
+      const activeDeals = allDealsResponse.results?.filter((deal: any) => {
+        const stage = deal.properties?.dealstage || '';
+        const stageName = dealStageInfo[stage] || stage;
+        
+        // Exclude closed won and closed lost stages based on actual Seed Sales Pipeline stages
+        const closedWonStageIds = ['1108547153']; // Closed Won from debug
+        const closedLostStageIds = ['1108547154']; // Closed Lost from debug
+        const allClosedStageIds = [...closedWonStageIds, ...closedLostStageIds];
+        const closedStages = ['closedwon', 'closedlost', 'closed won', 'closed lost'];
+        const isClosedStage = allClosedStageIds.includes(stage) ||
+                             closedStages.some(closedStage => 
+                               stage.toLowerCase().includes(closedStage) || 
+                               stageName.toLowerCase().includes(closedStage)
+                             );
+        
+        return !isClosedStage; // Include only non-closed deals
+      })?.length || 0;
+      
+      console.log(`Active deals count: ${activeDeals} (deals not in closed won/lost stages)`);
 
       // Get MTD revenue from closed-won deals
       const firstOfMonth = new Date();
@@ -1632,7 +1599,7 @@ Generated: ${new Date().toLocaleDateString()}`;
 
       return {
         pipelineValue: Math.round(pipelineValue),
-        activeLeads,
+        activeDeals,
         mtdRevenue: Math.round(mtdRevenue)
       };
 
