@@ -654,9 +654,25 @@ Services Include:
   // Get all custom objects to find the Leads object
   async getCustomObjects(): Promise<any[]> {
     try {
+      console.log('Fetching custom object schemas...');
       const response = await this.makeRequest('/crm/v3/schemas', {
         method: 'GET'
       });
+      console.log('Custom objects response:', JSON.stringify(response, null, 2));
+      
+      // If schemas endpoint returns empty, try properties endpoint for custom objects
+      if (!response.results || response.results.length === 0) {
+        console.log('No custom schemas found, trying properties endpoint...');
+        try {
+          const propertiesResponse = await this.makeRequest('/crm/v3/properties/p149640503_leads', {
+            method: 'GET'
+          });
+          console.log('Properties response for leads:', propertiesResponse);
+        } catch (propError) {
+          console.log('Properties endpoint also failed:', (propError as any).message);
+        }
+      }
+      
       return response.results || [];
     } catch (error) {
       console.error('Error fetching custom objects:', error);
@@ -693,7 +709,7 @@ Services Include:
 
       // If dynamic discovery fails, try common IDs as fallback
       console.log('Dynamic discovery failed, trying fallback IDs...');
-      const possibleLeadObjectIds = ['leads', '2-20169374', '2-5890328'];
+      const possibleLeadObjectIds = ['leads', '2-18298094', 'p149640503_leads', '2-20169374', '2-5890328'];
       let leadsObjectId = null;
       let searchResult = null;
       
