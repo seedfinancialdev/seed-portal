@@ -651,23 +651,176 @@ Services Include:
     }
   }
 
-  // Get sales inbox leads (active contacts with recent activity)
+  // Get all custom objects to find the Leads object
+  async getCustomObjects(): Promise<any[]> {
+    try {
+      const response = await this.makeRequest('/crm/v3/schemas', {
+        method: 'GET'
+      });
+      return response.results || [];
+    } catch (error) {
+      console.error('Error fetching custom objects:', error);
+      return [];
+    }
+  }
+
+  // Get sales inbox leads (from custom Leads object)
   async getSalesInboxLeads(ownerEmail?: string, limit: number = 20): Promise<any[]> {
+    try {
+      // First, find the custom Leads object
+      const customObjects = await this.getCustomObjects();
+      const leadsObject = customObjects.find(obj => 
+        obj.labels?.singular?.toLowerCase() === 'lead' || 
+        obj.name?.toLowerCase() === 'leads' ||
+        obj.objectTypeId?.startsWith('2-')
+      );
+      
+      if (!leadsObject) {
+        console.warn('No custom Leads object found, falling back to contacts');
+        // Fallback to searching contacts with lifecycle stage = lead
+        return this.getSalesInboxLeadsFromContacts(ownerEmail, limit);
+      }
+      
+      console.log('Found Leads object:', leadsObject.objectTypeId, leadsObject.name);
+
+      // Build search body for Leads object
+      let leadsSearchBody: any = {
+        filterGroups: [
+          {
+            filters: []
+          }
+        ],
+        sorts: [
+          {
+            propertyName: 'hs_lastmodifieddate',
+            direction: 'DESCENDING'
+          }
+        ],
+        limit: limit,
+        properties: [
+          'hs_lead_name',
+          'hs_lead_status', 
+          'hs_lead_owner',
+          'hs_createdate',
+          'hs_lastmodifieddate'
+        ]
+      };
+
+      // Add owner filter if provided
+      if (ownerEmail) {
+        const ownerId = await this.getOwnerByEmail(ownerEmail);
+        if (ownerId) {
+          leadsSearchBody.filterGroups[0].filters.push({
+            propertyName: 'hs_lead_owner',
+            operator: 'EQ',
+            value: ownerId
+          });
+        }
+      }
+
+      // Add lead status filter for active leads
+      leadsSearchBody.filterGroups[0].filters.push({
+        propertyName: 'hs_lead_status',
+        operator: 'IN',
+        values: ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']
+      });
+
+      console.log('Searching Leads object with body:', JSON.stringify(leadsSearchBody, null, 2));
+
+      const searchResult = await this.makeRequest(`/crm/v3/objects/${leadsObject.objectTypeId}/search`, {
+        method: 'POST',
+        body: JSON.stringify(leadsSearchBody)
+      });
+
+      console.log(`Found ${searchResult.results?.length || 0} leads from Leads object`);
+
+      // Get associated contacts for each lead
+      const enrichedLeads = await Promise.all(
+        (searchResult.results || []).map(async (lead: any) => {
+          try {
+            console.log(`Processing lead: ${lead.properties?.hs_lead_name || 'Unknown'} (Status: ${lead.properties?.hs_lead_status})`);
+            
+            // Get associated contact
+            const associations = await this.makeRequest(`/crm/v3/objects/${leadsObject.objectTypeId}/${lead.id}/associations/contacts`, {
+              method: 'GET'
+            });
+            
+            let contactInfo = {
+              company: 'Unknown Company',
+              firstName: '',
+              lastName: '',
+              email: ''
+            };
+            
+            if (associations.results?.length > 0) {
+              const contactId = associations.results[0].id;
+              const contact = await this.makeRequest(`/crm/v3/objects/contacts/${contactId}`, {
+                method: 'GET',
+                params: {
+                  properties: 'company,firstname,lastname,email'
+                }
+              });
+              
+              contactInfo = {
+                company: contact.properties?.company || 'Unknown Company',
+                firstName: contact.properties?.firstname || '',
+                lastName: contact.properties?.lastname || '',
+                email: contact.properties?.email || ''
+              };
+            }
+
+            return {
+              id: lead.id,
+              properties: {
+                ...contactInfo,
+                hubspot_owner_assigneddate: lead.properties?.hs_createdate,
+                hs_lead_status: lead.properties?.hs_lead_status
+              },
+              leadStage: lead.properties?.hs_lead_status || 'New',
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${leadsObject.objectTypeId}/${lead.id}`
+            };
+          } catch (error) {
+            console.error(`Error enriching lead ${lead.id}:`, error);
+            return {
+              id: lead.id,
+              properties: {
+                company: lead.properties?.hs_lead_name || 'Unknown',
+                firstName: '',
+                lastName: '',
+                email: '',
+                hubspot_owner_assigneddate: lead.properties?.hs_createdate,
+                hs_lead_status: lead.properties?.hs_lead_status
+              },
+              leadStage: lead.properties?.hs_lead_status || 'New',
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/record/${leadsObject.objectTypeId}/${lead.id}`
+            };
+          }
+        })
+      );
+
+      console.log(`Returning ${enrichedLeads.length} enriched leads`);
+      return enrichedLeads;
+    } catch (error) {
+      console.error('Error fetching sales inbox leads:', error);
+      return [];
+    }
+  }
+
+  // Fallback method to get leads from contacts when custom Leads object not found
+  async getSalesInboxLeadsFromContacts(ownerEmail?: string, limit: number = 20): Promise<any[]> {
     try {
       let searchBody: any = {
         filterGroups: [
           {
             filters: [
-              // Filter for leads/contacts with email
               {
                 propertyName: 'email',
                 operator: 'HAS_PROPERTY'
               },
-              // Remove all filtering except email to see what leads exist
               {
                 propertyName: 'lifecyclestage',
-                operator: 'IN',
-                values: ['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity', 'subscriber', 'other', 'customer']
+                operator: 'EQ',
+                value: 'lead'
               }
             ]
           }
@@ -682,7 +835,7 @@ Services Include:
         properties: [
           'email',
           'firstname',
-          'lastname', 
+          'lastname',
           'company',
           'phone',
           'hs_lead_status',
@@ -698,41 +851,6 @@ Services Include:
         ]
       };
 
-      // Filter by owner if provided
-      if (ownerEmail) {
-        console.log(`Looking up owner ID for email: ${ownerEmail}`);
-        const ownerId = await this.getOwnerByEmail(ownerEmail);
-        console.log(`Found owner ID: ${ownerId} for email: ${ownerEmail}`);
-        
-        if (ownerId) {
-          searchBody.filterGroups[0].filters.push({
-            propertyName: 'hubspot_owner_id',
-            operator: 'EQ',
-            value: ownerId
-          });
-        } else {
-          console.warn(`No owner ID found for email: ${ownerEmail}, showing all leads`);
-        }
-      }
-
-      console.log('Fetching sales inbox leads with body:', JSON.stringify(searchBody, null, 2));
-
-      // Search contacts with lifecycle stage = 'lead' and proper filtering
-      console.log('Searching contacts with lifecycle stage = lead');
-      
-      // Override search to focus on contacts that are leads
-      searchBody.filterGroups[0].filters = [
-        {
-          propertyName: 'email',
-          operator: 'HAS_PROPERTY'
-        },
-        {
-          propertyName: 'lifecyclestage',
-          operator: 'EQ',
-          value: 'lead'
-        }
-      ];
-      
       // Add owner filter if provided
       if (ownerEmail) {
         const ownerId = await this.getOwnerByEmail(ownerEmail);
@@ -744,7 +862,8 @@ Services Include:
           });
         }
       }
-      
+
+      console.log('Searching contacts with lifecycle stage = lead');
       const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
         method: 'POST',
         body: JSON.stringify(searchBody)
@@ -767,7 +886,7 @@ Services Include:
             );
 
             // Get stage name from pipeline info if available
-            let leadStage = contact.properties?.lifecyclestage || 'New Lead';
+            let leadStage = contact.properties?.hs_lead_status || contact.properties?.lifecyclestage || 'New Lead';
             if (activeDeal?.properties?.dealstage) {
               // Try to get human-readable stage name
               const stageInfo = await this.getDealStageInfo(activeDeal.properties.dealstage);
@@ -778,15 +897,15 @@ Services Include:
               ...contact,
               leadStage,
               activeDealId: activeDeal?.id || null,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/lead/${contact.id}`
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/contact/${contact.id}`
             };
           } catch (error) {
             console.error(`Error enriching contact ${contact.id}:`, error);
             return {
               ...contact,
-              leadStage: contact.properties?.lifecyclestage || 'New Lead',
+              leadStage: contact.properties?.hs_lead_status || contact.properties?.lifecyclestage || 'New Lead',
               activeDealId: null,
-              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/lead/${contact.id}`
+              hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/contact/${contact.id}`
             };
           }
         })
@@ -795,7 +914,7 @@ Services Include:
       console.log(`Returning ${enrichedContacts.length} enriched contacts`);
       return enrichedContacts;
     } catch (error) {
-      console.error('Error fetching sales inbox leads:', error);
+      console.error('Error fetching sales inbox leads from contacts:', error);
       return [];
     }
   }
