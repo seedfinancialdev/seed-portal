@@ -752,12 +752,12 @@ Services Include:
 
           // For the standard leads object, use the correct property names
           const ownerProperty = 'hubspot_owner_id';
-          const statusProperty = 'hs_lead_status';
+          const statusProperty = 'hs_pipeline_stage';
           
           // Set properties - standard leads object uses these property names
           leadsSearchBody.properties = [
             'hs_lead_name',
-            'hs_lead_status', 
+            'hs_pipeline_stage', 
             'hubspot_owner_id',
             'hs_createdate',
             'hs_lastmodifieddate',
@@ -908,7 +908,7 @@ Services Include:
         limit: limit,
         properties: isStandardLeads ? [
           'hs_lead_name',
-          'hs_lead_status', 
+          'hs_pipeline_stage', 
           'hubspot_owner_id',  // Standard leads use hubspot_owner_id
           'hs_createdate',
           'hs_lastmodifieddate',
@@ -936,7 +936,7 @@ Services Include:
 
       // Add lead status filter for active leads (exclude Qualified and Disqualified)
       leadsSearchBody.filterGroups[0].filters.push({
-        propertyName: 'hs_lead_status',
+        propertyName: isStandardLeads ? 'hs_pipeline_stage' : 'hs_lead_status',
         operator: 'IN',
         values: ['New', 'Assigned', 'Contact Attempted', 'Discovery Call Booked']  // Include only active stages
       });
