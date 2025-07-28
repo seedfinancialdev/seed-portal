@@ -29,7 +29,7 @@ import {
   Zap
 } from "lucide-react";
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -71,7 +71,42 @@ export default function Profile() {
     },
   });
 
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      form.reset({
+        phoneNumber: formatPhoneNumber(user.phoneNumber || ''),
+        profilePhoto: user.profilePhoto || '',
+        address: user.address || '',
+        city: user.city || '',
+        state: user.state || '',
+        zipCode: user.zipCode || '',
+        country: user.country || 'US',
+      });
+    }
+  }, [user, form, formatPhoneNumber]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Phone number formatting function
+  const formatPhoneNumber = useCallback((value: string) => {
+    // Remove all non-digits
+    const phoneNumber = value.replace(/\D/g, '');
+    
+    // Don't format if empty
+    if (!phoneNumber) return '';
+    
+    // Format as (XXX) XXX-XXXX
+    if (phoneNumber.length >= 10) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6, 10)}`;
+    } else if (phoneNumber.length >= 6) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3, 6)}-${phoneNumber.slice(6)}`;
+    } else if (phoneNumber.length >= 3) {
+      return `(${phoneNumber.slice(0, 3)}) ${phoneNumber.slice(3)}`;
+    } else {
+      return phoneNumber;
+    }
+  }, []);
 
   // Handle photo upload
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -430,8 +465,12 @@ export default function Profile() {
                             <FormLabel>Phone Number</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="(310) 737-2067" 
-                                {...field} 
+                                placeholder="(555) 555-5555" 
+                                {...field}
+                                onChange={(e) => {
+                                  const formatted = formatPhoneNumber(e.target.value);
+                                  field.onChange(formatted);
+                                }}
                                 className="bg-white border-gray-200"
                               />
                             </FormControl>
