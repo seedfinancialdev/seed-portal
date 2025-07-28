@@ -46,9 +46,9 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   });
 
   const leads: SalesLead[] = (leadsData?.leads || []).sort((a: SalesLead, b: SalesLead) => {
-    // Sort by assigned date (most recent first)
-    const dateA = new Date(a.properties.hubspot_owner_assigneddate || '1970-01-01');
-    const dateB = new Date(b.properties.hubspot_owner_assigneddate || '1970-01-01');
+    // Sort by assigned date (most recent first) - use this reliable date field
+    const dateA = new Date(a.properties.hubspot_owner_assigneddate || a.properties.hs_createdate || '1970-01-01');
+    const dateB = new Date(b.properties.hubspot_owner_assigneddate || b.properties.hs_createdate || '1970-01-01');
     return dateB.getTime() - dateA.getTime();
   });
 
@@ -63,8 +63,8 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
     return lead.properties.email;
   };
 
-  const formatAssignedDate = (dateString?: string) => {
-    if (!dateString) return 'Not assigned';
+  const formatCreateDate = (dateString?: string) => {
+    if (!dateString) return 'No date';
     try {
       return format(new Date(dateString), 'MMM d, yyyy');
     } catch {
@@ -185,7 +185,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
                       {lead.properties.company || 'Unknown Company'}
                     </h3>
                     <p className="text-xs text-gray-600">
-                      {formatContactName(lead)} • {formatAssignedDate(lead.properties.hubspot_owner_assigneddate)} • {lead.leadStage}
+                      {formatContactName(lead)} • {formatCreateDate(lead.properties.hubspot_owner_assigneddate || lead.properties.hs_createdate)} • {lead.leadStage}
                     </p>
                   </div>
                 </div>

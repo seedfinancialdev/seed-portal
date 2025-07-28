@@ -22,6 +22,8 @@ Preferred communication style: Simple, everyday language.
   - Sales inbox now loads instantly when switching between users without 30-second delays
   - Fixed HubSpot "Open in HubSpot" button URLs to use correct lead overview format with leadId parameter
   - Added frontend sorting to display leads by most recent assigned date first
+  - Changed date property to use hubspot_owner_assigneddate for more reliable sorting (hs_createdate was less reliable)
+  - Both date fields are now available with fallback logic for maximum reliability
 
 ✓ **Complete Dashboard Integration and Bug Fixes** (July 28, 2025)
   - Fixed HubSpot dashboard integration to show correct pipeline data ($62.5K+ pipeline value)

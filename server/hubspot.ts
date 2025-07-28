@@ -797,7 +797,8 @@ Services Include:
               id: lead.id,
               properties: {
                 ...contactInfo,
-                hubspot_owner_assigneddate: createDate,
+                hs_createdate: createDate,
+                hubspot_owner_assigneddate: lead.properties?.hubspot_owner_assigneddate,
                 hs_lead_status: leadStatus
               },
               leadStage: leadStatus,
@@ -816,7 +817,8 @@ Services Include:
                 firstName: '',
                 lastName: '',
                 email: '',
-                hubspot_owner_assigneddate: createDate,
+                hs_createdate: createDate,
+                hubspot_owner_assigneddate: lead.properties?.hubspot_owner_assigneddate,
                 hs_lead_status: leadStatus
               },
               leadStage: leadStatus,
