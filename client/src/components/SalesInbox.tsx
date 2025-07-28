@@ -141,87 +141,51 @@ export function SalesInbox({ limit = 20 }: SalesInboxProps) {
   }
 
   return (
-    <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+    <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl h-fit">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Inbox className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <CardTitle className="text-xl">Sales Inbox</CardTitle>
-              <CardDescription>
-                {leads.length} active lead{leads.length !== 1 ? 's' : ''} requiring attention
-              </CardDescription>
-            </div>
+          <div>
+            <CardTitle className="text-lg font-medium text-white">Sales Inbox</CardTitle>
+            <CardDescription className="text-sm text-white/80">Active leads requiring attention</CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
-          </div>
+          <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs">View All</Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         {leads.length === 0 ? (
           <div className="text-center py-8">
-            <Inbox className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No active leads</h3>
-            <p className="text-gray-600">All caught up! No leads requiring attention at the moment.</p>
+            <Inbox className="h-12 w-12 text-white/40 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-white mb-2">No active leads</h3>
+            <p className="text-white/60">All caught up! No leads requiring attention at the moment.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {leads.map((lead) => (
-              <div
-                key={lead.id}
-                className="flex items-center justify-between p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={getAvatarUrl(lead) || undefined} alt={lead.properties.company || 'Company'} />
-                    <AvatarFallback className="bg-blue-100">
-                      <Building2 className="h-6 w-6 text-blue-600" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 text-sm">
-                      {lead.properties.company || 'Unknown Company'}
-                    </h3>
-                    <div className="flex items-center text-xs text-gray-600 space-x-2">
-                      <span className="flex items-center">
-                        <User className="h-3 w-3 mr-1" />
-                        {formatContactName(lead)}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {formatAssignedDate(lead.properties.hubspot_owner_assigneddate)}
-                      </span>
-                      <span>•</span>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${getLeadStageColor(lead.leadStage)}`}
-                      >
-                        {lead.leadStage}
-                      </Badge>
-                    </div>
-                  </div>
+          leads.map((lead) => (
+            <div
+              key={lead.id}
+              className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-white" />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => window.open(lead.hubspotContactUrl, '_blank')}
-                    className="text-xs"
-                  >
-                    <ExternalLink className="h-3 w-3 mr-1" />
-                    Open in HubSpot
-                  </Button>
+                <div>
+                  <h3 className="font-semibold text-gray-900 text-sm">
+                    {lead.properties.company || 'Unknown Company'}
+                  </h3>
+                  <p className="text-xs text-gray-600">
+                    {formatContactName(lead)} • {formatAssignedDate(lead.properties.hubspot_owner_assigneddate)} • {lead.leadStage}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
+              <Button
+                size="sm"
+                onClick={() => window.open(lead.hubspotContactUrl, '_blank')}
+                className="bg-orange-500 hover:bg-orange-600 text-white text-xs"
+              >
+                Open in HubSpot
+              </Button>
+            </div>
+          ))
         )}
       </CardContent>
     </Card>

@@ -665,7 +665,7 @@ Services Include:
         ],
         sorts: [
           {
-            propertyName: 'notes_last_activity_date',
+            propertyName: 'lastmodifieddate',
             direction: 'DESCENDING'
           }
         ],
@@ -699,15 +699,21 @@ Services Include:
         }
       }
 
+      console.log('Fetching sales inbox leads with body:', JSON.stringify(searchBody, null, 2));
+
       const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
         method: 'POST',
         body: JSON.stringify(searchBody)
       });
 
+      console.log(`Found ${searchResult.results?.length || 0} contacts for sales inbox`);
+
       // Enrich each contact with deal information for lead stage
       const enrichedContacts = await Promise.all(
         (searchResult.results || []).map(async (contact: any) => {
           try {
+            console.log(`Processing contact: ${contact.properties?.company || 'Unknown'} (${contact.properties?.email})`);
+            
             // Get associated deals to determine lead stage
             const deals = await this.getContactDeals(contact.id);
             const activeDeal = deals.find((deal: any) => 
@@ -716,7 +722,7 @@ Services Include:
             );
 
             // Get stage name from pipeline info if available
-            let leadStage = 'New Lead';
+            let leadStage = contact.properties?.lifecyclestage || 'New Lead';
             if (activeDeal?.properties?.dealstage) {
               // Try to get human-readable stage name
               const stageInfo = await this.getDealStageInfo(activeDeal.properties.dealstage);
@@ -733,7 +739,7 @@ Services Include:
             console.error(`Error enriching contact ${contact.id}:`, error);
             return {
               ...contact,
-              leadStage: 'New Lead',
+              leadStage: contact.properties?.lifecyclestage || 'New Lead',
               activeDealId: null,
               hubspotContactUrl: `https://app.hubspot.com/contacts/149640503/contact/${contact.id}`
             };
@@ -741,6 +747,7 @@ Services Include:
         })
       );
 
+      console.log(`Returning ${enrichedContacts.length} enriched contacts`);
       return enrichedContacts;
     } catch (error) {
       console.error('Error fetching sales inbox leads:', error);
