@@ -44,8 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/login", credentials);
       return await res.json();
     },
-    onSuccess: (user: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: async (user: SelectUser) => {
+      // Don't set partial login data in cache - force fresh fetch of complete profile
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/user"] });
+      
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",

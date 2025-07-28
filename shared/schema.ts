@@ -107,6 +107,8 @@ export const updateProfileSchema = z.object({
   state: z.string().optional(),
   zipCode: z.string().optional(),
   country: z.string().optional(),
+  latitude: z.string().optional(),
+  longitude: z.string().optional(),
   lastHubspotSync: z.string().optional(),
 });
 

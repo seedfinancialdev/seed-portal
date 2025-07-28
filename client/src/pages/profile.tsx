@@ -244,11 +244,7 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: async (updatedUser, variables) => {
-      // Force refresh user data immediately
-      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      
-      // If address was updated, geocode and fetch weather
+      // If address was updated, geocode and save coordinates to database
       if (variables.address || variables.city || variables.state) {
         const geocodeResult = await geocodeAddress(
           variables.address || '',
@@ -258,13 +254,28 @@ export default function Profile() {
         );
         
         if (geocodeResult) {
-          await fetchWeatherByCoordinates(
-            geocodeResult.latitude,
-            geocodeResult.longitude,
-            geocodeResult.location
-          );
+          // Save coordinates to database
+          try {
+            await apiRequest('PATCH', '/api/user/profile', {
+              latitude: geocodeResult.latitude.toString(),
+              longitude: geocodeResult.longitude.toString(),
+            });
+            
+            // Fetch weather with new coordinates
+            await fetchWeatherByCoordinates(
+              geocodeResult.latitude,
+              geocodeResult.longitude,
+              geocodeResult.location
+            );
+          } catch (error) {
+            console.error('Failed to save coordinates:', error);
+          }
         }
       }
+      
+      // Force refresh user data immediately after all updates
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
       
       toast({
         title: "Profile Updated",
