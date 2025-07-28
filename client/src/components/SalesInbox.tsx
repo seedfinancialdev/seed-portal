@@ -64,7 +64,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
     gcTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: false,
-    enabled: isModalOpen, // Only fetch when modal is opened
+    enabled: true, // Always fetch to get the total count for button
   });
 
   const leads: SalesLead[] = (leadsData?.leads || []).sort((a: SalesLead, b: SalesLead) => {
@@ -73,6 +73,9 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
     const dateB = new Date(b.properties.hubspot_owner_assigneddate || b.properties.hs_createdate || '1970-01-01');
     return dateB.getTime() - dateA.getTime();
   });
+
+  const allLeads: SalesLead[] = (allLeadsData?.leads || []);
+  const totalLeadCount = allLeads.length > 0 ? allLeads.length : leads.length;
 
   const formatContactName = (lead: SalesLead) => {
     const firstName = lead.properties.firstname || '';
@@ -184,7 +187,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogTrigger asChild>
               <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
-                View All ({leads.length})
+                View All ({totalLeadCount})
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[90vh]">
