@@ -355,39 +355,7 @@ export default function Profile() {
 
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Profile Photo Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-700">Profile Photo</h3>
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-20 w-20">
-                      <AvatarImage src={user?.profilePhoto || ''} alt="Profile" />
-                      <AvatarFallback className="text-lg">
-                        {user?.firstName?.[0]}{user?.lastName?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-2"
-                      >
-                        <Camera className="h-4 w-4" />
-                        Change Photo
-                      </Button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                      />
-                    </div>
-                  </div>
-                </div>
 
-                <Separator />
 
                 {/* HubSpot Synced Fields (Read-Only) */}
                 <div className="space-y-4">
@@ -649,21 +617,12 @@ export default function Profile() {
                   
                   <div className="space-y-2">
                     <input
+                      ref={fileInputRef}
                       type="file"
                       accept="image/*"
                       className="hidden"
                       id="photo-upload"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          // For demo purposes, we'll use a placeholder URL
-                          // In production, you'd upload to cloud storage
-                          toast({
-                            title: "Photo upload",
-                            description: "Photo upload feature coming soon",
-                          });
-                        }
-                      }}
+                      onChange={handlePhotoUpload}
                     />
                     <label
                       htmlFor="photo-upload"
@@ -673,7 +632,7 @@ export default function Profile() {
                       Change Photo
                     </label>
                     <p className="text-xs text-gray-500">
-                      Upload a new profile photo (local only)
+                      Upload a new profile photo (5mb max)
                     </p>
                   </div>
                 </div>
