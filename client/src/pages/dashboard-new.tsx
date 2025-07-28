@@ -89,7 +89,7 @@ export default function Dashboard() {
   const [weather, setWeather] = useState<WeatherData>({
     temperature: null,
     condition: '',
-    location: 'Marina Del Rey, CA',
+    location: '',
     isLoading: true
   });
 
@@ -105,20 +105,32 @@ export default function Dashboard() {
     return "Good evening";
   };
 
-  // Fetch live weather data based on user's location or default
+  // Fetch live weather data based on user's location
   useEffect(() => {
     const fetchWeather = async () => {
       try {
-        // Use user's coordinates if available, otherwise default to Marina Del Rey, CA
-        let lat = 33.9806;
-        let lon = -118.4416;
-        let locationName = 'Marina Del Rey, CA';
+        console.log('Dashboard weather useEffect triggered');
+        console.log('Current user object:', user);
+        console.log('User latitude:', user?.latitude);
+        console.log('User longitude:', user?.longitude);
         
-        if (user?.latitude && user?.longitude) {
-          lat = parseFloat(user.latitude.toString());
-          lon = parseFloat(user.longitude.toString());
-          locationName = user.city && user.state ? `${user.city}, ${user.state}` : 'Your Location';
+        // Only fetch weather if user has coordinates set
+        if (!user?.latitude || !user?.longitude) {
+          console.log('No user coordinates available, skipping weather fetch');
+          setWeather({
+            temperature: null,
+            condition: '',
+            location: 'Set address in profile for weather',
+            isLoading: false
+          });
+          return;
         }
+        
+        const lat = parseFloat(user.latitude.toString());
+        const lon = parseFloat(user.longitude.toString());
+        const locationName = user.city && user.state ? `${user.city}, ${user.state}` : 'Your Location';
+        
+        console.log('Dashboard fetching weather for:', locationName, 'at coordinates:', lat, lon);
         
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
@@ -150,11 +162,11 @@ export default function Dashboard() {
         });
       } catch (error) {
         console.error('Failed to fetch weather:', error);
-        // Fallback to pleasant default on error
+        // Fallback without hardcoded location
         setWeather({
-          temperature: 72,
+          temperature: null,
           condition: 'clear',
-          location: user?.city && user?.state ? `${user.city}, ${user.state}` : 'Marina Del Rey, CA',
+          location: user?.city && user?.state ? `${user.city}, ${user.state}` : 'Weather unavailable',
           isLoading: false
         });
       }
