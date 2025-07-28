@@ -26,11 +26,11 @@ interface SalesInboxProps {
   limit?: number;
 }
 
-export function SalesInbox({ limit = 20 }: SalesInboxProps) {
+export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   const { data: leadsData, isLoading, error } = useQuery({
-    queryKey: ['/api/sales-inbox/leads', limit, 'showAll'],
+    queryKey: ['/api/sales-inbox/leads', limit],
     queryFn: async () => {
-      const response = await fetch(`/api/sales-inbox/leads?limit=${limit}&showAll=true`);
+      const response = await fetch(`/api/sales-inbox/leads?limit=${limit}`);
       if (!response.ok) {
         throw new Error('Failed to fetch sales inbox leads');
       }
@@ -151,7 +151,7 @@ export function SalesInbox({ limit = 20 }: SalesInboxProps) {
           <Button className="bg-orange-500 hover:bg-orange-600 text-white text-xs">View All</Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3" style={{ minHeight: '400px' }}>
         {leads.length === 0 ? (
           <div className="text-center py-8">
             <Inbox className="h-12 w-12 text-white/40 mx-auto mb-4" />
@@ -159,33 +159,39 @@ export function SalesInbox({ limit = 20 }: SalesInboxProps) {
             <p className="text-white/60">All caught up! No leads requiring attention at the moment.</p>
           </div>
         ) : (
-          leads.map((lead) => (
-            <div
-              key={lead.id}
-              className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-sm">
-                    {lead.properties.company || 'Unknown Company'}
-                  </h3>
-                  <p className="text-xs text-gray-600">
-                    {formatContactName(lead)} • {formatAssignedDate(lead.properties.hubspot_owner_assigneddate)} • {lead.leadStage}
-                  </p>
-                </div>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => window.open(lead.hubspotContactUrl, '_blank')}
-                className="bg-orange-500 hover:bg-orange-600 text-white text-xs"
+          <>
+            {leads.slice(0, 8).map((lead) => (
+              <div
+                key={lead.id}
+                className="flex items-center justify-between p-4 bg-white border-l-4 border-l-orange-500 rounded-lg shadow-sm"
               >
-                Open in HubSpot
-              </Button>
-            </div>
-          ))
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm">
+                      {lead.properties.company || 'Unknown Company'}
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      {formatContactName(lead)} • {formatAssignedDate(lead.properties.hubspot_owner_assigneddate)} • {lead.leadStage}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => window.open(lead.hubspotContactUrl, '_blank')}
+                  className="bg-orange-500 hover:bg-orange-600 text-white text-xs"
+                >
+                  Open in HubSpot
+                </Button>
+              </div>
+            ))}
+            {/* Fill remaining space for consistent height */}
+            {leads.length < 8 && (
+              <div style={{ height: `${(8 - leads.length) * 80}px` }} />
+            )}
+          </>
         )}
       </CardContent>
     </Card>

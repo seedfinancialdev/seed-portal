@@ -340,7 +340,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-3 gap-8 mb-16">
           {/* Dynamic Sales Inbox */}
           <div className="col-span-2">
-            <SalesInbox limit={20} />
+            <SalesInbox limit={8} />
           </div>
 
           {/* Sidebar Tools */}
