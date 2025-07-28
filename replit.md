@@ -20,7 +20,7 @@ Preferred communication style: Simple, everyday language.
   - Pipeline correctly targets "Seed Sales Pipeline" (ID: 761069086) with proper stage filtering
   - Swapped MTD Revenue and Active Deals card positions per user request
   - Changed "Active Leads" to "Active Deals" counting deals NOT in closed won/lost stages
-  - Added smooth counter animations to all 3 metric cards with staggered timing for visual appeal
+  - Added fast counter animations to all 3 metric cards (completes within 1 second) with staggered timing for visual appeal
 
 ✓ **QBO Subscription Feature Added** (July 27, 2025)
   - Added QBO Subscription checkbox to bookkeeping section below Override Minimum Cleanup
