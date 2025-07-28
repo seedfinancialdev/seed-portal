@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import {
   Dialog,
@@ -107,6 +107,7 @@ interface SalesRepStats {
 
 export default function CommissionTracker() {
   const { user } = useAuth();
+  const [location, setLocation] = useLocation();
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [monthlyBonuses, setMonthlyBonuses] = useState<MonthlyBonus[]>([]);
@@ -365,7 +366,7 @@ export default function CommissionTracker() {
             onClick={() => {
               // Invalidate dashboard metrics to refresh data
               queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-              window.location.href = '/';
+              setLocation('/');
             }}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />

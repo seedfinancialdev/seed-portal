@@ -24,7 +24,7 @@ import {
   Eye,
   Download
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +69,7 @@ interface ClientSnapshot {
 
 export default function ClientIntel() {
   const { user } = useAuth();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClient, setSelectedClient] = useState<ClientSnapshot | null>(null);
@@ -236,7 +237,7 @@ export default function ClientIntel() {
               onClick={() => {
                 // Invalidate dashboard metrics to refresh data
                 queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-                window.location.href = '/';
+                setLocation('/');
               }}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />

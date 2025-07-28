@@ -21,6 +21,7 @@ Preferred communication style: Simple, everyday language.
   - Swapped MTD Revenue and Active Deals card positions per user request
   - Changed "Active Leads" to "Active Deals" counting deals NOT in closed won/lost stages
   - Added fast counter animations to all 3 metric cards (completes within 1 second) with staggered timing for visual appeal
+  - Fixed navigation performance issue - replaced slow `window.location.href` with fast React Router navigation in Commission Tracker and Client Intel pages
 
 ✓ **QBO Subscription Feature Added** (July 27, 2025)
   - Added QBO Subscription checkbox to bookkeeping section below Override Minimum Cleanup
