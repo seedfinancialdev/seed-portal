@@ -1709,8 +1709,8 @@ Generated: ${new Date().toLocaleDateString()}`;
 
 
 
-  // Get user details for profile syncing
-  async getUserDetails(email: string): Promise<{ firstName?: string; lastName?: string; phoneNumber?: string; email?: string } | null> {
+  // Get user details for profile syncing (name and email only)
+  async getUserDetails(email: string): Promise<{ firstName?: string; lastName?: string; email?: string } | null> {
     try {
       // First try to get from owners (internal team members)
       const ownersResponse = await this.makeRequest('/crm/v3/owners');
@@ -1724,52 +1724,13 @@ Generated: ${new Date().toLocaleDateString()}`;
           console.log('Owner data found:', {
             firstName: owner.firstName,
             lastName: owner.lastName,
-            email: owner.email,
-            phone: owner.phone,
-            allFields: Object.keys(owner)
+            email: owner.email
           });
-          
-          // Owner found but no phone - also check if this user exists as a contact
-          console.log('Owner phone is undefined, checking contacts for phone number...');
-          const contactResult = await this.verifyContactByEmail(email);
-          if (contactResult.verified && contactResult.contact) {
-            const props = contactResult.contact.properties;
-            
-            console.log('Contact properties found for owner:', {
-              firstname: props.firstname,
-              lastname: props.lastname,
-              email: props.email,
-              phone: (props as any).phone,
-              mobilephone: (props as any).mobilephone,
-              hs_phone: (props as any).hs_phone,
-              phone_number: (props as any).phone_number,
-              work_phone: (props as any).work_phone,
-              mobile_phone: (props as any).mobile_phone,
-              allContactProps: Object.keys(props)
-            });
-            
-            // Try multiple phone field variations
-            const phoneNumber = (props as any).phone || 
-                               (props as any).mobilephone || 
-                               (props as any).hs_phone || 
-                               (props as any).phone_number ||
-                               (props as any).work_phone ||
-                               (props as any).mobile_phone ||
-                               '';
-            
-            return {
-              firstName: owner.firstName || '',
-              lastName: owner.lastName || '',
-              email: owner.email || email,
-              phoneNumber: phoneNumber
-            };
-          }
           
           return {
             firstName: owner.firstName || '',
             lastName: owner.lastName || '',
-            email: owner.email || email,
-            phoneNumber: ''
+            email: owner.email || email
           };
         }
       }
@@ -1779,31 +1740,16 @@ Generated: ${new Date().toLocaleDateString()}`;
       if (contactResult.verified && contactResult.contact) {
         const props = contactResult.contact.properties;
         
-        console.log('Contact properties found:', {
+        console.log('Contact data found:', {
           firstname: props.firstname,
           lastname: props.lastname,
-          email: props.email,
-          phone: (props as any).phone,
-          mobilephone: (props as any).mobilephone,
-          hs_phone: (props as any).hs_phone,
-          phone_number: (props as any).phone_number,
-          allContactProps: Object.keys(props)
+          email: props.email
         });
-        
-        // Try multiple phone field variations
-        const phoneNumber = (props as any).phone || 
-                           (props as any).mobilephone || 
-                           (props as any).hs_phone || 
-                           (props as any).phone_number ||
-                           (props as any).work_phone ||
-                           (props as any).mobile_phone ||
-                           '';
         
         return {
           firstName: props.firstname || '',
           lastName: props.lastname || '',
-          email: props.email || email,
-          phoneNumber: phoneNumber
+          email: props.email || email
         };
       }
 

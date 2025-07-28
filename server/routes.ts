@@ -686,11 +686,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found in HubSpot" });
       }
 
-      // Update user with HubSpot data (excluding photo)
+      // Update user with HubSpot data (name and email only)
       const updateData = {
         firstName: hubspotData.firstName,
         lastName: hubspotData.lastName,
-        phoneNumber: hubspotData.phoneNumber,
         lastHubspotSync: new Date().toISOString()
       };
 
@@ -703,7 +702,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: {
           firstName: updatedUser.firstName,
           lastName: updatedUser.lastName,
-          phoneNumber: updatedUser.phoneNumber,
           lastHubspotSync: updatedUser.lastHubspotSync
         }
       });

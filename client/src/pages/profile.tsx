@@ -60,6 +60,7 @@ export default function Profile() {
   const form = useForm<UpdateProfile>({
     resolver: zodResolver(updateProfileSchema),
     defaultValues: {
+      phoneNumber: user?.phoneNumber || '',
       address: user?.address || '',
       city: user?.city || '',
       state: user?.state || '',
@@ -299,7 +300,7 @@ export default function Profile() {
                     <Alert className="flex-1 mr-4">
                       <Info className="h-4 w-4" />
                       <AlertDescription>
-                        To update your name or phone number, please make changes in HubSpot.
+                        Name and email are synced from HubSpot. Phone number can be edited below.
                       </AlertDescription>
                     </Alert>
                     
@@ -338,43 +339,62 @@ export default function Profile() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="email" className="text-gray-700">Email</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <Input 
-                          id="email"
-                          value={user?.email || ''} 
-                          disabled 
-                          className="bg-gray-50 text-gray-600"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="phone" className="text-gray-700">Phone Number</Label>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <Input 
-                          id="phone"
-                          value={user?.phoneNumber || 'Not set'} 
-                          disabled 
-                          className="bg-gray-50 text-gray-600"
-                        />
-                      </div>
+                  <div>
+                    <Label htmlFor="email" className="text-gray-700">Email</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <Input 
+                        id="email"
+                        value={user?.email || ''} 
+                        disabled 
+                        className="bg-gray-50 text-gray-600"
+                      />
                     </div>
                   </div>
                 </div>
 
                 <Separator />
 
-                {/* Editable Address Fields */}
+                {/* Editable Fields */}
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <MapPin className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-700">Address & Location</span>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Phone Number Field */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-600" />
+                        <span className="text-sm font-medium text-gray-700">Contact Information</span>
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="phoneNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone Number</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="(310) 737-2067" 
+                                {...field} 
+                                className="bg-white border-gray-200"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Your contact phone number (editable locally)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
+
+                    <Separator />
+
+                    {/* Address Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-700">Address & Location</span>
+                      </div>
 
                     <FormField
                       control={form.control}
@@ -481,6 +501,7 @@ export default function Profile() {
                       {updateProfileMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
                       Update Profile
                     </Button>
+                    </div>
                   </form>
                 </Form>
               </CardContent>
