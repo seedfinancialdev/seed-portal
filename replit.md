@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Enhanced Login Experience and Bug Fixes** (July 28, 2025)
+  - **Password Reveal Toggle**: Added eye/eye-off icon button in password field for password visibility control
+  - **Faster Toast Notifications**: Reduced login/logout toast duration from 5 seconds to 2 seconds
+  - **React Hooks Error Fix**: Fixed critical hooks order error in AuthPage that caused crashes after login
+  - **Improved UX**: Password field now has proper spacing and styling for toggle button
+  - **Consistent Design**: Login improvements maintain existing Seed Financial branding and layout
+  - **Better Accessibility**: Users can now verify password input before submitting login form
+
 ✓ **User-Specific Dashboard Stats Fix** (July 28, 2025)
   - **Fixed Cross-User Data Issue**: Dashboard metric cards were showing same data for all users
   - **User-Specific Query Keys**: Added user email to query keys to ensure proper data isolation
