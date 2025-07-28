@@ -302,6 +302,7 @@ export default function Profile() {
       const knownLocations: Record<string, { latitude: number; longitude: number }> = {
         'Marina Del Rey, CA': { latitude: 33.9802, longitude: -118.4517 },
         'Los Angeles, CA': { latitude: 34.0522, longitude: -118.2437 },
+        'Los Angeles, California': { latitude: 34.0522, longitude: -118.2437 },
         'San Francisco, CA': { latitude: 37.7749, longitude: -122.4194 },
         'Cupertino, CA': { latitude: 37.3318, longitude: -122.0312 },
         'Cupertino, California': { latitude: 37.3318, longitude: -122.0312 },
@@ -441,33 +442,19 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: async (updatedUser, variables) => {
-      // If address was updated, geocode and save coordinates to database
-      if (variables.address || variables.city || variables.state) {
-        const geocodeResult = await geocodeAddress(
-          variables.address || '',
-          variables.city || '',
-          variables.state || '',
-          variables.zipCode || ''
-        );
-        
-        if (geocodeResult) {
-          // Save coordinates to database
-          try {
-            await apiRequest('PATCH', '/api/user/profile', {
-              latitude: geocodeResult.latitude.toString(),
-              longitude: geocodeResult.longitude.toString(),
-            });
-            
-            // Fetch weather with new coordinates
-            await fetchWeatherByCoordinates(
-              geocodeResult.latitude,
-              geocodeResult.longitude,
-              geocodeResult.location
-            );
-          } catch (error) {
-            console.error('Failed to save coordinates:', error);
-          }
-        }
+      // Always refresh weather card after profile update using current form values
+      const currentAddress = form.getValues('address') || '';
+      const currentCity = form.getValues('city') || '';
+      const currentState = form.getValues('state') || '';
+      const currentZipCode = form.getValues('zipCode') || '';
+      
+      console.log('Profile updated, refreshing weather with current form values:', {
+        currentAddress, currentCity, currentState, currentZipCode
+      });
+      
+      // If we have address information, fetch weather immediately
+      if (currentAddress && currentCity && currentState) {
+        await fetchWeatherForAddress(currentAddress, currentCity, currentState, currentZipCode);
       }
       
       // Force refresh user data immediately after all updates
@@ -478,7 +465,7 @@ export default function Profile() {
       
       toast({
         title: "Profile Updated",
-        description: "Your profile has been updated successfully.",
+        description: "Your profile and weather have been updated successfully.",
       });
     },
     onError: (error) => {
