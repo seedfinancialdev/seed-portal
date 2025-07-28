@@ -180,30 +180,30 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
 
   if (isLoading) {
     return (
-      <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+      <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl h-fit">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg">
-              <Inbox className="h-6 w-6 text-blue-600" />
+            <div className="p-2 bg-orange-500/20 rounded-lg">
+              <Inbox className="h-6 w-6 text-orange-300" />
             </div>
             <div>
-              <CardTitle className="text-xl">Sales Inbox</CardTitle>
-              <CardDescription>Loading active leads...</CardDescription>
+              <CardTitle className="text-xl text-white">Sales Inbox</CardTitle>
+              <CardDescription className="text-white/80">Loading active leads...</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 bg-gray-50 border rounded-lg animate-pulse">
+              <div key={i} className="flex items-center justify-between p-4 bg-white/20 border border-white/20 rounded-lg animate-pulse">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-300 rounded-full"></div>
+                  <div className="w-12 h-12 bg-white/30 rounded-full"></div>
                   <div>
-                    <div className="h-4 bg-gray-300 rounded w-32 mb-2"></div>
-                    <div className="h-3 bg-gray-300 rounded w-48"></div>
+                    <div className="h-4 bg-white/30 rounded w-32 mb-2"></div>
+                    <div className="h-3 bg-white/30 rounded w-48"></div>
                   </div>
                 </div>
-                <div className="h-8 bg-gray-300 rounded w-24"></div>
+                <div className="h-8 bg-white/30 rounded w-24"></div>
               </div>
             ))}
           </div>
@@ -214,20 +214,20 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
 
   if (error) {
     return (
-      <Card className="bg-white/70 backdrop-blur-sm border border-gray-200">
+      <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl h-fit">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/10 rounded-lg">
-              <Inbox className="h-6 w-6 text-red-600" />
+            <div className="p-2 bg-red-500/20 rounded-lg">
+              <Inbox className="h-6 w-6 text-red-300" />
             </div>
             <div>
-              <CardTitle className="text-xl">Sales Inbox</CardTitle>
-              <CardDescription className="text-red-600">Failed to load leads</CardDescription>
+              <CardTitle className="text-xl text-white">Sales Inbox</CardTitle>
+              <CardDescription className="text-red-300">Failed to load leads</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-white/80">
             Unable to connect to HubSpot. Please check your integration settings.
           </p>
         </CardContent>
