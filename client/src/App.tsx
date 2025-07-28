@@ -13,6 +13,7 @@ import Dashboard from "@/pages/dashboard-new"; // Main dashboard home page
 import CommissionTracker from "@/pages/commission-tracker";
 import ClientIntel from "@/pages/client-intel";
 import Profile from "@/pages/profile";
+import KnowledgeBase from "@/pages/knowledge-base";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
         <ProtectedRoute path="/calculator" component={Calculator} />
         <ProtectedRoute path="/commission-tracker" component={CommissionTracker} />
         <ProtectedRoute path="/client-intel" component={ClientIntel} />
+        <ProtectedRoute path="/knowledge-base" component={KnowledgeBase} />
         <ProtectedRoute path="/profile" component={Profile} />
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />

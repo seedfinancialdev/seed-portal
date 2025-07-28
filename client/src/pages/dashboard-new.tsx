@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   Calculator, 
   LogOut, 
@@ -13,6 +13,7 @@ import {
   Video,
   Bot,
   GraduationCap,
+  BookOpen,
   UserCheck,
   ChevronRight,
   TrendingUp,
@@ -383,14 +384,17 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
-                  <Input placeholder="Ask anything..." className="pl-9 text-sm h-9 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-500 font-medium" />
-                </div>
+                <Button 
+                  onClick={() => setLocation('/knowledge-base')}
+                  className="w-full text-sm h-9 bg-orange-500 hover:bg-orange-600 text-white border-0 font-semibold"
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Open Wiki.js
+                </Button>
                 <div className="space-y-2">
-                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">S-Corp Election Process</div>
-                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">Tax Planning 2024</div>
-                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">Client Onboarding SOP</div>
+                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">Employee Handbook</div>
+                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">API Documentation</div>
+                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">Sales Playbook</div>
                 </div>
               </CardContent>
             </Card>

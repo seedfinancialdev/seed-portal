@@ -1,0 +1,39 @@
+version: "3"
+services:
+  wiki-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: wiki
+      POSTGRES_PASSWORD: seedwiki2025
+      POSTGRES_USER: wikijs
+    logging:
+      driver: "none"
+    restart: unless-stopped
+    volumes:
+      - wiki-db-data:/var/lib/postgresql/data
+    networks:
+      - wiki-network
+
+  wiki:
+    image: ghcr.io/requarks/wiki:2
+    depends_on:
+      - wiki-db
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: wiki-db
+      DB_PORT: 5432
+      DB_USER: wikijs
+      DB_PASS: seedwiki2025
+      DB_NAME: wiki
+    restart: unless-stopped
+    ports:
+      - "3001:3000"  # Use port 3001 to avoid conflict with our main app
+    networks:
+      - wiki-network
+
+volumes:
+  wiki-db-data:
+
+networks:
+  wiki-network:
+    driver: bridge
