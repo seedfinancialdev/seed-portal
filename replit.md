@@ -11,14 +11,16 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ✓ **Complete Wiki.js Knowledge Base Integration** (July 28, 2025)
-  - **Docker Compose Setup**: Created docker-compose.wiki.yml for Wiki.js and PostgreSQL containers
-  - **Express Proxy Integration**: Added /wiki route proxy to Wiki.js instance on port 3001
+  - **Vercel Deployment Integration**: Updated knowledge base to work with Vercel-hosted Wiki.js
+  - **Neon Database Support**: Configured for Neon PostgreSQL database integration
+  - **Environment Variable Configuration**: Added VITE_WIKI_URL for external Wiki.js connection
+  - **Dependency Fix**: Resolved GraphQL dependency conflicts with --legacy-peer-deps
   - **Knowledge Base Portal Page**: Built comprehensive /knowledge-base page with status monitoring
   - **Dashboard Integration**: Added "Open Wiki.js" button and navigation from dashboard
-  - **Smart Setup Guide**: Automatic setup instructions when Wiki.js is not running
+  - **Smart Setup Guide**: Vercel deployment instructions with troubleshooting
   - **Portal Navigation**: Full avatar menu and consistent UX across knowledge base
-  - **Documentation**: Complete WIKI_SETUP.md with troubleshooting and production tips
-  - **Route Structure**: /knowledge-base for portal interface, /wiki for direct Wiki.js access
+  - **Documentation**: Complete VERCEL_WIKI_SETUP.md with deployment guide
+  - **Route Structure**: /knowledge-base for portal interface, external Vercel URL for Wiki.jsss
 
 ✓ **Project Organization and Routing Clarification** (July 28, 2025)
   - **Proper Home Page**: Dashboard is correctly configured as home page (/) - no changes needed to routing
