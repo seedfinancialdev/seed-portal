@@ -239,9 +239,20 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
 
   // Mutations for different generation steps
   const generateOutlineMutation = useMutation({
-    mutationFn: async (data: GeneratorFormData) => {
-      const variables = data.variables ? JSON.parse(data.variables) : {};
-      const payload = { ...data, variables };
+    mutationFn: async (data: GeneratorFormData & Record<string, any>) => {
+      // Collect template variables from individual form fields
+      const templateVariables: Record<string, string> = {};
+      if (selectedTemplate?.variables) {
+        selectedTemplate.variables.forEach(variable => {
+          const fieldName = variable.replace(/[{}]/g, '');
+          const fieldValue = data[`templateVar_${fieldName}`];
+          if (fieldValue && fieldValue.trim()) {
+            templateVariables[fieldName] = fieldValue.trim();
+          }
+        });
+      }
+      
+      const payload = { ...data, variables: Object.keys(templateVariables).length > 0 ? templateVariables : {} };
       return apiRequest("/api/kb/ai/generate-outline", { method: "POST", body: JSON.stringify(payload) });
     },
     onSuccess: (result: GenerationStep) => {
@@ -277,9 +288,20 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
   });
 
   const generateDraftMutation = useMutation({
-    mutationFn: async ({ outline, ...data }: GeneratorFormData & { outline?: string }) => {
-      const variables = data.variables ? JSON.parse(data.variables) : {};
-      const payload = { ...data, variables, outline };
+    mutationFn: async ({ outline, ...data }: GeneratorFormData & { outline?: string } & Record<string, any>) => {
+      // Collect template variables from individual form fields
+      const templateVariables: Record<string, string> = {};
+      if (selectedTemplate?.variables) {
+        selectedTemplate.variables.forEach(variable => {
+          const fieldName = variable.replace(/[{}]/g, '');
+          const fieldValue = data[`templateVar_${fieldName}`];
+          if (fieldValue && fieldValue.trim()) {
+            templateVariables[fieldName] = fieldValue.trim();
+          }
+        });
+      }
+      
+      const payload = { ...data, variables: Object.keys(templateVariables).length > 0 ? templateVariables : {}, outline };
       return apiRequest("/api/kb/ai/generate-draft", { method: "POST", body: JSON.stringify(payload) });
     },
     onSuccess: (result: GenerationStep, variables) => {
@@ -300,9 +322,20 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
   });
 
   const polishMutation = useMutation({
-    mutationFn: async ({ draft, ...data }: GeneratorFormData & { draft: string }) => {
-      const variables = data.variables ? JSON.parse(data.variables) : {};
-      const payload = { ...data, variables, draft };
+    mutationFn: async ({ draft, ...data }: GeneratorFormData & { draft: string } & Record<string, any>) => {
+      // Collect template variables from individual form fields
+      const templateVariables: Record<string, string> = {};
+      if (selectedTemplate?.variables) {
+        selectedTemplate.variables.forEach(variable => {
+          const fieldName = variable.replace(/[{}]/g, '');
+          const fieldValue = data[`templateVar_${fieldName}`];
+          if (fieldValue && fieldValue.trim()) {
+            templateVariables[fieldName] = fieldValue.trim();
+          }
+        });
+      }
+      
+      const payload = { ...data, variables: Object.keys(templateVariables).length > 0 ? templateVariables : {}, draft };
       return apiRequest("/api/kb/ai/polish", { method: "POST", body: JSON.stringify(payload) });
     },
     onSuccess: (result: GenerationStep) => {
@@ -571,16 +604,23 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                 {/* Template Variables Preview */}
                                 {template.variables && template.variables.length > 0 && (
                                   <div className="pt-3 border-t border-gray-200">
-                                    <h4 className="font-semibold text-sm text-gray-800 mb-2">Customizable Elements:</h4>
+                                    <h4 className="font-semibold text-sm text-gray-800 mb-2">Can Be Customized:</h4>
                                     <div className="flex flex-wrap gap-1 mb-2">
-                                      {template.variables.map((variable, index) => (
-                                        <Badge key={index} variant="outline" className="text-xs py-0.5 px-2">
-                                          {variable.replace(/[{}]/g, '')}
-                                        </Badge>
-                                      ))}
+                                      {template.variables.map((variable, index) => {
+                                        // Convert variable names to readable format
+                                        const readableName = variable
+                                          .replace(/[{}]/g, '')
+                                          .replace(/_/g, ' ')
+                                          .replace(/\b\w/g, l => l.toUpperCase());
+                                        return (
+                                          <Badge key={index} variant="outline" className="text-xs py-0.5 px-2">
+                                            {readableName}
+                                          </Badge>
+                                        );
+                                      })}
                                     </div>
                                     <div className="text-xs text-gray-400 italic leading-relaxed">
-                                      You can customize these elements below, or let AI generate them automatically
+                                      These will appear as simple form fields below for easy customization
                                     </div>
                                   </div>
                                 )}
@@ -732,50 +772,56 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                       )}
                     />
 
-                    {/* Template Variables - Optional Enhancement */}
+                    {/* Template Customization Fields - Simple Individual Inputs */}
                     {selectedTemplate && selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
                       <Card className="border-blue-200 bg-blue-50/30">
                         <CardHeader>
                           <CardTitle className="flex items-center gap-2 text-blue-800">
                             <Settings className="h-4 w-4" />
-                            Template Variables (Optional)
-                            <Badge variant="secondary" className="text-xs">
-                              {selectedTemplate.variables.length} available
-                            </Badge>
+                            Customize Template (Optional)
                           </CardTitle>
                           <p className="text-sm text-gray-600 mt-1">
-                            Customize specific elements for your article. Leave blank to let AI generate appropriate content automatically.
+                            Fill in any fields you want to customize. Leave blank for AI to generate automatically.
                           </p>
                         </CardHeader>
                         <CardContent>
-                          <FormField
-                            control={form.control}
-                            name="variables"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Customize Template Elements (JSON format - Optional)</FormLabel>
-                                <FormControl>
-                                  <Textarea 
-                                    placeholder={`Optional variables for ${selectedTemplate.name}:\n${JSON.stringify(
-                                      selectedTemplate.variables.reduce((acc, variable) => ({
-                                        ...acc,
-                                        [variable.replace(/[{}]/g, '')]: "Your custom value (optional)"
-                                      }), {}),
-                                      null,
-                                      2
-                                    )}\n\nLeave blank to let AI generate appropriate content.`}
-                                    className="min-h-[120px] font-mono text-sm"
-                                    {...field} 
-                                  />
-                                </FormControl>
-                                <div className="text-xs text-gray-600 mt-1">
-                                  <strong>Example:</strong> {"{"}"process_name": "Client Onboarding", "department": "Sales"{"}"}<br/>
-                                  Elements: {selectedTemplate.variables.join(', ')} (all optional)
-                                </div>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedTemplate.variables.map((variable, index) => {
+                              const fieldName = variable.replace(/[{}]/g, '');
+                              const readableName = fieldName
+                                .replace(/_/g, ' ')
+                                .replace(/\b\w/g, l => l.toUpperCase());
+                              
+                              return (
+                                <FormField
+                                  key={index}
+                                  control={form.control}
+                                  name={`templateVar_${fieldName}`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>{readableName}</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          placeholder={`e.g., ${
+                                            fieldName.includes('name') ? 'Client Onboarding Process' :
+                                            fieldName.includes('department') ? 'Sales Department' :
+                                            fieldName.includes('tools') ? 'HubSpot, QuickBooks' :
+                                            fieldName.includes('industry') ? 'Professional Services' :
+                                            fieldName.includes('state') ? 'California' :
+                                            fieldName.includes('entity') ? 'LLC' :
+                                            fieldName.includes('level') ? 'Beginner' :
+                                            'Your custom value'
+                                          }`}
+                                          {...field}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              );
+                            })}
+                          </div>
                         </CardContent>
                       </Card>
                     )}
