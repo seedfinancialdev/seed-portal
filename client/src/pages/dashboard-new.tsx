@@ -379,78 +379,65 @@ export default function Dashboard() {
             <LazySalesInbox limit={8} />
           </div>
 
-          {/* Sidebar Tools */}
-          <div className="space-y-6">
-            {/* Knowledge Base */}
-            <Card className="bg-white border border-gray-200 shadow-xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                  <Bot className="h-4 w-4 text-orange-500" />
-                  Knowledge Base
+          {/* SEEDOS - Full Column */}
+          <div className="h-full">
+            <Card className="bg-white border border-gray-200 shadow-xl h-full">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-lg font-bold text-gray-900">
+                  <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
+                    <Bot className="h-5 w-5 text-white" />
+                  </div>
+                  SEEDOS
                 </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Your intelligent knowledge companion
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-6">
                 <Button 
                   onClick={() => setLocation('/knowledge-base')}
-                  className="w-full text-sm h-9 bg-orange-500 hover:bg-orange-600 text-white border-0 font-semibold"
+                  className="w-full text-base h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-semibold shadow-lg"
                 >
-                  <BookOpen className="h-4 w-4 mr-2" />
-                  Open Wiki.js
+                  <BookOpen className="h-5 w-5 mr-3" />
+                  Access Knowledge Base
                 </Button>
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">Employee Handbook</div>
-                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">API Documentation</div>
-                  <div className="text-sm text-gray-700 font-medium hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-gray-50 rounded">Sales Playbook</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Seed Academy */}
-            <Card className="bg-white border border-gray-200 shadow-xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                  <GraduationCap className="h-4 w-4 text-orange-500" />
-                  Seed Academy
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-bold text-gray-900">XP: 2,450</span>
-                  <Badge className="bg-orange-500 text-white text-sm font-bold">Level 7</Badge>
-                </div>
-                <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded font-medium">Tax Planning 201 - In Progress (75%)</div>
-                <Button className="w-full text-sm h-9 bg-orange-500 hover:bg-orange-600 text-white border-0 font-semibold">View Courses</Button>
-              </CardContent>
-            </Card>
-
-            {/* Recent Activity */}
-            <Card className="bg-white border border-gray-200 shadow-xl">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                  <Bell className="h-4 w-4 text-orange-500" />
-                  Recent Activity
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full mt-1 flex-shrink-0"></div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">New lead added</p>
-                    <p className="text-sm text-gray-600">TechFlow Solutions • 5 min ago</p>
+                
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Quick Access</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="font-medium">Getting Started Hub</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="font-medium">Tax-as-a-Service</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="font-medium">Sales Playbook</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="font-medium">Bookkeeping Academy</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full mt-1 flex-shrink-0"></div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Commission earned</p>
-                    <p className="text-sm text-gray-600">+$450 • 2h ago</p>
+
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                    <Bot className="h-4 w-4 text-orange-500" />
+                    <span className="font-medium">AI-Powered Features</span>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full mt-1 flex-shrink-0"></div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Document uploaded</p>
-                    <p className="text-sm text-gray-600">Tax Guide 2024 • 4h ago</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+                      <div className="font-semibold text-orange-700">Smart Search</div>
+                      <div className="text-orange-600">Coming Soon</div>
+                    </div>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+                      <div className="font-semibold text-orange-700">Auto SOPs</div>
+                      <div className="text-orange-600">Coming Soon</div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
