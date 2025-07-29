@@ -229,13 +229,9 @@ export default function KnowledgeBase() {
         
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <h1 className="text-6xl font-bold text-white mb-6 tracking-tight">
-            Seed KB
+          <h1 className="text-6xl font-bold text-white mb-6 tracking-tight" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+            Seed<span className="text-[#e24c00]">KB</span>
           </h1>
-          <p className="text-xl text-white/80 max-w-3xl mx-auto leading-relaxed">
-            Welcome to Seed Financial's comprehensive knowledge base. Access everything from quick-start guides 
-            and tax strategies to AI-powered tools and automation recipes. Your one-stop hub for financial expertise.
-          </p>
           
           {/* Search Bar */}
           <div className="max-w-2xl mx-auto mt-8">
@@ -258,21 +254,23 @@ export default function KnowledgeBase() {
             return (
               <Card 
                 key={category.id}
-                className={`group p-8 bg-white/15 backdrop-blur-md border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:scale-105 ${category.borderColor} aspect-square flex flex-col justify-center items-center text-center`}
+                className={`group p-8 bg-white/15 backdrop-blur-md border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:scale-105 ${category.borderColor} h-80 flex flex-col justify-between items-center text-center`}
               >
-                <div className={`p-4 rounded-2xl bg-gradient-to-br ${category.color} mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <IconComponent className="h-8 w-8 text-white" />
+                <div className="flex flex-col items-center flex-1 justify-center">
+                  <div className={`p-4 rounded-2xl bg-gradient-to-br ${category.color} mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                    <IconComponent className="h-8 w-8 text-white" />
+                  </div>
+                  
+                  <h3 className="text-xl font-bold text-white mb-3 group-hover:text-orange-200 transition-colors">
+                    {category.title}
+                  </h3>
+                  
+                  <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors flex-1 flex items-center">
+                    {category.description}
+                  </p>
                 </div>
-                
-                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-orange-200 transition-colors">
-                  {category.title}
-                </h3>
-                
-                <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">
-                  {category.description}
-                </p>
 
-                <Badge className="mt-4 bg-orange-500/20 text-orange-200 border-orange-500/30 group-hover:bg-orange-500/30">
+                <Badge className="bg-orange-500/20 text-orange-200 border-orange-500/30 group-hover:bg-orange-500/30 mt-4">
                   Coming Soon
                 </Badge>
               </Card>
