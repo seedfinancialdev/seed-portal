@@ -21,7 +21,8 @@ import {
   Settings,
   Eye,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Bell
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
@@ -143,15 +144,32 @@ export default function KnowledgeBase() {
               </Button>
             </div>
             
-            <div className="absolute top-0 right-0">
+            <div className="absolute top-0 right-0 flex items-center space-x-4">
+              <div className="relative hidden md:block">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
+                <Input 
+                  placeholder="Search..." 
+                  className="pl-10 w-64 bg-white/15 backdrop-blur-md border-white/30 placeholder:text-white/60 text-white focus:bg-white/20 focus:border-white/50"
+                />
+              </div>
+              <Button variant="ghost" size="sm" className="relative text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
+                <Bell className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
-                    <User className="h-4 w-4 mr-2" />
-                    {user?.firstName || user?.email?.split('@')[0] || 'User'}
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
+                    <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                      {user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="hidden md:block">{user?.email?.split('@')[0]}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-3 py-2 border-b">
+                    <p className="font-medium text-gray-900">{user?.email?.split('@')[0]}</p>
+                    <p className="text-sm text-gray-500">{user?.email}</p>
+                  </div>
                   <DropdownMenuItem onClick={() => setLocation('/profile')}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
@@ -161,7 +179,7 @@ export default function KnowledgeBase() {
                     <span>Knowledge Base Admin</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
