@@ -27,7 +27,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/use-auth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, LogOut } from "lucide-react";
-import logoPath from "@assets/Nav Logo_1753431362883.png";
+import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import { apiRequest } from "@/lib/queryClient";
 
 // Types
