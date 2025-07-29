@@ -542,57 +542,52 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                 )}
                               </div>
                               
-                              {/* Enhanced Visual Preview with Sample Content */}
-                              <div className="mb-3 bg-gradient-to-br from-green-50 to-orange-50 p-3 rounded-lg border">
-                                <div className="text-xs text-gray-700 space-y-2">
-                                  <div className="font-semibold text-orange-600 mb-2">Article Preview:</div>
-                                  
-                                  {/* Sample Article Structure */}
-                                  <div className="bg-white p-3 rounded border space-y-2 max-h-40 overflow-y-auto">
-                                    <div className="font-bold text-sm text-gray-800"># {template.name} - Sample Title</div>
-                                    
+                              {/* Simplified Template Information */}
+                              <div className="space-y-3">
+                                <div>
+                                  <h4 className="font-semibold text-sm text-gray-800 mb-1">Main Sections:</h4>
+                                  <div className="text-xs text-gray-600 space-y-1">
                                     {template.structure.slice(0, 4).map((section, index) => (
-                                      <div key={index} className="space-y-1">
-                                        <div className="font-semibold text-xs text-orange-600">## {section}</div>
-                                        <div className="text-xs text-gray-500 pl-2">
-                                          {section.includes('Process') || section.includes('Steps') ? 
-                                            '1. Step one with detailed instructions...\n2. Step two with clear guidance...\n3. Final verification and completion...' :
-                                          section.includes('Overview') || section.includes('Introduction') ? 
-                                            'This section provides a comprehensive overview of the topic, including key objectives and expected outcomes...' :
-                                          section.includes('Resources') || section.includes('Links') ?
-                                            '• Related documentation links\n• Contact information\n• Additional tools and templates' :
-                                            'Detailed content covering important aspects, best practices, and actionable insights for this section...'
-                                          }
-                                        </div>
+                                      <div key={index} className="flex items-center gap-2">
+                                        <div className="w-1 h-1 bg-orange-500 rounded-full"></div>
+                                        <span>{section}</span>
                                       </div>
                                     ))}
-                                    
                                     {template.structure.length > 4 && (
-                                      <div className="text-xs text-gray-400 italic border-t pt-2">
-                                        +{template.structure.length - 4} additional sections with comprehensive content
-                                      </div>
+                                      <div className="text-gray-400 italic">+{template.structure.length - 4} more sections</div>
                                     )}
                                   </div>
-                                  
-                                  <div className="text-xs text-gray-500 italic">
-                                    ✨ Final article will be professionally written with Seed Financial's brand voice
+                                </div>
+                                
+                                <div>
+                                  <h4 className="font-semibold text-sm text-gray-800 mb-1">Best For:</h4>
+                                  <div className="text-xs text-gray-600">
+                                    {template.id === 'sop' && 'Step-by-step procedures, process documentation, workflow guides'}
+                                    {template.id === 'sales-playbook' && 'Sales strategies, client outreach, service positioning'}
+                                    {template.id === 'faq' && 'Common questions, troubleshooting guides, quick reference'}
+                                    {template.id === 'client-guide' && 'Client onboarding, service explanations, how-to guides'}
+                                    {template.id === 'product-doc' && 'Feature documentation, technical specs, user manuals'}
+                                    {!['sop', 'sales-playbook', 'faq', 'client-guide', 'product-doc'].includes(template.id) && 'General documentation and knowledge articles'}
                                   </div>
                                 </div>
                               </div>
                               
                               {/* Template Variables Preview */}
                               {template.variables && template.variables.length > 0 && (
-                                <div className="text-xs text-gray-600">
-                                  <span className="font-medium">Variables:</span>
+                                <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
+                                  <span className="font-medium">Optional Variables:</span>
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {template.variables.slice(0, 3).map((variable, index) => (
-                                      <Badge key={index} variant="secondary" className="text-xs py-0">
-                                        {variable}
+                                      <Badge key={index} variant="outline" className="text-xs py-0 px-1">
+                                        {variable.replace(/[{}]/g, '')}
                                       </Badge>
                                     ))}
                                     {template.variables.length > 3 && (
-                                      <span className="text-xs text-gray-500">+{template.variables.length - 3}</span>
+                                      <span className="text-xs text-gray-400">+{template.variables.length - 3} more</span>
                                     )}
+                                  </div>
+                                  <div className="text-xs text-gray-400 mt-1 italic">
+                                    AI will generate appropriate content if variables are not provided
                                   </div>
                                 </div>
                               )}
