@@ -247,25 +247,13 @@ export default function KnowledgeBase() {
             {categoriesLoading ? (
               <div className="col-span-full text-center text-white">Loading categories...</div>
             ) : (
-              categories.map((category: KbCategory, index: number) => {
+              categories.map((category: KbCategory) => {
                 const IconComponent = getIconComponent(category.icon);
-                // Create stronger visual contrast with different card backgrounds
-                const cardVariants = [
-                  'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 hover:from-slate-700/90 hover:to-slate-800/90 hover:border-orange-400/70',
-                  'bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-gray-600/50 hover:from-gray-700/90 hover:to-gray-800/90 hover:border-blue-400/70',
-                  'bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 border-zinc-600/50 hover:from-zinc-700/90 hover:to-zinc-800/90 hover:border-purple-400/70',
-                  'bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 border-neutral-600/50 hover:from-neutral-700/90 hover:to-neutral-800/90 hover:border-green-400/70',
-                  'bg-gradient-to-br from-stone-800/90 to-stone-900/90 border-stone-600/50 hover:from-stone-700/90 hover:to-stone-800/90 hover:border-pink-400/70',
-                  'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 hover:from-slate-700/90 hover:to-slate-800/90 hover:border-cyan-400/70',
-                  'bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-gray-600/50 hover:from-gray-700/90 hover:to-gray-800/90 hover:border-yellow-400/70',
-                  'bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 border-zinc-600/50 hover:from-zinc-700/90 hover:to-zinc-800/90 hover:border-red-400/70',
-                  'bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 border-neutral-600/50 hover:from-neutral-700/90 hover:to-neutral-800/90 hover:border-indigo-400/70',
-                ];
                 
                 return (
                   <Card
                     key={category.id}
-                    className={`group h-80 cursor-pointer transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl hover:shadow-black/40 ${cardVariants[index % cardVariants.length]} backdrop-blur-xl border-2 rounded-2xl overflow-hidden relative transform hover:-translate-y-2`}
+                    className="group h-80 cursor-pointer transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl hover:shadow-black/40 bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 hover:from-slate-700/90 hover:to-slate-800/90 hover:border-orange-400/70 backdrop-blur-xl border-2 rounded-2xl overflow-hidden relative transform hover:-translate-y-2"
                     onClick={() => handleCategoryClick(category)}
                   >
                     {/* Strong background overlay on hover */}
@@ -279,8 +267,8 @@ export default function KnowledgeBase() {
                       <div className={`w-24 h-24 rounded-3xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-6 shadow-2xl shadow-black/50 group-hover:shadow-3xl group-hover:scale-125 transition-all duration-500 relative overflow-hidden border-2 border-white/20 group-hover:border-white/40`}>
                         {/* Strong icon glow effect */}
                         <div className="absolute inset-0 bg-white/30 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        {/* Pulsing background */}
-                        <div className="absolute inset-0 rounded-3xl bg-white/20 animate-pulse opacity-0 group-hover:opacity-50 transition-opacity duration-500" />
+                        {/* Slower pulsing background */}
+                        <div className="absolute inset-0 rounded-3xl bg-white/20 opacity-0 group-hover:opacity-50 transition-opacity duration-500 animate-[pulse_10s_ease-in-out_infinite]" />
                         <IconComponent className="h-12 w-12 text-white relative z-10 group-hover:scale-110 transition-transform duration-500 drop-shadow-lg" />
                       </div>
                       
