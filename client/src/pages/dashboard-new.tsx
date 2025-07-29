@@ -379,64 +379,80 @@ export default function Dashboard() {
             <LazySalesInbox limit={8} />
           </div>
 
-          {/* SEEDOS - Full Column */}
+          {/* SEEDKB - Full Column */}
           <div className="h-full">
-            <Card className="bg-white border border-gray-200 shadow-xl h-full">
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3 text-lg font-bold text-gray-900">
-                  <div className="p-2 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg">
-                    <Bot className="h-5 w-5 text-white" />
+            <Card className="bg-gradient-to-br from-orange-50 to-white border border-orange-200 shadow-xl h-full">
+              <CardHeader className="pb-6">
+                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
+                  <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
+                    <BookOpen className="h-6 w-6 text-white" />
                   </div>
-                  SEEDOS
+                  SEED<span className="text-orange-600">KB</span>
                 </CardTitle>
-                <CardDescription className="text-gray-600">
-                  Your intelligent knowledge companion
+                <CardDescription className="text-gray-600 text-lg">
+                  Your comprehensive knowledge hub
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-8 flex-1">
                 <Button 
                   onClick={() => setLocation('/knowledge-base')}
-                  className="w-full text-base h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-semibold shadow-lg"
+                  className="w-full text-lg h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-200"
                 >
-                  <BookOpen className="h-5 w-5 mr-3" />
-                  Access Knowledge Base
+                  <BookOpen className="h-6 w-6 mr-3" />
+                  Open Knowledge Base
                 </Button>
                 
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Quick Access</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span className="font-medium">Getting Started Hub</span>
+                <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-orange-100">
+                  <h4 className="font-bold text-gray-900 mb-4 text-lg">Knowledge Categories</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="font-semibold text-sm">Getting Started</span>
                     </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span className="font-medium">Tax-as-a-Service</span>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="font-semibold text-sm">Tax Services</span>
                     </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span className="font-medium">Sales Playbook</span>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="font-semibold text-sm">Sales Playbook</span>
                     </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-gray-900 cursor-pointer py-2 px-3 hover:bg-white rounded-lg transition-colors">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span className="font-medium">Bookkeeping Academy</span>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="font-semibold text-sm">Bookkeeping</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="font-semibold text-sm">CFO Vault</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                      <span className="font-semibold text-sm">Compliance</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                    <Bot className="h-4 w-4 text-orange-500" />
-                    <span className="font-medium">AI-Powered Features</span>
+                <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Bot className="h-6 w-6 text-white" />
+                    <span className="font-bold text-lg">AI-Powered Intelligence</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
-                      <div className="font-semibold text-orange-700">Smart Search</div>
-                      <div className="text-orange-600">Coming Soon</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
+                      <div className="font-bold text-white mb-1">Smart Search</div>
+                      <div className="text-orange-100 text-sm">Natural language queries</div>
                     </div>
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
-                      <div className="font-semibold text-orange-700">Auto SOPs</div>
-                      <div className="text-orange-600">Coming Soon</div>
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
+                      <div className="font-bold text-white mb-1">Auto SOPs</div>
+                      <div className="text-orange-100 text-sm">Generated procedures</div>
+                    </div>
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
+                      <div className="font-bold text-white mb-1">Decision Trees</div>
+                      <div className="text-orange-100 text-sm">Interactive guidance</div>
+                    </div>
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
+                      <div className="font-bold text-white mb-1">Visual Maps</div>
+                      <div className="text-orange-100 text-sm">Process flowcharts</div>
                     </div>
                   </div>
                 </div>
