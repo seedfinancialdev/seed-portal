@@ -523,7 +523,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                     {templatesLoading ? (
                       <div className="text-center py-4">Loading templates...</div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {(templates as Template[]).map((template: Template) => (
                           <Card 
                             key={template.id}
@@ -532,7 +532,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                             }`}
                             onClick={() => handleTemplateSelect(template.id)}
                           >
-                            <CardContent className="p-4">
+                            <CardContent className="p-5">
                               <div className="flex items-center gap-2 mb-3">
                                 <h4 className="font-semibold">{template.name}</h4>
                                 {template.seedStyle && (
@@ -543,25 +543,22 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                               </div>
                               
                               {/* Simplified Template Information */}
-                              <div className="space-y-3">
+                              <div className="space-y-4">
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-800 mb-1">Main Sections:</h4>
+                                  <h4 className="font-semibold text-sm text-gray-800 mb-2">Main Sections:</h4>
                                   <div className="text-xs text-gray-600 space-y-1">
-                                    {template.structure.slice(0, 4).map((section, index) => (
-                                      <div key={index} className="flex items-center gap-2">
-                                        <div className="w-1 h-1 bg-orange-500 rounded-full"></div>
-                                        <span>{section}</span>
+                                    {template.structure.map((section, index) => (
+                                      <div key={index} className="flex items-start gap-2">
+                                        <div className="w-1 h-1 bg-orange-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                                        <span className="leading-relaxed">{section}</span>
                                       </div>
                                     ))}
-                                    {template.structure.length > 4 && (
-                                      <div className="text-gray-400 italic">+{template.structure.length - 4} more sections</div>
-                                    )}
                                   </div>
                                 </div>
                                 
                                 <div>
-                                  <h4 className="font-semibold text-sm text-gray-800 mb-1">Best For:</h4>
-                                  <div className="text-xs text-gray-600">
+                                  <h4 className="font-semibold text-sm text-gray-800 mb-2">Best For:</h4>
+                                  <div className="text-xs text-gray-600 leading-relaxed">
                                     {template.id === 'sop' && 'Step-by-step procedures, process documentation, workflow guides'}
                                     {template.id === 'sales-playbook' && 'Sales strategies, client outreach, service positioning'}
                                     {template.id === 'faq' && 'Common questions, troubleshooting guides, quick reference'}
@@ -570,27 +567,24 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                     {!['sop', 'sales-playbook', 'faq', 'client-guide', 'product-doc'].includes(template.id) && 'General documentation and knowledge articles'}
                                   </div>
                                 </div>
+                                
+                                {/* Template Variables Preview */}
+                                {template.variables && template.variables.length > 0 && (
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <h4 className="font-semibold text-sm text-gray-800 mb-2">Optional Variables:</h4>
+                                    <div className="flex flex-wrap gap-1 mb-2">
+                                      {template.variables.map((variable, index) => (
+                                        <Badge key={index} variant="outline" className="text-xs py-0.5 px-2">
+                                          {variable.replace(/[{}]/g, '')}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                    <div className="text-xs text-gray-400 italic leading-relaxed">
+                                      AI will generate appropriate content if variables are not provided
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                              
-                              {/* Template Variables Preview */}
-                              {template.variables && template.variables.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
-                                  <span className="font-medium">Optional Variables:</span>
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {template.variables.slice(0, 3).map((variable, index) => (
-                                      <Badge key={index} variant="outline" className="text-xs py-0 px-1">
-                                        {variable.replace(/[{}]/g, '')}
-                                      </Badge>
-                                    ))}
-                                    {template.variables.length > 3 && (
-                                      <span className="text-xs text-gray-400">+{template.variables.length - 3} more</span>
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-gray-400 mt-1 italic">
-                                    AI will generate appropriate content if variables are not provided
-                                  </div>
-                                </div>
-                              )}
                             </CardContent>
                           </Card>
                         ))}
