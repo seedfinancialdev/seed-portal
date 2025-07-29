@@ -144,55 +144,32 @@ export default function KnowledgeBase() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] animate-in fade-in duration-700">
-      {/* Header - matching other portal pages */}
-      <div className="bg-transparent border-b border-white/10 backdrop-blur-sm sticky top-0 z-50">
+      {/* Header - Simple transparent design matching other portal pages */}
+      <div className="bg-transparent">
         <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Portal
-              </Button>
-            </Link>
-            <div className="flex items-center gap-3">
-              <img src={logoPath} alt="Seed Financial" className="h-8 w-auto" />
-              <div className="text-white">
-                <h1 className="text-lg font-semibold">SEED FINANCIAL</h1>
-              </div>
+          <Link to="/">
+            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Portal
+            </Button>
+          </Link>
+          
+          <div className="flex items-center gap-3">
+            <img src={logoPath} alt="Seed Financial" className="h-8 w-auto" />
+            <div className="text-white">
+              <h1 className="text-lg font-semibold">SEED FINANCIAL</h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative">
               <Bell className="h-4 w-4" />
               <div className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full animate-pulse"></div>
             </Button>
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-2">
-                  <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-xs font-semibold text-white">
-                    {user?.email?.[0]?.toUpperCase() || 'U'}
-                  </div>
-                  <span className="hidden sm:block">{user?.email?.split('@')[0] || 'User'}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-xs font-semibold text-white">
+              {user?.email?.[0]?.toUpperCase() || 'J'}
+            </div>
           </div>
         </div>
       </div>
