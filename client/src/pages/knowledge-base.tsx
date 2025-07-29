@@ -252,21 +252,34 @@ export default function KnowledgeBase() {
                 return (
                   <Card
                     key={category.id}
-                    className="h-80 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl bg-white/15 backdrop-blur-md border-white/30 hover:bg-white/20 hover:border-orange-500/50"
+                    className="group h-80 cursor-pointer transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/20 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 hover:border-white/40 rounded-2xl overflow-hidden relative"
                     onClick={() => handleCategoryClick(category)}
                   >
-                    <div className="p-8 h-full flex flex-col items-center justify-center text-center">
-                      <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-6 shadow-lg`}>
-                        <IconComponent className="h-10 w-10 text-white" />
+                    {/* Background gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    
+                    {/* Subtle border glow */}
+                    <div className="absolute inset-0 rounded-2xl border border-white/10 group-hover:border-orange-300/30 transition-colors duration-500" />
+                    
+                    <div className="relative p-8 h-full flex flex-col items-center justify-center text-center">
+                      {/* Enhanced icon container */}
+                      <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-6 shadow-2xl shadow-black/25 group-hover:shadow-3xl group-hover:scale-110 transition-all duration-500 relative overflow-hidden`}>
+                        {/* Icon glow effect */}
+                        <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        <IconComponent className="h-10 w-10 text-white relative z-10 group-hover:scale-110 transition-transform duration-500" />
                       </div>
                       
-                      <h3 className="text-xl font-bold text-white mb-4">
+                      {/* Enhanced typography */}
+                      <h3 className="text-xl font-bold text-white mb-4 group-hover:text-orange-100 transition-colors duration-300">
                         {category.name}
                       </h3>
                       
-                      <p className="text-white/80 text-sm leading-relaxed">
+                      <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors duration-300">
                         {category.description}
                       </p>
+                      
+                      {/* Subtle bottom accent */}
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-orange-400/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     </div>
                   </Card>
                 );
@@ -274,33 +287,86 @@ export default function KnowledgeBase() {
             )}
           </div>
 
-          {/* Coming Soon Features */}
-          <div className="mt-16 text-center">
-            <h2 className="text-2xl font-bold text-white mb-8">🚀 Coming Soon: Advanced AI Features</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              <div className="bg-white/10 backdrop-blur-md border border-white/30 rounded-lg p-6">
-                <h3 className="text-white font-semibold mb-2">AI Search Copilot</h3>
-                <p className="text-white/70 text-sm">Natural language search with intelligent recommendations</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md border border-white/30 rounded-lg p-6">
-                <h3 className="text-white font-semibold mb-2">Visual SOP Maps</h3>
-                <p className="text-white/70 text-sm">Interactive flowcharts for complex processes</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md border border-white/30 rounded-lg p-6">
-                <h3 className="text-white font-semibold mb-2">Decision Trees</h3>
-                <p className="text-white/70 text-sm">AI-guided decision making for tax and financial strategies</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md border border-white/30 rounded-lg p-6">
-                <h3 className="text-white font-semibold mb-2">Auto-SOP Generator</h3>
-                <p className="text-white/70 text-sm">AI creates step-by-step procedures from descriptions</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md border border-white/30 rounded-lg p-6">
-                <h3 className="text-white font-semibold mb-2">Smart Tagging</h3>
-                <p className="text-white/70 text-sm">Automatic content categorization and cross-referencing</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-md border border-white/30 rounded-lg p-6">
-                <h3 className="text-white font-semibold mb-2">Finance Meme Wall</h3>
-                <p className="text-white/70 text-sm">AI-curated humor for team culture and client engagement</p>
+          {/* Coming Soon Features - Enhanced Design */}
+          <div className="mt-20 relative">
+            {/* Beautiful background section */}
+            <div className="relative bg-gradient-to-br from-black/30 via-green-900/20 to-orange-900/30 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl shadow-black/20 overflow-hidden">
+              {/* Animated background pattern */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent)] opacity-50" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-400/60 to-transparent" />
+              
+              <div className="relative p-12">
+                {/* Enhanced title */}
+                <div className="text-center mb-12">
+                  <div className="inline-flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg">
+                      <BrainCircuit className="h-6 w-6 text-white" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-white">Coming Soon: Advanced AI Features</h2>
+                  </div>
+                  <p className="text-white/70 text-lg max-w-2xl mx-auto">
+                    Revolutionizing knowledge management with cutting-edge AI capabilities
+                  </p>
+                </div>
+                
+                {/* Enhanced feature grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                  <div className="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 hover:bg-white/15 hover:border-orange-300/40 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <Search className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-3 group-hover:text-orange-100 transition-colors">AI Search Copilot</h3>
+                    <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">Natural language search with intelligent recommendations and contextual understanding</p>
+                  </div>
+                  
+                  <div className="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 hover:bg-white/15 hover:border-orange-300/40 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <Target className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-3 group-hover:text-orange-100 transition-colors">Visual SOP Maps</h3>
+                    <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">Interactive flowcharts and visual process maps for complex procedures</p>
+                  </div>
+                  
+                  <div className="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 hover:bg-white/15 hover:border-orange-300/40 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <BrainCircuit className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-3 group-hover:text-orange-100 transition-colors">Decision Trees</h3>
+                    <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">AI-guided decision making for tax and financial strategies</p>
+                  </div>
+                  
+                  <div className="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 hover:bg-white/15 hover:border-orange-300/40 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <Settings className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-3 group-hover:text-orange-100 transition-colors">Auto-SOP Generator</h3>
+                    <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">AI creates step-by-step procedures from simple descriptions</p>
+                  </div>
+                  
+                  <div className="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 hover:bg-white/15 hover:border-orange-300/40 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <BookOpen className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-3 group-hover:text-orange-100 transition-colors">Smart Tagging</h3>
+                    <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">Automatic content categorization and intelligent cross-referencing</p>
+                  </div>
+                  
+                  <div className="group bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 hover:bg-white/15 hover:border-orange-300/40 hover:scale-105 transition-all duration-500 hover:shadow-2xl hover:shadow-orange-500/10">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                      <Heart className="h-7 w-7 text-white" />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-3 group-hover:text-orange-100 transition-colors">Finance Meme Wall</h3>
+                    <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">AI-curated humor for team culture and client engagement</p>
+                  </div>
+                </div>
+                
+                {/* Call to action */}
+                <div className="text-center mt-12">
+                  <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-full border border-orange-400/30 backdrop-blur-sm">
+                    <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
+                    <span className="text-orange-200 text-sm font-medium">AI features in active development</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
