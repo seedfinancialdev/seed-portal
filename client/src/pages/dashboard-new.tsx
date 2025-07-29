@@ -432,30 +432,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Bot className="h-6 w-6 text-white" />
-                    <span className="font-bold text-lg">AI-Powered Intelligence</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
-                      <div className="font-bold text-white mb-1">Smart Search</div>
-                      <div className="text-orange-100 text-sm">Natural language queries</div>
-                    </div>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
-                      <div className="font-bold text-white mb-1">Auto SOPs</div>
-                      <div className="text-orange-100 text-sm">Generated procedures</div>
-                    </div>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
-                      <div className="font-bold text-white mb-1">Decision Trees</div>
-                      <div className="text-orange-100 text-sm">Interactive guidance</div>
-                    </div>
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-center border border-white/30">
-                      <div className="font-bold text-white mb-1">Visual Maps</div>
-                      <div className="text-orange-100 text-sm">Process flowcharts</div>
-                    </div>
-                  </div>
-                </div>
+
               </CardContent>
             </Card>
           </div>
