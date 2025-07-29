@@ -38,6 +38,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { KbCategory, KbArticle } from "@shared/schema";
+import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Form schemas
 const articleFormSchema = z.object({
@@ -177,61 +178,61 @@ export default function KnowledgeBase() {
   const displayedArticles = searchQuery.length >= 2 ? searchResults : articles;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
-      {/* Header - consistent with other pages */}
-      <div className="flex items-center justify-between mb-8 p-4 relative">
-        <Button
-          variant="ghost"
-          onClick={() => {
-            queryClient.invalidateQueries();
-            setLocation('/');
-          }}
-          className="text-white hover:bg-white/10 transition-colors p-2 rounded-lg"
-        >
-          <ArrowLeft className="h-5 w-5 mr-2" />
-          Back to Portal
-        </Button>
-        
-        {/* Centered Logo */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-              <Sprout className="h-5 w-5 text-[#253e31]" />
-            </div>
-            <span className="text-white font-semibold text-lg">SEED FINANCIAL</span>
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-8">
+          {/* Back Button - Top Left */}
+          <div className="absolute top-0 left-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+              onClick={() => {
+                // Invalidate dashboard metrics to refresh data
+                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                setLocation('/');
+              }}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back to Portal
+            </Button>
           </div>
-          <h1 className="text-2xl font-bold text-white mt-2">Knowledge Base</h1>
-        </div>
-
-        {/* Right side - notification and user menu */}
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            className="text-white hover:bg-white/10 p-2 rounded-full relative"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-              1
-            </span>
-          </Button>
           
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
-            </div>
-            <span className="text-white font-medium">
-              {user?.firstName || user?.email?.split('@')[0] || 'User'}
-            </span>
+          {/* Centered Logo */}
+          <div className="flex justify-center">
+            <img 
+              src={logoPath} 
+              alt="Seed Financial" 
+              className="h-16 w-auto"
+            />
+          </div>
+          
+          {/* User Menu - Top Right */}
+          <div className="absolute top-0 right-0 flex items-center gap-4">
+            <Button variant="ghost" size="sm" className="relative p-2 hover:bg-white/10 text-white">
+              <Bell className="h-4 w-4" />
+              <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="text-white hover:bg-white/10 p-1">
-                  <User className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
+                  {user?.profilePhoto ? (
+                    <img 
+                      src={user.profilePhoto} 
+                      alt="Profile" 
+                      className="h-6 w-6 rounded-full"
+                    />
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
+                  <span className="hidden sm:inline text-white">{user?.firstName || 'User'}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setLocation("/profile")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Profile Settings
+                <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
@@ -242,11 +243,9 @@ export default function KnowledgeBase() {
             </DropdownMenu>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="p-6">
-        <div className="max-w-6xl mx-auto">
+        {/* Main Content */}
+        <div className="space-y-8">
           {/* Search and Actions */}
           <div className="mb-8">
             <Card className="p-6 bg-white/20 backdrop-blur-md border-white/30 shadow-lg">
@@ -444,7 +443,7 @@ export default function KnowledgeBase() {
                 const IconComponent = category ? getCategoryIcon(category.icon) : BookOpen;
                 
                 return (
-                  <Card key={article.id} className="p-6 bg-white/20 backdrop-blur-md border-white/30 hover:bg-white/25 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-orange-300/50">
+                  <Card key={article.id} className="p-6 bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:from-gray-50 hover:to-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-orange-300">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-3">
@@ -468,11 +467,11 @@ export default function KnowledgeBase() {
                           </Badge>
                         </div>
                         
-                        <h3 className="text-xl font-semibold text-white drop-shadow-sm mb-2 cursor-pointer hover:text-orange-300 transition-colors">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-orange-600 transition-colors">
                           {article.title}
                         </h3>
                         
-                        <p className="text-white/90 text-sm mb-4 drop-shadow-sm">
+                        <p className="text-gray-600 text-sm mb-4">
                           {article.excerpt}
                         </p>
 
@@ -486,7 +485,7 @@ export default function KnowledgeBase() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-6 text-white/80 text-sm">
+                        <div className="flex items-center gap-6 text-gray-500 text-sm">
                           <div className="flex items-center gap-1">
                             <Eye className="h-4 w-4" />
                             <span>{article.viewCount || 0} views</span>
