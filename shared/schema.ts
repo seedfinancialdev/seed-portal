@@ -327,3 +327,107 @@ export type InsertClientDocument = z.infer<typeof insertClientDocumentSchema>;
 export type ClientDocument = typeof clientDocuments.$inferSelect;
 export type InsertClientActivity = z.infer<typeof insertClientActivitySchema>;
 export type ClientActivity = typeof clientActivities.$inferSelect;
+
+// Knowledge Base Schema
+export const kbCategories = pgTable("kb_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  description: text("description"),
+  icon: text("icon").default("folder"), // Lucide icon name
+  color: text("color").default("blue"), // Category color theme
+  parentId: integer("parent_id"), // For subcategories - will add reference after table definition
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const kbArticles = pgTable("kb_articles", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  slug: text("slug").notNull().unique(),
+  excerpt: text("excerpt"), // Brief summary
+  content: text("content").notNull(), // Rich text/markdown content
+  categoryId: integer("category_id").notNull().references(() => kbCategories.id),
+  authorId: integer("author_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("draft"), // draft, published, archived
+  featured: boolean("featured").default(false), // Featured articles
+  tags: text("tags").array(), // Array of tags for filtering
+  viewCount: integer("view_count").default(0),
+  searchVector: text("search_vector"), // For full-text search
+  aiSummary: text("ai_summary"), // AI-generated summary
+  lastReviewedAt: timestamp("last_reviewed_at"),
+  lastReviewedBy: integer("last_reviewed_by").references(() => users.id),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const kbArticleVersions = pgTable("kb_article_versions", {
+  id: serial("id").primaryKey(),
+  articleId: integer("article_id").notNull().references(() => kbArticles.id),
+  version: integer("version").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  authorId: integer("author_id").notNull().references(() => users.id),
+  changeNote: text("change_note"), // What changed in this version
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const kbBookmarks = pgTable("kb_bookmarks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  articleId: integer("article_id").notNull().references(() => kbArticles.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const kbSearchHistory = pgTable("kb_search_history", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  query: text("query").notNull(),
+  resultsCount: integer("results_count").default(0),
+  clickedArticleId: integer("clicked_article_id").references(() => kbArticles.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Knowledge Base Schemas
+export const insertKbCategorySchema = createInsertSchema(kbCategories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKbArticleSchema = createInsertSchema(kbArticles).omit({
+  id: true,
+  viewCount: true,
+  searchVector: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertKbArticleVersionSchema = createInsertSchema(kbArticleVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertKbBookmarkSchema = createInsertSchema(kbBookmarks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertKbSearchHistorySchema = createInsertSchema(kbSearchHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertKbCategory = z.infer<typeof insertKbCategorySchema>;
+export type KbCategory = typeof kbCategories.$inferSelect;
+export type InsertKbArticle = z.infer<typeof insertKbArticleSchema>;
+export type KbArticle = typeof kbArticles.$inferSelect;
+export type InsertKbArticleVersion = z.infer<typeof insertKbArticleVersionSchema>;
+export type KbArticleVersion = typeof kbArticleVersions.$inferSelect;
+export type InsertKbBookmark = z.infer<typeof insertKbBookmarkSchema>;
+export type KbBookmark = typeof kbBookmarks.$inferSelect;
+export type InsertKbSearchHistory = z.infer<typeof insertKbSearchHistorySchema>;
+export type KbSearchHistory = typeof kbSearchHistory.$inferSelect;

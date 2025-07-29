@@ -1,4 +1,9 @@
-import { users, quotes, approvalCodes, type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, updateQuoteSchema, type UpdateProfile } from "@shared/schema";
+import { 
+  users, quotes, approvalCodes, kbCategories, kbArticles, kbBookmarks, kbSearchHistory,
+  type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, 
+  type KbCategory, type InsertKbCategory, type KbArticle, type InsertKbArticle, type KbBookmark, type InsertKbBookmark,
+  type KbSearchHistory, type InsertKbSearchHistory, updateQuoteSchema, type UpdateProfile 
+} from "@shared/schema";
 import { db } from "./db";
 import { safeDbQuery } from "./db-utils";
 import { eq, like, desc, asc, sql, and } from "drizzle-orm";
@@ -30,6 +35,31 @@ export interface IStorage {
   createApprovalCode(approvalCode: InsertApprovalCode): Promise<ApprovalCode>;
   validateApprovalCode(code: string, email: string): Promise<boolean>;
   markApprovalCodeUsed(code: string, email: string): Promise<void>;
+
+  // Knowledge Base methods
+  // Categories
+  getKbCategories(): Promise<KbCategory[]>;
+  createKbCategory(category: InsertKbCategory): Promise<KbCategory>;
+  updateKbCategory(id: number, category: Partial<InsertKbCategory>): Promise<KbCategory>;
+  deleteKbCategory(id: number): Promise<void>;
+  
+  // Articles
+  getKbArticles(categoryId?: number, status?: string, featured?: boolean): Promise<KbArticle[]>;
+  getKbArticle(id: number): Promise<KbArticle | undefined>;
+  getKbArticleBySlug(slug: string): Promise<KbArticle | undefined>;
+  createKbArticle(article: InsertKbArticle): Promise<KbArticle>;
+  updateKbArticle(id: number, article: Partial<InsertKbArticle>): Promise<KbArticle>;
+  deleteKbArticle(id: number): Promise<void>;
+  incrementArticleViews(id: number): Promise<void>;
+  
+  // Search
+  searchKbArticles(query: string, userId?: number): Promise<KbArticle[]>;
+  recordKbSearch(search: InsertKbSearchHistory): Promise<KbSearchHistory>;
+  
+  // Bookmarks
+  getUserKbBookmarks(userId: number): Promise<KbBookmark[]>;
+  createKbBookmark(bookmark: InsertKbBookmark): Promise<KbBookmark>;
+  deleteKbBookmark(userId: number, articleId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -278,6 +308,205 @@ export class DatabaseStorage implements IStorage {
       // Note: Drizzle doesn't return affected rows count easily, so we trust the operation
       return result;
     }, 'markApprovalCodeUsed');
+  }
+
+  // Knowledge Base Categories
+  async getKbCategories(): Promise<KbCategory[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(kbCategories)
+        .where(eq(kbCategories.isActive, true))
+        .orderBy(asc(kbCategories.sortOrder), asc(kbCategories.name));
+    }, 'getKbCategories');
+  }
+
+  async createKbCategory(insertCategory: InsertKbCategory): Promise<KbCategory> {
+    return await safeDbQuery(async () => {
+      const [category] = await db
+        .insert(kbCategories)
+        .values(insertCategory)
+        .returning();
+      
+      if (!category) {
+        throw new Error('Failed to create category');
+      }
+      
+      return category;
+    }, 'createKbCategory');
+  }
+
+  async updateKbCategory(id: number, category: Partial<InsertKbCategory>): Promise<KbCategory> {
+    return await safeDbQuery(async () => {
+      const [updatedCategory] = await db
+        .update(kbCategories)
+        .set({ ...category, updatedAt: new Date() })
+        .where(eq(kbCategories.id, id))
+        .returning();
+      
+      if (!updatedCategory) {
+        throw new Error(`Category with ID ${id} not found`);
+      }
+      
+      return updatedCategory;
+    }, 'updateKbCategory');
+  }
+
+  async deleteKbCategory(id: number): Promise<void> {
+    await safeDbQuery(async () => {
+      await db.update(kbCategories)
+        .set({ isActive: false })
+        .where(eq(kbCategories.id, id));
+    }, 'deleteKbCategory');
+  }
+
+  // Knowledge Base Articles
+  async getKbArticles(categoryId?: number, status?: string, featured?: boolean): Promise<KbArticle[]> {
+    return await safeDbQuery(async () => {
+      const conditions = [];
+      
+      if (categoryId) conditions.push(eq(kbArticles.categoryId, categoryId));
+      if (status) conditions.push(eq(kbArticles.status, status));
+      if (featured !== undefined) conditions.push(eq(kbArticles.featured, featured));
+      
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      
+      return await db.select().from(kbArticles)
+        .where(whereClause)
+        .orderBy(desc(kbArticles.featured), desc(kbArticles.updatedAt));
+    }, 'getKbArticles');
+  }
+
+  async getKbArticle(id: number): Promise<KbArticle | undefined> {
+    return await safeDbQuery(async () => {
+      const [article] = await db.select().from(kbArticles)
+        .where(eq(kbArticles.id, id));
+      return article || undefined;
+    }, 'getKbArticle');
+  }
+
+  async getKbArticleBySlug(slug: string): Promise<KbArticle | undefined> {
+    return await safeDbQuery(async () => {
+      const [article] = await db.select().from(kbArticles)
+        .where(eq(kbArticles.slug, slug));
+      return article || undefined;
+    }, 'getKbArticleBySlug');
+  }
+
+  async createKbArticle(insertArticle: InsertKbArticle): Promise<KbArticle> {
+    return await safeDbQuery(async () => {
+      const [article] = await db
+        .insert(kbArticles)
+        .values(insertArticle)
+        .returning();
+      
+      if (!article) {
+        throw new Error('Failed to create article');
+      }
+      
+      return article;
+    }, 'createKbArticle');
+  }
+
+  async updateKbArticle(id: number, article: Partial<InsertKbArticle>): Promise<KbArticle> {
+    return await safeDbQuery(async () => {
+      const [updatedArticle] = await db
+        .update(kbArticles)
+        .set({ ...article, updatedAt: new Date() })
+        .where(eq(kbArticles.id, id))
+        .returning();
+      
+      if (!updatedArticle) {
+        throw new Error(`Article with ID ${id} not found`);
+      }
+      
+      return updatedArticle;
+    }, 'updateKbArticle');
+  }
+
+  async deleteKbArticle(id: number): Promise<void> {
+    await safeDbQuery(async () => {
+      await db.update(kbArticles)
+        .set({ status: 'archived' })
+        .where(eq(kbArticles.id, id));
+    }, 'deleteKbArticle');
+  }
+
+  async incrementArticleViews(id: number): Promise<void> {
+    await safeDbQuery(async () => {
+      await db.update(kbArticles)
+        .set({ viewCount: sql`${kbArticles.viewCount} + 1` })
+        .where(eq(kbArticles.id, id));
+    }, 'incrementArticleViews');
+  }
+
+  // Search
+  async searchKbArticles(query: string, userId?: number): Promise<KbArticle[]> {
+    return await safeDbQuery(async () => {
+      const searchResults = await db.select().from(kbArticles)
+        .where(
+          and(
+            eq(kbArticles.status, 'published'),
+            sql`(
+              ${kbArticles.title} ILIKE ${`%${query}%`} OR 
+              ${kbArticles.content} ILIKE ${`%${query}%`} OR 
+              ${kbArticles.excerpt} ILIKE ${`%${query}%`}
+            )`
+          )
+        )
+        .orderBy(desc(kbArticles.featured), desc(kbArticles.viewCount));
+      
+      return searchResults;
+    }, 'searchKbArticles');
+  }
+
+  async recordKbSearch(insertSearch: InsertKbSearchHistory): Promise<KbSearchHistory> {
+    return await safeDbQuery(async () => {
+      const [search] = await db
+        .insert(kbSearchHistory)
+        .values(insertSearch)
+        .returning();
+      
+      if (!search) {
+        throw new Error('Failed to record search');
+      }
+      
+      return search;
+    }, 'recordKbSearch');
+  }
+
+  // Bookmarks
+  async getUserKbBookmarks(userId: number): Promise<KbBookmark[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(kbBookmarks)
+        .where(eq(kbBookmarks.userId, userId))
+        .orderBy(desc(kbBookmarks.createdAt));
+    }, 'getUserKbBookmarks');
+  }
+
+  async createKbBookmark(insertBookmark: InsertKbBookmark): Promise<KbBookmark> {
+    return await safeDbQuery(async () => {
+      const [bookmark] = await db
+        .insert(kbBookmarks)
+        .values(insertBookmark)
+        .returning();
+      
+      if (!bookmark) {
+        throw new Error('Failed to create bookmark');
+      }
+      
+      return bookmark;
+    }, 'createKbBookmark');
+  }
+
+  async deleteKbBookmark(userId: number, articleId: number): Promise<void> {
+    await safeDbQuery(async () => {
+      await db.delete(kbBookmarks)
+        .where(
+          and(
+            eq(kbBookmarks.userId, userId),
+            eq(kbBookmarks.articleId, articleId)
+          )
+        );
+    }, 'deleteKbBookmark');
   }
 }
 

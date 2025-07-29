@@ -1,7 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertQuoteSchema, updateQuoteSchema, updateProfileSchema } from "@shared/schema";
+import { 
+  insertQuoteSchema, updateQuoteSchema, updateProfileSchema,
+  insertKbCategorySchema, insertKbArticleSchema, insertKbBookmarkSchema, insertKbSearchHistorySchema
+} from "@shared/schema";
 import { z } from "zod";
 import { sendCleanupOverrideNotification } from "./slack";
 import { hubSpotService } from "./hubspot";
@@ -895,6 +898,225 @@ export async function registerRoutes(app: Express): Promise<Server> {
           baseId: process.env.AIRTABLE_BASE_ID ? 'Present' : 'Missing'
         }
       });
+    }
+  });
+
+  // Knowledge Base API endpoints
+  
+  // Get all categories
+  app.get("/api/kb/categories", requireAuth, async (req, res) => {
+    try {
+      const categories = await storage.getKbCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  // Create new category
+  app.post("/api/kb/categories", requireAuth, async (req, res) => {
+    try {
+      const categoryData = insertKbCategorySchema.parse(req.body);
+      const category = await storage.createKbCategory(categoryData);
+      res.json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid category data", errors: error.errors });
+      } else {
+        console.error('Error creating category:', error);
+        res.status(500).json({ message: "Failed to create category" });
+      }
+    }
+  });
+
+  // Get articles (with optional filters)
+  app.get("/api/kb/articles", requireAuth, async (req, res) => {
+    try {
+      const { categoryId, status, featured } = req.query;
+      
+      const articles = await storage.getKbArticles(
+        categoryId ? parseInt(categoryId as string) : undefined,
+        status as string,
+        featured === 'true' ? true : featured === 'false' ? false : undefined
+      );
+      
+      res.json(articles);
+    } catch (error) {
+      console.error('Error fetching articles:', error);
+      res.status(500).json({ message: "Failed to fetch articles" });
+    }
+  });
+
+  // Get single article by ID
+  app.get("/api/kb/articles/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const article = await storage.getKbArticle(parseInt(id));
+      
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Increment view count
+      await storage.incrementArticleViews(parseInt(id));
+      
+      res.json(article);
+    } catch (error) {
+      console.error('Error fetching article:', error);
+      res.status(500).json({ message: "Failed to fetch article" });
+    }
+  });
+
+  // Get article by slug
+  app.get("/api/kb/articles/slug/:slug", requireAuth, async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const article = await storage.getKbArticleBySlug(slug);
+      
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Increment view count
+      await storage.incrementArticleViews(article.id);
+      
+      res.json(article);
+    } catch (error) {
+      console.error('Error fetching article:', error);
+      res.status(500).json({ message: "Failed to fetch article" });
+    }
+  });
+
+  // Create new article
+  app.post("/api/kb/articles", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const articleData = insertKbArticleSchema.parse({
+        ...req.body,
+        authorId: req.user.id
+      });
+
+      const article = await storage.createKbArticle(articleData);
+      res.json(article);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid article data", errors: error.errors });
+      } else {
+        console.error('Error creating article:', error);
+        res.status(500).json({ message: "Failed to create article" });
+      }
+    }
+  });
+
+  // Update article
+  app.patch("/api/kb/articles/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      const article = await storage.updateKbArticle(parseInt(id), updateData);
+      res.json(article);
+    } catch (error) {
+      console.error('Error updating article:', error);
+      res.status(500).json({ message: "Failed to update article" });
+    }
+  });
+
+  // Delete article
+  app.delete("/api/kb/articles/:id", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteKbArticle(parseInt(id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      res.status(500).json({ message: "Failed to delete article" });
+    }
+  });
+
+  // Search articles
+  app.get("/api/kb/search", requireAuth, searchRateLimit, async (req, res) => {
+    try {
+      const { q: query } = req.query;
+      
+      if (!query || typeof query !== 'string' || query.length < 2) {
+        return res.json([]);
+      }
+
+      const articles = await storage.searchKbArticles(query, req.user?.id);
+      
+      // Record search history
+      if (req.user) {
+        await storage.recordKbSearch({
+          userId: req.user.id,
+          query,
+          resultsCount: articles.length
+        });
+      }
+      
+      res.json(articles);
+    } catch (error) {
+      console.error('Error searching articles:', error);
+      res.status(500).json({ message: "Failed to search articles" });
+    }
+  });
+
+  // Get user bookmarks
+  app.get("/api/kb/bookmarks", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const bookmarks = await storage.getUserKbBookmarks(req.user.id);
+      res.json(bookmarks);
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+      res.status(500).json({ message: "Failed to fetch bookmarks" });
+    }
+  });
+
+  // Create bookmark
+  app.post("/api/kb/bookmarks", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const bookmarkData = insertKbBookmarkSchema.parse({
+        ...req.body,
+        userId: req.user.id
+      });
+
+      const bookmark = await storage.createKbBookmark(bookmarkData);
+      res.json(bookmark);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid bookmark data", errors: error.errors });
+      } else {
+        console.error('Error creating bookmark:', error);
+        res.status(500).json({ message: "Failed to create bookmark" });
+      }
+    }
+  });
+
+  // Delete bookmark
+  app.delete("/api/kb/bookmarks/:articleId", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const { articleId } = req.params;
+      await storage.deleteKbBookmark(req.user.id, parseInt(articleId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting bookmark:', error);
+      res.status(500).json({ message: "Failed to delete bookmark" });
     }
   });
 
