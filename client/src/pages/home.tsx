@@ -1258,7 +1258,6 @@ export default function Home() {
           showBackButton={true} 
           backButtonText="Back to Portal" 
           backButtonPath="/" 
-          variant="dark"
         />
 
         {/* Service Selection Cards - Optimized for desktop */}

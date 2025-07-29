@@ -229,7 +229,6 @@ export default function ClientIntel() {
         showBackButton={true} 
         backButtonText="Back to Portal" 
         backButtonPath="/" 
-        variant="dark"
       />
       {/* Main Content */}
 

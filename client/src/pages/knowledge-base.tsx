@@ -123,7 +123,6 @@ export default function KnowledgeBase() {
             showBackButton={true} 
             backButtonText="Back to Portal" 
             backButtonPath="/" 
-            variant="dark"
           />
 
           {/* Title */}

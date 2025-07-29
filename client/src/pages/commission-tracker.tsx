@@ -361,7 +361,6 @@ export default function CommissionTracker() {
           showBackButton={true} 
           backButtonText="Back to Portal" 
           backButtonPath="/" 
-          variant="dark"
         />
 
         {/* Stats Cards */}
