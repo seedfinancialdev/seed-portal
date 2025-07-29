@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **AI Article Generator UI Improvement & Integration** (July 29, 2025)
+  - **Streamlined Layout**: Moved AI Generate Article button from sidebar card to main header next to New Article button
+  - **Clean Button Design**: Orange gradient Generate Article button with magic wand icon positioned prominently
+  - **Removed Clutter**: Eliminated bulky AI generator sidebar card that was bunched in corner
+  - **Better UX Flow**: Users can now access AI generator directly from main article management header
+  - **Consistent Styling**: Generate Article button matches overall orange theme with gradient design
+  - **Maintained Functionality**: All AI generation features preserved - just improved the interface layout
+
 ✓ **SEEDKB Dashboard Enhancement & Scroll Restoration** (July 29, 2025)
   - **SEEDKB Knowledge System**: Transformed Knowledge Base card into comprehensive "SEEDKB" interface taking full right column
   - **Enhanced Card Design**: Large prominent card with gradient background, orange-highlighted "KB" text, and comprehensive layout

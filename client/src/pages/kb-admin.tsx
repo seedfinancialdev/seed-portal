@@ -275,47 +275,6 @@ export default function KbAdmin() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Categories Sidebar */}
           <div className="lg:col-span-1 space-y-6">
-            {/* AI Article Generator Card */}
-            <Card className="bg-gradient-to-br from-orange-500/20 to-yellow-500/20 backdrop-blur-md border-orange-300/40 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2 text-lg">
-                  <Wand2 className="h-6 w-6 text-orange-300" />
-                  AI Article Generator
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-white/90 text-sm">
-                  Create professional articles with Claude AI using templates, brand voice, and compliance guidelines.
-                </p>
-                <Button
-                  onClick={() => setIsAIGeneratorOpen(true)}
-                  className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-semibold shadow-md"
-                  size="lg"
-                >
-                  <Wand2 className="h-4 w-4 mr-2" />
-                  Generate Article
-                </Button>
-                <div className="grid grid-cols-2 gap-2 text-xs text-white/80">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    Outline → Draft
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    Multi-Audience
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                    Brand Voice
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                    Compliance
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Categories Card */}
             <Card className="bg-white/15 backdrop-blur-md border-white/30">
               <CardHeader>
@@ -357,17 +316,25 @@ export default function KbAdmin() {
                       : "All Articles"
                     }
                   </CardTitle>
-                  <Dialog open={isArticleDialogOpen} onOpenChange={setIsArticleDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        className="bg-orange-500 hover:bg-orange-600 text-white"
-                        onClick={openNewArticleDialog}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Article
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setIsAIGeneratorOpen(true)}
+                      className="bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-semibold shadow-md"
+                    >
+                      <Wand2 className="h-4 w-4 mr-2" />
+                      Generate Article
+                    </Button>
+                    <Dialog open={isArticleDialogOpen} onOpenChange={setIsArticleDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          className="bg-orange-500 hover:bg-orange-600 text-white"
+                          onClick={openNewArticleDialog}
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          New Article
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>
                           {editingArticle ? "Edit Article" : "Create New Article"}
@@ -531,6 +498,7 @@ export default function KbAdmin() {
                       </Form>
                     </DialogContent>
                   </Dialog>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
