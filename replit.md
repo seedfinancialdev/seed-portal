@@ -10,6 +10,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Comprehensive AI Article Generator Enhancement** (July 29, 2025)
+  - **Fixed Template Variables Logic**: Changed from "required" to truly optional - AI can work around missing variables
+  - **Enhanced Template Previews**: Added sample finalized article format with Lorem Ipsum content alongside structure
+  - **Professional WYSIWYG Editor**: Implemented TinyMCE rich text editor in Polish tab for polished content editing
+  - **Session Persistence**: Complete localStorage integration to save/restore user progress across app sessions
+  - **Auto-Metadata Generation**: Enhanced excerpt and tag generation with manual regeneration capabilities
+  - **Visual Seed-Styled Previews**: Template previews now show generic finalized article format with professional styling
+  - **Conditional Display Fix**: Template variables box only appears when template actually has variables defined
+  - **Multi-step Workflow**: Professional article creation flow from outline → draft → polish → versions
+  - **Audience-Aware Content**: Dynamic content generation based on selected audience (Internal Team, Client-Facing, General)
+
 ✓ **AI Article Generator UI Improvement & Integration** (July 29, 2025)
   - **Streamlined Layout**: Moved AI Generate Article button from sidebar card to main header next to New Article button
   - **Clean Button Design**: Orange gradient Generate Article button with magic wand icon positioned prominently

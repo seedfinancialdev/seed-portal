@@ -33,9 +33,11 @@ import {
   Edit3,
   Sparkles,
   RotateCcw,
-  History
+  History,
+  Edit
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { RichTextEditor } from './RichTextEditor';
 
 // Types and interfaces
 interface Template {
@@ -540,19 +542,41 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                 )}
                               </div>
                               
-                              {/* Visual Preview */}
+                              {/* Enhanced Visual Preview with Sample Content */}
                               <div className="mb-3 bg-gradient-to-br from-green-50 to-orange-50 p-3 rounded-lg border">
-                                <div className="text-xs text-gray-700 space-y-1">
-                                  <div className="font-semibold text-orange-600">Preview Structure:</div>
-                                  {template.structure.slice(0, 4).map((section, index) => (
-                                    <div key={index} className="flex items-center gap-1">
-                                      <div className="w-1 h-1 bg-green-500 rounded-full"></div>
-                                      <span className="text-xs">{section}</span>
-                                    </div>
-                                  ))}
-                                  {template.structure.length > 4 && (
-                                    <div className="text-xs text-gray-500 italic">+{template.structure.length - 4} more sections</div>
-                                  )}
+                                <div className="text-xs text-gray-700 space-y-2">
+                                  <div className="font-semibold text-orange-600 mb-2">Article Preview:</div>
+                                  
+                                  {/* Sample Article Structure */}
+                                  <div className="bg-white p-3 rounded border space-y-2 max-h-40 overflow-y-auto">
+                                    <div className="font-bold text-sm text-gray-800"># {template.name} - Sample Title</div>
+                                    
+                                    {template.structure.slice(0, 4).map((section, index) => (
+                                      <div key={index} className="space-y-1">
+                                        <div className="font-semibold text-xs text-orange-600">## {section}</div>
+                                        <div className="text-xs text-gray-500 pl-2">
+                                          {section.includes('Process') || section.includes('Steps') ? 
+                                            '1. Step one with detailed instructions...\n2. Step two with clear guidance...\n3. Final verification and completion...' :
+                                          section.includes('Overview') || section.includes('Introduction') ? 
+                                            'This section provides a comprehensive overview of the topic, including key objectives and expected outcomes...' :
+                                          section.includes('Resources') || section.includes('Links') ?
+                                            '• Related documentation links\n• Contact information\n• Additional tools and templates' :
+                                            'Detailed content covering important aspects, best practices, and actionable insights for this section...'
+                                          }
+                                        </div>
+                                      </div>
+                                    ))}
+                                    
+                                    {template.structure.length > 4 && (
+                                      <div className="text-xs text-gray-400 italic border-t pt-2">
+                                        +{template.structure.length - 4} additional sections with comprehensive content
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="text-xs text-gray-500 italic">
+                                    ✨ Final article will be professionally written with Seed Financial's brand voice
+                                  </div>
                                 </div>
                               </div>
                               
@@ -719,17 +743,20 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                       )}
                     />
 
-                    {/* Template Variables - Enhanced conditional display */}
+                    {/* Template Variables - Optional Enhancement */}
                     {selectedTemplate && selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
-                      <Card className="border-orange-200 bg-orange-50/30">
+                      <Card className="border-blue-200 bg-blue-50/30">
                         <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-orange-800">
+                          <CardTitle className="flex items-center gap-2 text-blue-800">
                             <Settings className="h-4 w-4" />
-                            Template Variables Required
+                            Template Variables (Optional)
                             <Badge variant="secondary" className="text-xs">
-                              {selectedTemplate.variables.length} variables
+                              {selectedTemplate.variables.length} available
                             </Badge>
                           </CardTitle>
+                          <p className="text-sm text-gray-600 mt-1">
+                            These variables are optional. AI will generate appropriate content if left blank.
+                          </p>
                         </CardHeader>
                         <CardContent>
                           <FormField
@@ -737,23 +764,23 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                             name="variables"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Custom Variables (JSON format)</FormLabel>
+                                <FormLabel>Custom Variables (JSON format - Optional)</FormLabel>
                                 <FormControl>
                                   <Textarea 
-                                    placeholder={`Required for ${selectedTemplate.name}:\n${JSON.stringify(
+                                    placeholder={`Optional variables for ${selectedTemplate.name}:\n${JSON.stringify(
                                       selectedTemplate.variables.reduce((acc, variable) => ({
                                         ...acc,
-                                        [variable]: "Your value here"
+                                        [variable.replace(/[{}]/g, '')]: "Your custom value (optional)"
                                       }), {}),
                                       null,
                                       2
-                                    )}`}
+                                    )}\n\nLeave blank to let AI generate appropriate content.`}
                                     className="min-h-[120px] font-mono text-sm"
                                     {...field} 
                                   />
                                 </FormControl>
                                 <div className="text-xs text-gray-600 mt-1">
-                                  Available variables: {selectedTemplate.variables.join(', ')}
+                                  Available variables: {selectedTemplate.variables.join(', ')} (all optional)
                                 </div>
                                 <FormMessage />
                               </FormItem>
@@ -917,12 +944,15 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
             </Card>
           </TabsContent>
 
-          {/* Polish Tab */}
+          {/* Polish Tab with WYSIWYG Editor */}
           <TabsContent value="polish" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span>Polished Article</span>
+                  <div className="flex items-center gap-2">
+                    <Edit className="h-5 w-5" />
+                    <span>Polished Article - WYSIWYG Editor</span>
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
@@ -943,21 +973,17 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                         "Create Versions"
                       )}
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleSaveArticle(generatedContent.polished || '')}
-                      className="bg-green-500 hover:bg-green-600"
-                    >
-                      <Save className="h-4 w-4 mr-1" />
-                      Save Article
-                    </Button>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm">{generatedContent.polished}</pre>
-                </div>
+                <RichTextEditor
+                  content={generatedContent.polished || ''}
+                  onChange={(content) => setGeneratedContent(prev => ({ ...prev, polished: content }))}
+                  onSave={(content) => handleSaveArticle(content)}
+                  placeholder="Your polished article content will appear here. Edit with full rich text formatting..."
+                  height={500}
+                />
               </CardContent>
             </Card>
           </TabsContent>
