@@ -230,7 +230,7 @@ export default function KnowledgeBase() {
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-6xl font-bold text-white mb-6 tracking-tight" style={{ fontFamily: 'League Spartan, sans-serif' }}>
-            Seed<span className="text-[#e24c00]">KB</span>
+            SEED<span className="text-[#e24c00]">KB</span>
           </h1>
           
           {/* Search Bar */}
