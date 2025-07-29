@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { 
-  ArrowLeft, 
   Search, 
   BookOpen, 
   Calculator, 
@@ -18,17 +17,12 @@ import {
   Heart,
   Compass,
   Folder,
-  Settings,
   Eye,
   Clock,
   ChevronRight,
-  Bell
+  Settings
 } from 'lucide-react';
-import { useLocation } from 'wouter';
-import { useAuth } from '@/hooks/use-auth';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, LogOut } from "lucide-react";
-import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
+import { UniversalNavbar } from '@/components/UniversalNavbar';
 import { apiRequest } from "@/lib/queryClient";
 
 // Types
@@ -72,12 +66,11 @@ const iconMap: Record<string, any> = {
   'shield': Shield,
   'wrench': Wrench,
   'heart': Heart,
-  'folder': Folder
+  'folder': Folder,
+  'settings': Settings
 };
 
 export default function KnowledgeBase() {
-  const [, setLocation] = useLocation();
-  const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<KbCategory | null>(null);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
@@ -120,81 +113,18 @@ export default function KnowledgeBase() {
     return IconComponent;
   };
 
-  const handleLogout = async () => {
-    await logout();
-  };
-
   // Main categories view
   if (!selectedCategory) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           
-          {/* Header */}
-          <div className="relative mb-8">
-            <div className="absolute top-0 left-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-                onClick={() => setLocation('/')}
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Portal
-              </Button>
-            </div>
-            
-            <div className="absolute top-0 right-0 flex items-center space-x-4">
-              <div className="relative hidden md:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
-                <Input 
-                  placeholder="Search..." 
-                  className="pl-10 w-64 bg-white/15 backdrop-blur-md border-white/30 placeholder:text-white/60 text-white focus:bg-white/20 focus:border-white/50"
-                />
-              </div>
-              <Button variant="ghost" size="sm" className="relative text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
-                    <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                      {user?.email?.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="hidden md:block">{user?.email?.split('@')[0]}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b">
-                    <p className="font-medium text-gray-900">{user?.email?.split('@')[0]}</p>
-                    <p className="text-sm text-gray-500">{user?.email}</p>
-                  </div>
-                  <DropdownMenuItem onClick={() => setLocation('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation('/kb-admin')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Knowledge Base Admin</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            
-            <div className="flex justify-center">
-              <img 
-                src={logoPath} 
-                alt="Seed Financial Logo" 
-                className="h-16"
-              />
-            </div>
-          </div>
+          <UniversalNavbar 
+            showBackButton={true} 
+            backButtonText="Back to Portal" 
+            backButtonPath="/" 
+            variant="dark"
+          />
 
           {/* Title */}
           <div className="text-center mb-12">

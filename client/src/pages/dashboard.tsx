@@ -1,19 +1,8 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { 
   Calculator, 
-  LogOut, 
-  User, 
-  BookOpen, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings, 
-  MessageSquare, 
-  Bell, 
-  Search,
   TrendingUp,
   Calendar,
   CreditCard,
@@ -41,20 +30,14 @@ import {
   CloudRain,
   ChevronDown
 } from "lucide-react";
-import navLogoPath from "@assets/Nav Logo_1753431362883.png";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { SalesInbox } from "@/components/SalesInbox";
+import { UniversalNavbar } from "@/components/UniversalNavbar";
 import { useState, useEffect } from 'react';
 
 export default function Dashboard() {
-  const { user, logoutMutation } = useAuth();
+  const { user } = useAuth();
   const [weather, setWeather] = useState({ temp: 72, condition: 'sunny', location: 'Marina Del Rey, CA' });
-
-  const handleLogout = () => {
-    logoutMutation.mutate();
-  };
 
   const currentDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -93,120 +76,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-green-50 to-emerald-100">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <img 
-                src={navLogoPath} 
-                alt="Seed Financial Logo" 
-                className="h-8"
-              />
-              <div className="hidden lg:flex items-center space-x-6">
-                <nav className="flex space-x-6">
-                  <Button variant="ghost" className="text-gray-700 hover:text-gray-900 font-medium">
-                    Dashboard
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="text-gray-700 hover:text-gray-900 font-medium">
-                        Tools <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-64">
-                      <DropdownMenuItem>
-                        <Calculator className="mr-3 h-4 w-4" />
-                        Quote Calculator
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <DollarSign className="mr-3 h-4 w-4" />
-                        Commission Tracker
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Inbox className="mr-3 h-4 w-4" />
-                        Sales Inbox
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <UserCheck className="mr-3 h-4 w-4" />
-                        Client Snapshot Generator
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="text-gray-700 hover:text-gray-900 font-medium">
-                        Resources <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-64">
-                      <DropdownMenuItem>
-                        <Video className="mr-3 h-4 w-4" />
-                        Meeting Vault
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Bot className="mr-3 h-4 w-4" />
-                        Knowledge Base
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <GraduationCap className="mr-3 h-4 w-4" />
-                        Seed Academy
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Megaphone className="mr-3 h-4 w-4" />
-                        Announcements
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </nav>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="relative hidden md:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input 
-                  placeholder="Search..." 
-                  className="pl-10 w-64 bg-gray-50 border-gray-200 focus:bg-white"
-                />
-              </div>
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5 text-gray-600" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                      {user?.email?.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="hidden md:block text-gray-700">{user?.email?.split('@')[0]}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-3 py-2 border-b">
-                    <p className="font-medium text-gray-900">{user?.email?.split('@')[0]}</p>
-                    <p className="text-sm text-gray-500">{user?.email}</p>
-                  </div>
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </header>
+      <UniversalNavbar showBackButton={false} variant="light" />
 
       {/* Executive Summary Bar */}
       <div className="bg-gradient-to-r from-[#253e31] via-[#2d4937] to-[#3a5d47] text-white shadow-lg">
