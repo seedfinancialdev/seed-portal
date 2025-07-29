@@ -180,7 +180,7 @@ export default function KnowledgeBase() {
 
           {/* Title */}
           <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold text-white mb-4" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+            <h1 className="text-8xl font-bold text-white mb-4" style={{ fontFamily: 'League Spartan, sans-serif' }}>
               SEED<span style={{ color: '#e24c00' }}>KB</span>
             </h1>
           </div>
