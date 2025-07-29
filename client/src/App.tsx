@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
+import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
@@ -17,6 +18,9 @@ import KnowledgeBase from "@/pages/knowledge-base";
 import KbAdmin from "@/pages/kb-admin";
 
 function Router() {
+  // Automatically scroll to top when route changes
+  useScrollToTop();
+
   return (
     <ErrorBoundary>
       <Switch>

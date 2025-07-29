@@ -10,7 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-✓ **SEEDKB Dashboard Enhancement & Universal Navbar Completed** (July 29, 2025)
+✓ **SEEDKB Dashboard Enhancement & Scroll Restoration** (July 29, 2025)
   - **SEEDKB Knowledge System**: Transformed Knowledge Base card into comprehensive "SEEDKB" interface taking full right column
   - **Enhanced Card Design**: Large prominent card with gradient background, orange-highlighted "KB" text, and comprehensive layout
   - **Streamlined Layout**: Removed Seed Academy and Recent Activity cards to focus on core SEEDKB functionality
@@ -23,6 +23,7 @@ Preferred communication style: Simple, everyday language.
   - **Complete Portal Integration**: Updated all 5 portal pages with consistent navigation design
   - **Code Cleanup**: Eliminated 200+ lines of duplicate header code and renamed unused dashboard files
   - **LSP Error Resolution**: Fixed all TypeScript compilation errors and maintained clean codebase
+  - **Scroll Restoration**: Added automatic scroll-to-top functionality on all page navigation for better UX
 
 ✓ **Enhanced Login Experience and Bug Fixes** (July 28, 2025)
   - **Password Reveal Toggle**: Added eye/eye-off icon button in password field for password visibility control
