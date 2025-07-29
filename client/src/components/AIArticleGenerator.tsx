@@ -834,7 +834,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                             fieldName.includes('level') ? 'Beginner' :
                                             'Your custom value'
                                           }`}
-                                          value={field.value || ''}
+                                          value={field.value as string || ''}
                                           onChange={field.onChange}
                                           onBlur={field.onBlur}
                                           name={field.name}
