@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,23 +67,26 @@ export default function KbAdmin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, isLoading: authLoading } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<KbArticle | null>(null);
   const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
 
-  // Fetch categories
+  // Fetch categories - only when authenticated
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/kb/categories"],
+    enabled: !!user,
   });
 
-  // Fetch articles
+  // Fetch articles - only when authenticated
   const { data: articles = [], isLoading: articlesLoading } = useQuery({
     queryKey: ["/api/kb/articles", selectedCategory],
     queryFn: async () => {
       const params = selectedCategory ? `?categoryId=${selectedCategory}` : '';
       return apiRequest(`/api/kb/articles${params}`);
     },
+    enabled: !!user,
   });
 
   // Article form
@@ -234,6 +238,15 @@ export default function KbAdmin() {
     setIsArticleDialogOpen(true);
     setIsAIGeneratorOpen(false);
   };
+
+  // Show loading state while authenticating
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center">
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
