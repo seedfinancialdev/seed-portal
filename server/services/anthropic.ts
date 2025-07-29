@@ -336,6 +336,44 @@ Focus on:
     return content;
   }
 
+  async generateMetadata(content: string, title: string): Promise<{ excerpt: string; tags: string[] }> {
+    try {
+      const response = await anthropic.messages.create({
+        model: DEFAULT_MODEL_STR,
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: `Analyze this knowledge base article and generate metadata:
+
+TITLE: ${title}
+
+CONTENT:
+${content}
+
+Generate a JSON response with:
+1. "excerpt": A compelling 1-2 sentence summary (under 150 characters) that captures the article's main value
+2. "tags": Array of 3-5 relevant tags for searchability (focus on topics, categories, and key concepts)
+
+Use Seed Financial's professional tone. Make the excerpt action-oriented and the tags specific and useful.
+
+Format as valid JSON only, no other text.`
+        }]
+      });
+
+      const result = JSON.parse(response.content[0].text);
+      return {
+        excerpt: result.excerpt || 'Professional knowledge base article with comprehensive guidance.',
+        tags: result.tags || ['knowledge-base', 'professional-services', 'seed-financial']
+      };
+    } catch (error) {
+      console.error('Metadata generation failed:', error);
+      return {
+        excerpt: 'Professional knowledge base article with comprehensive guidance.',
+        tags: ['knowledge-base', 'professional-services', 'seed-financial']
+      };
+    }
+  }
+
   getAvailableTemplates() {
     return Object.entries(ARTICLE_TEMPLATES).map(([key, template]) => ({
       id: key,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,11 @@ import {
   BookOpen,
   Settings,
   Save,
-  Download
+  Download,
+  Edit3,
+  Sparkles,
+  RotateCcw,
+  History
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -39,6 +43,9 @@ interface Template {
   name: string;
   structure: string[];
   variables: string[];
+  description?: string;
+  seedStyle?: boolean;
+  preview?: string;
 }
 
 interface GenerationStep {
@@ -54,6 +61,22 @@ interface ContentAnalysis {
   complianceChecks: string[];
   suggestions: string[];
   missingElements: string[];
+}
+
+interface SavedSession {
+  formData: GeneratorFormData;
+  generatedContent: {
+    outline: string;
+    draft: string;
+    polished: string;
+  };
+  audienceVersions: {
+    internal: string;
+    client: string;
+    sales: string;
+  };
+  selectedTemplate: Template | null;
+  timestamp: number;
 }
 
 // Form schema
@@ -85,8 +108,12 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [contentAnalysis, setContentAnalysis] = useState<ContentAnalysis | null>(null);
   const [audienceVersions, setAudienceVersions] = useState<Record<string, string>>({});
+  const [autoExcerpt, setAutoExcerpt] = useState('');
+  const [autoTags, setAutoTags] = useState<string[]>([]);
+  const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
+  const [showSessionHistory, setShowSessionHistory] = useState(false);
 
-  // Fetch available templates
+  // Fetch available templates with enhanced Seed-styled previews
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ["/api/kb/ai/templates"],
     enabled: isOpen,
@@ -107,6 +134,106 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
       variables: "",
     },
   });
+
+  // Session persistence functions (moved after form initialization)
+  const saveSession = () => {
+    const sessionData: SavedSession = {
+      formData: form.getValues(),
+      generatedContent: {
+        outline: generatedContent.outline || '',
+        draft: generatedContent.draft || '',
+        polished: generatedContent.polished || ''
+      },
+      audienceVersions: {
+        internal: audienceVersions.internal || '',
+        client: audienceVersions.client || '',
+        sales: audienceVersions.sales || ''
+      },
+      selectedTemplate,
+      timestamp: Date.now()
+    };
+    
+    const existing = JSON.parse(localStorage.getItem('ai-article-sessions') || '[]');
+    const updated = [sessionData, ...existing.slice(0, 9)]; // Keep last 10 sessions
+    localStorage.setItem('ai-article-sessions', JSON.stringify(updated));
+    setSavedSessions(updated);
+    
+    toast({
+      title: "Session Saved",
+      description: "Your progress has been saved and can be restored later.",
+    });
+  };
+
+  const loadSession = (session: SavedSession) => {
+    form.reset(session.formData);
+    setGeneratedContent(session.generatedContent);
+    setAudienceVersions(session.audienceVersions);
+    setSelectedTemplate(session.selectedTemplate);
+    
+    // Determine current step based on available content
+    if (session.audienceVersions.internal) setCurrentStep('versions');
+    else if (session.generatedContent.polished) setCurrentStep('polish');
+    else if (session.generatedContent.draft) setCurrentStep('draft');
+    else if (session.generatedContent.outline) setCurrentStep('outline');
+    else setCurrentStep('setup');
+    
+    setShowSessionHistory(false);
+    toast({
+      title: "Session Restored",
+      description: "Your previous work has been loaded.",
+    });
+  };
+
+  // Auto-generate excerpt and tags function
+  const generateExcerptAndTags = async (content: string) => {
+    try {
+      const response = await apiRequest("/api/kb/ai/generate-metadata", {
+        method: "POST",
+        body: JSON.stringify({ content, title: form.getValues('title') })
+      });
+      setAutoExcerpt(response.excerpt);
+      setAutoTags(response.tags);
+    } catch (error) {
+      console.error('Failed to generate metadata:', error);
+    }
+  };
+
+  // Auto-save current work every 30s
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const interval = setInterval(() => {
+      const hasContent = generatedContent.outline || generatedContent.draft || generatedContent.polished;
+      if (hasContent) {
+        const autoSave: SavedSession = {
+          formData: form.getValues(),
+          generatedContent: {
+            outline: generatedContent.outline || '',
+            draft: generatedContent.draft || '',
+            polished: generatedContent.polished || ''
+          },
+          audienceVersions: {
+            internal: audienceVersions.internal || '',
+            client: audienceVersions.client || '',
+            sales: audienceVersions.sales || ''
+          },
+          selectedTemplate,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('ai-article-autosave', JSON.stringify(autoSave));
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, generatedContent, audienceVersions, selectedTemplate, form]);
+
+  // Load sessions on mount
+  useEffect(() => {
+    if (isOpen) {
+      const saved = JSON.parse(localStorage.getItem('ai-article-sessions') || '[]');
+      setSavedSessions(saved);
+    }
+  }, [isOpen]);
 
   // Mutations for different generation steps
   const generateOutlineMutation = useMutation({
@@ -132,18 +259,40 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     },
   });
 
+  // Generate metadata mutation
+  const generateMetadataMutation = useMutation({
+    mutationFn: async (data: { content: string; title: string }) => {
+      const response = await apiRequest('/api/kb/ai/generate-metadata', {
+        method: 'POST',  
+        body: JSON.stringify(data)
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      setAutoExcerpt(data.excerpt);
+      setAutoTags(data.tags);
+    }
+  });
+
   const generateDraftMutation = useMutation({
     mutationFn: async ({ outline, ...data }: GeneratorFormData & { outline?: string }) => {
       const variables = data.variables ? JSON.parse(data.variables) : {};
       const payload = { ...data, variables, outline };
       return apiRequest("/api/kb/ai/generate-draft", { method: "POST", body: JSON.stringify(payload) });
     },
-    onSuccess: (result: GenerationStep) => {
+    onSuccess: (result: GenerationStep, variables) => {
       setGeneratedContent(prev => ({ ...prev, draft: result.content }));
       setCurrentStep('draft');
+      
+      // Auto-generate metadata after draft creation
+      generateMetadataMutation.mutate({
+        content: result.content,
+        title: variables.title
+      });
+      
       toast({
         title: "Draft Generated",
-        description: "Your article draft is ready for review",
+        description: "Article draft created with auto-generated metadata",
       });
     },
   });
@@ -231,15 +380,54 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     }
   };
 
-  const handleSaveArticle = (content: string) => {
+  const handleSaveArticle = async (content: string) => {
     const formData = form.getValues();
-    onArticleGenerated({
-      title: formData.title,
-      content,
-      categoryId: formData.categoryId,
-    });
-    onClose();
-    resetGenerator();
+    
+    // Generate slug from title
+    const slug = formData.title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+    
+    try {
+      await apiRequest("/api/kb/articles", {
+        method: "POST",
+        body: JSON.stringify({
+          title: formData.title,
+          slug: slug,
+          content: content,
+          categoryId: formData.categoryId,
+          status: 'published',
+          excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
+          tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
+        })
+      });
+
+      onArticleGenerated({
+        title: formData.title,
+        content: content,
+        categoryId: formData.categoryId,
+      });
+
+      toast({
+        title: "Article Saved Successfully",
+        description: "Your AI-generated article is now live in the knowledge base",
+      });
+
+      // Clear the current session after successful save
+      localStorage.removeItem('ai-article-autosave');
+      onClose();
+      resetGenerator();
+    } catch (error: any) {
+      console.error('Save error:', error);
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save article. Please check the validation requirements.",
+        variant: "destructive",
+      });
+    }
   };
 
   const resetGenerator = () => {
@@ -263,9 +451,32 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="h-5 w-5 text-orange-500" />
-            AI Knowledge Base Article Generator
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5 text-orange-500" />
+              AI Knowledge Base Article Generator
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Session Management */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSessionHistory(true)}
+                disabled={savedSessions.length === 0}
+              >
+                <History className="h-4 w-4 mr-1" />
+                Sessions ({savedSessions.length})
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={saveSession}
+                disabled={!generatedContent.outline && !generatedContent.draft && !generatedContent.polished}
+              >
+                <Save className="h-4 w-4 mr-1" />
+                Save Progress
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -314,24 +525,53 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                         {(templates as Template[]).map((template: Template) => (
                           <Card 
                             key={template.id}
-                            className={`cursor-pointer transition-all hover:shadow-md ${
-                              selectedTemplate?.id === template.id ? 'ring-2 ring-orange-500' : ''
+                            className={`cursor-pointer transition-all hover:shadow-lg ${
+                              selectedTemplate?.id === template.id ? 'ring-2 ring-orange-500 shadow-lg' : ''
                             }`}
                             onClick={() => handleTemplateSelect(template.id)}
                           >
                             <CardContent className="p-4">
-                              <h4 className="font-semibold mb-2">{template.name}</h4>
-                              <div className="space-y-1">
-                                <p className="text-sm text-gray-600">Structure:</p>
-                                {template.structure.slice(0, 3).map((section, index) => (
-                                  <Badge key={index} variant="outline" className="mr-1 mb-1 text-xs">
-                                    {section}
+                              <div className="flex items-center gap-2 mb-3">
+                                <h4 className="font-semibold">{template.name}</h4>
+                                {template.seedStyle && (
+                                  <Badge className="bg-orange-100 text-orange-800 text-xs">
+                                    Seed Style
                                   </Badge>
-                                ))}
-                                {template.structure.length > 3 && (
-                                  <span className="text-xs text-gray-500">+{template.structure.length - 3} more</span>
                                 )}
                               </div>
+                              
+                              {/* Visual Preview */}
+                              <div className="mb-3 bg-gradient-to-br from-green-50 to-orange-50 p-3 rounded-lg border">
+                                <div className="text-xs text-gray-700 space-y-1">
+                                  <div className="font-semibold text-orange-600">Preview Structure:</div>
+                                  {template.structure.slice(0, 4).map((section, index) => (
+                                    <div key={index} className="flex items-center gap-1">
+                                      <div className="w-1 h-1 bg-green-500 rounded-full"></div>
+                                      <span className="text-xs">{section}</span>
+                                    </div>
+                                  ))}
+                                  {template.structure.length > 4 && (
+                                    <div className="text-xs text-gray-500 italic">+{template.structure.length - 4} more sections</div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Template Variables Preview */}
+                              {template.variables && template.variables.length > 0 && (
+                                <div className="text-xs text-gray-600">
+                                  <span className="font-medium">Variables:</span>
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {template.variables.slice(0, 3).map((variable, index) => (
+                                      <Badge key={index} variant="secondary" className="text-xs py-0">
+                                        {variable}
+                                      </Badge>
+                                    ))}
+                                    {template.variables.length > 3 && (
+                                      <span className="text-xs text-gray-500">+{template.variables.length - 3}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </CardContent>
                           </Card>
                         ))}
@@ -479,25 +719,48 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                       )}
                     />
 
-                    {/* Template Variables */}
-                    {selectedTemplate && selectedTemplate.variables.length > 0 && (
-                      <FormField
-                        control={form.control}
-                        name="variables"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Template Variables</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder={`Available variables: ${selectedTemplate.variables.join(', ')}\n\nProvide values in JSON format:\n{\n  "industry": "Technology",\n  "state": "California",\n  "entity_type": "LLC"\n}`}
-                                className="min-h-[120px] font-mono text-sm"
-                                {...field} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    {/* Template Variables - Enhanced conditional display */}
+                    {selectedTemplate && selectedTemplate.variables && selectedTemplate.variables.length > 0 && (
+                      <Card className="border-orange-200 bg-orange-50/30">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-orange-800">
+                            <Settings className="h-4 w-4" />
+                            Template Variables Required
+                            <Badge variant="secondary" className="text-xs">
+                              {selectedTemplate.variables.length} variables
+                            </Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <FormField
+                            control={form.control}
+                            name="variables"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Custom Variables (JSON format)</FormLabel>
+                                <FormControl>
+                                  <Textarea 
+                                    placeholder={`Required for ${selectedTemplate.name}:\n${JSON.stringify(
+                                      selectedTemplate.variables.reduce((acc, variable) => ({
+                                        ...acc,
+                                        [variable]: "Your value here"
+                                      }), {}),
+                                      null,
+                                      2
+                                    )}`}
+                                    className="min-h-[120px] font-mono text-sm"
+                                    {...field} 
+                                  />
+                                </FormControl>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  Available variables: {selectedTemplate.variables.join(', ')}
+                                </div>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </CardContent>
+                      </Card>
                     )}
 
                     <FormField
@@ -735,6 +998,106 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Session History Dialog */}
+        {showSessionHistory && (
+          <Dialog open={showSessionHistory} onOpenChange={setShowSessionHistory}>
+            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Session History
+                  <Badge variant="secondary">{savedSessions.length} saved</Badge>
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                {savedSessions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No saved sessions yet</p>
+                    <p className="text-sm">Your progress will be saved automatically every 30 seconds</p>
+                  </div>
+                ) : (
+                  savedSessions.map((session, index) => (
+                    <Card key={index} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="font-semibold mb-1">
+                              {session.formData.title || 'Untitled Article'}
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-2">
+                              Template: {session.selectedTemplate?.name || 'None'} • 
+                              Category: {categories.find(c => c.id === session.formData.categoryId)?.name || 'Unknown'}
+                            </p>
+                            <div className="flex gap-2 text-xs">
+                              {session.generatedContent.outline && (
+                                <Badge variant="outline" className="text-green-600">Outline ✓</Badge>
+                              )}
+                              {session.generatedContent.draft && (
+                                <Badge variant="outline" className="text-blue-600">Draft ✓</Badge>
+                              )}
+                              {session.generatedContent.polished && (
+                                <Badge variant="outline" className="text-orange-600">Polished ✓</Badge>
+                              )}
+                              {session.audienceVersions.internal && (
+                                <Badge variant="outline" className="text-purple-600">Versions ✓</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Saved: {new Date(session.timestamp).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => loadSession(session)}
+                              className="bg-green-500 hover:bg-green-600"
+                            >
+                              <RotateCcw className="h-3 w-3 mr-1" />
+                              Load
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const updated = savedSessions.filter((_, i) => i !== index);
+                                setSavedSessions(updated);
+                                localStorage.setItem('ai-article-sessions', JSON.stringify(updated));
+                                if (updated.length === 0) setShowSessionHistory(false);
+                              }}
+                            >
+                              <AlertCircle className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+                
+                <div className="flex justify-between pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      localStorage.removeItem('ai-article-sessions');
+                      setSavedSessions([]);
+                      setShowSessionHistory(false);
+                      toast({ title: "All sessions cleared" });
+                    }}
+                    disabled={savedSessions.length === 0}
+                  >
+                    Clear All Sessions
+                  </Button>
+                  <Button onClick={() => setShowSessionHistory(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );

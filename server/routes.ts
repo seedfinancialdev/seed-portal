@@ -1198,6 +1198,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate article metadata (excerpt and tags)
+  app.post("/api/kb/ai/generate-metadata", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const { content, title } = req.body;
+      const result = await anthropicService.generateMetadata(content, title);
+      res.json(result);
+    } catch (error) {
+      console.error('Error generating metadata:', error);
+      res.status(500).json({ message: "Failed to generate metadata" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
