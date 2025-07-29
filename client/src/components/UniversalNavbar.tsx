@@ -67,13 +67,6 @@ export function UniversalNavbar({
         )}
         
         <div className="absolute top-0 right-0 flex items-center space-x-4">
-          <div className="relative hidden md:block">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${searchIconClasses}`} />
-            <Input 
-              placeholder="Search..." 
-              className={searchClasses}
-            />
-          </div>
           <Button variant="ghost" size="sm" className={`relative ${buttonBaseClasses}`}>
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
