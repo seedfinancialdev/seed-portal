@@ -1,10 +1,19 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/hooks/use-auth';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { 
   Search, 
   BookOpen, 
@@ -20,10 +29,14 @@ import {
   Eye,
   Clock,
   ChevronRight,
-  Settings
+  Settings,
+  ArrowLeft,
+  User,
+  LogOut
 } from 'lucide-react';
 import { UniversalNavbar } from '@/components/UniversalNavbar';
 import { apiRequest } from "@/lib/queryClient";
+import logoPath from "@assets/Nav Logo_1753431362883.png";
 
 // Types
 interface KbCategory {
@@ -74,18 +87,27 @@ export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<KbCategory | null>(null);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
+  
+  const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
+
+  const handleLogout = async () => {
+    await logout();
+    setLocation('/');
+  };
 
   // Fetch categories
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<KbCategory[]>({
     queryKey: ["/api/kb/categories"],
   });
 
   // Fetch articles for selected category
   const { data: categoryArticles = [], isLoading: articlesLoading } = useQuery({
     queryKey: ["/api/kb/articles", selectedCategory?.id],
-    queryFn: () => {
-      if (!selectedCategory) return Promise.resolve([]);
-      return apiRequest("GET", `/api/kb/articles?categoryId=${selectedCategory.id}&status=published`).then(res => res.json());
+    queryFn: async () => {
+      if (!selectedCategory) return [];
+      const response = await apiRequest("GET", `/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
+      return response.json();
     },
     enabled: !!selectedCategory,
   });
@@ -93,9 +115,10 @@ export default function KnowledgeBase() {
   // Search articles
   const { data: searchResults = [], isLoading: searchLoading } = useQuery({
     queryKey: ["/api/kb/search", searchQuery],
-    queryFn: () => {
-      if (!searchQuery || searchQuery.length < 2) return Promise.resolve([]);
-      return apiRequest("GET", `/api/kb/search?q=${encodeURIComponent(searchQuery)}`).then(res => res.json());
+    queryFn: async () => {
+      if (!searchQuery || searchQuery.length < 2) return [];
+      const response = await apiRequest("GET", `/api/kb/search?q=${encodeURIComponent(searchQuery)}`);
+      return response.json();
     },
     enabled: searchQuery.length >= 2,
   });
