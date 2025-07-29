@@ -10,7 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-✓ **Comprehensive AI Article Generator Enhancement** (July 29, 2025)
+✓ **Comprehensive AI Article Generator Enhancement with Navigation** (July 29, 2025)
   - **Fixed Template Variables Logic**: Changed from "required" to truly optional - AI can work around missing variables
   - **Enhanced Template Previews**: Added sample finalized article format with Lorem Ipsum content alongside structure
   - **Professional WYSIWYG Editor**: Implemented TinyMCE rich text editor in Polish tab for polished content editing
@@ -22,6 +22,8 @@ Preferred communication style: Simple, everyday language.
   - **User-Friendly Descriptions**: Rewrote template descriptions with specific examples anyone can understand
   - **Multi-step Workflow**: Professional article creation flow from outline → draft → polish → versions
   - **Audience-Aware Content**: Dynamic content generation based on selected audience (Internal Team, Client-Facing, General)
+  - **Fixed Controlled Component Warning**: Resolved React warnings by adding proper default values for dynamic template variables
+  - **Step Navigation System**: Added "Back to Setup" and "Edit Previous Step" buttons allowing users to change templates and regenerate at any stage
 
 ✓ **AI Article Generator UI Improvement & Integration** (July 29, 2025)
   - **Streamlined Layout**: Moved AI Generate Article button from sidebar card to main header next to New Article button

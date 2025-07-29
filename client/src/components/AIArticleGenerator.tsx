@@ -34,7 +34,8 @@ import {
   Sparkles,
   RotateCcw,
   History,
-  Edit
+  Edit,
+  ArrowLeft
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { RichTextEditor } from './RichTextEditor';
@@ -905,6 +906,17 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                     <Button
                       size="sm"
                       variant="outline"
+                      onClick={() => {
+                        setCurrentStep('setup');
+                        setGeneratedContent({});
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                      Back to Setup
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => copyToClipboard(generatedContent.outline || '')}
                     >
                       <Copy className="h-4 w-4" />
@@ -939,6 +951,26 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                 <CardTitle className="flex items-center justify-between">
                   <span>Generated Draft</span>
                   <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setCurrentStep('setup');
+                        setGeneratedContent({});
+                        setContentAnalysis(null);
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                      Back to Setup
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentStep('outline')}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit Outline
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -1015,6 +1047,26 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                     <span>Polished Article - WYSIWYG Editor</span>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setCurrentStep('setup');
+                        setGeneratedContent({});
+                        setContentAnalysis(null);
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                      Back to Setup
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentStep('draft')}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      Edit Draft
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
