@@ -1,17 +1,13 @@
-import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   ChevronLeft, 
-  ExternalLink, 
   BookOpen, 
   FileText, 
   Search,
-  Loader2,
-  AlertCircle,
-  Play
+  Plus
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -21,79 +17,6 @@ import { queryClient } from "@/lib/queryClient";
 export default function KnowledgeBase() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const [wikiStatus, setWikiStatus] = useState<'loading' | 'available' | 'unavailable'>('loading');
-  const [showSetupGuide, setShowSetupGuide] = useState(false);
-
-  // Check if Wiki.js is available
-  useEffect(() => {
-    checkWikiStatus();
-  }, []);
-
-  const checkWikiStatus = async () => {
-    try {
-      // Check if we have a Vercel Wiki.js URL configured
-      const wikiUrl = import.meta.env.VITE_WIKI_URL || process.env.WIKI_URL;
-      
-      if (!wikiUrl) {
-        setWikiStatus('unavailable');
-        setShowSetupGuide(true);
-        return;
-      }
-
-      // Use AbortController for proper timeout handling
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      try {
-        const response = await fetch(`${wikiUrl}/healthz`, { 
-          method: 'GET',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          setWikiStatus('available');
-        } else {
-          // Try the main URL if healthz fails
-          const mainResponse = await fetch(wikiUrl, { 
-            method: 'HEAD',
-            signal: controller.signal
-          });
-          
-          if (mainResponse.ok || mainResponse.status === 404) {
-            setWikiStatus('available');
-          } else {
-            setWikiStatus('unavailable');
-          }
-        }
-      } catch (fetchError) {
-        clearTimeout(timeoutId);
-        throw fetchError;
-      }
-    } catch (error) {
-      // Only log error if it's not an abort error (expected for timeout/unmount)
-      if (error instanceof Error && error.name !== 'AbortError') {
-        console.error('Wiki status check failed:', error.message);
-      }
-      setWikiStatus('unavailable');
-      setShowSetupGuide(true);
-    }
-  };
-
-  const startWiki = () => {
-    setShowSetupGuide(true);
-  };
-
-  const openWiki = () => {
-    const wikiUrl = import.meta.env.VITE_WIKI_URL || process.env.WIKI_URL;
-    if (wikiUrl) {
-      window.open(wikiUrl, '_blank');
-    } else {
-      // Fallback to local proxy if no external URL configured
-      window.open('/wiki', '_blank');
-    }
-  };
 
   const quickLinks = [
     {
@@ -207,7 +130,7 @@ export default function KnowledgeBase() {
 
         {/* Main Content */}
         <div className="space-y-8">
-          {/* Wiki Status Card */}
+          {/* Knowledge Base Status Card */}
           <Card className="bg-white/10 backdrop-blur-lg border border-white/20">
             <div className="p-6">
               <div className="flex items-center justify-between">
@@ -216,104 +139,19 @@ export default function KnowledgeBase() {
                     <BookOpen className="h-6 w-6 text-orange-300" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-white mb-1">Wiki.js Knowledge Base</h3>
-                    <div className="flex items-center gap-2">
-                      {wikiStatus === 'loading' && (
-                        <>
-                          <Loader2 className="h-4 w-4 text-white animate-spin" />
-                          <span className="text-white/80">Checking status...</span>
-                        </>
-                      )}
-                      {wikiStatus === 'available' && (
-                        <>
-                          <div className="h-2 w-2 bg-green-400 rounded-full"></div>
-                          <span className="text-white/80">Wiki.js is running and available</span>
-                        </>
-                      )}
-                      {wikiStatus === 'unavailable' && (
-                        <>
-                          <div className="h-2 w-2 bg-red-400 rounded-full"></div>
-                          <span className="text-white/80">Wiki.js is not running</span>
-                        </>
-                      )}
-                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-1">Seed Financial Knowledge Base</h3>
+                    <p className="text-white/80">Custom knowledge management system</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {wikiStatus === 'available' && (
-                    <Button onClick={openWiki} className="bg-orange-500 hover:bg-orange-600 text-white">
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Wiki
-                    </Button>
-                  )}
-                  {wikiStatus === 'unavailable' && (
-                    <Button onClick={startWiki} variant="outline" className="border-white/30 text-white hover:bg-white/10">
-                      <Play className="h-4 w-4 mr-2" />
-                      Setup Guide
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={checkWikiStatus} 
-                    variant="outline" 
-                    className="border-white/30 text-white hover:bg-white/10"
-                    disabled={wikiStatus === 'loading'}
-                  >
-                    {wikiStatus === 'loading' ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      'Refresh'
-                    )}
+                  <Button className="bg-orange-500 hover:bg-orange-600 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Article
                   </Button>
                 </div>
               </div>
             </div>
           </Card>
-
-          {/* Setup Guide */}
-          {showSetupGuide && (
-            <Card className="bg-white/10 backdrop-blur-lg border border-white/20">
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <AlertCircle className="h-5 w-5 text-orange-300" />
-                  <h3 className="text-lg font-semibold text-white">Wiki.js Setup Guide</h3>
-                </div>
-                <div className="space-y-4 text-white/80">
-                  <div className="bg-black/20 rounded-lg p-4">
-                    <p className="font-medium text-white mb-2">Deploy Wiki.js on Vercel (Recommended):</p>
-                    <div className="space-y-2 text-sm">
-                      <p><strong>1.</strong> Go to <a href="https://vercel.com/templates" target="_blank" className="text-orange-300 hover:text-orange-200 underline">vercel.com/templates</a></p>
-                      <p><strong>2.</strong> Search for "Wiki.js" and click "Deploy"</p>
-                      <p><strong>3.</strong> Connect your GitHub account and deploy</p>
-                      <p><strong>4.</strong> Add a PostgreSQL database (Vercel Postgres recommended)</p>
-                      <p><strong>5.</strong> Configure environment variables:</p>
-                      <div className="bg-black/40 rounded p-3 font-mono text-xs ml-4">
-                        <p>DB_TYPE=postgres</p>
-                        <p>DB_HOST=your-db-host</p>
-                        <p>DB_USER=your-db-user</p>
-                        <p>DB_PASS=your-db-password</p>
-                        <p>DB_NAME=wiki</p>
-                      </div>
-                      <p><strong>6.</strong> Once deployed, add your Wiki.js URL to environment variables:</p>
-                      <div className="bg-black/40 rounded p-3 font-mono text-xs ml-4">
-                        <p>VITE_WIKI_URL=https://your-wiki.vercel.app</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
-                    <p className="text-orange-200 font-medium mb-2">💡 Why Vercel?</p>
-                    <p className="text-sm">Vercel hosting avoids Docker requirements, provides SSL, and integrates seamlessly with your portal. Most plans include free PostgreSQL for small teams.</p>
-                  </div>
-                  <Button 
-                    onClick={() => setShowSetupGuide(false)} 
-                    variant="outline" 
-                    className="border-white/30 text-white hover:bg-white/10"
-                  >
-                    Close Guide
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          )}
 
           {/* Quick Links */}
           <div>
@@ -337,7 +175,6 @@ export default function KnowledgeBase() {
                           </div>
                           <p className="text-white/70 text-sm">{link.description}</p>
                         </div>
-                        <ExternalLink className="h-4 w-4 text-white/40" />
                       </div>
                     </div>
                   </Card>
@@ -354,15 +191,11 @@ export default function KnowledgeBase() {
                 <h3 className="text-lg font-semibold text-white">Search Knowledge Base</h3>
               </div>
               <p className="text-white/70 mb-4">
-                Use the Wiki.js search to find documentation, procedures, and company information.
+                Find documentation, procedures, and company information quickly with AI-powered search.
               </p>
-              <Button 
-                onClick={wikiStatus === 'available' ? openWiki : startWiki}
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-                disabled={wikiStatus === 'loading'}
-              >
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white">
                 <Search className="h-4 w-4 mr-2" />
-                {wikiStatus === 'available' ? 'Search Wiki' : 'Setup Wiki First'}
+                Search Articles
               </Button>
             </div>
           </Card>
