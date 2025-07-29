@@ -571,7 +571,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                 {/* Template Variables Preview */}
                                 {template.variables && template.variables.length > 0 && (
                                   <div className="pt-3 border-t border-gray-200">
-                                    <h4 className="font-semibold text-sm text-gray-800 mb-2">Optional Variables:</h4>
+                                    <h4 className="font-semibold text-sm text-gray-800 mb-2">Customizable Elements:</h4>
                                     <div className="flex flex-wrap gap-1 mb-2">
                                       {template.variables.map((variable, index) => (
                                         <Badge key={index} variant="outline" className="text-xs py-0.5 px-2">
@@ -580,7 +580,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                       ))}
                                     </div>
                                     <div className="text-xs text-gray-400 italic leading-relaxed">
-                                      AI will generate appropriate content if variables are not provided
+                                      You can customize these elements below, or let AI generate them automatically
                                     </div>
                                   </div>
                                 )}
@@ -744,7 +744,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                             </Badge>
                           </CardTitle>
                           <p className="text-sm text-gray-600 mt-1">
-                            These variables are optional. AI will generate appropriate content if left blank.
+                            Customize specific elements for your article. Leave blank to let AI generate appropriate content automatically.
                           </p>
                         </CardHeader>
                         <CardContent>
@@ -753,7 +753,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                             name="variables"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Custom Variables (JSON format - Optional)</FormLabel>
+                                <FormLabel>Customize Template Elements (JSON format - Optional)</FormLabel>
                                 <FormControl>
                                   <Textarea 
                                     placeholder={`Optional variables for ${selectedTemplate.name}:\n${JSON.stringify(
@@ -769,7 +769,8 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                   />
                                 </FormControl>
                                 <div className="text-xs text-gray-600 mt-1">
-                                  Available variables: {selectedTemplate.variables.join(', ')} (all optional)
+                                  <strong>Example:</strong> {"{"}"process_name": "Client Onboarding", "department": "Sales"{"}"}<br/>
+                                  Elements: {selectedTemplate.variables.join(', ')} (all optional)
                                 </div>
                                 <FormMessage />
                               </FormItem>
