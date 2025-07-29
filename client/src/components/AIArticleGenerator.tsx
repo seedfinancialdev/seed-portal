@@ -559,12 +559,12 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                 <div>
                                   <h4 className="font-semibold text-sm text-gray-800 mb-2">Best For:</h4>
                                   <div className="text-xs text-gray-600 leading-relaxed">
-                                    {template.id === 'sop' && 'Step-by-step procedures, process documentation, workflow guides'}
-                                    {template.id === 'sales-playbook' && 'Sales strategies, client outreach, service positioning'}
-                                    {template.id === 'faq' && 'Common questions, troubleshooting guides, quick reference'}
-                                    {template.id === 'client-guide' && 'Client onboarding, service explanations, how-to guides'}
-                                    {template.id === 'product-doc' && 'Feature documentation, technical specs, user manuals'}
-                                    {!['sop', 'sales-playbook', 'faq', 'client-guide', 'product-doc'].includes(template.id) && 'General documentation and knowledge articles'}
+                                    {template.id === 'sop' && 'Creating detailed instructions for any business process - like "How to onboard new clients," "Monthly bookkeeping checklist," or "Tax season preparation steps." Perfect when you need clear, repeatable procedures that anyone can follow.'}
+                                    {template.id === 'sales-playbook' && 'Building sales resources like "How to pitch Seed services," "Objection handling scripts," or "Client follow-up sequences." Great for training sales team members and standardizing your approach to prospects.'}
+                                    {template.id === 'faq' && 'Answering common client questions like "What documents do I need for bookkeeping?" or "How does tax planning work?" Ideal for creating quick reference guides that save time on repeated explanations.'}
+                                    {template.id === 'client-guide' && 'Teaching clients how to use your services - like "Getting started with Seed Financial," "How to prepare for your CFO call," or "Understanding your financial reports." Perfect for client education materials.'}
+                                    {template.id === 'product-doc' && 'Explaining features and capabilities like "Seed Portal user guide," "Service pricing breakdown," or "Integration setup instructions." Great for technical documentation and user manuals.'}
+                                    {!['sop', 'sales-playbook', 'faq', 'client-guide', 'product-doc'].includes(template.id) && 'General business articles, announcements, policy updates, or educational content that doesn\'t fit other specific templates.'}
                                   </div>
                                 </div>
                                 

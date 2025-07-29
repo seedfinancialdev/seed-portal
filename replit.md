@@ -16,8 +16,10 @@ Preferred communication style: Simple, everyday language.
   - **Professional WYSIWYG Editor**: Implemented TinyMCE rich text editor in Polish tab for polished content editing
   - **Session Persistence**: Complete localStorage integration to save/restore user progress across app sessions
   - **Auto-Metadata Generation**: Enhanced excerpt and tag generation with manual regeneration capabilities
-  - **Visual Seed-Styled Previews**: Template previews now show generic finalized article format with professional styling
-  - **Conditional Display Fix**: Template variables box only appears when template actually has variables defined
+  - **Simplified Template Cards**: Clean, informative template selection with practical "Best For" descriptions
+  - **Complete Content Display**: Removed artificial truncation limits - all sections and variables display cleanly
+  - **Improved Card Layout**: 2-column grid with better spacing, margins, and readability
+  - **User-Friendly Descriptions**: Rewrote template descriptions with specific examples anyone can understand
   - **Multi-step Workflow**: Professional article creation flow from outline → draft → polish → versions
   - **Audience-Aware Content**: Dynamic content generation based on selected audience (Internal Team, Client-Facing, General)
 
