@@ -387,7 +387,7 @@ export default function Dashboard() {
                   <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
                     <BookOpen className="h-6 w-6 text-white" />
                   </div>
-                  SEED<span className="text-orange-600">KB</span>
+                  SEEDKB
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-lg">
                   Your comprehensive knowledge hub
