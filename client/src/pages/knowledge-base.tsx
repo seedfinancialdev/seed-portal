@@ -143,39 +143,89 @@ export default function KnowledgeBase() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] animate-in fade-in duration-700">
-      {/* Header - Simple transparent design matching other portal pages */}
-      <div className="bg-transparent">
-        <div className="flex items-center justify-between px-6 py-4">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Portal
-            </Button>
-          </Link>
-          
-          <div className="flex items-center gap-3">
-            <img src={logoPath} alt="Seed Financial" className="h-8 w-auto" />
-            <div className="text-white">
-              <h1 className="text-lg font-semibold">SEED FINANCIAL</h1>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
+        {/* Header - Exact same as quote calculator */}
+        <div className="relative mb-8">
+          {/* Back Button - Top Left */}
+          <div className="absolute top-0 left-0">
+            <Link to="/">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+                onClick={() => {
+                  // Invalidate dashboard metrics to refresh data
+                  queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
+                }}
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to Portal
+              </Button>
+            </Link>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative">
+          
+          {/* User Menu - Top Right */}
+          <div className="absolute top-0 right-0 flex items-center gap-4">
+            <Button variant="ghost" size="sm" className="relative p-2 hover:bg-white/10 text-white">
               <Bell className="h-4 w-4" />
-              <div className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full animate-pulse"></div>
+              <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
             </Button>
-            
-            <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-xs font-semibold text-white">
-              {user?.email?.[0]?.toUpperCase() || 'J'}
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
+                  {user?.profilePhoto ? (
+                    <img 
+                      src={user.profilePhoto} 
+                      alt="Profile" 
+                      className="w-7 h-7 rounded-full object-cover border border-white/20"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
+                      {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <div className="px-3 py-2 border-b">
+                  <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
+                </div>
+                <DropdownMenuItem 
+                  onClick={() => setLocation('/profile')}
+                  className="text-sm cursor-pointer"
+                >
+                  <User className="mr-2 h-3 w-3" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem className="text-sm">
+                  <Settings className="mr-2 h-3 w-3" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  disabled={logoutMutation.isPending}
+                  className="cursor-pointer text-red-600 text-sm"
+                >
+                  <LogOut className="mr-2 h-3 w-3" />
+                  {logoutMutation.isPending ? "Signing out..." : "Sign Out"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
+          {/* Logo - Center */}
+          <div className="flex justify-center">
+            <img 
+              src={logoPath} 
+              alt="Seed Financial Logo" 
+              className="h-16"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-6 py-12">
+      <div className="max-w-4xl mx-auto">
         
         {/* Hero Section */}
         <div className="text-center mb-16">
