@@ -396,34 +396,46 @@ export default function KnowledgeBase() {
             </Card>
           </div>
 
-          {/* Categories Filter - 2 rows layout */}
+          {/* Categories Filter - Horizontal Scrollable */}
           {!searchQuery && (
             <div className="mb-8">
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <Button
-                  variant={selectedCategory === null ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(null)}
-                  className={`${selectedCategory === null ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
-                >
-                  All Categories
-                </Button>
-                {(categories as KbCategory[]).map((category: KbCategory) => {
-                  const IconComponent = getCategoryIcon(category.icon || 'book-open');
-                  return (
+              <Card className="p-4 bg-white/15 backdrop-blur-md border-white/30 shadow-lg">
+                <div className="flex gap-3 overflow-x-auto pb-2" style={{scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitScrollbar: 'none'}}>
+                  <div className="flex gap-3 min-w-fit">
                     <Button
-                      key={category.id}
-                      variant={selectedCategory === category.id ? "default" : "outline"}
+                      variant={selectedCategory === null ? "default" : "outline"}
                       size="sm"
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`${selectedCategory === category.id ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-white/10 border-white/20 text-white hover:bg-white/20'}`}
+                      onClick={() => setSelectedCategory(null)}
+                      className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 ${
+                        selectedCategory === null 
+                          ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg border-orange-500' 
+                          : 'bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-white/30 hover:border-white/50'
+                      }`}
                     >
-                      <IconComponent className="h-4 w-4 mr-2" />
-                      {category.name}
+                      All Categories
                     </Button>
-                  );
-                })}
-              </div>
+                    {(categories as KbCategory[]).map((category: KbCategory) => {
+                      const IconComponent = getCategoryIcon(category.icon || 'book-open');
+                      return (
+                        <Button
+                          key={category.id}
+                          variant={selectedCategory === category.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedCategory(category.id)}
+                          className={`flex items-center gap-2 flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 ${
+                            selectedCategory === category.id 
+                              ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg border-orange-500' 
+                              : 'bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-white/30 hover:border-white/50'
+                          }`}
+                        >
+                          <IconComponent className="h-4 w-4" />
+                          {category.name}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
             </div>
           )}
 
@@ -448,20 +460,24 @@ export default function KnowledgeBase() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-3">
                           {article.featured && (
-                            <Badge variant="secondary" className="bg-orange-500/20 text-orange-300 border-orange-500/30">
-                              <Star className="h-3 w-3 mr-1" />
+                            <Badge variant="secondary" className="bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-800 border-orange-200 font-medium">
+                              <Star className="h-3 w-3 mr-1 fill-orange-600" />
                               Featured
                             </Badge>
                           )}
                           {category && (
-                            <Badge variant="outline" className="text-white/70 border-white/30">
-                              <IconComponent className="h-3 w-3 mr-1" />
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-medium">
+                              <IconComponent className="h-3 w-3 mr-1 text-blue-600" />
                               {category.name}
                             </Badge>
                           )}
                           <Badge 
                             variant="outline" 
-                            className={`${article.status === 'published' ? 'text-green-300 border-green-500/30' : 'text-yellow-300 border-yellow-500/30'}`}
+                            className={`font-medium ${
+                              article.status === 'published' 
+                                ? 'bg-green-50 text-green-700 border-green-200' 
+                                : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                            }`}
                           >
                             {article.status}
                           </Badge>
@@ -478,7 +494,7 @@ export default function KnowledgeBase() {
                         {article.tags && article.tags.length > 0 && (
                           <div className="flex items-center gap-2 mb-4">
                             {article.tags.map((tag, index) => (
-                              <Badge key={index} variant="outline" className="text-xs text-white/60 border-white/20">
+                              <Badge key={index} variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300 font-medium">
                                 #{tag}
                               </Badge>
                             ))}
@@ -502,10 +518,10 @@ export default function KnowledgeBase() {
                       </div>
 
                       <div className="flex items-center gap-2 ml-4">
-                        <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                        <Button variant="ghost" size="sm" className="text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
                           <Bookmark className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                        <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                           <FileText className="h-4 w-4" />
                         </Button>
                       </div>
