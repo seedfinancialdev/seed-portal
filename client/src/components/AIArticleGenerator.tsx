@@ -362,11 +362,22 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
       return apiRequest("/api/kb/ai/polish", { method: "POST", body: JSON.stringify(payload) });
     },
     onSuccess: (result: GenerationStep) => {
-      setGeneratedContent(prev => ({ ...prev, polished: result.content }));
-      setCurrentStep('polish');
+      // Use setTimeout to ensure proper state update order
+      setTimeout(() => {
+        setGeneratedContent(prev => ({ ...prev, polished: result.content }));
+        setCurrentStep('polish');
+        toast({
+          title: "Article Polished",
+          description: "Your article has been refined and is ready for publication",
+        });
+      }, 100);
+    },
+    onError: (error: any) => {
+      console.error('Polish mutation error:', error);
       toast({
-        title: "Article Polished",
-        description: "Your article has been refined and is ready for publication",
+        title: "Polish Failed",
+        description: error.message || "Failed to polish article",
+        variant: "destructive",
       });
     },
   });
