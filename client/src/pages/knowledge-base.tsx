@@ -247,39 +247,57 @@ export default function KnowledgeBase() {
             {categoriesLoading ? (
               <div className="col-span-full text-center text-white">Loading categories...</div>
             ) : (
-              categories.map((category: KbCategory) => {
+              categories.map((category: KbCategory, index: number) => {
                 const IconComponent = getIconComponent(category.icon);
+                // Create stronger visual contrast with different card backgrounds
+                const cardVariants = [
+                  'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 hover:from-slate-700/90 hover:to-slate-800/90 hover:border-orange-400/70',
+                  'bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-gray-600/50 hover:from-gray-700/90 hover:to-gray-800/90 hover:border-blue-400/70',
+                  'bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 border-zinc-600/50 hover:from-zinc-700/90 hover:to-zinc-800/90 hover:border-purple-400/70',
+                  'bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 border-neutral-600/50 hover:from-neutral-700/90 hover:to-neutral-800/90 hover:border-green-400/70',
+                  'bg-gradient-to-br from-stone-800/90 to-stone-900/90 border-stone-600/50 hover:from-stone-700/90 hover:to-stone-800/90 hover:border-pink-400/70',
+                  'bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 hover:from-slate-700/90 hover:to-slate-800/90 hover:border-cyan-400/70',
+                  'bg-gradient-to-br from-gray-800/90 to-gray-900/90 border-gray-600/50 hover:from-gray-700/90 hover:to-gray-800/90 hover:border-yellow-400/70',
+                  'bg-gradient-to-br from-zinc-800/90 to-zinc-900/90 border-zinc-600/50 hover:from-zinc-700/90 hover:to-zinc-800/90 hover:border-red-400/70',
+                  'bg-gradient-to-br from-neutral-800/90 to-neutral-900/90 border-neutral-600/50 hover:from-neutral-700/90 hover:to-neutral-800/90 hover:border-indigo-400/70',
+                ];
+                
                 return (
                   <Card
                     key={category.id}
-                    className="group h-80 cursor-pointer transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl hover:shadow-black/20 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 hover:border-white/40 rounded-2xl overflow-hidden relative"
+                    className={`group h-80 cursor-pointer transition-all duration-500 hover:scale-[1.05] hover:shadow-2xl hover:shadow-black/40 ${cardVariants[index % cardVariants.length]} backdrop-blur-xl border-2 rounded-2xl overflow-hidden relative transform hover:-translate-y-2`}
                     onClick={() => handleCategoryClick(category)}
                   >
-                    {/* Background gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    {/* Strong background overlay on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     
-                    {/* Subtle border glow */}
-                    <div className="absolute inset-0 rounded-2xl border border-white/10 group-hover:border-orange-300/30 transition-colors duration-500" />
+                    {/* Dramatic glow effect */}
+                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 shadow-2xl" />
                     
                     <div className="relative p-8 h-full flex flex-col items-center justify-center text-center">
-                      {/* Enhanced icon container */}
-                      <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-6 shadow-2xl shadow-black/25 group-hover:shadow-3xl group-hover:scale-110 transition-all duration-500 relative overflow-hidden`}>
-                        {/* Icon glow effect */}
-                        <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                        <IconComponent className="h-10 w-10 text-white relative z-10 group-hover:scale-110 transition-transform duration-500" />
+                      {/* Dramatically enhanced icon container */}
+                      <div className={`w-24 h-24 rounded-3xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-6 shadow-2xl shadow-black/50 group-hover:shadow-3xl group-hover:scale-125 transition-all duration-500 relative overflow-hidden border-2 border-white/20 group-hover:border-white/40`}>
+                        {/* Strong icon glow effect */}
+                        <div className="absolute inset-0 bg-white/30 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                        {/* Pulsing background */}
+                        <div className="absolute inset-0 rounded-3xl bg-white/20 animate-pulse opacity-0 group-hover:opacity-50 transition-opacity duration-500" />
+                        <IconComponent className="h-12 w-12 text-white relative z-10 group-hover:scale-110 transition-transform duration-500 drop-shadow-lg" />
                       </div>
                       
-                      {/* Enhanced typography */}
-                      <h3 className="text-xl font-bold text-white mb-4 group-hover:text-orange-100 transition-colors duration-300">
+                      {/* Enhanced typography with stronger contrast */}
+                      <h3 className="text-xl font-bold text-white mb-4 group-hover:text-orange-200 transition-colors duration-300 drop-shadow-lg">
                         {category.name}
                       </h3>
                       
-                      <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors duration-300">
+                      <p className="text-gray-300 text-sm leading-relaxed group-hover:text-white transition-colors duration-300">
                         {category.description}
                       </p>
                       
-                      {/* Subtle bottom accent */}
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-orange-400/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      {/* Strong bottom accent with animation */}
+                      <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-r from-transparent via-orange-400/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      
+                      {/* Corner accent */}
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-bl-3xl" />
                     </div>
                   </Card>
                 );
@@ -289,11 +307,11 @@ export default function KnowledgeBase() {
 
           {/* Coming Soon Features - Enhanced Design */}
           <div className="mt-20 relative">
-            {/* Beautiful background section */}
-            <div className="relative bg-gradient-to-br from-black/30 via-green-900/20 to-orange-900/30 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl shadow-black/20 overflow-hidden">
-              {/* Animated background pattern */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent)] opacity-50" />
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-orange-400/60 to-transparent" />
+            {/* Beautiful background section with stronger contrast */}
+            <div className="relative bg-gradient-to-br from-black/80 via-slate-900/60 to-orange-900/40 backdrop-blur-xl rounded-3xl border-2 border-orange-400/30 shadow-2xl shadow-orange-500/20 overflow-hidden">
+              {/* More dramatic animated background pattern */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(249,115,22,0.15),transparent),radial-gradient(circle_at_70%_80%,rgba(34,197,94,0.1),transparent)] opacity-80" />
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-orange-500/60 via-orange-400/80 to-orange-500/60" />
               
               <div className="relative p-12">
                 {/* Enhanced title */}
