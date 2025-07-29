@@ -1,0 +1,61 @@
+1) Authoring & Generation
+	•	Template system
+SOPs, playbooks, product/feature docs, FAQs, client-facing guides. Template variables (e.g., {{industry}}, {{state}}, {{entity_type}}) and reusable snippets (“Disclaimers,” “Billing section,” etc.).
+	•	Structured front-matter
+Title, audience (internal/client), lifecycle stage (Draft/Review/Approved), owners, review date, tags, compliance flags. Enforced as JSON/YAML at the top of each doc.
+	•	Outline → Draft → Polish workflow
+“Plan first” mode (headings + bullets), then expansion, then a polish pass (tone, examples, links).
+	•	Audience toggles
+Switch between Internal, Client-friendly, and Sales-ready versions from one source of truth.
+	•	Channel-aware rendering
+Export to Markdown (docs site), HTML (CMS/Help Center), PDF, and short “playcard” summaries for HubSpot/Slack.
+	•	Multilingual (optional)
+Human-in-the-loop translation with glossary enforcement.
+	•	Diagram & table helpers
+Mermaid/PlantUML from text; CSV-to-table; auto-sizing comparison tables.
+
+⸻
+
+2) Knowledge & Context (RAG that actually behaves)
+	•	Retrieval-Augmented Generation
+Vector search over “knowledge cards” (chunked SOPs, policies, pricing, glossary, tone guide). Top-K + re-rank + freshness bias.
+	•	Source control
+“Only answer from approved sources” mode; per-repo/per-folder include/exclude.
+	•	Citations & traceability
+Inline citations with deep links; evidence panel with confidence and last-updated dates.
+	•	Auto cross-links & taxonomy
+Detects entities and inserts [Related Docs] and glossary hovers; maintains a graph of dependencies.
+
+⸻
+
+3) Quality, Compliance & Guardrails
+	•	Style guide enforcement
+Lint for voice (witty, not flippant), banned terms, reading level, tense/person. Scored “Brand Fit 1–5”.
+	•	Compliance rails
+PII/PHI/PCI detection & redaction; required disclaimers by doc type; state-by-state caveats. “No new legal advice” rule.
+	•	Factuality checks
+Claim-evidence matching (hallucination guard), numeric sanity checks, date recency flags.
+	•	Schema validation
+Ensures required sections exist (e.g., “Risks,” “Action Checklist,” “Last Reviewed”).
+
+⸻
+
+4) Collaboration & Workflow
+	•	PR-style reviews
+Suggested edits, inline comments, approver lanes (SME → Compliance → Brand).
+	•	Tasks & notifications
+ClickUp issues from failed checks; Slack/Email for “needs approvals,” “doc expiring,” “policy changed.”
+	•	Change proposals
+“Propose update” button for anyone; routed to the right owner with the relevant context pulled in.
+
+⸻
+
+5) Continuous Learning (Self-training without drift)
+	•	Edit-diff capture
+Every human edit is logged as a labeled improvement: style, accuracy, structure, compliance.
+	•	Feedback signals → retriever
+Boost sources that repeatedly survive editing; down-rank those that cause fixes. Nightly vector refresh.
+	•	Prompt & rubric versioning
+Versioned system prompts and checklists; A/B outputs; rollback button.
+	•	Curated fine-tune (optional, quarterly)
+Train on high-scoring docs + their before/after diffs to nudge base behavior.
