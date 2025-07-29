@@ -1120,6 +1120,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Article Generator endpoints
+  
+  // Get available templates
+  app.get("/api/kb/ai/templates", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const templates = anthropicService.getAvailableTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error('Error fetching templates:', error);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  // Generate article outline
+  app.post("/api/kb/ai/generate-outline", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const result = await anthropicService.generateArticleOutline(req.body);
+      res.json(result);
+    } catch (error) {
+      console.error('Error generating outline:', error);
+      res.status(500).json({ message: "Failed to generate outline" });
+    }
+  });
+
+  // Generate article draft
+  app.post("/api/kb/ai/generate-draft", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const { outline, ...requestData } = req.body;
+      const result = await anthropicService.generateArticleDraft(requestData, outline);
+      res.json(result);
+    } catch (error) {
+      console.error('Error generating draft:', error);
+      res.status(500).json({ message: "Failed to generate draft" });
+    }
+  });
+
+  // Polish article
+  app.post("/api/kb/ai/polish", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const { draft, ...requestData } = req.body;
+      const result = await anthropicService.polishArticle(draft, requestData);
+      res.json(result);
+    } catch (error) {
+      console.error('Error polishing article:', error);
+      res.status(500).json({ message: "Failed to polish article" });
+    }
+  });
+
+  // Generate multiple audience versions
+  app.post("/api/kb/ai/generate-versions", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const { baseContent, ...requestData } = req.body;
+      const result = await anthropicService.generateMultipleVersions(requestData, baseContent);
+      res.json(result);
+    } catch (error) {
+      console.error('Error generating versions:', error);
+      res.status(500).json({ message: "Failed to generate versions" });
+    }
+  });
+
+  // Analyze content quality
+  app.post("/api/kb/ai/analyze", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const { content } = req.body;
+      const result = await anthropicService.analyzeContent(content);
+      res.json(result);
+    } catch (error) {
+      console.error('Error analyzing content:', error);
+      res.status(500).json({ message: "Failed to analyze content" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

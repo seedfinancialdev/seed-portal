@@ -14,8 +14,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { AIArticleGenerator } from "@/components/AIArticleGenerator";
 import logoPath from "@assets/Nav Logo_1753431362883.png";
 
 // Types
@@ -68,6 +69,7 @@ export default function KbAdmin() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<KbArticle | null>(null);
+  const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
 
   // Fetch categories
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
@@ -77,9 +79,9 @@ export default function KbAdmin() {
   // Fetch articles
   const { data: articles = [], isLoading: articlesLoading } = useQuery({
     queryKey: ["/api/kb/articles", selectedCategory],
-    queryFn: () => {
+    queryFn: async () => {
       const params = selectedCategory ? `?categoryId=${selectedCategory}` : '';
-      return apiRequest("GET", `/api/kb/articles${params}`).then(res => res.json());
+      return apiRequest(`/api/kb/articles${params}`);
     },
   });
 
@@ -104,8 +106,7 @@ export default function KbAdmin() {
         ...data,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
       };
-      const response = await apiRequest("POST", "/api/kb/articles", payload);
-      return response.json();
+      return apiRequest("/api/kb/articles", { method: "POST", body: JSON.stringify(payload) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
@@ -132,8 +133,7 @@ export default function KbAdmin() {
         ...data,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : undefined,
       };
-      const response = await apiRequest("PATCH", `/api/kb/articles/${id}`, payload);
-      return response.json();
+      return apiRequest(`/api/kb/articles/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
@@ -157,8 +157,7 @@ export default function KbAdmin() {
   // Delete article mutation
   const deleteArticleMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest("DELETE", `/api/kb/articles/${id}`);
-      return response.json();
+      return apiRequest(`/api/kb/articles/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
@@ -220,6 +219,22 @@ export default function KbAdmin() {
     setIsArticleDialogOpen(true);
   };
 
+  const handleAIArticleGenerated = (article: { title: string; content: string; categoryId: number; }) => {
+    // Pre-populate the regular form with AI-generated content
+    setEditingArticle(null);
+    form.reset({
+      title: article.title,
+      excerpt: "",
+      content: article.content,
+      categoryId: article.categoryId,
+      status: "draft",
+      featured: false,
+      tags: "",
+    });
+    setIsArticleDialogOpen(true);
+    setIsAIGeneratorOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
@@ -259,7 +274,49 @@ export default function KbAdmin() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Categories Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
+            {/* AI Article Generator Card */}
+            <Card className="bg-gradient-to-br from-orange-500/20 to-yellow-500/20 backdrop-blur-md border-orange-300/40 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2 text-lg">
+                  <Wand2 className="h-6 w-6 text-orange-300" />
+                  AI Article Generator
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-white/90 text-sm">
+                  Create professional articles with Claude AI using templates, brand voice, and compliance guidelines.
+                </p>
+                <Button
+                  onClick={() => setIsAIGeneratorOpen(true)}
+                  className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 text-white font-semibold shadow-md"
+                  size="lg"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Generate Article
+                </Button>
+                <div className="grid grid-cols-2 gap-2 text-xs text-white/80">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    Outline → Draft
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    Multi-Audience
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                    Brand Voice
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                    Compliance
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Categories Card */}
             <Card className="bg-white/15 backdrop-blur-md border-white/30">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
@@ -275,7 +332,7 @@ export default function KbAdmin() {
                 >
                   All Articles
                 </Button>
-                {categories.map((category: KbCategory) => (
+                {(categories as KbCategory[]).map((category: KbCategory) => (
                   <Button
                     key={category.id}
                     variant={selectedCategory === category.id ? "secondary" : "ghost"}
@@ -296,7 +353,7 @@ export default function KbAdmin() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white">
                     {selectedCategory 
-                      ? categories.find((c: KbCategory) => c.id === selectedCategory)?.name 
+                      ? (categories as KbCategory[]).find((c: KbCategory) => c.id === selectedCategory)?.name 
                       : "All Articles"
                     }
                   </CardTitle>
@@ -350,7 +407,7 @@ export default function KbAdmin() {
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      {categories.map((category: KbCategory) => (
+                                      {(categories as KbCategory[]).map((category: KbCategory) => (
                                         <SelectItem key={category.id} value={category.id.toString()}>
                                           {category.name}
                                         </SelectItem>
@@ -551,6 +608,14 @@ export default function KbAdmin() {
             </Card>
           </div>
         </div>
+
+        {/* AI Article Generator Component */}
+        <AIArticleGenerator
+          categories={categories as KbCategory[]}
+          onArticleGenerated={handleAIArticleGenerated}
+          isOpen={isAIGeneratorOpen}
+          onClose={() => setIsAIGeneratorOpen(false)}
+        />
       </div>
     </div>
   );
