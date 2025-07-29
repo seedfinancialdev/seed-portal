@@ -41,8 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      return await apiRequest("/api/login", {
+        method: "POST",
+        body: JSON.stringify(credentials)
+      });
     },
     onSuccess: async (user: SelectUser) => {
       // Clear all user-specific data to prevent cross-user data leakage
@@ -78,8 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
-      const res = await apiRequest("POST", "/api/register", credentials);
-      return await res.json();
+      return await apiRequest("/api/register", {
+        method: "POST",
+        body: JSON.stringify(credentials)
+      });
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -99,7 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout");
+      await apiRequest("/api/logout", {
+        method: "POST"
+      });
     },
     onSuccess: () => {
       // Clear ALL cached data on logout to prevent any cross-user data leakage
