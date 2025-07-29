@@ -81,7 +81,7 @@ interface SavedSession {
   timestamp: number;
 }
 
-// Form schema
+// Form schema - dynamic schema for template variables will be handled at runtime
 const generatorSchema = z.object({
   templateType: z.string().min(1, "Template type is required"),
   title: z.string().min(1, "Title is required"),
@@ -92,7 +92,7 @@ const generatorSchema = z.object({
   includeCompliance: z.boolean().default(true),
   customRequirements: z.string().optional(),
   variables: z.string().optional(), // JSON string of variables
-});
+}).passthrough(); // Allow additional fields for template variables
 
 type GeneratorFormData = z.infer<typeof generatorSchema>;
 
@@ -136,6 +136,28 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
       variables: "",
     },
   });
+
+  // Initialize template variable fields when templates load
+  useEffect(() => {
+    if (templates && Array.isArray(templates)) {
+      const allVariables: Record<string, string> = {};
+      (templates as Template[]).forEach(template => {
+        if (template.variables) {
+          template.variables.forEach(variable => {
+            const fieldName = variable.replace(/[{}]/g, '');
+            allVariables[`templateVar_${fieldName}`] = "";
+          });
+        }
+      });
+      
+      // Set default values for all template variables
+      Object.keys(allVariables).forEach(key => {
+        if (!form.getValues(key as any)) {
+          form.setValue(key as any, "");
+        }
+      });
+    }
+  }, [templates, form]);
 
   // Session persistence functions (moved after form initialization)
   const saveSession = () => {
@@ -812,7 +834,10 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                             fieldName.includes('level') ? 'Beginner' :
                                             'Your custom value'
                                           }`}
-                                          {...field}
+                                          value={field.value || ''}
+                                          onChange={field.onChange}
+                                          onBlur={field.onBlur}
+                                          name={field.name}
                                         />
                                       </FormControl>
                                       <FormMessage />
