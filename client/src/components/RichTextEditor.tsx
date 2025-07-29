@@ -100,6 +100,7 @@ export function RichTextEditor({
 
       <div className="border rounded-lg overflow-hidden">
         <Editor
+          apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
           onInit={(evt, editor) => editorRef.current = editor}
           value={content}
           onEditorChange={handleEditorChange}
