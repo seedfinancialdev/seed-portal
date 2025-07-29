@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, User, Settings, LogOut } from "lucide-react";
+import { Bell, User, Settings, LogOut, ArrowLeft, Sprout } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,7 +61,7 @@ const categoryIconMap = {
 
 export default function KnowledgeBase() {
   const [, setLocation] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
 
   // Handle authentication
@@ -158,8 +158,7 @@ export default function KnowledgeBase() {
 
   const handleLogout = async () => {
     try {
-      await logout();
-      queryClient.clear();
+      await logoutMutation.mutateAsync();
       setLocation("/auth");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -179,50 +178,69 @@ export default function KnowledgeBase() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
-      {/* Navigation Header */}
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"  
-            onClick={() => {
-              queryClient.invalidateQueries();
-              setLocation("/");
-            }}
-            className="text-white hover:bg-white/10"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Portal
-          </Button>
-          <h1 className="text-2xl font-bold text-white">Knowledge Base</h1>
+      {/* Header - consistent with other pages */}
+      <div className="flex items-center justify-between mb-8 p-4 relative">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            queryClient.invalidateQueries();
+            setLocation('/');
+          }}
+          className="text-white hover:bg-white/10 transition-colors p-2 rounded-lg"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Portal
+        </Button>
+        
+        {/* Centered Logo */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <Sprout className="h-5 w-5 text-[#253e31]" />
+            </div>
+            <span className="text-white font-semibold text-lg">SEED FINANCIAL</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white mt-2">Knowledge Base</h1>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-white">
-            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-medium">
-              {user?.firstName?.[0] || user?.email?.[0] || 'U'}
+        {/* Right side - notification and user menu */}
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            className="text-white hover:bg-white/10 p-2 rounded-full relative"
+          >
+            <Bell className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+              1
+            </span>
+          </Button>
+          
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
             </div>
-            <span className="font-medium">{user?.firstName || user?.email}</span>
+            <span className="text-white font-medium">
+              {user?.firstName || user?.email?.split('@')[0] || 'User'}
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="text-white hover:bg-white/10 p-1">
+                  <User className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setLocation("/profile")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Profile Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-                <User className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setLocation("/profile")}>
-                <Settings className="mr-2 h-4 w-4" />
-                Profile Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
@@ -231,7 +249,7 @@ export default function KnowledgeBase() {
         <div className="max-w-6xl mx-auto">
           {/* Search and Actions */}
           <div className="mb-8">
-            <Card className="p-6 bg-white/10 backdrop-blur-sm border-white/20">
+            <Card className="p-6 bg-white/20 backdrop-blur-md border-white/30 shadow-lg">
               <div className="flex items-center gap-4">
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
@@ -282,7 +300,7 @@ export default function KnowledgeBase() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {categories.map((category: KbCategory) => (
+                                  {(categories as KbCategory[]).map((category: KbCategory) => (
                                     <SelectItem key={category.id} value={category.id.toString()}>
                                       {category.name}
                                     </SelectItem>
@@ -379,10 +397,10 @@ export default function KnowledgeBase() {
             </Card>
           </div>
 
-          {/* Categories Filter */}
+          {/* Categories Filter - 2 rows layout */}
           {!searchQuery && (
             <div className="mb-8">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="grid grid-cols-3 gap-2 mb-4">
                 <Button
                   variant={selectedCategory === null ? "default" : "outline"}
                   size="sm"
@@ -391,8 +409,8 @@ export default function KnowledgeBase() {
                 >
                   All Categories
                 </Button>
-                {categories.map((category: KbCategory) => {
-                  const IconComponent = getCategoryIcon(category.icon);
+                {(categories as KbCategory[]).map((category: KbCategory) => {
+                  const IconComponent = getCategoryIcon(category.icon || 'book-open');
                   return (
                     <Button
                       key={category.id}
@@ -422,11 +440,11 @@ export default function KnowledgeBase() {
               </div>
             ) : (
               displayedArticles.map((article: KbArticle) => {
-                const category = categories.find((cat: KbCategory) => cat.id === article.categoryId);
+                const category = (categories as KbCategory[]).find((cat: KbCategory) => cat.id === article.categoryId);
                 const IconComponent = category ? getCategoryIcon(category.icon) : BookOpen;
                 
                 return (
-                  <Card key={article.id} className="p-6 bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/15 transition-colors">
+                  <Card key={article.id} className="p-6 bg-white/20 backdrop-blur-md border-white/30 hover:bg-white/25 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-orange-300/50">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-3">
@@ -450,11 +468,11 @@ export default function KnowledgeBase() {
                           </Badge>
                         </div>
                         
-                        <h3 className="text-xl font-semibold text-white mb-2 cursor-pointer hover:text-orange-300 transition-colors">
+                        <h3 className="text-xl font-semibold text-white drop-shadow-sm mb-2 cursor-pointer hover:text-orange-300 transition-colors">
                           {article.title}
                         </h3>
                         
-                        <p className="text-white/70 text-sm mb-4">
+                        <p className="text-white/90 text-sm mb-4 drop-shadow-sm">
                           {article.excerpt}
                         </p>
 
@@ -468,7 +486,7 @@ export default function KnowledgeBase() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-6 text-white/60 text-sm">
+                        <div className="flex items-center gap-6 text-white/80 text-sm">
                           <div className="flex items-center gap-1">
                             <Eye className="h-4 w-4" />
                             <span>{article.viewCount || 0} views</span>
