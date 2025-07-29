@@ -1,241 +1,193 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import { 
-  ChevronLeft, 
+  ArrowLeft, 
+  Search, 
   BookOpen, 
-  FileText, 
-  Search,
-  Plus,
-  Star,
-  Eye,
-  Bookmark,
-  Users,
+  Calculator, 
+  PiggyBank, 
+  Bot, 
+  Phone, 
+  Shield, 
+  Wrench, 
+  Heart,
+  Sparkles,
   TrendingUp,
-  Settings as SettingsIcon,
-  Code,
-  UserCheck,
-  ShieldCheck,
-  Filter,
-  Clock,
-  Edit,
-  Trash2
-} from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+  Users,
+  FileText,
+  Target,
+  BrainCircuit,
+  Zap,
+  Scale,
+  Palette
+} from 'lucide-react';
+import { Link } from 'wouter';
+import { useAuth } from '@/hooks/use-auth';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bell, User, Settings, LogOut, ArrowLeft, Sprout } from "lucide-react";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import type { KbCategory, KbArticle } from "@shared/schema";
+import { Bell, User, Settings, LogOut } from "lucide-react";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
-// Form schemas
-const articleFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  excerpt: z.string().min(1, "Excerpt is required"),
-  content: z.string().min(1, "Content is required"),
-  categoryId: z.string().min(1, "Category is required"),
-  status: z.enum(["draft", "published"]),
-  featured: z.boolean().default(false),
-  tags: z.string().optional()
-});
+// Category data for the 9 cards
+const categories = [
+  {
+    id: 1,
+    title: "Getting Started Hub",
+    description: "Quick-start guides for clients, partners, and internal teams",
+    icon: Sparkles,
+    color: "from-blue-500 to-cyan-500",
+    textColor: "text-blue-600",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-200"
+  },
+  {
+    id: 2,
+    title: "Tax-as-a-Service (TaaS)",
+    description: "Playbooks, FAQs, and tax strategy explainers",
+    icon: Calculator,
+    color: "from-green-500 to-emerald-500",
+    textColor: "text-green-600",
+    bgColor: "bg-green-50",
+    borderColor: "border-green-200"
+  },
+  {
+    id: 3,
+    title: "Bookkeeping Academy",
+    description: "Best practices, QBO hacks, and monthly close checklists",
+    icon: PiggyBank,
+    color: "from-purple-500 to-indigo-500",
+    textColor: "text-purple-600",
+    bgColor: "bg-purple-50",
+    borderColor: "border-purple-200"
+  },
+  {
+    id: 4,
+    title: "Fractional CFO Vault",
+    description: "Cash-flow templates, scenario planning guides, fundraising resources",
+    icon: TrendingUp,
+    color: "from-orange-500 to-red-500",
+    textColor: "text-orange-600",
+    bgColor: "bg-orange-50",
+    borderColor: "border-orange-200"
+  },
+  {
+    id: 5,
+    title: "Automation & AI Center",
+    description: "n8n recipes, ClickUp templates, HubSpot workflows, AI prompt libraries",
+    icon: Bot,
+    color: "from-violet-500 to-purple-500",
+    textColor: "text-violet-600",
+    bgColor: "bg-violet-50",
+    borderColor: "border-violet-200"
+  },
+  {
+    id: 6,
+    title: "Sales Playbook",
+    description: "ICP criteria, outreach cadences, HubSpot playbooks, Seed Stories",
+    icon: Target,
+    color: "from-rose-500 to-pink-500",
+    textColor: "text-rose-600",
+    bgColor: "bg-rose-50",
+    borderColor: "border-rose-200"
+  },
+  {
+    id: 7,
+    title: "Compliance + Legal",
+    description: "Entity structuring, sales tax rules, R&D credit eligibility",
+    icon: Shield,
+    color: "from-slate-500 to-gray-500",
+    textColor: "text-slate-600",
+    bgColor: "bg-slate-50",
+    borderColor: "border-slate-200"
+  },
+  {
+    id: 8,
+    title: "Toolbox",
+    description: "Scenario simulators, tax calendar, case study builder & more",
+    icon: Wrench,
+    color: "from-amber-500 to-yellow-500",
+    textColor: "text-amber-600",
+    bgColor: "bg-amber-50",
+    borderColor: "border-amber-200"
+  },
+  {
+    id: 9,
+    title: "Culture & Voice",
+    description: "Brand tone, style guides, meme library for financial humor",
+    icon: Heart,
+    color: "from-pink-500 to-rose-500",
+    textColor: "text-pink-600",
+    bgColor: "bg-pink-50",
+    borderColor: "border-pink-200"
+  }
+];
 
-const categoryIconMap = {
-  'users': Users,
-  'trending-up': TrendingUp,
-  'settings': SettingsIcon,
-  'code': Code,
-  'user-check': UserCheck,
-  'shield-check': ShieldCheck
-} as const;
+// AI Features coming soon
+const aiFeatures = [
+  { name: "AI Search Copilot", description: "Natural language search with direct answers", icon: BrainCircuit },
+  { name: "Visual SOP Maps", description: "Interactive flowcharts and diagrams", icon: FileText },
+  { name: "Decision Trees", description: "Choose Your Own Adventure style tools", icon: Zap },
+  { name: "Auto-SOP Generator", description: "Convert recordings into structured SOPs", icon: Bot },
+  { name: "Smart Tagging", description: "AI auto-tags content with relevant topics", icon: Sparkles },
+  { name: "Finance Meme Wall", description: "Curated financial humor library", icon: Palette }
+];
 
 export default function KnowledgeBase() {
-  const [, setLocation] = useLocation();
   const { user, logoutMutation } = useAuth();
-  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Handle authentication
-  useEffect(() => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Required",
-        description: "Please log in to access the knowledge base.",
-      });
-      setLocation('/');
-    }
-  }, [user, toast, setLocation]);
-
-  // Show loading state while redirecting
-  if (!user) {
-    return <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center">
-      <div className="text-white">Redirecting to login...</div>
-    </div>;
-  }
-
-  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-
-  // Fetch categories
-  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery({
-    queryKey: ['/api/kb/categories'],
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: false,
-  });
-
-  // Fetch articles
-  const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles, error: articlesError } = useQuery({
-    queryKey: ['/api/kb/articles', selectedCategory],
-    queryFn: () => apiRequest(`/api/kb/articles${selectedCategory ? `?categoryId=${selectedCategory}` : ''}`),
-    enabled: !!user,
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    retry: false,
-  });
-
-  // Search articles
-  const { data: searchResults = [], isLoading: searchLoading, error: searchError } = useQuery({
-    queryKey: ['/api/kb/search', searchQuery],
-    queryFn: () => apiRequest(`/api/kb/search?q=${encodeURIComponent(searchQuery)}`),
-    enabled: !!user && searchQuery.length >= 2,
-    staleTime: 30 * 1000, // 30 seconds
-    retry: false,
-  });
-
-  // Create article form
-  const form = useForm<z.infer<typeof articleFormSchema>>({
-    resolver: zodResolver(articleFormSchema),
-    defaultValues: {
-      title: "",
-      excerpt: "",
-      content: "",
-      categoryId: "",
-      status: "draft",
-      featured: false,
-      tags: ""
-    }
-  });
-
-  // Create article mutation
-  const createArticleMutation = useMutation({
-    mutationFn: (data: z.infer<typeof articleFormSchema>) => {
-      const payload = {
-        ...data,
-        categoryId: parseInt(data.categoryId),
-        tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
-      };
-      return apiRequest('/api/kb/articles', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-    },
-    onSuccess: () => {
-      toast({ title: "Article created successfully" });
-      setShowCreateDialog(false);
-      form.reset();
-      refetchArticles();
-      queryClient.invalidateQueries({ queryKey: ['/api/kb/categories'] });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to create article", 
-        description: error.message,
-        variant: "destructive" 
-      });
-    }
-  });
-
-  const handleLogout = async () => {
-    try {
-      await logoutMutation.mutateAsync();
-      setLocation("/auth");
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
-
-  const handleCreateArticle = (data: z.infer<typeof articleFormSchema>) => {
-    createArticleMutation.mutate(data);
-  };
-
-  const getCategoryIcon = (iconName: string) => {
-    const IconComponent = categoryIconMap[iconName as keyof typeof categoryIconMap] || BookOpen;
-    return IconComponent;
-  };
-
-  const displayedArticles = searchQuery.length >= 2 ? searchResults : articles;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="relative mb-8">
-          {/* Back Button - Top Left */}
-          <div className="absolute top-0 left-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-              onClick={() => {
-                // Invalidate dashboard metrics to refresh data
-                queryClient.invalidateQueries({ queryKey: ['/api/dashboard/metrics'] });
-                setLocation('/');
-              }}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back to Portal
-            </Button>
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] animate-in fade-in duration-700">
+      {/* Header - matching other portal pages */}
+      <div className="bg-transparent border-b border-white/10 backdrop-blur-sm sticky top-0 z-50">
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Portal
+              </Button>
+            </Link>
+            <div className="flex items-center gap-3">
+              <img src={logoPath} alt="Seed Financial" className="h-8 w-auto" />
+              <div className="text-white">
+                <h1 className="text-lg font-semibold">SEED FINANCIAL</h1>
+              </div>
+            </div>
           </div>
-          
-          {/* Centered Logo */}
-          <div className="flex justify-center">
-            <img 
-              src={logoPath} 
-              alt="Seed Financial" 
-              className="h-16 w-auto"
-            />
-          </div>
-          
-          {/* User Menu - Top Right */}
-          <div className="absolute top-0 right-0 flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="relative p-2 hover:bg-white/10 text-white">
+
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 relative">
               <Bell className="h-4 w-4" />
-              <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
+              <div className="absolute -top-1 -right-1 h-3 w-3 bg-orange-500 rounded-full animate-pulse"></div>
             </Button>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
-                  {user?.profilePhoto ? (
-                    <img 
-                      src={user.profilePhoto} 
-                      alt="Profile" 
-                      className="h-6 w-6 rounded-full"
-                    />
-                  ) : (
-                    <User className="h-4 w-4" />
-                  )}
-                  <span className="hidden sm:inline text-white">{user?.firstName || 'User'}</span>
+                <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 gap-2">
+                  <div className="h-6 w-6 rounded-full bg-orange-500 flex items-center justify-center text-xs font-semibold text-white">
+                    {user?.email?.[0]?.toUpperCase() || 'U'}
+                  </div>
+                  <span className="hidden sm:block">{user?.email?.split('@')[0] || 'User'}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setLocation('/profile')}>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
@@ -243,294 +195,101 @@ export default function KnowledgeBase() {
             </DropdownMenu>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="space-y-8">
-          {/* Search and Actions */}
-          <div className="mb-8">
-            <Card className="p-6 bg-white/20 backdrop-blur-md border-white/30 shadow-lg">
-              <div className="flex items-center gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/60" />
-                  <Input
-                    placeholder="Search knowledge base..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-white/10 border-white/20 text-white placeholder-white/60"
-                  />
-                </div>
-                <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Article
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Create New Article</DialogTitle>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(handleCreateArticle)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="title"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Title</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="Enter article title" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="categoryId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Category</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select a category" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {(categories as KbCategory[]).map((category: KbCategory) => (
-                                    <SelectItem key={category.id} value={category.id.toString()}>
-                                      {category.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="excerpt"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Excerpt</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} placeholder="Brief summary of the article" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="content"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Content</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  {...field} 
-                                  placeholder="Article content (Markdown supported)" 
-                                  className="min-h-[200px]"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="tags"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tags</FormLabel>
-                              <FormControl>
-                                <Input {...field} placeholder="Enter tags separated by commas" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <div className="flex items-center justify-between">
-                          <FormField
-                            control={form.control}
-                            name="status"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Status</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger className="w-32">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="draft">Draft</SelectItem>
-                                    <SelectItem value="published">Published</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <Button 
-                            type="submit" 
-                            disabled={createArticleMutation.isPending}
-                            className="bg-orange-500 hover:bg-orange-600"
-                          >
-                            {createArticleMutation.isPending ? "Creating..." : "Create Article"}
-                          </Button>
-                        </div>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </Card>
-          </div>
-
-          {/* Categories Filter - Horizontal Scrollable */}
-          {!searchQuery && (
-            <div className="mb-8">
-              <Card className="p-4 bg-white/15 backdrop-blur-md border-white/30 shadow-lg">
-                <div className="flex gap-3 overflow-x-auto pb-2" style={{scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitScrollbar: 'none'}}>
-                  <div className="flex gap-3 min-w-fit">
-                    <Button
-                      variant={selectedCategory === null ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(null)}
-                      className={`flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 ${
-                        selectedCategory === null 
-                          ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg border-orange-500' 
-                          : 'bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-white/30 hover:border-white/50'
-                      }`}
-                    >
-                      All Categories
-                    </Button>
-                    {(categories as KbCategory[]).map((category: KbCategory) => {
-                      const IconComponent = getCategoryIcon(category.icon || 'book-open');
-                      return (
-                        <Button
-                          key={category.id}
-                          variant={selectedCategory === category.id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setSelectedCategory(category.id)}
-                          className={`flex items-center gap-2 flex-shrink-0 px-4 py-2 rounded-full transition-all duration-200 ${
-                            selectedCategory === category.id 
-                              ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg border-orange-500' 
-                              : 'bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-white/30 hover:border-white/50'
-                          }`}
-                        >
-                          <IconComponent className="h-4 w-4" />
-                          {category.name}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </Card>
+      {/* Main Content */}
+      <div className="container mx-auto px-6 py-12">
+        
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <h1 className="text-6xl font-bold text-white mb-6 tracking-tight">
+            Seed KB
+          </h1>
+          <p className="text-xl text-white/80 max-w-3xl mx-auto leading-relaxed">
+            Welcome to Seed Financial's comprehensive knowledge base. Access everything from quick-start guides 
+            and tax strategies to AI-powered tools and automation recipes. Your one-stop hub for financial expertise.
+          </p>
+          
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mt-8">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Input
+                placeholder="Search knowledge base... (AI-powered search coming soon)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 pr-4 py-4 text-lg bg-white/15 backdrop-blur-md border-white/30 text-white placeholder:text-white/60 focus:bg-white/20 focus:border-white/50"
+              />
             </div>
-          )}
-
-          {/* Articles Display */}
-          <div className="space-y-4">
-            {articlesLoading || searchLoading ? (
-              <div className="text-center text-white/70 py-12">
-                Loading articles...
-              </div>
-            ) : displayedArticles.length === 0 ? (
-              <div className="text-center text-white/70 py-12">
-                {searchQuery ? "No articles found matching your search." : "No articles available."}
-              </div>
-            ) : (
-              displayedArticles.map((article: KbArticle) => {
-                const category = (categories as KbCategory[]).find((cat: KbCategory) => cat.id === article.categoryId);
-                const IconComponent = category ? getCategoryIcon(category.icon) : BookOpen;
-                
-                return (
-                  <Card key={article.id} className="p-6 bg-gradient-to-br from-white to-gray-50 border-gray-200 hover:from-gray-50 hover:to-gray-100 transition-all duration-200 shadow-lg hover:shadow-xl hover:border-orange-300">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-3">
-                          {article.featured && (
-                            <Badge variant="secondary" className="bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-800 border-orange-200 font-medium">
-                              <Star className="h-3 w-3 mr-1 fill-orange-600" />
-                              Featured
-                            </Badge>
-                          )}
-                          {category && (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-medium">
-                              <IconComponent className="h-3 w-3 mr-1 text-blue-600" />
-                              {category.name}
-                            </Badge>
-                          )}
-                          <Badge 
-                            variant="outline" 
-                            className={`font-medium ${
-                              article.status === 'published' 
-                                ? 'bg-green-50 text-green-700 border-green-200' 
-                                : 'bg-yellow-50 text-yellow-700 border-yellow-200'
-                            }`}
-                          >
-                            {article.status}
-                          </Badge>
-                        </div>
-                        
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2 cursor-pointer hover:text-orange-600 transition-colors">
-                          {article.title}
-                        </h3>
-                        
-                        <p className="text-gray-600 text-sm mb-4">
-                          {article.excerpt}
-                        </p>
-
-                        {article.tags && article.tags.length > 0 && (
-                          <div className="flex items-center gap-2 mb-4">
-                            {article.tags.map((tag, index) => (
-                              <Badge key={index} variant="outline" className="text-xs bg-gray-100 text-gray-600 border-gray-300 font-medium">
-                                #{tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-6 text-gray-500 text-sm">
-                          <div className="flex items-center gap-1">
-                            <Eye className="h-4 w-4" />
-                            <span>{article.viewCount || 0} views</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{new Date(article.updatedAt).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <User className="h-4 w-4" />
-                            <span>Author</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 ml-4">
-                        <Button variant="ghost" size="sm" className="text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors">
-                          <Bookmark className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })
-            )}
           </div>
+        </div>
+
+        {/* Category Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+          {categories.map((category) => {
+            const IconComponent = category.icon;
+            return (
+              <Card 
+                key={category.id}
+                className={`group p-8 bg-white/15 backdrop-blur-md border-white/30 hover:bg-white/25 hover:border-white/50 transition-all duration-300 cursor-pointer hover:shadow-2xl hover:scale-105 ${category.borderColor} aspect-square flex flex-col justify-center items-center text-center`}
+              >
+                <div className={`p-4 rounded-2xl bg-gradient-to-br ${category.color} mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                  <IconComponent className="h-8 w-8 text-white" />
+                </div>
+                
+                <h3 className="text-xl font-bold text-white mb-3 group-hover:text-orange-200 transition-colors">
+                  {category.title}
+                </h3>
+                
+                <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">
+                  {category.description}
+                </p>
+
+                <Badge className="mt-4 bg-orange-500/20 text-orange-200 border-orange-500/30 group-hover:bg-orange-500/30">
+                  Coming Soon
+                </Badge>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* AI Features Preview */}
+        <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4">🚀 Advanced AI Features</h2>
+            <p className="text-white/80 text-lg max-w-3xl mx-auto">
+              Powered by cutting-edge AI technology, these features will revolutionize how you interact with knowledge and automate workflows.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {aiFeatures.map((feature, index) => {
+              const IconComponent = feature.icon;
+              return (
+                <Card 
+                  key={index}
+                  className="p-6 bg-white/10 backdrop-blur-sm border-white/20 hover:bg-white/15 hover:border-white/30 transition-all duration-300"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600">
+                      <IconComponent className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-white mb-2">{feature.name}</h4>
+                      <p className="text-white/70 text-sm">{feature.description}</p>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Footer Note */}
+        <div className="text-center mt-12">
+          <p className="text-white/60 text-sm">
+            💡 This knowledge base is actively being built. Check back soon for new content and AI-powered features!
+          </p>
         </div>
       </div>
     </div>
