@@ -35,7 +35,9 @@ import { SalesInbox } from "@/components/SalesInbox";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
 import { useState, useEffect } from 'react';
 
-export default function Dashboard() {
+// TEMPLATE: Saved for potential future admin dashboard implementation
+// This is the original dashboard design before dashboard-new.tsx became the main dashboard
+export default function AdminDashboardTemplate() {
   const { user } = useAuth();
   const [weather, setWeather] = useState({ temp: 72, condition: 'sunny', location: 'Marina Del Rey, CA' });
 

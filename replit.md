@@ -10,7 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-✓ **Universal Navbar Architecture Completed** (July 29, 2025)
+✓ **Universal Navbar Architecture & Code Cleanup Completed** (July 29, 2025)
   - **Universal Design Based on Dashboard-New**: Simplified UniversalNavbar to match dashboard-new.tsx layout exactly
   - **Centered Logo Layout**: All pages now use centered Seed Financial logo with right-aligned user controls
   - **Removed Variant System**: Eliminated complex light/dark variant props in favor of single universal design
@@ -21,6 +21,8 @@ Preferred communication style: Simple, everyday language.
   - **Consistent Branding**: Unified orange accents, user avatar styling, and navigation behavior
   - **LSP Error Resolution**: Fixed all TypeScript compilation errors related to removed variant prop
   - **Simplified Maintenance**: Single clean component design ensures perfect consistency across all pages
+  - **Dashboard Cleanup**: Renamed unused dashboard.tsx to admin-dashboard-template.tsx for potential future admin dashboard use
+  - **Clear File Purpose**: dashboard-new.tsx is now the sole main dashboard, reducing confusion in codebase
 
 ✓ **Enhanced Login Experience and Bug Fixes** (July 28, 2025)
   - **Password Reveal Toggle**: Added eye/eye-off icon button in password field for password visibility control
