@@ -63,29 +63,54 @@ export default function KnowledgeBase() {
   const [, setLocation] = useLocation();
   const { user, logout } = useAuth();
   const { toast } = useToast();
+
+  // Handle authentication
+  useEffect(() => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please log in to access the knowledge base.",
+      });
+      setLocation('/');
+    }
+  }, [user, toast, setLocation]);
+
+  // Show loading state while redirecting
+  if (!user) {
+    return <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center">
+      <div className="text-white">Redirecting to login...</div>
+    </div>;
+  }
+
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   // Fetch categories
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+  const { data: categories = [], isLoading: categoriesLoading, error: categoriesError } = useQuery({
     queryKey: ['/api/kb/categories'],
+    enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
   });
 
   // Fetch articles
-  const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles } = useQuery({
+  const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles, error: articlesError } = useQuery({
     queryKey: ['/api/kb/articles', selectedCategory],
     queryFn: () => apiRequest(`/api/kb/articles${selectedCategory ? `?categoryId=${selectedCategory}` : ''}`),
+    enabled: !!user,
     staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: false,
   });
 
   // Search articles
-  const { data: searchResults = [], isLoading: searchLoading } = useQuery({
+  const { data: searchResults = [], isLoading: searchLoading, error: searchError } = useQuery({
     queryKey: ['/api/kb/search', searchQuery],
     queryFn: () => apiRequest(`/api/kb/search?q=${encodeURIComponent(searchQuery)}`),
-    enabled: searchQuery.length >= 2,
+    enabled: !!user && searchQuery.length >= 2,
     staleTime: 30 * 1000, // 30 seconds
+    retry: false,
   });
 
   // Create article form
