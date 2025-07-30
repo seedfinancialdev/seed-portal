@@ -386,17 +386,17 @@ export default function AdminDashboard() {
       {/* Sidebar Navigation */}
       <div className="w-64 bg-white/10 backdrop-blur-md border-r border-white/20 shadow-xl fixed h-full overflow-y-auto">
         {/* SEEDOS Header */}
-        <div className="p-6 border-b border-white/20 h-[88px] flex items-center justify-center bg-white">
+        <div className="p-6 border-b border-white/20 h-[88px] flex items-center justify-center">
           <div className="flex items-center gap-3">
             <img src={navLogoPath} alt="Seed Financial" className="h-12" />
           </div>
         </div>
 
         {/* User Profile */}
-        <div className="p-4 border-b border-white/20">
+        <div className="p-4 border-b border-white/20 bg-white">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-3 p-2 rounded-lg bg-white hover:bg-white/95 cursor-pointer">
+              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
                 {user?.profilePhoto ? (
                   <img 
                     src={user.profilePhoto} 
@@ -472,7 +472,7 @@ export default function AdminDashboard() {
         <div className="bg-white/10 backdrop-blur-md border-b border-white/20 px-6 py-6 h-[88px]">
           <div className="flex items-center justify-between h-full">
             <div className="flex items-center gap-4">
-              <h1 className="text-3xl font-bold text-white" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+              <h1 className="text-4xl font-bold text-white" style={{ fontFamily: 'League Spartan, sans-serif' }}>
                 SEED<span className="text-orange-500">OS</span>
               </h1>
               <p className="text-white/70 text-lg">Executive Dashboard</p>
