@@ -39,15 +39,21 @@ export class GoogleAdminService {
       let auth: GoogleAuth;
       
       if (serviceAccountJson) {
-        // Use JSON string credentials
-        const credentials = JSON.parse(serviceAccountJson);
-        auth = new GoogleAuth({
-          credentials,
-          scopes: [
-            'https://www.googleapis.com/auth/admin.directory.user.readonly',
-            'https://www.googleapis.com/auth/admin.directory.domain.readonly'
-          ]
-        });
+        try {
+          // Use JSON string credentials
+          const credentials = JSON.parse(serviceAccountJson);
+          auth = new GoogleAuth({
+            credentials,
+            scopes: [
+              'https://www.googleapis.com/auth/admin.directory.user.readonly',
+              'https://www.googleapis.com/auth/admin.directory.domain.readonly'
+            ]
+          });
+        } catch (parseError) {
+          console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError);
+          console.warn('Google Admin API credentials not configured - invalid JSON format');
+          return;
+        }
       } else if (serviceAccountPath) {
         // Use file path credentials
         auth = new GoogleAuth({
