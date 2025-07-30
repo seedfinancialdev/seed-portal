@@ -18,7 +18,13 @@ import {
   ChevronRight,
   TrendingUp,
   Target,
-  Activity
+  Activity,
+  Compass,
+  BrainCircuit,
+  Wrench,
+  Shield,
+  Heart,
+  Folder
 } from "lucide-react";
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -29,6 +35,8 @@ import { useState, useEffect } from "react";
 import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { useCounterAnimation } from "@/hooks/useCounterAnimation";
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from "@/lib/queryClient";
 
 interface WeatherData {
   temperature: number | null;
@@ -36,6 +44,34 @@ interface WeatherData {
   location: string;
   isLoading: boolean;
 }
+
+interface KbCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Icon mapping for categories
+const iconMap: Record<string, any> = {
+  'compass': Compass,
+  'calculator': Calculator,
+  'book-open': BookOpen,
+  'trending-up': TrendingUp,
+  'brain-circuit': BrainCircuit,
+  'target': Target,
+  'shield': Shield,
+  'wrench': Wrench,
+  'heart': Heart,
+  'folder': Folder,
+  'settings': Settings
+};
 
 // Weather icon component
 const getWeatherIcon = (condition: string) => {
@@ -88,6 +124,17 @@ export default function Dashboard() {
     delay: 300,
     enabled: !metricsLoading && !metricsError 
   });
+
+  // Fetch knowledge base categories for the SEEDKB card
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<KbCategory[]>({
+    queryKey: ["/api/kb/categories"],
+  });
+
+  const getIconComponent = (iconName: string) => {
+    const IconComponent = iconMap[iconName] || Folder;
+    return IconComponent;
+  };
+
   const [weather, setWeather] = useState<WeatherData>({
     temperature: null,
     condition: '',
@@ -379,60 +426,79 @@ export default function Dashboard() {
             <LazySalesInbox limit={8} />
           </div>
 
-          {/* SEEDKB - Full Column */}
+          {/* SEEDKB - Full Column with Category Grid */}
           <div className="h-full">
-            <Card className="bg-gradient-to-br from-orange-50 to-white border border-orange-200 shadow-xl h-full">
-              <CardHeader className="pb-6">
-                <CardTitle className="flex items-center gap-3 text-2xl font-bold text-gray-900">
+            <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 backdrop-blur-xl border-2 rounded-2xl shadow-2xl h-full overflow-hidden">
+              <CardHeader className="pb-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-600/30">
+                <CardTitle className="flex items-center gap-3 text-2xl font-bold" style={{ fontFamily: 'League Spartan, sans-serif' }}>
                   <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
                     <BookOpen className="h-6 w-6 text-white" />
                   </div>
-                  SEEDKB
+                  <span className="text-white">SEED<span style={{ color: '#e24c00' }}>KB</span></span>
                 </CardTitle>
-                <CardDescription className="text-gray-600 text-lg">
+                <CardDescription className="text-slate-300 text-base">
                   Your comprehensive knowledge hub
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-8 flex-1">
-                <Button 
-                  onClick={() => setLocation('/knowledge-base')}
-                  className="w-full text-lg h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-200"
-                >
-                  <BookOpen className="h-6 w-6 mr-3" />
-                  Open Knowledge Base
-                </Button>
-                
-                <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-orange-100">
-                  <h4 className="font-bold text-gray-900 mb-4 text-lg">Knowledge Categories</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="font-semibold text-sm">Getting Started</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="font-semibold text-sm">Tax Services</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="font-semibold text-sm">Sales Playbook</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="font-semibold text-sm">Bookkeeping</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="font-semibold text-sm">CFO Vault</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-700 hover:text-orange-600 cursor-pointer py-3 px-4 hover:bg-orange-50 rounded-xl transition-all duration-200 border border-gray-100 hover:border-orange-200">
-                      <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                      <span className="font-semibold text-sm">Compliance</span>
-                    </div>
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  <Button 
+                    onClick={() => setLocation('/knowledge-base')}
+                    className="w-full text-lg h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <BookOpen className="h-5 w-5 mr-3" />
+                    Open Knowledge Base
+                  </Button>
+                  
+                  {/* Mini Category Grid - 2x3 layout */}
+                  <div>
+                    <h4 className="font-bold text-white mb-4 text-base">Knowledge Categories</h4>
+                    {categoriesLoading ? (
+                      <div className="text-slate-400 text-center py-8">Loading categories...</div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3">
+                        {categories.slice(0, 6).map((category: KbCategory) => {
+                          const IconComponent = getIconComponent(category.icon);
+                          
+                          return (
+                            <Card
+                              key={category.id}
+                              className="group h-24 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg bg-gradient-to-br from-slate-700/80 to-slate-800/80 border-slate-600/40 hover:from-slate-600/80 hover:to-slate-700/80 hover:border-orange-400/50 backdrop-blur-md border rounded-xl overflow-hidden relative"
+                              onClick={() => setLocation('/knowledge-base')}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              
+                              <div className="relative p-4 h-full flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 border border-white/20`}>
+                                  <IconComponent className="h-5 w-5 text-white" />
+                                </div>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="text-sm font-semibold text-white group-hover:text-orange-200 transition-colors duration-300 truncate">
+                                    {category.name.replace(' Hub', '').replace(' Academy', '').replace(' Vault', '').replace(' Center', '').replace(' Playbook', '')}
+                                  </h3>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    )}
+                    
+                    {categories.length > 6 && (
+                      <div className="mt-4 text-center">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setLocation('/knowledge-base')}
+                          className="text-orange-400 hover:text-orange-300 hover:bg-slate-700/50"
+                        >
+                          View all {categories.length} categories →
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-
               </CardContent>
             </Card>
           </div>
