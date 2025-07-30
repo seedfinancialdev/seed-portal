@@ -61,30 +61,19 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     } catch (error: any) {
       console.error('Error fetching workspace users:', error);
       
-      // Provide detailed setup instructions for common errors
-      if (error.message?.includes('authorized_user credentials cannot be used')) {
+      // Handle scope permission errors for authorized_user credentials
+      if (error.code === 403 && error.message?.includes('Insufficient Permission')) {
         return res.status(500).json({ 
-          message: 'Wrong Credential Type',
-          error: 'authorized_user credentials detected, but service account required',
+          message: 'Insufficient Permissions',
+          error: 'The authorized_user credential lacks required Admin SDK scopes',
           setupInstructions: {
-            currentIssue: 'You have user OAuth credentials, but Google Admin API requires a service account with domain-wide delegation',
-            solution: 'Create a service account instead of using user credentials',
-            step1: 'Go to Google Cloud Console → IAM & Admin → Service Accounts',
-            step2: 'Click "Create Service Account"',
-            step3: 'Name: "seedos-admin" or similar',
-            step4: 'Click "Create and Continue"',
-            step5: 'Skip role assignment (not needed for domain-wide delegation)',
-            step6: 'Click "Done"',
-            step7: 'Click on the new service account → Keys → Add Key → Create new key → JSON',
-            step8: 'Download the JSON file and replace GOOGLE_SERVICE_ACCOUNT_JSON secret with its contents',
-            step9: 'In Google Workspace Admin Console → Security → API Controls → Domain-wide Delegation',
-            step10: 'Add the service account Client ID with required scopes',
-            scopes: [
-              'https://www.googleapis.com/auth/admin.directory.user.readonly',
-              'https://www.googleapis.com/auth/admin.directory.group.readonly',
-              'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
-            ],
-            note: 'Service accounts can impersonate domain users, while user OAuth cannot access the Admin API'
+            currentIssue: 'The user credential does not have Admin Directory API access',
+            solution: 'Re-create the ADC file with proper Admin SDK scopes',
+            step1: 'Run: gcloud auth application-default revoke',
+            step2: 'Run: gcloud auth application-default login --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly',
+            step3: 'Copy the new ADC file content to GOOGLE_SERVICE_ACCOUNT_JSON secret',
+            step4: 'Ensure the user account has Google Workspace Admin role',
+            note: 'The authorized_user must be a Workspace admin with Directory API access'
           }
         });
       }

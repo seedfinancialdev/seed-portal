@@ -47,16 +47,19 @@ export class GoogleAdminService {
           // Use JSON string credentials
           const credentials = JSON.parse(serviceAccountJson);
           
-          // Check credential type and provide helpful error messages
+          // Support authorized_user credentials for development
           if (credentials.type === 'authorized_user') {
-            console.error('CREDENTIAL TYPE ERROR: Found authorized_user credential, but Google Admin API requires a service account');
-            console.error('SOLUTION: You need to create a service account in Google Cloud Console:');
-            console.error('1. Go to Google Cloud Console → IAM & Admin → Service Accounts');
-            console.error('2. Create a new service account');
-            console.error('3. Download the JSON key file');
-            console.error('4. Replace GOOGLE_SERVICE_ACCOUNT_JSON with the service account JSON');
-            console.error('5. Enable domain-wide delegation in Google Workspace Admin Console');
-            throw new Error('Invalid credential type: authorized_user credentials cannot be used for Google Admin API. Service account required.');
+            console.log('Using authorized_user credentials for Google Admin API (development mode)');
+            
+            // For authorized_user, create auth directly with the credentials
+            auth = new GoogleAuth({
+              credentials,
+              scopes: [
+                'https://www.googleapis.com/auth/admin.directory.user.readonly',
+                'https://www.googleapis.com/auth/admin.directory.group.readonly',
+                'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+              ]
+            });
           }
           
           // For impersonated service accounts, create a simpler direct approach
@@ -100,11 +103,17 @@ export class GoogleAdminService {
               const jsonEnd = serviceAccountJson.substring(pos, pos + 50);
               console.error(`JSON syntax error near position ${pos}:`);
               console.error(`...${jsonStart}[ERROR HERE]${jsonEnd}...`);
+              console.error('Common issues:');
+              console.error('- Missing closing brace } at end of JSON');
+              console.error('- Extra comma after last property');
+              console.error('- Unescaped quotes in string values');
+              console.error('- Truncated JSON when copying/pasting');
             }
           }
           
           console.warn('Google Admin API credentials not configured - invalid JSON format');
-          console.warn('Please check that the GOOGLE_SERVICE_ACCOUNT_JSON secret contains valid JSON');
+          console.warn('Please verify the GOOGLE_SERVICE_ACCOUNT_JSON secret contains complete, valid JSON');
+          console.warn('For authorized_user credentials, ensure the JSON ends with } after the last property');
           return;
         }
       } else if (serviceAccountPath) {
@@ -120,10 +129,18 @@ export class GoogleAdminService {
         throw new Error('No valid Google Admin API credentials found');
       }
 
-      // Subject must be an admin user for domain-wide delegation
-      const adminEmail = process.env.GOOGLE_ADMIN_EMAIL || 'admin@seedfinancial.io';
+      // Set subject for domain-wide delegation (only needed for service accounts)
       const authClient = await auth.getClient();
-      authClient.subject = adminEmail;
+      
+      // Only set subject for service accounts that need domain-wide delegation
+      if (serviceAccountJson) {
+        const credentials = JSON.parse(serviceAccountJson);
+        if (credentials.type === 'service_account' || credentials.type === 'impersonated_service_account') {
+          const adminEmail = process.env.GOOGLE_ADMIN_EMAIL || 'admin@seedfinancial.io';
+          authClient.subject = adminEmail;
+          console.log(`Using domain-wide delegation with subject: ${adminEmail}`);
+        }
+      }
 
       this.admin = google.admin({ version: 'directory_v1', auth: authClient });
       this.initialized = true;

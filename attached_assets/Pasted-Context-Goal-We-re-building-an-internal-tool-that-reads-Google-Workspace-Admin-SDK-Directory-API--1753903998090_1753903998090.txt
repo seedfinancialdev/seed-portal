@@ -1,0 +1,38 @@
+Context / Goal
+We’re building an internal tool that reads Google Workspace Admin SDK (Directory API) to list managed users, then syncs that list to our portal for access control. In production we’ll run on Vercel using OIDC + Workload Identity Federation and service-account impersonation. For development on Replit, we are not using service-account keys (org policy forbids key creation).
+
+What’s already in place (GCP & Workspace):
+	•	A dedicated service account with Domain-Wide Delegation (DWD) is configured for production use. The delegated Admin SDK scopes we’ll need are limited to Directory read (users/groups) and are already authorized in the Google Workspace Admin Console under Security → API controls → Domain-wide delegation.
+	•	The IAM Credentials API and Admin SDK API are enabled in our GCP project.
+	•	The necessary IAM (“Service Account Token Creator”) bindings are set so we can impersonate the service account in prod.
+	•	For dev, we generated a standard Application Default Credentials (ADC) file of type authorized_user (a user OAuth credential for our Workspace admin). This is intentionally not a service-account key. It is the recommended “quickest dev path” to call Admin SDK without creating keys.
+
+What we need from Replit (dev behavior):
+	1.	Accept an authorized_user ADC file for development.
+	•	This is the JSON produced by gcloud auth application-default login for our admin user.
+	•	Google client libraries natively support this file type via Application Default Credentials discovery.
+	•	We are not asking to use a service-account key JSON in dev.
+	2.	ADC discovery path support:
+	•	Please allow us to store the ADC file at the standard path ~/.config/gcloud/application_default_credentials.json inside the Replit environment and have Google client libraries pick it up automatically.
+	•	If your platform currently validates GOOGLE_APPLICATION_CREDENTIALS and rejects non-service-account JSON as “invalid format,” please don’t require that env var for this case. ADC works by auto-discovering the authorized_user file from the standard path without the env var.
+	3.	Do not require a service-account key JSON in dev.
+	•	Our organization disallows key creation by policy (security).
+	•	We will use service-account impersonation via Vercel OIDC + Workload Identity Federation in production (short-lived tokens, no keys). Dev doesn’t need impersonation to read Directory; a Workspace admin user token with the proper scope is sufficient.
+
+Why this is correct (short version):
+	•	The Admin SDK can be called with either:
+(a) a user credential (authorized_user) that has the Directory read scope, or
+(b) a service account with DWD impersonating a user.
+	•	For development, (a) is simpler and secure enough; for production, we’ll use (b) via OIDC/WIF and no keys.
+	•	The Google auth libraries already support authorized_user ADC files via the well-known path. Requiring a service-account JSON for this dev scenario is unnecessary.
+
+Acceptance criteria (dev):
+	•	Our Replit app can obtain Directory users for our Workspace tenant using the authorized_user ADC (no service-account key).
+	•	No “invalid format” error is raised purely because the credentials JSON is authorized_user.
+	•	We are not forced to set GOOGLE_APPLICATION_CREDENTIALS to a service-account key; the standard ADC discovery path works.
+
+Production note (for clarity, no action needed from you now):
+	•	In prod on Vercel, we will supply an external_account (WIF) config that exchanges Vercel OIDC for short-lived Google tokens and impersonates our service account (which already has DWD). No secrets at rest, no keys. That flow is separate from this dev request.
+
+Summary ask:
+Please treat our authorized_user ADC as a valid dev credential, allow the standard ADC discovery path, and do not require a service-account key JSON. That will let us finish development on Replit and keep production locked down with OIDC/WIF + SA impersonation.
