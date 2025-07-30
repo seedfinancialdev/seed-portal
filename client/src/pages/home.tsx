@@ -662,11 +662,17 @@ export default function Home() {
       console.log('Final quote data:', quoteData);
       
       if (editingQuoteId) {
-        const response = await apiRequest("PUT", `/api/quotes/${editingQuoteId}`, quoteData);
-        return response.json();
+        const response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
+          method: "PUT",
+          body: JSON.stringify(quoteData)
+        });
+        return response;
       } else {
-        const response = await apiRequest("POST", "/api/quotes", quoteData);
-        return response.json();
+        const response = await apiRequest("/api/quotes", {
+          method: "POST",
+          body: JSON.stringify(quoteData)
+        });
+        return response;
       }
     },
     onSuccess: (data) => {
@@ -696,8 +702,11 @@ export default function Home() {
   // Archive quote mutation
   const archiveQuoteMutation = useMutation({
     mutationFn: async (quoteId: number) => {
-      const response = await apiRequest("PATCH", `/api/quotes/${quoteId}/archive`, {});
-      return response.json();
+      const response = await apiRequest(`/api/quotes/${quoteId}/archive`, {
+        method: "PATCH",
+        body: JSON.stringify({})
+      });
+      return response;
     },
     onSuccess: () => {
       toast({
@@ -758,13 +767,16 @@ export default function Home() {
     
     try {
       // Check for existing quotes and verify HubSpot contact in parallel
-      const [hubspotResponse, existingQuotesResponse] = await Promise.all([
-        apiRequest('POST', '/api/hubspot/verify-contact', { email }),
-        apiRequest('POST', '/api/quotes/check-existing', { email })
+      const [hubspotResult, existingQuotesResult] = await Promise.all([
+        apiRequest('/api/hubspot/verify-contact', {
+          method: 'POST',
+          body: JSON.stringify({ email })
+        }),
+        apiRequest('/api/quotes/check-existing', {
+          method: 'POST',
+          body: JSON.stringify({ email })
+        })
       ]);
-      
-      const hubspotResult = await hubspotResponse.json();
-      const existingQuotesResult = await existingQuotesResponse.json();
       
       // Handle HubSpot verification
       if (hubspotResult.verified && hubspotResult.contact) {
@@ -825,8 +837,10 @@ export default function Home() {
   // Push to HubSpot mutation
   const pushToHubSpotMutation = useMutation({
     mutationFn: async (quoteId: number) => {
-      const response = await apiRequest("POST", "/api/hubspot/push-quote", { quoteId });
-      const result = await response.json();
+      const result = await apiRequest("/api/hubspot/push-quote", {
+        method: "POST",
+        body: JSON.stringify({ quoteId })
+      });
       return { ...result, quoteId }; // Include the original quoteId in the response
     },
     onSuccess: (data) => {
@@ -865,11 +879,14 @@ export default function Home() {
         taasPriorYearsFee: feeCalculation.taas.setupFee.toString()
       };
       
-      const response = await apiRequest("POST", "/api/hubspot/update-quote", { 
-        quoteId, 
-        currentFormData: enhancedFormData 
+      const result = await apiRequest("/api/hubspot/update-quote", {
+        method: "POST",
+        body: JSON.stringify({
+          quoteId, 
+          currentFormData: enhancedFormData 
+        })
       });
-      return response.json();
+      return result;
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -1117,25 +1134,28 @@ export default function Home() {
         ? parseFloat(formData.customSetupFee) 
         : fees.setupFee;
       
-      const response = await apiRequest("POST", "/api/approval/request", {
-        contactEmail: formData.contactEmail,
-        quoteData: {
+      const result = await apiRequest("/api/approval/request", {
+        method: "POST",
+        body: JSON.stringify({
           contactEmail: formData.contactEmail,
-          revenueBand: formData.revenueBand,
-          monthlyTransactions: formData.monthlyTransactions,
-          industry: formData.industry,
-          cleanupMonths: formData.cleanupMonths,
-          requestedCleanupMonths: formData.cleanupMonths, // Add requested months
-          overrideReason: formData.overrideReason || "",
-          customOverrideReason: formData.customOverrideReason || "",
-          customSetupFee: formData.customSetupFee || "",
-          monthlyFee: fees.monthlyFee,
-          setupFee: setupFee,
-          originalCleanupMonths: currentMonth // Include original minimum
-        }
+          quoteData: {
+            contactEmail: formData.contactEmail,
+            revenueBand: formData.revenueBand,
+            monthlyTransactions: formData.monthlyTransactions,
+            industry: formData.industry,
+            cleanupMonths: formData.cleanupMonths,
+            requestedCleanupMonths: formData.cleanupMonths, // Add requested months
+            overrideReason: formData.overrideReason || "",
+            customOverrideReason: formData.customOverrideReason || "",
+            customSetupFee: formData.customSetupFee || "",
+            monthlyFee: fees.monthlyFee,
+            setupFee: setupFee,
+            originalCleanupMonths: currentMonth // Include original minimum
+          }
+        })
       });
       
-      if (response.ok) {
+      if (result) {
         setHasRequestedApproval(true);
         toast({
           title: "Approval Requested",
@@ -1170,12 +1190,13 @@ export default function Home() {
 
     setIsValidatingCode(true);
     try {
-      const response = await apiRequest("POST", "/api/approval/validate", {
-        code: approvalCode,
-        contactEmail: form.getValues().contactEmail
+      const result = await apiRequest("/api/approval/validate", {
+        method: "POST",
+        body: JSON.stringify({
+          code: approvalCode,
+          contactEmail: form.getValues().contactEmail
+        })
       });
-      
-      const result = await response.json();
       
       if (result.valid) {
         // Lock all fields permanently after approval
