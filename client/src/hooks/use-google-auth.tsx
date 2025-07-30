@@ -139,6 +139,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     },
     scope: 'openid email profile',
     hosted_domain: 'seedfinancial.io', // Restrict to seedfinancial.io domain
+    flow: 'implicit', // Use popup flow instead of redirect to avoid localhost issues
   });
 
   // Sign out mutation
