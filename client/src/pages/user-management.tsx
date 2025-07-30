@@ -43,9 +43,10 @@ export default function UserManagement() {
   const [selectedRole, setSelectedRole] = useState<{[key: string]: string}>({});
 
   // Fetch Google Workspace users
-  const { data: workspaceData, isLoading: loadingWorkspace, refetch: refetchWorkspace } = useQuery({
+  const { data: workspaceData, isLoading: loadingWorkspace, refetch: refetchWorkspace, error: workspaceError } = useQuery({
     queryKey: ['/api/admin/workspace-users'],
     queryFn: () => apiRequest('/api/admin/workspace-users'),
+    retry: false, // Don't retry on errors so we can display setup instructions
   });
 
   // Fetch database users
@@ -208,6 +209,42 @@ export default function UserManagement() {
             <CardContent>
               {loadingWorkspace ? (
                 <div className="text-center py-8">Loading workspace users...</div>
+              ) : workspaceError ? (
+                <div className="text-center py-8">
+                  <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                  <div className="text-red-600 font-medium mb-1">Setup Required</div>
+                  <div className="text-sm text-gray-600 max-w-md mx-auto mb-4">
+                    Google Workspace Admin API needs additional configuration
+                  </div>
+                  {(workspaceError as any)?.setupInstructions && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-left max-w-2xl mx-auto">
+                      <div className="text-sm text-yellow-800">
+                        <strong className="block mb-3">Required Setup Steps:</strong>
+                        {Object.entries((workspaceError as any).setupInstructions).map(([key, value]) => {
+                          if (key === 'scopes') {
+                            return (
+                              <div key={key} className="mb-2">
+                                <strong>Required Scopes:</strong>
+                                <ul className="list-disc list-inside ml-2 mt-1">
+                                  {(value as string[]).map((scope, i) => (
+                                    <li key={i} className="text-xs font-mono break-all">{scope}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                          }
+                          if (key.startsWith('step')) {
+                            return <div key={key} className="mb-1">• {value as string}</div>;
+                          }
+                          if (key === 'clientId') {
+                            return <div key={key} className="mb-1"><strong>Client ID:</strong> {value as string}</div>;
+                          }
+                          return null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : !configured ? (
                 <div className="text-center py-8 text-gray-500">
                   Google Admin API not configured
@@ -219,16 +256,6 @@ export default function UserManagement() {
                   <div className="text-sm text-gray-600 max-w-md mx-auto">
                     {connectionTest?.message || 'Unable to connect to Google Workspace'}
                   </div>
-                  {connectionTest?.message?.includes('domain-wide delegation') && (
-                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-left max-w-md mx-auto">
-                      <div className="text-sm text-yellow-800">
-                        <strong>Setup Required:</strong> Please enable domain-wide delegation for the service account:
-                        <br />• Go to Google Workspace Admin Console
-                        <br />• Navigate to Security → API Controls → Domain-wide Delegation
-                        <br />• Add the service account client ID with required scopes
-                      </div>
-                    </div>
-                  )}
                 </div>
               ) : workspaceUsers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">

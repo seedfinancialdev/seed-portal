@@ -60,6 +60,28 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       });
     } catch (error: any) {
       console.error('Error fetching workspace users:', error);
+      
+      // Provide detailed setup instructions for common errors
+      if (error.message?.includes('iam.serviceAccounts.getAccessToken')) {
+        return res.status(500).json({ 
+          message: 'Google Workspace Admin API Setup Required',
+          error: 'Domain-wide delegation not properly configured',
+          setupInstructions: {
+            step1: 'Go to Google Cloud Console → IAM & Admin → Service Accounts',
+            step2: 'Find the service account: seed-admin-api@seedportal.iam.gserviceaccount.com',
+            step3: 'Click on the service account, go to "Permissions" tab',
+            step4: 'Add IAM binding: Service Account Token Creator role',
+            step5: 'Also ensure domain-wide delegation is enabled in Google Workspace Admin Console',
+            clientId: 'Use the service account Client ID in Google Workspace Admin Console',
+            scopes: [
+              'https://www.googleapis.com/auth/admin.directory.user.readonly',
+              'https://www.googleapis.com/auth/admin.directory.group.readonly',
+              'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+            ]
+          }
+        });
+      }
+      
       res.status(500).json({ 
         message: 'Failed to fetch workspace users: ' + error.message 
       });
