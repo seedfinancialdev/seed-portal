@@ -459,7 +459,7 @@ export default function Dashboard() {
                     ) : (
                       <TooltipProvider>
                         <div className="grid grid-cols-3 gap-4">
-                          {categories.slice(0, 6).map((category: KbCategory) => {
+                          {categories.map((category: KbCategory) => {
                             const IconComponent = getIconComponent(category.icon);
                             
                             return (
@@ -489,19 +489,6 @@ export default function Dashboard() {
                           })}
                         </div>
                       </TooltipProvider>
-                    )}
-                    
-                    {categories.length > 6 && (
-                      <div className="mt-4 text-center">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => setLocation('/knowledge-base')}
-                          className="text-orange-400 hover:text-orange-300 hover:bg-slate-700/50"
-                        >
-                          View all {categories.length} categories →
-                        </Button>
-                      </div>
                     )}
                   </div>
                 </div>
