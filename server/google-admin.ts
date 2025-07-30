@@ -20,10 +20,11 @@ export interface GoogleWorkspaceUser {
 export class GoogleAdminService {
   private admin: admin_directory_v1.Admin | null = null;
   private initialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    // Start initialization but don't wait for it in constructor
-    this.initialize().catch(error => {
+    // Store initialization promise to await in methods
+    this.initializationPromise = this.initialize().catch(error => {
       console.error('Google Admin initialization failed:', error);
       this.initialized = false;
     });
@@ -70,11 +71,20 @@ export class GoogleAdminService {
   }
 
   async isConfigured(): Promise<boolean> {
+    // Wait for initialization to complete
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+    }
     return this.initialized && this.admin !== null;
   }
 
   async testConnection(): Promise<{ connected: boolean; error?: string }> {
     try {
+      // Wait for initialization to complete
+      if (this.initializationPromise) {
+        await this.initializationPromise;
+      }
+      
       if (!this.admin) {
         return { connected: false, error: 'Google Admin API not initialized' };
       }
@@ -107,6 +117,11 @@ export class GoogleAdminService {
 
   async getAllDomainUsers(): Promise<GoogleWorkspaceUser[]> {
     try {
+      // Wait for initialization to complete
+      if (this.initializationPromise) {
+        await this.initializationPromise;
+      }
+      
       if (!this.admin) {
         throw new Error('Google Admin API not initialized');
       }
