@@ -86,6 +86,7 @@ const iconMap: Record<string, any> = {
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<KbCategory | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<KbArticle | null>(null);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   
   const { user, logout } = useAuth();
@@ -129,12 +130,117 @@ export default function KnowledgeBase() {
 
   const handleBackToCategories = () => {
     setSelectedCategory(null);
+    setSelectedArticle(null);
+  };
+
+  const handleArticleClick = (article: KbArticle) => {
+    setSelectedArticle(article);
+  };
+
+  const handleBackToArticles = () => {
+    setSelectedArticle(null);
   };
 
   const getIconComponent = (iconName: string) => {
     const IconComponent = iconMap[iconName] || Folder;
     return IconComponent;
   };
+
+  // Article detail view
+  if (selectedArticle) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          
+          {/* Header */}
+          <div className="relative mb-8">
+            <div className="absolute top-0 left-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+                onClick={handleBackToArticles}
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back to {selectedCategory?.name}
+              </Button>
+            </div>
+            
+            <div className="absolute top-0 right-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
+                    <User className="h-4 w-4 mr-2" />
+                    {user?.firstName || user?.email?.split('@')[0] || 'User'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation('/kb-admin')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Knowledge Base Admin</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
+            <div className="flex justify-center">
+              <img 
+                src={logoPath} 
+                alt="Seed Financial Logo" 
+                className="h-16 brightness-0 invert"
+                style={{filter: 'brightness(0) invert(1)'}}
+              />
+            </div>
+          </div>
+
+          {/* Article Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-4" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+              {selectedArticle.title}
+            </h1>
+            <div className="flex items-center justify-center gap-6 text-white/70 text-sm">
+              <span className="flex items-center gap-1">
+                <Eye className="h-4 w-4" />
+                {selectedArticle.viewCount} views
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {new Date(selectedArticle.updatedAt).toLocaleDateString()}
+              </span>
+            </div>
+            {selectedArticle.tags && selectedArticle.tags.length > 0 && (
+              <div className="flex gap-2 mt-4 justify-center">
+                {selectedArticle.tags.map((tag, index) => (
+                  <Badge key={index} variant="outline" className="border-white/30 text-white/70">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Article Content */}
+          <Card className="bg-white/10 backdrop-blur-md border-white/30">
+            <div className="p-8">
+              <div 
+                className="prose prose-invert max-w-none text-white/90 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: selectedArticle.content }}
+              />
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   // Main categories view
   if (!selectedCategory) {
@@ -398,7 +504,8 @@ export default function KnowledgeBase() {
             <img 
               src={logoPath} 
               alt="Seed Financial Logo" 
-              className="h-16"
+              className="h-16 brightness-0 invert"
+              style={{filter: 'brightness(0) invert(1)'}}
             />
           </div>
         </div>
@@ -442,7 +549,11 @@ export default function KnowledgeBase() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {categoryArticles.map((article: KbArticle) => (
-                  <Card key={article.id} className="bg-white/10 border-white/20 hover:bg-white/15 transition-colors cursor-pointer">
+                  <Card 
+                    key={article.id} 
+                    className="bg-white/10 border-white/20 hover:bg-white/15 transition-colors cursor-pointer"
+                    onClick={() => handleArticleClick(article)}
+                  >
                     <div className="p-6">
                       <h3 className="text-lg font-semibold text-white mb-3">
                         {article.title}
