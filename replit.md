@@ -10,6 +10,17 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Google Workspace OIDC Authentication Implementation** (July 30, 2025)
+  - **Replaced Firebase Authentication**: Migrated from Firebase to Google OAuth (@react-oauth/google library)
+  - **Enterprise-Grade Access Control**: Restricted login to @seedfinancial.io email addresses only
+  - **Database Schema Updates**: Added google_id, auth_provider, and role columns to users table
+  - **Backend OAuth Integration**: Created /api/auth/google/sync endpoint for user synchronization
+  - **Frontend Auth Flow**: Updated all components to use new useGoogleAuth hook
+  - **Fixed Database Columns**: Added missing firebase_uid column for backward compatibility
+  - **Session Management**: Proper localStorage handling for Google user data and access tokens
+  - **Role-Based Access**: Admin role automatically assigned to jon@seedfinancial.io and anthony@seedfinancial.io
+  - **Security Enhancement**: Google OAuth tokens properly validated on backend with domain restriction
+
 ✓ **Comprehensive AI Article Generator Enhancement with Navigation** (July 29, 2025)
   - **Fixed Template Variables Logic**: Changed from "required" to truly optional - AI can work around missing variables
   - **Enhanced Template Previews**: Added sample finalized article format with Lorem Ipsum content alongside structure

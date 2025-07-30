@@ -7,6 +7,15 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Helper to get authorization header
+function getAuthHeader(): Record<string, string> {
+  const token = localStorage.getItem('google_access_token');
+  if (token) {
+    return { 'Authorization': `Bearer ${token}` };
+  }
+  return {};
+}
+
 export async function apiRequest(
   url: string,
   options?: {
@@ -21,6 +30,7 @@ export async function apiRequest(
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...getAuthHeader(),
       ...headers,
     },
     body,
@@ -38,6 +48,9 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
+      headers: {
+        ...getAuthHeader(),
+      },
       credentials: "include",
     });
 

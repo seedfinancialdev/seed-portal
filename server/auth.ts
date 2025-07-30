@@ -277,10 +277,41 @@ export function setupAuth(app: Express) {
   });
 }
 
-// Middleware to require authentication
-export function requireAuth(req: any, res: any, next: any) {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Authentication required" });
+// Middleware to require authentication (supports both session and Google OAuth)
+export async function requireAuth(req: any, res: any, next: any) {
+  // First check session-based auth
+  if (req.isAuthenticated()) {
+    return next();
   }
-  next();
+  
+  // Then check for Google OAuth token
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      // Verify the token with Google
+      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const userInfo = await response.json();
+        // Check if user is from seedfinancial.io domain
+        if (userInfo.hd === 'seedfinancial.io') {
+          // Get user from database
+          const user = await storage.getUserByEmail(userInfo.email);
+          if (user) {
+            req.user = user;
+            return next();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Token verification failed:', error);
+    }
+  }
+  
+  return res.status(401).json({ message: "Authentication required" });
 }
