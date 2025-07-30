@@ -1802,6 +1802,8 @@ Generated: ${new Date().toLocaleDateString()}`;
       const ownerId = await this.getOwnerByEmail(userEmail);
       console.log(`Getting dashboard metrics for ${userEmail}, ownerId: ${ownerId}`);
       if (!ownerId) {
+        console.log(`No HubSpot owner found for ${userEmail} - this could be why metrics are showing $0`);
+        console.log('Available owners can be checked in HubSpot admin or user may need to be assigned as owner');
         return {
           pipelineValue: 0,
           activeDeals: 0,
@@ -1809,26 +1811,55 @@ Generated: ${new Date().toLocaleDateString()}`;
         };
       }
 
-      // Get deals from Seed Sales Pipeline only
+      // Get pipeline information to find the correct Seed Sales Pipeline ID dynamically
+      let seedPipelineId = null;
+      try {
+        const pipelinesResponse = await this.makeRequest('/crm/v3/pipelines/deals', {
+          method: 'GET'
+        });
+        
+        console.log('Available pipelines:', pipelinesResponse.results?.map((p: any) => `${p.id}: ${p.label}`));
+        
+        // Find Seed Sales Pipeline ID dynamically
+        const seedPipelineEntry = pipelinesResponse.results?.find((p: any) => 
+          p.label && (p.label.toLowerCase().includes('seed') || p.label.toLowerCase().includes('sales'))
+        );
+        
+        if (seedPipelineEntry) {
+          seedPipelineId = seedPipelineEntry.id;
+          console.log(`Found Seed Sales Pipeline: ${seedPipelineId} (${seedPipelineEntry.label})`);
+        } else {
+          console.log('Could not find Seed Sales Pipeline, will search all pipelines');
+        }
+      } catch (error) {
+        console.log('Could not fetch pipeline info, will search all pipelines');
+      }
+
+      // Build search filters - include pipeline filter only if we found the specific pipeline
+      const filters = [
+        {
+          propertyName: 'hubspot_owner_id',
+          operator: 'EQ',
+          value: ownerId
+        }
+      ];
+
+      // Add pipeline filter only if we found the specific Seed Sales Pipeline
+      if (seedPipelineId) {
+        filters.push({
+          propertyName: 'pipeline',
+          operator: 'EQ',
+          value: seedPipelineId
+        });
+      }
+
+      console.log(`Searching deals with filters:`, filters);
+
+      // Get deals with dynamic pipeline filtering
       const allDealsResponse = await this.makeRequest('/crm/v3/objects/deals/search', {
         method: 'POST',
         body: JSON.stringify({
-          filterGroups: [
-            {
-              filters: [
-                {
-                  propertyName: 'hubspot_owner_id',
-                  operator: 'EQ',
-                  value: ownerId
-                },
-                {
-                  propertyName: 'pipeline',
-                  operator: 'EQ',
-                  value: '761069086' // Seed Sales Pipeline ID from debug output
-                }
-              ]
-            }
-          ],
+          filterGroups: [{ filters }],
           properties: ['amount', 'dealstage', 'dealname', 'closedate', 'pipeline', 'hs_deal_stage_probability'],
           limit: 100
         })
@@ -1842,6 +1873,7 @@ Generated: ${new Date().toLocaleDateString()}`;
 
       // Get deal stage information to understand the stage IDs
       let dealStageInfo: any = {};
+      let pipelineInfo: any = {};
       try {
         const stagesResponse = await this.makeRequest('/crm/v3/properties/deals/dealstage', {
           method: 'GET'
@@ -1853,27 +1885,6 @@ Generated: ${new Date().toLocaleDateString()}`;
         console.log('Deal stage mapping:', dealStageInfo);
       } catch (error) {
         console.log('Could not fetch deal stage info, will use raw stage values');
-      }
-
-      // Get pipeline information to find "Seed Sales Pipeline"
-      let pipelineInfo: any = {};
-      try {
-        const pipelinesResponse = await this.makeRequest('/crm/v3/pipelines/deals', {
-          method: 'GET'
-        });
-        pipelineInfo = pipelinesResponse.results?.reduce((acc: any, pipeline: any) => {
-          acc[pipeline.id] = pipeline.label;
-          return acc;
-        }, {}) || {};
-        console.log('Available pipelines:', pipelineInfo);
-        
-        // Find Seed Sales Pipeline ID
-        const seedPipelineEntry = pipelinesResponse.results?.find((p: any) => 
-          p.label && p.label.toLowerCase().includes('seed')
-        );
-        console.log('Seed Sales Pipeline found:', seedPipelineEntry);
-      } catch (error) {
-        console.log('Could not fetch pipeline info');
       }
 
       // Also get all deals with more properties to understand the discrepancy
