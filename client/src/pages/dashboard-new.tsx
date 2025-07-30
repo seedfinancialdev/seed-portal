@@ -428,8 +428,8 @@ export default function Dashboard() {
           </div>
 
           {/* SEEDKB - Full Column with Category Grid */}
-          <div className="h-full">
-            <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 backdrop-blur-xl border-2 rounded-2xl shadow-2xl h-full overflow-hidden">
+          <div className="h-full relative z-10">
+            <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 backdrop-blur-xl border-2 rounded-2xl shadow-2xl h-full overflow-visible">
               <CardHeader className="pb-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-600/30">
                 <CardTitle className="flex items-center gap-3 text-2xl font-bold" style={{ fontFamily: 'League Spartan, sans-serif' }}>
                   <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
@@ -441,7 +441,7 @@ export default function Dashboard() {
                   Your comprehensive knowledge hub
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-6 overflow-visible">
                 <div className="space-y-6">
                   <Button 
                     onClick={() => setLocation('/knowledge-base')}
@@ -451,14 +451,14 @@ export default function Dashboard() {
                     Open Knowledge Base
                   </Button>
                   
-                  {/* Mini Category Grid - 2x3 layout */}
-                  <div>
+                  {/* Mini Category Grid - 3x3 layout */}
+                  <div className="relative z-20">
                     <h4 className="font-bold text-white mb-4 text-base">Knowledge Categories</h4>
                     {categoriesLoading ? (
                       <div className="text-slate-400 text-center py-8">Loading categories...</div>
                     ) : (
                       <TooltipProvider>
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-3 gap-4 relative z-30">
                           {categories.map((category: KbCategory) => {
                             const IconComponent = getIconComponent(category.icon);
                             
@@ -480,7 +480,9 @@ export default function Dashboard() {
                                 </TooltipTrigger>
                                 <TooltipContent 
                                   side="bottom" 
-                                  className="bg-slate-800 border-slate-600 text-white font-medium"
+                                  className="bg-slate-800 border-slate-600 text-white font-medium z-50 max-w-none whitespace-nowrap"
+                                  sideOffset={8}
+                                  avoidCollisions={true}
                                 >
                                   {category.name}
                                 </TooltipContent>
