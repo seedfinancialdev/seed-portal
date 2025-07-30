@@ -382,27 +382,27 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex">
       {/* Sidebar Navigation */}
-      <div className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full overflow-y-auto">
+      <div className="w-64 bg-white/10 backdrop-blur-md border-r border-white/20 shadow-xl fixed h-full overflow-y-auto">
         {/* SEEDOS Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-white/20">
           <div className="flex items-center gap-3">
             <img src={navLogoPath} alt="Seed Financial" className="h-8" />
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-white">
                 SEED<span className="text-orange-500">OS</span>
               </h1>
-              <p className="text-xs text-gray-500">Executive Dashboard</p>
+              <p className="text-xs text-white/70">Executive Dashboard</p>
             </div>
           </div>
         </div>
 
         {/* User Profile */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-white/20">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 cursor-pointer">
                 {user?.profilePhoto ? (
                   <img 
                     src={user.profilePhoto} 
@@ -415,12 +415,12 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-white truncate">
                     {user?.email?.split('@')[0]}
                   </p>
-                  <p className="text-xs text-gray-500">Administrator</p>
+                  <p className="text-xs text-white/70">Administrator</p>
                 </div>
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <ChevronDown className="h-4 w-4 text-white/70" />
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -445,7 +445,7 @@ export default function AdminDashboard() {
         <div className="p-4 space-y-6">
           {navigationItems.map((category) => (
             <div key={category.category}>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">
                 {category.category}
               </h3>
               <div className="space-y-1">
@@ -455,14 +455,14 @@ export default function AdminDashboard() {
                     onClick={() => item.path.startsWith('/admin') ? setSelectedSection(item.name.toLowerCase()) : setLocation(item.path)}
                     className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
                       (item.active || selectedSection === item.name.toLowerCase()) 
-                        ? 'bg-orange-50 text-orange-700 border-r-2 border-orange-500' 
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-orange-500/20 text-orange-300 border-r-2 border-orange-500' 
+                        : 'text-white/80 hover:bg-white/10'
                     }`}
                   >
                     <item.icon className="h-4 w-4" />
                     {item.name}
                     {!item.path.startsWith('/admin') && (
-                      <ExternalLink className="h-3 w-3 ml-auto text-gray-400" />
+                      <ExternalLink className="h-3 w-3 ml-auto text-white/50" />
                     )}
                   </button>
                 ))}
@@ -475,11 +475,11 @@ export default function AdminDashboard() {
       {/* Main Content Area */}
       <div className="flex-1 ml-64">
         {/* Top Header */}
-        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div className="bg-white/10 backdrop-blur-md border-b border-white/20 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 capitalize">{selectedSection}</h1>
-              <p className="text-gray-600">Real-time business intelligence and system management</p>
+              <h1 className="text-2xl font-bold text-white">SEEDOS Executive Dashboard</h1>
+              <p className="text-white/70">Real-time business intelligence and system management</p>
             </div>
             <div className="flex items-center space-x-4">
               <Button variant="outline" size="sm">
@@ -491,7 +491,7 @@ export default function AdminDashboard() {
                 Configure
               </Button>
               <div className="relative">
-                <Bell className="h-5 w-5 text-gray-500" />
+                <Bell className="h-5 w-5 text-white/70" />
                 <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
                   3
                 </span>
@@ -505,54 +505,62 @@ export default function AdminDashboard() {
 
           {/* Executive Summary Cards */}
           <div className="grid grid-cols-4 gap-6">
-            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl text-white">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 text-sm">Total Revenue</p>
+                    <p className="text-white/80 text-sm">Total Revenue</p>
                     <p className="text-3xl font-bold">$425K</p>
-                    <p className="text-blue-100 text-sm">+12% from last month</p>
+                    <p className="text-white/80 text-sm">+12% from last month</p>
                   </div>
-                  <TrendingUp className="h-8 w-8 text-blue-200" />
+                  <div className="p-3 bg-blue-500/20 rounded-full">
+                    <TrendingUp className="h-8 w-8 text-blue-300" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl text-white">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-green-100 text-sm">Active Clients</p>
+                    <p className="text-white/80 text-sm">Active Clients</p>
                     <p className="text-3xl font-bold">89</p>
-                    <p className="text-green-100 text-sm">+5 new this month</p>
+                    <p className="text-white/80 text-sm">+5 new this month</p>
                   </div>
-                  <Users className="h-8 w-8 text-green-200" />
+                  <div className="p-3 bg-green-500/20 rounded-full">
+                    <Users className="h-8 w-8 text-green-300" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl text-white">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-purple-100 text-sm">Pipeline Value</p>
+                    <p className="text-white/80 text-sm">Pipeline Value</p>
                     <p className="text-3xl font-bold">$127K</p>
-                    <p className="text-purple-100 text-sm">18 active deals</p>
+                    <p className="text-white/80 text-sm">18 active deals</p>
                   </div>
-                  <Target className="h-8 w-8 text-purple-200" />
+                  <div className="p-3 bg-purple-500/20 rounded-full">
+                    <Target className="h-8 w-8 text-purple-300" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl text-white">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-orange-100 text-sm">System Health</p>
+                    <p className="text-white/80 text-sm">System Health</p>
                     <p className="text-3xl font-bold">98%</p>
-                    <p className="text-orange-100 text-sm">All systems operational</p>
+                    <p className="text-white/80 text-sm">All systems operational</p>
                   </div>
-                  <Shield className="h-8 w-8 text-orange-200" />
+                  <div className="p-3 bg-orange-500/20 rounded-full">
+                    <Shield className="h-8 w-8 text-orange-300" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -561,16 +569,16 @@ export default function AdminDashboard() {
           {/* Main Dashboard Content */}
           <div className="grid grid-cols-3 gap-6">
             {/* Revenue Chart */}
-            <Card className="col-span-2">
+            <Card className="col-span-2 bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center justify-between">
+                <CardTitle className="flex items-center justify-between text-white">
                   <span>Revenue Analytics</span>
-                  <Badge variant="secondary">Current Week</Badge>
+                  <Badge variant="secondary" className="bg-orange-500 text-white">Current Week</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-80 flex items-center justify-center bg-gray-50 rounded-lg">
-                  <div className="text-center text-gray-500">
+                <div className="h-80 flex items-center justify-center bg-white/10 rounded-lg">
+                  <div className="text-center text-white/70">
                     <BarChart3 className="h-16 w-16 mx-auto mb-4" />
                     <p className="font-medium">Revenue Chart Integration</p>
                     <p className="text-sm">Connect to Stripe/Mercury for live data</p>
@@ -580,9 +588,9 @@ export default function AdminDashboard() {
             </Card>
 
             {/* System Status */}
-            <Card>
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Monitor className="h-5 w-5" />
                   System Status
                 </CardTitle>
@@ -590,10 +598,10 @@ export default function AdminDashboard() {
               <CardContent>
                 <div className="space-y-4">
                   {Object.entries(systemHealth).map(([service, status]) => (
-                    <div key={service} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={service} className="flex items-center justify-between p-3 bg-white/10 rounded-lg">
                       <div className="flex items-center gap-3">
                         {getStatusIcon(status)}
-                        <span className="font-medium capitalize">{service}</span>
+                        <span className="font-medium capitalize text-white">{service}</span>
                       </div>
                       <Badge variant={status === 'healthy' ? 'default' : 'destructive'} className={status === 'healthy' ? 'bg-green-500' : ''}>
                         {status}
@@ -607,110 +615,110 @@ export default function AdminDashboard() {
 
           {/* Integration Status Grid */}
           <div className="grid grid-cols-4 gap-6">
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-shadow">
               <CardContent className="p-6 text-center">
-                <CreditCardIcon className="h-12 w-12 text-purple-500 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Stripe</h3>
-                <p className="text-sm text-gray-600 mb-3">Payment processing</p>
-                <Badge className="bg-green-100 text-green-800">Connected</Badge>
+                <CreditCardIcon className="h-12 w-12 text-purple-400 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2 text-white">Stripe</h3>
+                <p className="text-sm text-white/70 mb-3">Payment processing</p>
+                <Badge className="bg-green-500 text-white">Connected</Badge>
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-shadow">
               <CardContent className="p-6 text-center">
-                <Banknote className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Mercury</h3>
-                <p className="text-sm text-gray-600 mb-3">Business banking</p>
-                <Badge variant="secondary">Setup Required</Badge>
+                <Banknote className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2 text-white">Mercury</h3>
+                <p className="text-sm text-white/70 mb-3">Business banking</p>
+                <Badge variant="secondary" className="bg-white/20 text-white">Setup Required</Badge>
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-shadow">
               <CardContent className="p-6 text-center">
-                <Receipt className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">QuickBooks</h3>
-                <p className="text-sm text-gray-600 mb-3">Accounting sync</p>
-                <Badge variant="secondary">Setup Required</Badge>
+                <Receipt className="h-12 w-12 text-green-400 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2 text-white">QuickBooks</h3>
+                <p className="text-sm text-white/70 mb-3">Accounting sync</p>
+                <Badge variant="secondary" className="bg-white/20 text-white">Setup Required</Badge>
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-md transition-shadow">
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl hover:shadow-2xl transition-shadow">
               <CardContent className="p-6 text-center">
-                <Video className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">Zoom</h3>
-                <p className="text-sm text-gray-600 mb-3">Meeting analytics</p>
-                <Badge variant="secondary">Setup Required</Badge>
+                <Video className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2 text-white">Zoom</h3>
+                <p className="text-sm text-white/70 mb-3">Meeting analytics</p>
+                <Badge variant="secondary" className="bg-white/20 text-white">Setup Required</Badge>
               </CardContent>
             </Card>
           </div>
 
           {/* Recent Activity & Alerts */}
           <div className="grid grid-cols-2 gap-6">
-            <Card>
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Activity className="h-5 w-5" />
                   Recent Activity
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-start gap-3 p-3 bg-white/10 rounded-lg">
                     <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                     <div>
-                      <p className="font-medium">New client onboarded</p>
-                      <p className="text-sm text-gray-600">TechFlow Solutions - $12,000 ARR</p>
-                      <p className="text-xs text-gray-500">2 hours ago</p>
+                      <p className="font-medium text-white">New client onboarded</p>
+                      <p className="text-sm text-white/70">TechFlow Solutions - $12,000 ARR</p>
+                      <p className="text-xs text-white/50">2 hours ago</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-start gap-3 p-3 bg-white/10 rounded-lg">
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                     <div>
-                      <p className="font-medium">Commission approved</p>
-                      <p className="text-sm text-gray-600">Amanda Rodriguez - $450</p>
-                      <p className="text-xs text-gray-500">4 hours ago</p>
+                      <p className="font-medium text-white">Commission approved</p>
+                      <p className="text-sm text-white/70">Amanda Rodriguez - $450</p>
+                      <p className="text-xs text-white/50">4 hours ago</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-start gap-3 p-3 bg-white/10 rounded-lg">
                     <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
                     <div>
-                      <p className="font-medium">System backup completed</p>
-                      <p className="text-sm text-gray-600">All data synchronized</p>
-                      <p className="text-xs text-gray-500">6 hours ago</p>
+                      <p className="font-medium text-white">System backup completed</p>
+                      <p className="text-sm text-white/70">All data synchronized</p>
+                      <p className="text-xs text-white/50">6 hours ago</p>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Bell className="h-5 w-5" />
                   System Alerts
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                  <div className="flex items-start gap-3 p-3 bg-yellow-500/20 border border-yellow-500/30 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-yellow-400 mt-0.5" />
                     <div>
-                      <p className="font-medium text-yellow-800">ClickUp Integration Warning</p>
-                      <p className="text-sm text-yellow-700">API rate limit approaching</p>
+                      <p className="font-medium text-yellow-200">ClickUp Integration Warning</p>
+                      <p className="text-sm text-yellow-300">API rate limit approaching</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Clock className="h-5 w-5 text-blue-500 mt-0.5" />
+                  <div className="flex items-start gap-3 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                    <Clock className="h-5 w-5 text-blue-400 mt-0.5" />
                     <div>
-                      <p className="font-medium text-blue-800">Scheduled Maintenance</p>
-                      <p className="text-sm text-blue-700">Database backup in 2 hours</p>
+                      <p className="font-medium text-blue-200">Scheduled Maintenance</p>
+                      <p className="text-sm text-blue-300">Database backup in 2 hours</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                  <div className="flex items-start gap-3 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-400 mt-0.5" />
                     <div>
-                      <p className="font-medium text-green-800">Security Scan Complete</p>
-                      <p className="text-sm text-green-700">No vulnerabilities detected</p>
+                      <p className="font-medium text-green-200">Security Scan Complete</p>
+                      <p className="text-sm text-green-300">No vulnerabilities detected</p>
                     </div>
                   </div>
                 </div>
