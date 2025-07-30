@@ -76,6 +76,8 @@ export const users = pgTable("users", {
   googleId: text("google_id").unique(), // Google user ID for OIDC
   authProvider: text("auth_provider").default("local"), // 'local' or 'google'
   role: text("role").default("service"), // 'admin', 'sales', 'service'
+  roleAssignedBy: integer("role_assigned_by").references(() => users.id),
+  roleAssignedAt: timestamp("role_assigned_at"),
   // Profile information
   profilePhoto: text("profile_photo"), // HubSpot profile photo URL or Google photo
   phoneNumber: text("phone_number"), // Synced from HubSpot

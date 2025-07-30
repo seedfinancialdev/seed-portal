@@ -18,6 +18,8 @@ export interface IStorage {
   
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  updateUserRole(userId: number, role: string, assignedBy: number): Promise<User>;
+  getAllUsers(): Promise<User[]>;
   getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
@@ -89,6 +91,33 @@ export class DatabaseStorage implements IStorage {
       const [user] = await db.select().from(users).where(eq(users.email, email));
       return user || undefined;
     }, 'getUserByEmail');
+  }
+
+  async updateUserRole(userId: number, role: string, assignedBy: number): Promise<User> {
+    return await safeDbQuery(async () => {
+      const [user] = await db
+        .update(users)
+        .set({ 
+          role,
+          roleAssignedBy: assignedBy,
+          roleAssignedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (!user) {
+        throw new Error(`User with ID ${userId} not found or could not be updated`);
+      }
+      
+      return user;
+    }, 'updateUserRole');
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(users).orderBy(asc(users.email));
+    }, 'getAllUsers');
   }
 
   async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {

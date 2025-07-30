@@ -194,7 +194,7 @@ const navigationItems = [
     category: 'System & Security',
     items: [
       { name: 'System Health', icon: Monitor, path: '/admin/system' },
-      { name: 'User Management', icon: UserCheck, path: '/admin/users' },
+      { name: 'User Management', icon: UserCheck, path: '/user-management' },
       { name: 'API Integrations', icon: CloudCog, path: '/admin/apis' },
       { name: 'Security Center', icon: Shield, path: '/admin/security' }
     ]

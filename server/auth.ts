@@ -92,12 +92,11 @@ export function setupAuth(app: Express) {
             // Create user automatically with default password and role assignment
             console.log(`Creating new user for ${email} with default password`);
             
-            // Determine role based on email
-            let role = 'service'; // Default role
-            if (email === 'jon@seedfinancial.io' || email === 'anthony@seedfinancial.io') {
+            // Create user with default service role (admin must manually assign roles)
+            let role = 'service'; // Default role for all new users
+            // Only jon@seedfinancial.io gets admin by default to bootstrap the system
+            if (email === 'jon@seedfinancial.io') {
               role = 'admin';
-            } else if (email.includes('sales') || email === 'amanda@seedfinancial.io') {
-              role = 'sales';
             }
             
             try {

@@ -9,6 +9,7 @@ import { z } from "zod";
 import { sendCleanupOverrideNotification } from "./slack";
 import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
+import { registerAdminRoutes } from "./admin-routes";
 import { calculateCombinedFees } from "@shared/pricing";
 import { clientIntelEngine } from "./client-intel";
 import { apiRateLimit, searchRateLimit, enhancementRateLimit } from "./middleware/rate-limiter";
@@ -1293,6 +1294,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to generate metadata" });
     }
   });
+
+  // Register admin routes
+  await registerAdminRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
