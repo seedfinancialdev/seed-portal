@@ -19,12 +19,15 @@ Preferred communication style: Simple, everyday language.
   - **Full Integration Working**: Google Workspace user sync, role assignment, and user management interface fully operational
   - **Required Scopes**: admin.directory.user.readonly, admin.directory.group.readonly, admin.directory.group.member.readonly
 
-✓ **Complete User Management System with Hardcoded Admin Access** (July 30, 2025)
+✓ **Complete User Management System with Restricted Access Control** (July 30, 2025)
   - **Database Schema Enhanced**: Added role_assigned_by and role_assigned_at tracking fields
   - **Admin User Management Interface**: Built comprehensive /user-management page for Google Workspace integration
   - **Google Admin API Integration**: Service class for fetching managed domain users (when credentials configured)
   - **Hardcoded Admin Protection**: jon@seedfinancial.io permanently hardcoded as admin in multiple authentication layers
   - **Manual Role Assignment Only**: Removed all auto-assignment logic, admin manually assigns all roles
+  - **Restricted Access System**: New Google Workspace users cannot auto-create accounts - must be manually added by admin first
+  - **Access Request Flow**: Unauthorized users redirected to request access page with Slack DM notifications to admin
+  - **Slack Integration**: Direct messages sent to admin when users request portal access with one-click user management link
   - **RoleBasedRedirect Fix**: Always routes jon@seedfinancial.io to /admin dashboard regardless of stored role
   - **Multi-Layer Admin Enforcement**: Server auth, Google OAuth sync, and client routing all enforce admin status
   - **User Management Features**: Sync Google Workspace users, assign roles, track assignment history

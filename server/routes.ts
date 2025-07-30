@@ -86,39 +86,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByGoogleId(googleId) || await storage.getUserByEmail(email);
 
       if (!user) {
-        // Create new user with Google auth
-        const nameParts = name?.split(' ') || [];
-        const firstName = nameParts[0] || '';
-        const lastName = nameParts.slice(1).join(' ') || '';
-
-        // Check HubSpot for user data
-        let hubspotData = null;
-        if (hubSpotService) {
-          try {
-            const verification = await hubSpotService.verifyUser(email);
-            if (verification.exists) {
-              hubspotData = verification.userData;
-            }
-          } catch (error) {
-            console.error('HubSpot verification failed:', error);
-          }
-        }
-
-        // Determine if user should be admin - hardcode jon@seedfinancial.io as permanent admin
-        let role = 'service'; // Default role for all new users
-        if (email === 'jon@seedfinancial.io') {
-          role = 'admin';
-        }
-
-        user = await storage.createUser({
-          email,
-          googleId,
-          authProvider: 'google' as const,
-          role: role as 'admin' | 'sales' | 'service',
-          firstName: hubspotData?.firstName || firstName,
-          lastName: hubspotData?.lastName || lastName,
-          profilePhoto: picture || hubspotData?.profilePhoto || null,
-          hubspotUserId: hubspotData?.hubspotUserId || null,
+        // No automatic user creation - user must be manually added by admin first
+        return res.status(403).json({ 
+          message: "ACCESS_NOT_GRANTED",
+          email: email,
+          needsApproval: true 
         });
       } else if (!user.googleId && user.email === email) {
         // Update existing user to link Google account
@@ -151,6 +123,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error syncing Google user:', error);
       res.status(500).json({ message: "Failed to sync user" });
+    }
+  });
+
+  // Request portal access endpoint
+  app.post("/api/auth/request-access", async (req, res) => {
+    try {
+      const { email, name } = req.body;
+      
+      if (!email || !name) {
+        return res.status(400).json({ message: "Email and name are required" });
+      }
+
+      // Send direct message to admin via Slack
+      const { WebClient } = await import('@slack/web-api');
+      const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+
+      // Send DM to jon@seedfinancial.io (admin)
+      await slack.chat.postMessage({
+        channel: 'D07HWJZPV8J', // Direct message channel ID for jon@seedfinancial.io
+        text: `🔐 Portal Access Request`,
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `*New Portal Access Request*\n\n*User:* ${name}\n*Email:* ${email}\n\nThis user is attempting to access the Seed Financial portal but hasn't been granted access yet. Please add them through the User Management interface if you want to grant access.`
+            }
+          },
+          {
+            type: 'actions',
+            elements: [
+              {
+                type: 'button',
+                text: {
+                  type: 'plain_text',
+                  text: 'Open User Management'
+                },
+                url: `${process.env.REPLIT_DEV_DOMAIN || 'https://seed-bk-calc.replit.app'}/user-management`,
+                action_id: 'open_user_management'
+              }
+            ]
+          }
+        ]
+      });
+
+      res.json({ message: "Access request sent to admin" });
+    } catch (error) {
+      console.error('Error sending access request:', error);
+      res.status(500).json({ message: "Failed to send access request" });
     }
   });
 

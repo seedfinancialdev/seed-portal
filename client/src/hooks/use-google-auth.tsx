@@ -18,6 +18,7 @@ interface AuthContextType {
   dbUser: DBUser | null;
   isLoading: boolean;
   error: Error | null;
+  needsApproval: boolean;
   signIn: () => void;
   signOut: () => Promise<void>;
   isAdmin: boolean;
@@ -54,30 +55,40 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Sync Google user with database
+  // Sync Google user with database - now handles access restrictions
   const { data: dbUser, isLoading: dbLoading, error } = useQuery<DBUser | null>({
     queryKey: ["/api/auth/google/sync", googleUser?.sub],
     queryFn: async () => {
       if (!googleUser || !accessToken) return null;
       
-      // Sync user with backend
-      const response = await apiRequest("/api/auth/google/sync", {
-        method: "POST",
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          googleId: googleUser.sub,
-          email: googleUser.email,
-          name: googleUser.name,
-          picture: googleUser.picture,
-          hd: googleUser.hd
-        }),
-      });
-      
-      return response;
+      try {
+        // Sync user with backend
+        const response = await apiRequest("/api/auth/google/sync", {
+          method: "POST",
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            googleId: googleUser.sub,
+            email: googleUser.email,
+            name: googleUser.name,
+            picture: googleUser.picture,
+            hd: googleUser.hd
+          }),
+        });
+        
+        return response;
+      } catch (error: any) {
+        // Handle access denied case
+        if (error.message?.includes('ACCESS_NOT_GRANTED') || error.status === 403) {
+          // User needs admin approval - this will be handled by the component
+          throw new Error('ACCESS_NOT_GRANTED');
+        }
+        throw error;
+      }
     },
     enabled: !!googleUser && !!accessToken,
+    retry: false, // Don't retry on access denied
   });
 
   const googleLogin = useGoogleLogin({
@@ -193,6 +204,9 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
 
   // Check if user is admin
   const isAdmin = dbUser?.role === 'admin' || dbUser?.role === 'super_admin';
+  
+  // Check if user needs access approval
+  const needsApproval = error?.message === 'ACCESS_NOT_GRANTED';
 
   return (
     <AuthContext.Provider
@@ -201,6 +215,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         dbUser: dbUser ?? null,
         isLoading: dbLoading,
         error,
+        needsApproval,
         signIn: googleLogin,
         signOut: () => signOutMutation.mutateAsync(),
         isAdmin,
