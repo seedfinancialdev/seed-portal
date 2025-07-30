@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OAuth Callback</title>
+</head>
+<body>
+    <h1>Authorization Complete</h1>
+    <div id="result"></div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const error = urlParams.get('error');
+
+        if (error) {
+            document.getElementById('result').innerHTML = `<p style="color: red;">Error: ${error}</p>`;
+        } else if (code) {
+            document.getElementById('result').innerHTML = `
+                <h2>Success! Authorization Code:</h2>
+                <textarea style="width: 100%; height: 100px;">${code}</textarea>
+                <p><strong>Copy this code and provide it to complete the Google Admin API setup.</strong></p>
+            `;
+        } else {
+            document.getElementById('result').innerHTML = '<p>No authorization code received.</p>';
+        }
+    </script>
+</body>
+</html>

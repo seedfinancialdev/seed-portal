@@ -1315,6 +1315,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register admin routes
   await registerAdminRoutes(app);
 
+  // Google Admin OAuth Setup Routes
+  app.get('/admin-oauth-setup', (req, res) => {
+    const CLIENT_ID = '537178633862-5sgg3uekslgf6v2c64qo95r0q85gf3u7.apps.googleusercontent.com';
+    const REDIRECT_URI = `${req.protocol}://${req.get('host')}/admin-oauth-callback`;
+    const SCOPES = [
+      'https://www.googleapis.com/auth/admin.directory.user.readonly',
+      'https://www.googleapis.com/auth/admin.directory.group.readonly',
+      'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+    ].join(' ');
+
+    const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+      client_id: CLIENT_ID,
+      redirect_uri: REDIRECT_URI,
+      response_type: 'code',
+      scope: SCOPES,
+      access_type: 'offline',
+      prompt: 'consent'
+    });
+    
+    res.redirect(authUrl);
+  });
+
+  app.get('/admin-oauth-callback', async (req, res) => {
+    const code = req.query.code as string;
+    const CLIENT_ID = '537178633862-5sgg3uekslgf6v2c64qo95r0q85gf3u7.apps.googleusercontent.com';
+    const CLIENT_SECRET = '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';
+    const REDIRECT_URI = `${req.protocol}://${req.get('host')}/admin-oauth-callback`;
+
+    if (!code) {
+      return res.status(400).send('No authorization code received');
+    }
+
+    try {
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          code,
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          redirect_uri: REDIRECT_URI,
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      const tokens = await tokenResponse.json();
+      
+      if (tokens.refresh_token) {
+        // Update credentials in the Google Admin service
+        const adcContent = {
+          client_id: CLIENT_ID,
+          client_secret: CLIENT_SECRET,
+          refresh_token: tokens.refresh_token,
+          type: 'authorized_user',
+          universe_domain: 'googleapis.com'
+        };
+        
+        const fs = await import('fs/promises');
+        await fs.writeFile('/home/runner/.config/gcloud/application_default_credentials.json', 
+          JSON.stringify(adcContent, null, 2));
+        
+        res.send(`
+          <html>
+            <body>
+              <h1>Google Admin API Setup Complete!</h1>
+              <p>Refresh token: <code>${tokens.refresh_token}</code></p>
+              <p>The server will restart automatically to apply the new credentials.</p>
+              <script>setTimeout(() => window.close(), 3000);</script>
+            </body>
+          </html>
+        `);
+        
+        // Restart the server to pick up new credentials
+        setTimeout(() => process.exit(0), 1000);
+      } else {
+        res.status(400).send(`No refresh token received. Response: ${JSON.stringify(tokens)}`);
+      }
+    } catch (error) {
+      console.error('Token exchange error:', error);
+      res.status(500).send('Failed to exchange authorization code for tokens');
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

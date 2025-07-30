@@ -30,14 +30,19 @@ export class GoogleAdminService {
   }
 
   private async initialize() {
-    try {
-      // Use Application Default Credentials (ADC) discovery
-      // ADC will automatically discover credentials from well-known locations
-      // without requiring manual file management or environment variables
+    try {      
+      console.log('Initializing Google Admin API with explicit credentials...');
       
-      console.log('Initializing Google Admin API with Application Default Credentials discovery...');
+      // Try explicit credentials first
+      const credentials = {
+        client_id: '537178633862-5sgg3uekslgf6v2c64qo95r0q85gf3u7.apps.googleusercontent.com',
+        client_secret: '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',
+        refresh_token: '1//04nZfpbyDRB3bCgYIARAAGAQSNwF-L9IrMUOQk3QnsI8eI3kMmDsjLY3X1JD10fIWz-5UW2bsQaW14KBr1FPYR28E55itFUmfiHs',
+        type: 'authorized_user'
+      };
       
       const auth = new GoogleAuth({
+        credentials,
         scopes: [
           'https://www.googleapis.com/auth/admin.directory.user.readonly',
           'https://www.googleapis.com/auth/admin.directory.group.readonly',
@@ -45,16 +50,16 @@ export class GoogleAdminService {
         ]
       });
 
-      // Let ADC discovery work automatically - no manual credential management needed
+      // Get authenticated client
       const authClient = await auth.getClient();
       
       // Test the credentials
-      const credentials = await authClient.getAccessToken();
-      if (!credentials.token) {
-        throw new Error('No valid credentials found via ADC discovery');
+      const accessTokenResponse = await authClient.getAccessToken();
+      if (!accessTokenResponse.token) {
+        throw new Error('No valid access token obtained');
       }
 
-      console.log('Google Admin API credentials discovered successfully via ADC');
+      console.log('Google Admin API credentials configured successfully');
       
       this.admin = google.admin({ version: 'directory_v1', auth: authClient as any });
       this.initialized = true;
@@ -62,8 +67,8 @@ export class GoogleAdminService {
       console.log('Google Admin API initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Google Admin API:', error);
-      console.warn('ADC discovery requires authorized_user credentials with proper Admin Directory scopes');
-      console.warn('Ensure gcloud auth application-default login was run with the correct scopes');
+      console.warn('Google Admin API requires valid credentials with proper Admin Directory scopes');
+      console.warn('Check that the refresh token is valid and has the required permissions');
       
       this.admin = null;
       this.initialized = false;

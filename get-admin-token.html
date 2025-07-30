@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Get Google Admin API Token</title>
+</head>
+<body>
+    <h1>Google Workspace Admin API Token Generator</h1>
+    <p>Click the button below to authorize and get your refresh token:</p>
+    <button onclick="authorize()">Authorize Google Admin API</button>
+    <div id="result"></div>
+
+    <script>
+        const CLIENT_ID = '537178633862-5sgg3uekslgf6v2c64qo95r0q85gf3u7.apps.googleusercontent.com';
+        const REDIRECT_URI = window.location.origin + '/oauth-callback.html';
+        const SCOPES = [
+            'https://www.googleapis.com/auth/admin.directory.user.readonly',
+            'https://www.googleapis.com/auth/admin.directory.group.readonly',
+            'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+        ].join(' ');
+
+        function authorize() {
+            const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+                client_id: CLIENT_ID,
+                redirect_uri: REDIRECT_URI,
+                response_type: 'code',
+                scope: SCOPES,
+                access_type: 'offline',
+                prompt: 'consent'
+            });
+            
+            window.location.href = authUrl;
+        }
+
+        // Check if we got a code from redirect
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        if (code) {
+            document.getElementById('result').innerHTML = `
+                <h2>Authorization Code:</h2>
+                <code>${code}</code>
+                <p>Copy this code and provide it to complete the setup.</p>
+            `;
+        }
+    </script>
+</body>
+</html>
