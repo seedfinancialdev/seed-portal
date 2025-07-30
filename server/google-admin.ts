@@ -89,9 +89,11 @@ export class GoogleAdminService {
         return { connected: false, error: 'Google Admin API not initialized' };
       }
 
-      // Try to fetch domains to test connection
-      const response = await this.admin.domains.list({
-        customer: 'my_customer'
+      // Try to list users to test connection (simpler than domains)
+      const response = await this.admin.users.list({
+        customer: 'my_customer',
+        domain: 'seedfinancial.io',
+        maxResults: 1
       });
       
       return { connected: response.status === 200 };
