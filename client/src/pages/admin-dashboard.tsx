@@ -371,10 +371,9 @@ export default function AdminDashboard() {
 
   // Debug logging for admin check
   console.log('Admin Dashboard Debug:', {
-    currentUser: currentUser?.email,
-    currentUserRole: currentUser?.role,
-    isAdmin,
-    userRole
+    currentUser: user?.email,
+    currentUserRole: user?.role,
+    isAdmin
   });
 
   // Use PermissionGuard for proper admin access control
