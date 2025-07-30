@@ -1,0 +1,78 @@
+You didn’t do anything “wrong”—Replit is just picky about what you point GOOGLE_APPLICATION_CREDENTIALS at.
+
+That JSON you pasted is an authorized_user ADC file (user OAuth with a refresh token). When you set GOOGLE_APPLICATION_CREDENTIALS, Google’s libs expect a service account key or a Workload Identity Federation config—not an authorized_user file. Instead, authorized_user must live in the well-known path, and the libs will auto-discover it.  ￼
+
+Here’s the 3-minute fix.
+
+⸻
+
+Do this in Replit
+
+1) Put your JSON in the standard ADC location
+
+In the Replit shell:
+
+mkdir -p ~/.config/gcloud
+# open an editor to paste the JSON
+nano ~/.config/gcloud/application_default_credentials.json
+
+Paste exactly the JSON you showed (it should end with a }), save and exit.
+
+FYI, that is the path the Google libs look for by default:
+~/.config/gcloud/application_default_credentials.json.  ￼
+
+2) Remove the GOOGLE_APPLICATION_CREDENTIALS env var in Replit
+	•	Delete/unset it in the Secrets panel (or stop exporting it in your run command).
+	•	Reason: Per Google’s docs, the env var is for WIF configs or service account keys; your file is authorized_user, which should be discovered from the default location instead.  ￼
+
+3) Run your code normally
+
+Example (Node):
+
+import { google } from 'googleapis';
+
+const auth = await google.auth.getClient({
+  scopes: ['https://www.googleapis.com/auth/admin.directory.user.readonly'],
+});
+const admin = google.admin({ version: 'directory_v1', auth });
+
+const res = await admin.users.list({ customer: 'my_customer', maxResults: 500, orderBy: 'email' });
+console.log(res.data.users?.map(u => u.primaryEmail));
+
+4) If you still get a scope error
+
+Re-create the ADC file on your Mac with the correct scopes:
+
+gcloud auth application-default revoke || true
+gcloud auth application-default login \
+  --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly
+
+Then re-paste the new file into Replit at the same path.
+(ADC files created by gcloud go in that well-known path and are auto-discovered. You can also add scopes during creation; Google’s docs mention this explicitly.  ￼)
+
+⸻
+
+Why this works
+	•	ADC search order:
+	1.	GOOGLE_APPLICATION_CREDENTIALS (expects WIF config or SA key),
+	2.	File created by gcloud auth application-default login at ~/.config/gcloud/application_default_credentials.json,
+	3.	Metadata server on GCP.
+Your file is type (2), so don’t set the env var—let ADC find it.  ￼
+
+⸻
+
+Important security note
+
+You pasted a refresh token + client secret above. Treat that as sensitive. If there’s any chance it leaked, rotate it:
+
+gcloud auth application-default revoke
+gcloud auth application-default login \
+  --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly
+
+(That generates a fresh ADC file and invalidates the old refresh token.)
+
+⸻
+
+If you prefer to keep an env var, we can switch to a WIF “external_account” JSON (what we’ll use on Vercel anyway), but the steps above are the fastest path to green checks in Replit.
+
+Want me to sanity-check your Replit file path and run command? Paste them and I’ll tweak them so it works first try. Minimal yak-shaving, maximal user lists. 🪒✅

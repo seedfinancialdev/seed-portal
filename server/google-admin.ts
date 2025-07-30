@@ -47,6 +47,18 @@ export class GoogleAdminService {
           // Use JSON string credentials
           const credentials = JSON.parse(serviceAccountJson);
           
+          // Check credential type and provide helpful error messages
+          if (credentials.type === 'authorized_user') {
+            console.error('CREDENTIAL TYPE ERROR: Found authorized_user credential, but Google Admin API requires a service account');
+            console.error('SOLUTION: You need to create a service account in Google Cloud Console:');
+            console.error('1. Go to Google Cloud Console → IAM & Admin → Service Accounts');
+            console.error('2. Create a new service account');
+            console.error('3. Download the JSON key file');
+            console.error('4. Replace GOOGLE_SERVICE_ACCOUNT_JSON with the service account JSON');
+            console.error('5. Enable domain-wide delegation in Google Workspace Admin Console');
+            throw new Error('Invalid credential type: authorized_user credentials cannot be used for Google Admin API. Service account required.');
+          }
+          
           // For impersonated service accounts, create a simpler direct approach
           if (credentials.type === 'impersonated_service_account') {
             console.log('Impersonated service account detected - implementing workaround for Google Admin API');

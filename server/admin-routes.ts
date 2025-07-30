@@ -62,6 +62,33 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       console.error('Error fetching workspace users:', error);
       
       // Provide detailed setup instructions for common errors
+      if (error.message?.includes('authorized_user credentials cannot be used')) {
+        return res.status(500).json({ 
+          message: 'Wrong Credential Type',
+          error: 'authorized_user credentials detected, but service account required',
+          setupInstructions: {
+            currentIssue: 'You have user OAuth credentials, but Google Admin API requires a service account with domain-wide delegation',
+            solution: 'Create a service account instead of using user credentials',
+            step1: 'Go to Google Cloud Console → IAM & Admin → Service Accounts',
+            step2: 'Click "Create Service Account"',
+            step3: 'Name: "seedos-admin" or similar',
+            step4: 'Click "Create and Continue"',
+            step5: 'Skip role assignment (not needed for domain-wide delegation)',
+            step6: 'Click "Done"',
+            step7: 'Click on the new service account → Keys → Add Key → Create new key → JSON',
+            step8: 'Download the JSON file and replace GOOGLE_SERVICE_ACCOUNT_JSON secret with its contents',
+            step9: 'In Google Workspace Admin Console → Security → API Controls → Domain-wide Delegation',
+            step10: 'Add the service account Client ID with required scopes',
+            scopes: [
+              'https://www.googleapis.com/auth/admin.directory.user.readonly',
+              'https://www.googleapis.com/auth/admin.directory.group.readonly',
+              'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+            ],
+            note: 'Service accounts can impersonate domain users, while user OAuth cannot access the Admin API'
+          }
+        });
+      }
+      
       if (error.message?.includes('iam.serviceAccounts.getAccessToken')) {
         return res.status(500).json({ 
           message: 'Google Workspace Admin API Setup Issue',
