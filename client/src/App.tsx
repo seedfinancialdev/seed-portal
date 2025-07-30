@@ -8,11 +8,14 @@ import { GoogleAuthProvider } from "@/hooks/use-google-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { RoleBasedRedirect } from "@/components/RoleBasedRedirect";
 import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
 import AuthPage from "@/pages/auth-page-google";
 import Dashboard from "@/pages/dashboard-new"; // Main dashboard home page
 import AdminDashboard from "@/pages/admin-dashboard"; // Admin dashboard
+import SalesDashboard from "@/pages/sales-dashboard"; // Sales dashboard
+import ServiceDashboard from "@/pages/service-dashboard"; // Service dashboard
 import CommissionTracker from "@/pages/commission-tracker";
 import ClientIntel from "@/pages/client-intel";
 import Profile from "@/pages/profile";
@@ -25,9 +28,12 @@ function Router() {
 
   return (
     <ErrorBoundary>
+      <RoleBasedRedirect />
       <Switch>
         <ProtectedRoute path="/" component={Dashboard} />
         <ProtectedRoute path="/admin" component={AdminDashboard} />
+        <ProtectedRoute path="/sales-dashboard" component={SalesDashboard} />
+        <ProtectedRoute path="/service-dashboard" component={ServiceDashboard} />
         <ProtectedRoute path="/calculator" component={Calculator} />
         <ProtectedRoute path="/commission-tracker" component={CommissionTracker} />
         <ProtectedRoute path="/client-intel" component={ClientIntel} />

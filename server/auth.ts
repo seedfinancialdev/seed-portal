@@ -89,8 +89,17 @@ export function setupAuth(app: Express) {
               return done(null, false);
             }
 
-            // Create user automatically with default password
+            // Create user automatically with default password and role assignment
             console.log(`Creating new user for ${email} with default password`);
+            
+            // Determine role based on email
+            let role = 'service'; // Default role
+            if (email === 'jon@seedfinancial.io' || email === 'anthony@seedfinancial.io') {
+              role = 'admin';
+            } else if (email.includes('sales') || email === 'amanda@seedfinancial.io') {
+              role = 'sales';
+            }
+            
             try {
               user = await storage.createUser({
                 email,
@@ -98,6 +107,7 @@ export function setupAuth(app: Express) {
                 firstName: '',
                 lastName: '',
                 hubspotUserId: null,
+                role,
               });
               console.log(`Successfully created user with ID: ${user.id}`);
             } catch (createError: any) {
@@ -134,7 +144,7 @@ export function setupAuth(app: Express) {
           }
           
           // Check password
-          if (!(await comparePasswords(password, user.password))) {
+          if (!user.password || !(await comparePasswords(password, user.password))) {
             return done(null, false);
           }
           

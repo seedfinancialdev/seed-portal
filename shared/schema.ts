@@ -75,7 +75,7 @@ export const users = pgTable("users", {
   firebaseUid: text("firebase_uid").unique(), // Firebase user ID (legacy)
   googleId: text("google_id").unique(), // Google user ID for OIDC
   authProvider: text("auth_provider").default("local"), // 'local' or 'google'
-  role: text("role").default("user"), // 'user', 'admin', 'super_admin'
+  role: text("role").default("service"), // 'admin', 'sales', 'service'
   // Profile information
   profilePhoto: text("profile_photo"), // HubSpot profile photo URL or Google photo
   phoneNumber: text("phone_number"), // Synced from HubSpot

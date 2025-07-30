@@ -1,6 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { usePermissions } from "@/hooks/use-permissions";
+import { PermissionGuard } from "@/components/PermissionGuard";
+import { PERMISSIONS } from "@shared/permissions";
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from "@/lib/queryClient";
@@ -200,11 +203,13 @@ const navigationItems = [
 
 export default function AdminDashboard() {
   const { dbUser: user, signOut } = useGoogleAuth();
+  const { hasPermission, getAvailableDashboards } = usePermissions();
   const [, setLocation] = useLocation();
   const [selectedSection, setSelectedSection] = useState('dashboard');
+  const availableDashboards = getAvailableDashboards();
 
-  // Check if user is admin
-  const isAdmin = user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin';
+  // Check if user has admin permission
+  const isAdmin = hasPermission(PERMISSIONS.VIEW_ADMIN_DASHBOARD);
 
   // Mock data - in production these would come from real APIs
   const [systemHealth] = useState<SystemHealth>({
