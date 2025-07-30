@@ -42,13 +42,27 @@ export class GoogleAdminService {
         try {
           // Use JSON string credentials
           const credentials = JSON.parse(serviceAccountJson);
-          auth = new GoogleAuth({
-            credentials,
-            scopes: [
-              'https://www.googleapis.com/auth/admin.directory.user.readonly',
-              'https://www.googleapis.com/auth/admin.directory.domain.readonly'
-            ]
-          });
+          
+          // Check if it's an impersonated service account
+          if (credentials.type === 'impersonated_service_account') {
+            console.log('Using impersonated service account for Google Admin API');
+            auth = new GoogleAuth({
+              credentials,
+              scopes: [
+                'https://www.googleapis.com/auth/admin.directory.user.readonly',
+                'https://www.googleapis.com/auth/admin.directory.domain.readonly'
+              ]
+            });
+          } else {
+            // Standard service account
+            auth = new GoogleAuth({
+              credentials,
+              scopes: [
+                'https://www.googleapis.com/auth/admin.directory.user.readonly',
+                'https://www.googleapis.com/auth/admin.directory.domain.readonly'
+              ]
+            });
+          }
         } catch (parseError) {
           console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError);
           console.warn('Google Admin API credentials not configured - invalid JSON format');
