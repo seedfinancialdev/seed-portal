@@ -12,6 +12,7 @@ import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
 import AuthPage from "@/pages/auth-page-google";
 import Dashboard from "@/pages/dashboard-new"; // Main dashboard home page
+import AdminDashboard from "@/pages/admin-dashboard"; // Admin dashboard
 import CommissionTracker from "@/pages/commission-tracker";
 import ClientIntel from "@/pages/client-intel";
 import Profile from "@/pages/profile";
@@ -26,6 +27,7 @@ function Router() {
     <ErrorBoundary>
       <Switch>
         <ProtectedRoute path="/" component={Dashboard} />
+        <ProtectedRoute path="/admin" component={AdminDashboard} />
         <ProtectedRoute path="/calculator" component={Calculator} />
         <ProtectedRoute path="/commission-tracker" component={CommissionTracker} />
         <ProtectedRoute path="/client-intel" component={ClientIntel} />

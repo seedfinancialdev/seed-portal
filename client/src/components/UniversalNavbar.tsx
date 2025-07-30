@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useGoogleAuth } from "@/hooks/use-google-auth";
 import { useLocation } from "wouter";
-import { ArrowLeft, Bell, User, Settings, LogOut } from "lucide-react";
+import { ArrowLeft, Bell, User, Settings, LogOut, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
@@ -81,6 +81,12 @@ export function UniversalNavbar({
                 <Settings className="mr-2 h-3 w-3" />
                 Knowledge Base Admin
               </DropdownMenuItem>
+              {(dbUser?.email === 'jon@seedfinancial.io' || dbUser?.email === 'anthony@seedfinancial.io' || dbUser?.role === 'admin') && (
+                <DropdownMenuItem onClick={() => setLocation('/admin')} className="text-sm">
+                  <Shield className="mr-2 h-3 w-3" />
+                  Admin Dashboard
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 text-sm">
                 <LogOut className="mr-2 h-3 w-3" />
