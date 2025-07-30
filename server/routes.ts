@@ -61,6 +61,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+  // Google OAuth user sync endpoint
+  app.post("/api/auth/google/sync", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "Authorization header required" });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const { googleId, email, name, picture, hd } = req.body;
+      
+      if (!googleId || !email) {
+        return res.status(400).json({ message: "Google ID and email are required" });
+      }
+
+      // Validate hosted domain
+      if (hd !== 'seedfinancial.io') {
+        return res.status(403).json({ message: "Only @seedfinancial.io accounts are allowed" });
+      }
+
+      // Check if user exists by Google ID or email
+      let user = await storage.getUserByGoogleId(googleId) || await storage.getUserByEmail(email);
+
+      if (!user) {
+        // Create new user with Google auth
+        const nameParts = name?.split(' ') || [];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Check HubSpot for user data
+        let hubspotData = null;
+        if (hubSpotService) {
+          try {
+            const verification = await hubSpotService.verifyUser(email);
+            if (verification.exists) {
+              hubspotData = verification.userData;
+            }
+          } catch (error) {
+            console.error('HubSpot verification failed:', error);
+          }
+        }
+
+        // Determine if user should be admin
+        const adminEmails = ['jon@seedfinancial.io', 'anthony@seedfinancial.io'];
+        const role = adminEmails.includes(email.toLowerCase()) ? 'admin' : 'user';
+
+        user = await storage.createUser({
+          email,
+          googleId,
+          authProvider: 'google',
+          role,
+          firstName: hubspotData?.firstName || firstName,
+          lastName: hubspotData?.lastName || lastName,
+          profilePhoto: picture || hubspotData?.profilePhoto || null,
+          hubspotUserId: hubspotData?.hubspotUserId || null,
+        });
+      } else if (!user.googleId && user.email === email) {
+        // Update existing user to link Google account
+        await storage.updateUserGoogleId(user.id, googleId, 'google', picture);
+        user = await storage.getUser(user.id);
+      }
+
+      // Return user data (excluding password)
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      console.error('Error syncing Google user:', error);
+      res.status(500).json({ message: "Failed to sync user" });
+    }
+  });
+
+  // Google logout endpoint
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      // For now, just acknowledge the logout
+      // In production, you might want to invalidate tokens on your end
+      res.json({ message: "Logged out successfully" });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
     try {

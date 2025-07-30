@@ -4,12 +4,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
+import { GoogleAuthProvider } from "@/hooks/use-google-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
-import AuthPage from "@/pages/auth-page";
+import AuthPage from "@/pages/auth-page-google";
 import Dashboard from "@/pages/dashboard-new"; // Main dashboard home page
 import CommissionTracker from "@/pages/commission-tracker";
 import ClientIntel from "@/pages/client-intel";
@@ -43,10 +44,12 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <AuthProvider>
-            <Toaster />
-            <Router />
-          </AuthProvider>
+          <GoogleAuthProvider>
+            <AuthProvider>
+              <Toaster />
+              <Router />
+            </AuthProvider>
+          </GoogleAuthProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

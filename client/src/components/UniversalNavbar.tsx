@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/use-auth";
+import { useGoogleAuth } from "@/hooks/use-google-auth";
 import { useLocation } from "wouter";
 import { ArrowLeft, Bell, User, Settings, LogOut } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,11 +16,11 @@ export function UniversalNavbar({
   backButtonText = "Back", 
   backButtonPath = "/"
 }: UniversalNavbarProps) {
-  const { user, logoutMutation } = useAuth();
+  const { dbUser, signOut } = useGoogleAuth();
   const [, setLocation] = useLocation();
 
   const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
+    await signOut();
   };
 
   // Universal design based on dashboard-new.tsx
@@ -55,23 +55,23 @@ export function UniversalNavbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
-                {user?.profilePhoto ? (
+                {dbUser?.profilePhoto ? (
                   <img 
-                    src={user.profilePhoto} 
+                    src={dbUser.profilePhoto} 
                     alt="Profile" 
                     className="w-7 h-7 rounded-full object-cover border border-white/20"
                   />
                 ) : (
                   <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                    {dbUser?.firstName?.charAt(0)?.toUpperCase() || dbUser?.email?.charAt(0).toUpperCase()}
                   </div>
                 )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
               <div className="px-3 py-2 border-b">
-                <p className="font-medium text-gray-900 text-sm">{user?.email?.split('@')[0]}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="font-medium text-gray-900 text-sm">{dbUser?.email?.split('@')[0]}</p>
+                <p className="text-xs text-gray-500">{dbUser?.email}</p>
               </div>
               <DropdownMenuItem onClick={() => setLocation('/profile')} className="text-sm">
                 <User className="mr-2 h-3 w-3" />

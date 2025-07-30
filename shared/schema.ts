@@ -67,12 +67,17 @@ export type Quote = typeof quotes.$inferSelect;
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(), // @seedfinancial.io email
-  password: text("password").notNull(),
+  password: text("password"), // Optional for OAuth users
   firstName: text("first_name"),
   lastName: text("last_name"),
   hubspotUserId: text("hubspot_user_id"), // HubSpot user ID for ownership
+  // OAuth fields
+  firebaseUid: text("firebase_uid").unique(), // Firebase user ID (legacy)
+  googleId: text("google_id").unique(), // Google user ID for OIDC
+  authProvider: text("auth_provider").default("local"), // 'local' or 'google'
+  role: text("role").default("user"), // 'user', 'admin', 'super_admin'
   // Profile information
-  profilePhoto: text("profile_photo"), // HubSpot profile photo URL
+  profilePhoto: text("profile_photo"), // HubSpot profile photo URL or Google photo
   phoneNumber: text("phone_number"), // Synced from HubSpot
   address: text("address"), // User-editable for weather
   city: text("city"),

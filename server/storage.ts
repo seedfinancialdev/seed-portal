@@ -18,9 +18,13 @@ export interface IStorage {
   
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserProfile(userId: number, profile: UpdateProfile): Promise<User>;
   updateUserHubSpotData(userId: number, hubspotData: Partial<User>): Promise<User>;
+  updateUserFirebaseUid(userId: number, firebaseUid: string, authProvider: string, profilePhoto: string | null): Promise<void>;
+  updateUserGoogleId(userId: number, googleId: string, authProvider: string, profilePhoto: string | null): Promise<void>;
   
   // Quote methods - now filtered by owner
   createQuote(quote: InsertQuote): Promise<Quote>;
@@ -85,6 +89,20 @@ export class DatabaseStorage implements IStorage {
       const [user] = await db.select().from(users).where(eq(users.email, email));
       return user || undefined;
     }, 'getUserByEmail');
+  }
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
+    return await safeDbQuery(async () => {
+      const [user] = await db.select().from(users).where(eq(users.firebaseUid, firebaseUid));
+      return user || undefined;
+    }, 'getUserByFirebaseUid');
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    return await safeDbQuery(async () => {
+      const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+      return user || undefined;
+    }, 'getUserByGoogleId');
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -157,6 +175,34 @@ export class DatabaseStorage implements IStorage {
       
       return user;
     }, 'updateUserHubSpotData');
+  }
+
+  async updateUserFirebaseUid(userId: number, firebaseUid: string, authProvider: string, profilePhoto: string | null): Promise<void> {
+    return await safeDbQuery(async () => {
+      await db
+        .update(users)
+        .set({ 
+          firebaseUid,
+          authProvider,
+          profilePhoto: profilePhoto || undefined,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+    }, 'updateUserFirebaseUid');
+  }
+
+  async updateUserGoogleId(userId: number, googleId: string, authProvider: string, profilePhoto: string | null): Promise<void> {
+    return await safeDbQuery(async () => {
+      await db
+        .update(users)
+        .set({ 
+          googleId,
+          authProvider,
+          profilePhoto: profilePhoto || undefined,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+    }, 'updateUserGoogleId');
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
