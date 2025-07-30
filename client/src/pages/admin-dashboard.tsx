@@ -369,24 +369,33 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center">
-        <Card className="bg-white/90 backdrop-blur-md border border-white/30 shadow-xl max-w-md">
-          <CardContent className="p-12 text-center">
-            <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-            <p className="text-gray-600 mb-4">You need admin privileges to access SEEDOS.</p>
-            <Button onClick={() => setLocation('/')} className="bg-orange-500 hover:bg-orange-600">
-              Back to Portal
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Debug logging for admin check
+  console.log('Admin Dashboard Debug:', {
+    currentUser: currentUser?.email,
+    currentUserRole: currentUser?.role,
+    isAdmin,
+    userRole
+  });
 
+  // Use PermissionGuard for proper admin access control
   return (
+    <PermissionGuard 
+      permissions={PERMISSIONS.VIEW_ADMIN_DASHBOARD}
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center">
+          <Card className="bg-white/90 backdrop-blur-md border border-white/30 shadow-xl max-w-md">
+            <CardContent className="p-12 text-center">
+              <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+              <p className="text-gray-600 mb-4">You need admin privileges to access SEEDOS.</p>
+              <Button onClick={() => setLocation('/')} className="bg-orange-500 hover:bg-orange-600">
+                Back to Portal
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      }
+    >
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex">
       {/* Sidebar Navigation */}
       <div className="w-64 bg-white/10 backdrop-blur-md border-r border-white/20 shadow-xl fixed h-full overflow-y-auto">
@@ -730,5 +739,6 @@ export default function AdminDashboard() {
         </div>
       </div>
     </div>
+    </PermissionGuard>
   );
 }

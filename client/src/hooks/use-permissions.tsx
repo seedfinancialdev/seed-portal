@@ -2,7 +2,7 @@ import { useGoogleAuth } from "./use-google-auth";
 import { hasPermission, hasAnyPermission, hasAllPermissions, getDefaultDashboard, getAvailableDashboards, type UserRole, type Permission } from "@shared/permissions";
 
 export function usePermissions() {
-  const { currentUser } = useGoogleAuth();
+  const { dbUser: currentUser } = useGoogleAuth();
   const userRole = (currentUser?.role as UserRole) || 'service';
 
   return {
