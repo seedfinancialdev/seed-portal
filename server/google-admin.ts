@@ -31,123 +31,49 @@ export class GoogleAdminService {
 
   private async initialize() {
     try {
-      // Check if service account credentials are available
-      const serviceAccountPath = process.env.GOOGLE_SERVICE_ACCOUNT_PATH;
-      const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+      // Use Application Default Credentials (ADC) discovery
+      // This will automatically find credentials in the standard locations:
+      // 1. GOOGLE_APPLICATION_CREDENTIALS env var (for service accounts/WIF)
+      // 2. ~/.config/gcloud/application_default_credentials.json (for authorized_user)
+      // 3. GCE metadata server (in production)
       
-      if (!serviceAccountPath && !serviceAccountJson) {
-        console.warn('Google Admin API credentials not configured');
-        return;
-      }
-
-      let auth: GoogleAuth;
+      console.log('Initializing Google Admin API with Application Default Credentials...');
       
-      if (serviceAccountJson) {
-        try {
-          // Use JSON string credentials
-          const credentials = JSON.parse(serviceAccountJson);
-          
-          // Support authorized_user credentials for development
-          if (credentials.type === 'authorized_user') {
-            console.log('Using authorized_user credentials for Google Admin API (development mode)');
-            
-            // For authorized_user, create auth directly with the credentials
-            auth = new GoogleAuth({
-              credentials,
-              scopes: [
-                'https://www.googleapis.com/auth/admin.directory.user.readonly',
-                'https://www.googleapis.com/auth/admin.directory.group.readonly',
-                'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
-              ]
-            });
-          }
-          
-          // For impersonated service accounts, create a simpler direct approach
-          if (credentials.type === 'impersonated_service_account') {
-            console.log('Impersonated service account detected - implementing workaround for Google Admin API');
-            
-            // Create a temporary message for user about creating a direct service account
-            console.warn('SETUP REQUIRED: Impersonated service accounts require complex IAM setup. Recommend creating a direct service account instead.');
-            
-            // Still try the impersonated approach but with better error handling
-            auth = new GoogleAuth({
-              credentials,
-              scopes: [
-                'https://www.googleapis.com/auth/admin.directory.user.readonly',
-                'https://www.googleapis.com/auth/admin.directory.group.readonly',
-                'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
-              ]
-            });
-          } else {
-            // Standard service account - much simpler setup
-            console.log('Using standard service account for Google Admin API');
-            auth = new GoogleAuth({
-              credentials,
-              scopes: [
-                'https://www.googleapis.com/auth/admin.directory.user.readonly',
-                'https://www.googleapis.com/auth/admin.directory.group.readonly',
-                'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
-              ]
-            });
-          }
-        } catch (parseError) {
-          console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError);
-          
-          // Provide helpful debugging information
-          if (parseError instanceof SyntaxError) {
-            const errorMessage = parseError.message;
-            const position = errorMessage.match(/position (\d+)/);
-            if (position) {
-              const pos = parseInt(position[1]);
-              const jsonStart = serviceAccountJson.substring(Math.max(0, pos - 50), pos);
-              const jsonEnd = serviceAccountJson.substring(pos, pos + 50);
-              console.error(`JSON syntax error near position ${pos}:`);
-              console.error(`...${jsonStart}[ERROR HERE]${jsonEnd}...`);
-              console.error('Common issues:');
-              console.error('- Missing closing brace } at end of JSON');
-              console.error('- Extra comma after last property');
-              console.error('- Unescaped quotes in string values');
-              console.error('- Truncated JSON when copying/pasting');
-            }
-          }
-          
-          console.warn('Google Admin API credentials not configured - invalid JSON format');
-          console.warn('Please verify the GOOGLE_SERVICE_ACCOUNT_JSON secret contains complete, valid JSON');
-          console.warn('For authorized_user credentials, ensure the JSON ends with } after the last property');
-          return;
-        }
-      } else if (serviceAccountPath) {
-        // Use file path credentials
-        auth = new GoogleAuth({
-          keyFile: serviceAccountPath,
-          scopes: [
-            'https://www.googleapis.com/auth/admin.directory.user.readonly',
-            'https://www.googleapis.com/auth/admin.directory.domain.readonly'
-          ]
-        });
-      } else {
-        throw new Error('No valid Google Admin API credentials found');
-      }
+      const auth = new GoogleAuth({
+        scopes: [
+          'https://www.googleapis.com/auth/admin.directory.user.readonly',
+          'https://www.googleapis.com/auth/admin.directory.group.readonly',
+          'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+        ]
+      });
 
-      // Set subject for domain-wide delegation (only needed for service accounts)
+      // Get the auth client and detect credential type
       const authClient = await auth.getClient();
       
-      // Only set subject for service accounts that need domain-wide delegation
-      if (serviceAccountJson) {
-        const credentials = JSON.parse(serviceAccountJson);
-        if (credentials.type === 'service_account' || credentials.type === 'impersonated_service_account') {
-          const adminEmail = process.env.GOOGLE_ADMIN_EMAIL || 'admin@seedfinancial.io';
-          authClient.subject = adminEmail;
-          console.log(`Using domain-wide delegation with subject: ${adminEmail}`);
-        }
+      // Check if we have credentials
+      const credentials = await authClient.getAccessToken();
+      if (!credentials.token) {
+        throw new Error('No valid credentials found via Application Default Credentials');
       }
 
+      // For development with authorized_user, we don't need domain-wide delegation
+      // For production with service accounts, domain-wide delegation will be configured
+      console.log('Google Admin API credentials found via ADC');
+      
       this.admin = google.admin({ version: 'directory_v1', auth: authClient });
       this.initialized = true;
       
-      console.log('Google Admin API initialized successfully');
+      console.log('Google Admin API initialized successfully with ADC');
     } catch (error) {
       console.error('Failed to initialize Google Admin API:', error);
+      console.error('ADC search order:');
+      console.error('1. GOOGLE_APPLICATION_CREDENTIALS env var (service account/WIF)');
+      console.error('2. ~/.config/gcloud/application_default_credentials.json (authorized_user)');
+      console.error('3. GCE metadata server');
+      console.error('');
+      console.error('For development: Place authorized_user ADC at ~/.config/gcloud/application_default_credentials.json');
+      console.error('For production: Use GOOGLE_APPLICATION_CREDENTIALS with WIF config');
+      
       this.admin = null;
       this.initialized = false;
     }

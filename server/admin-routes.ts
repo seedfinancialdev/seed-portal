@@ -61,21 +61,39 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     } catch (error: any) {
       console.error('Error fetching workspace users:', error);
       
-      // Handle scope permission errors for authorized_user credentials
-      if (error.code === 403 && error.message?.includes('Insufficient Permission')) {
-        return res.status(500).json({ 
-          message: 'Insufficient Permissions',
-          error: 'The authorized_user credential lacks required Admin SDK scopes',
-          setupInstructions: {
-            currentIssue: 'The user credential does not have Admin Directory API access',
-            solution: 'Re-create the ADC file with proper Admin SDK scopes',
-            step1: 'Run: gcloud auth application-default revoke',
-            step2: 'Run: gcloud auth application-default login --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly',
-            step3: 'Copy the new ADC file content to GOOGLE_SERVICE_ACCOUNT_JSON secret',
-            step4: 'Ensure the user account has Google Workspace Admin role',
-            note: 'The authorized_user must be a Workspace admin with Directory API access'
-          }
-        });
+      // Handle various Google Admin API errors
+      if (error.code === 403) {
+        if (error.message?.includes('Insufficient Permission') || error.message?.includes('Request had insufficient authentication scopes')) {
+          return res.status(500).json({ 
+            message: 'Insufficient Permissions',
+            error: 'The credential lacks required Admin SDK scopes',
+            setupInstructions: {
+              currentIssue: 'The credential does not have Admin Directory API access',
+              solution: 'Re-create the ADC file with proper Admin SDK scopes',
+              step1: 'Run: gcloud auth application-default revoke',
+              step2: 'Run: gcloud auth application-default login --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly',
+              step3: 'Copy the new ADC file to ~/.config/gcloud/application_default_credentials.json in Replit',
+              step4: 'Ensure the user account has Google Workspace Admin role',
+              note: 'For development, use authorized_user ADC with Admin Directory scopes'
+            }
+          });
+        }
+        
+        if (error.message?.includes('Not Authorized to access this resource/api')) {
+          return res.status(500).json({
+            message: 'API Access Denied',
+            error: 'Admin SDK API not enabled or user lacks Workspace admin privileges',
+            setupInstructions: {
+              currentIssue: 'Either the Admin SDK API is not enabled or the user lacks admin permissions',
+              solution: 'Enable Admin SDK API and ensure user is a Workspace admin',
+              step1: 'Go to Google Cloud Console → APIs & Services → Library',
+              step2: 'Search for "Admin SDK API" and enable it',
+              step3: 'Ensure the authenticated user has Google Workspace Super Admin role',
+              step4: 'Re-run: gcloud auth application-default login with admin user',
+              note: 'Only Workspace Super Admins can access the Directory API'
+            }
+          });
+        }
       }
       
       if (error.message?.includes('iam.serviceAccounts.getAccessToken')) {
