@@ -32,12 +32,10 @@ export class GoogleAdminService {
   private async initialize() {
     try {
       // Use Application Default Credentials (ADC) discovery
-      // This will automatically find credentials in the standard locations:
-      // 1. GOOGLE_APPLICATION_CREDENTIALS env var (for service accounts/WIF)
-      // 2. ~/.config/gcloud/application_default_credentials.json (for authorized_user)
-      // 3. GCE metadata server (in production)
+      // ADC will automatically discover credentials from well-known locations
+      // without requiring manual file management or environment variables
       
-      console.log('Initializing Google Admin API with Application Default Credentials...');
+      console.log('Initializing Google Admin API with Application Default Credentials discovery...');
       
       const auth = new GoogleAuth({
         scopes: [
@@ -47,32 +45,25 @@ export class GoogleAdminService {
         ]
       });
 
-      // Get the auth client and detect credential type
+      // Let ADC discovery work automatically - no manual credential management needed
       const authClient = await auth.getClient();
       
-      // Check if we have credentials
+      // Test the credentials
       const credentials = await authClient.getAccessToken();
       if (!credentials.token) {
-        throw new Error('No valid credentials found via Application Default Credentials');
+        throw new Error('No valid credentials found via ADC discovery');
       }
 
-      // For development with authorized_user, we don't need domain-wide delegation
-      // For production with service accounts, domain-wide delegation will be configured
-      console.log('Google Admin API credentials found via ADC');
+      console.log('Google Admin API credentials discovered successfully via ADC');
       
       this.admin = google.admin({ version: 'directory_v1', auth: authClient });
       this.initialized = true;
       
-      console.log('Google Admin API initialized successfully with ADC');
+      console.log('Google Admin API initialized successfully');
     } catch (error) {
       console.error('Failed to initialize Google Admin API:', error);
-      console.error('ADC search order:');
-      console.error('1. GOOGLE_APPLICATION_CREDENTIALS env var (service account/WIF)');
-      console.error('2. ~/.config/gcloud/application_default_credentials.json (authorized_user)');
-      console.error('3. GCE metadata server');
-      console.error('');
-      console.error('For development: Place authorized_user ADC at ~/.config/gcloud/application_default_credentials.json');
-      console.error('For production: Use GOOGLE_APPLICATION_CREDENTIALS with WIF config');
+      console.warn('ADC discovery requires authorized_user credentials with proper Admin Directory scopes');
+      console.warn('Ensure gcloud auth application-default login was run with the correct scopes');
       
       this.admin = null;
       this.initialized = false;
