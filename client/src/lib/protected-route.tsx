@@ -24,7 +24,7 @@ export function ProtectedRoute({
   if (!dbUser) {
     return (
       <Route path={path}>
-        <Redirect to="/auth-google" />
+        <Redirect to="/auth" />
       </Route>
     );
   }

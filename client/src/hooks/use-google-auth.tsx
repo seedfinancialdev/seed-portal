@@ -1,6 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { GoogleOAuthProvider, useGoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { User as DBUser } from "@shared/schema";
@@ -32,21 +31,25 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Check for stored token on mount
+  // Check for stored token and user info on mount
   useEffect(() => {
     const storedToken = localStorage.getItem('google_access_token');
-    if (storedToken) {
+    const storedUser = localStorage.getItem('google_user');
+    
+    if (storedToken && storedUser) {
       try {
-        const decoded = jwtDecode<GoogleUser>(storedToken);
+        const user = JSON.parse(storedUser) as GoogleUser;
         // Check if token is for seedfinancial.io domain
-        if (decoded.hd === 'seedfinancial.io') {
-          setGoogleUser(decoded);
+        if (user.hd === 'seedfinancial.io') {
+          setGoogleUser(user);
           setAccessToken(storedToken);
         } else {
           localStorage.removeItem('google_access_token');
+          localStorage.removeItem('google_user');
         }
       } catch (error) {
         localStorage.removeItem('google_access_token');
+        localStorage.removeItem('google_user');
       }
     }
   }, []);
@@ -100,15 +103,17 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         }
         
         // Store token and user info
-        localStorage.setItem('google_access_token', tokenResponse.access_token);
-        setAccessToken(tokenResponse.access_token);
-        setGoogleUser({
+        const googleUser = {
           email: userInfo.email,
           name: userInfo.name,
           picture: userInfo.picture,
           hd: userInfo.hd,
           sub: userInfo.sub,
-        });
+        };
+        localStorage.setItem('google_access_token', tokenResponse.access_token);
+        localStorage.setItem('google_user', JSON.stringify(googleUser));
+        setAccessToken(tokenResponse.access_token);
+        setGoogleUser(googleUser);
         
         toast({
           title: "Welcome!",
@@ -151,6 +156,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       
       // Clear local state
       localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_user');
       setGoogleUser(null);
       setAccessToken(null);
       queryClient.clear();
@@ -171,7 +177,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         googleUser,
-        dbUser,
+        dbUser: dbUser ?? null,
         isLoading: dbLoading,
         error,
         signIn: googleLogin,

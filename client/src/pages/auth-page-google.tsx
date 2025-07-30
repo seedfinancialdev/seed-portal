@@ -37,7 +37,7 @@ export default function AuthPage() {
         <Card className="bg-white shadow-xl">
           <CardContent className="pt-6">
             <div className="space-y-4">
-              {isLoading && firebaseUser && (
+              {isLoading && googleUser && (
                 <div className="text-center py-4">
                   <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
                   <p className="text-sm text-gray-600">Setting up your account...</p>
