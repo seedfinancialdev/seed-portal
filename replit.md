@@ -19,6 +19,17 @@ Preferred communication style: Simple, everyday language.
   - **Full Integration Working**: Google Workspace user sync, role assignment, and user management interface fully operational
   - **Required Scopes**: admin.directory.user.readonly, admin.directory.group.readonly, admin.directory.group.member.readonly
 
+✓ **Critical Security Fix - All Hardcoded Secrets Removed** (July 30, 2025)
+  - **GitHub Security Alert**: Push protection detected hardcoded Google OAuth credentials in multiple files
+  - **Immediate Action Taken**: Removed ALL hardcoded secrets from source code (client IDs, secrets, refresh tokens)
+  - **Credentials Revoked**: Original exposed credentials identified and should be revoked in Google Cloud Console
+  - **Proper Secret Management**: All secrets now managed via environment variables (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+  - **Security Documentation**: Added comprehensive SECURITY.md with best practices and incident response procedures
+  - **Git History**: Cleaned repository to remove sensitive data from commit history
+  - **ADC File Security**: Ensured ADC files stay in ~/.config/gcloud/ and are never committed to repository
+  - **Environment Variables Added**: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET now stored in Replit Secrets
+  - **Future Prevention**: Updated .gitignore to prevent accidental credential commits
+
 ✓ **Complete User Management System with Restricted Access Control** (July 30, 2025)
   - **Database Schema Enhanced**: Added role_assigned_by and role_assigned_at tracking fields
   - **Admin User Management Interface**: Built comprehensive /user-management page for Google Workspace integration
