@@ -26,6 +26,7 @@ import {
   Heart,
   Folder
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -456,33 +457,38 @@ export default function Dashboard() {
                     {categoriesLoading ? (
                       <div className="text-slate-400 text-center py-8">Loading categories...</div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-3">
-                        {categories.slice(0, 6).map((category: KbCategory) => {
-                          const IconComponent = getIconComponent(category.icon);
-                          
-                          return (
-                            <Card
-                              key={category.id}
-                              className="group h-24 cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg bg-gradient-to-br from-slate-700/80 to-slate-800/80 border-slate-600/40 hover:from-slate-600/80 hover:to-slate-700/80 hover:border-orange-400/50 backdrop-blur-md border rounded-xl overflow-hidden relative"
-                              onClick={() => setLocation('/knowledge-base')}
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                              
-                              <div className="relative p-4 h-full flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all duration-300 border border-white/20`}>
-                                  <IconComponent className="h-5 w-5 text-white" />
-                                </div>
-                                
-                                <div className="flex-1 min-w-0">
-                                  <h3 className="text-sm font-semibold text-white group-hover:text-orange-200 transition-colors duration-300 truncate">
-                                    {category.name.replace(' Hub', '').replace(' Academy', '').replace(' Vault', '').replace(' Center', '').replace(' Playbook', '')}
-                                  </h3>
-                                </div>
-                              </div>
-                            </Card>
-                          );
-                        })}
-                      </div>
+                      <TooltipProvider>
+                        <div className="grid grid-cols-3 gap-4">
+                          {categories.slice(0, 6).map((category: KbCategory) => {
+                            const IconComponent = getIconComponent(category.icon);
+                            
+                            return (
+                              <Tooltip key={category.id}>
+                                <TooltipTrigger asChild>
+                                  <Card
+                                    className="group h-20 w-20 cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-xl bg-gradient-to-br from-slate-700/80 to-slate-800/80 border-slate-600/40 hover:from-slate-600/80 hover:to-slate-700/80 hover:border-orange-400/70 backdrop-blur-md border rounded-2xl overflow-hidden relative mx-auto"
+                                    onClick={() => setLocation('/knowledge-base')}
+                                  >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                    
+                                    <div className="relative h-full flex items-center justify-center">
+                                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-125 transition-all duration-300 border border-white/30 group-hover:border-white/50`}>
+                                        <IconComponent className="h-6 w-6 text-white group-hover:scale-110 transition-transform duration-300" />
+                                      </div>
+                                    </div>
+                                  </Card>
+                                </TooltipTrigger>
+                                <TooltipContent 
+                                  side="bottom" 
+                                  className="bg-slate-800 border-slate-600 text-white font-medium"
+                                >
+                                  {category.name}
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                          })}
+                        </div>
+                      </TooltipProvider>
                     )}
                     
                     {categories.length > 6 && (
