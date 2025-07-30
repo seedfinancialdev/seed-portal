@@ -77,7 +77,22 @@ export class GoogleAdminService {
           }
         } catch (parseError) {
           console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError);
+          
+          // Provide helpful debugging information
+          if (parseError instanceof SyntaxError) {
+            const errorMessage = parseError.message;
+            const position = errorMessage.match(/position (\d+)/);
+            if (position) {
+              const pos = parseInt(position[1]);
+              const jsonStart = serviceAccountJson.substring(Math.max(0, pos - 50), pos);
+              const jsonEnd = serviceAccountJson.substring(pos, pos + 50);
+              console.error(`JSON syntax error near position ${pos}:`);
+              console.error(`...${jsonStart}[ERROR HERE]${jsonEnd}...`);
+            }
+          }
+          
           console.warn('Google Admin API credentials not configured - invalid JSON format');
+          console.warn('Please check that the GOOGLE_SERVICE_ACCOUNT_JSON secret contains valid JSON');
           return;
         }
       } else if (serviceAccountPath) {
