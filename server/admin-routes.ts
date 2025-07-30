@@ -49,7 +49,20 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       if (!googleAdminService) {
         return res.status(503).json({ 
           message: 'Google Admin API not configured',
-          configured: false
+          configured: false,
+          setupInstructions: {
+            issue: 'ADC file missing or invalid refresh token',
+            steps: [
+              '1. On your local machine, run:',
+              '   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly',
+              '2. This will open a browser to authenticate with your @seedfinancial.io admin account',
+              '3. Copy the generated file from your local machine:',
+              '   Mac/Linux: ~/.config/gcloud/application_default_credentials.json',
+              '   Windows: %APPDATA%\\gcloud\\application_default_credentials.json',
+              '4. In Replit, create the file at: ~/.config/gcloud/application_default_credentials.json',
+              '5. Restart the application'
+            ]
+          }
         });
       }
 

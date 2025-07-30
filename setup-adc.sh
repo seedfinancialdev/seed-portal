@@ -1,37 +1,34 @@
 #!/bin/bash
 
-# Script to help set up Application Default Credentials for Google Workspace Admin API
-# This creates the ADC file that the Google Admin service is looking for
+# Setup script for Google Admin API ADC configuration
 
-echo "Google Workspace Admin API ADC Setup Helper"
-echo "==========================================="
+echo "=== Google Admin API Setup Instructions ==="
 echo ""
-echo "Since the gcloud auth flow is having localhost redirect issues in Replit,"
-echo "you'll need to create the ADC file manually with your Google OAuth credentials."
+echo "The current ADC file has an invalid refresh token that doesn't match your Google Console client."
 echo ""
-echo "Here's what you need to do:"
+echo "To fix this, follow these steps:"
 echo ""
-echo "1. Go to Google Cloud Console: https://console.cloud.google.com/"
-echo "2. Navigate to APIs & Services > Credentials" 
-echo "3. Find your OAuth 2.0 Client ID (the one starting with 537178633862)"
-echo "4. Download the JSON file or copy the client_id and client_secret"
-echo "5. Create the ADC file at: ~/.config/gcloud/application_default_credentials.json"
+echo "1. ON YOUR LOCAL MACHINE (not in Replit), run:"
 echo ""
-echo "The ADC file should look like this:"
-echo '{'
-echo '  "client_id": "your_oauth_client_id_here",'
-echo '  "client_secret": "your_oauth_client_secret_here",'
-echo '  "refresh_token": "your_refresh_token_here",'
-echo '  "type": "authorized_user",'
-echo '  "universe_domain": "googleapis.com"'
-echo '}'
+echo "   gcloud auth application-default login \\"
+echo "     --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly"
 echo ""
-echo "You can get a refresh token by using the OAuth playground:"
-echo "https://developers.google.com/oauthplayground/"
+echo "2. This will open a browser - sign in with your @seedfinancial.io admin account"
 echo ""
-echo "Required scopes for the refresh token:"
-echo "- https://www.googleapis.com/auth/admin.directory.user.readonly"
-echo "- https://www.googleapis.com/auth/admin.directory.group.readonly"  
-echo "- https://www.googleapis.com/auth/admin.directory.group.member.readonly"
+echo "3. Find the generated ADC file on your local machine:"
+echo "   - Mac/Linux: ~/.config/gcloud/application_default_credentials.json"
+echo "   - Windows: %APPDATA%\\gcloud\\application_default_credentials.json"
 echo ""
-echo "Once you create that file, restart the application and the Admin API will work!"
+echo "4. Copy the ENTIRE contents of that file"
+echo ""
+echo "5. In Replit, run:"
+echo "   mkdir -p ~/.config/gcloud"
+echo "   nano ~/.config/gcloud/application_default_credentials.json"
+echo ""
+echo "6. Paste the contents, save (Ctrl+O, Enter, Ctrl+X)"
+echo ""
+echo "7. Restart the application"
+echo ""
+echo "IMPORTANT: Do NOT set GOOGLE_APPLICATION_CREDENTIALS environment variable"
+echo ""
+echo "The ADC file will be auto-discovered at ~/.config/gcloud/application_default_credentials.json"
