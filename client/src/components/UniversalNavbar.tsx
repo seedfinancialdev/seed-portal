@@ -84,7 +84,7 @@ export function UniversalNavbar({
               {(dbUser?.email === 'jon@seedfinancial.io' || dbUser?.email === 'anthony@seedfinancial.io' || dbUser?.role === 'admin') && (
                 <DropdownMenuItem onClick={() => setLocation('/admin')} className="text-sm">
                   <Shield className="mr-2 h-3 w-3" />
-                  Admin Dashboard
+                  SEEDOS Dashboard
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />

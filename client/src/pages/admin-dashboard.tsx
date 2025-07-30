@@ -1,13 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useGoogleAuth } from "@/hooks/use-google-auth";
-import { UniversalNavbar } from "@/components/UniversalNavbar";
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { Link, useLocation } from "wouter";
 import { 
   BarChart3,
   TrendingUp,
@@ -48,9 +48,32 @@ import {
   Bell,
   Monitor,
   Server,
-  HardDrive
+  HardDrive,
+  Home,
+  Building2,
+  Calculator,
+  Banknote,
+  BookOpen,
+  Phone,
+  FolderOpen,
+  CloudCog,
+  Headphones,
+  User,
+  LogOut,
+  ArrowLeft,
+  Mail,
+  MessageSquare,
+  BarChart,
+  Receipt,
+  Coins,
+  CreditCard as CreditCardIcon,
+  Laptop,
+  Smartphone,
+  Wifi,
+  Archive,
+  ExternalLink,
+  Layers
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -59,6 +82,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 interface SystemHealth {
   database: 'healthy' | 'warning' | 'error';
@@ -116,9 +141,67 @@ interface ClientHealthScore {
   revenue: number;
 }
 
+// Navigation items for SEEDOS
+const navigationItems = [
+  {
+    category: 'Core',
+    items: [
+      { name: 'Dashboard', icon: Home, path: '/admin', active: true },
+      { name: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
+      { name: 'Revenue', icon: TrendingUp, path: '/admin/revenue' }
+    ]
+  },
+  {
+    category: 'Business Operations',
+    items: [
+      { name: 'Sales Pipeline', icon: Target, path: '/admin/sales' },
+      { name: 'Client Management', icon: Users, path: '/admin/clients' },
+      { name: 'Commission Tracking', icon: DollarSign, path: '/admin/commissions' },
+      { name: 'Quote Calculator', icon: Calculator, path: '/calculator' }
+    ]
+  },
+  {
+    category: 'Financial Integration',
+    items: [
+      { name: 'Stripe Dashboard', icon: CreditCardIcon, path: '/admin/stripe' },
+      { name: 'Mercury Banking', icon: Banknote, path: '/admin/mercury' },
+      { name: 'QuickBooks Sync', icon: Receipt, path: '/admin/quickbooks' },
+      { name: 'Tax Planning', icon: FileText, path: '/admin/tax' }
+    ]
+  },
+  {
+    category: 'Productivity & Content',
+    items: [
+      { name: 'SeedKB Management', icon: BookOpen, path: '/kb-admin' },
+      { name: 'Box File Storage', icon: Archive, path: '/admin/box' },
+      { name: 'Google Drive', icon: FolderOpen, path: '/admin/drive' },
+      { name: 'Email Analytics', icon: Mail, path: '/admin/email' }
+    ]
+  },
+  {
+    category: 'Communication & Tools',
+    items: [
+      { name: 'Zoom Meetings', icon: Video, path: '/admin/zoom' },
+      { name: 'Slack Integration', icon: MessageSquare, path: '/admin/slack' },
+      { name: 'HubSpot CRM', icon: Building2, path: '/admin/hubspot' },
+      { name: 'ClickUp Projects', icon: Briefcase, path: '/admin/clickup' }
+    ]
+  },
+  {
+    category: 'System & Security',
+    items: [
+      { name: 'System Health', icon: Monitor, path: '/admin/system' },
+      { name: 'User Management', icon: UserCheck, path: '/admin/users' },
+      { name: 'API Integrations', icon: CloudCog, path: '/admin/apis' },
+      { name: 'Security Center', icon: Shield, path: '/admin/security' }
+    ]
+  }
+];
+
 export default function AdminDashboard() {
-  const { dbUser: user } = useGoogleAuth();
-  const [selectedTab, setSelectedTab] = useState('overview');
+  const { dbUser: user, signOut } = useGoogleAuth();
+  const [, setLocation] = useLocation();
+  const [selectedSection, setSelectedSection] = useState('dashboard');
 
   // Check if user is admin
   const isAdmin = user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin';
@@ -283,463 +366,360 @@ export default function AdminDashboard() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
-        <UniversalNavbar showBackButton={true} backButtonText="Back to Portal" backButtonPath="/" />
-        <main className="max-w-4xl mx-auto px-6 py-12">
-          <Card className="bg-white/90 backdrop-blur-md border border-white/30 shadow-xl">
-            <CardContent className="p-12 text-center">
-              <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-              <p className="text-gray-600">You need admin privileges to access this dashboard.</p>
-              <p className="text-sm text-gray-500 mt-2">Contact an administrator if you believe this is an error.</p>
-            </CardContent>
-          </Card>
-        </main>
+      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center">
+        <Card className="bg-white/90 backdrop-blur-md border border-white/30 shadow-xl max-w-md">
+          <CardContent className="p-12 text-center">
+            <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600 mb-4">You need admin privileges to access SEEDOS.</p>
+            <Button onClick={() => setLocation('/')} className="bg-orange-500 hover:bg-orange-600">
+              Back to Portal
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
-      <UniversalNavbar showBackButton={true} backButtonText="Back to Portal" backButtonPath="/" />
-      
-      {/* Admin Header */}
-      <div className="bg-white/10 backdrop-blur-md border-b border-white/20">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar Navigation */}
+      <div className="w-64 bg-white shadow-lg border-r border-gray-200 fixed h-full overflow-y-auto">
+        {/* SEEDOS Header */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <img src={navLogoPath} alt="Seed Financial" className="h-8" />
             <div>
-              <h1 className="text-2xl font-bold text-white mb-1">Admin Dashboard</h1>
-              <p className="text-white/70">System management and analytics</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant="secondary" className="bg-orange-500 text-white">
-                Admin Access
-              </Badge>
-              <Button variant="outline" className="text-white border-white/30 hover:bg-white/10">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Data
-              </Button>
+              <h1 className="text-xl font-bold text-gray-900">
+                SEED<span className="text-orange-500">OS</span>
+              </h1>
+              <p className="text-xs text-gray-500">Executive Dashboard</p>
             </div>
           </div>
         </div>
+
+        {/* User Profile */}
+        <div className="p-4 border-b border-gray-200">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+                {user?.profilePhoto ? (
+                  <img 
+                    src={user.profilePhoto} 
+                    alt="Profile" 
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {user?.email?.split('@')[0]}
+                  </p>
+                  <p className="text-xs text-gray-500">Administrator</p>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                My Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/')}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Portal
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={signOut} className="text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Navigation Menu */}
+        <div className="p-4 space-y-6">
+          {navigationItems.map((category) => (
+            <div key={category.category}>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                {category.category}
+              </h3>
+              <div className="space-y-1">
+                {category.items.map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => item.path.startsWith('/admin') ? setSelectedSection(item.name.toLowerCase()) : setLocation(item.path)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+                      (item.active || selectedSection === item.name.toLowerCase()) 
+                        ? 'bg-orange-50 text-orange-700 border-r-2 border-orange-500' 
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                    {!item.path.startsWith('/admin') && (
+                      <ExternalLink className="h-3 w-3 ml-auto text-gray-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-white/10 backdrop-blur-md">
-            <TabsTrigger value="overview" className="text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white">
-              Analytics
-            </TabsTrigger>
-            <TabsTrigger value="approvals" className="text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white">
-              Approvals
-            </TabsTrigger>
-            <TabsTrigger value="system" className="text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white">
-              System Health
-            </TabsTrigger>
-            <TabsTrigger value="clickup" className="text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white">
-              ClickUp Tasks
-            </TabsTrigger>
-            <TabsTrigger value="clients" className="text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white">
-              Client Health
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-4 gap-6">
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <p className="text-2xl font-light text-white mb-1">{adminMetrics.activeUsers}</p>
-                  <p className="text-xs text-white/80 uppercase tracking-wide">Active Users</p>
-                  <p className="text-xs text-white/60 mt-1">of {adminMetrics.totalUsers} total</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-3">
-                    <DollarSign className="h-6 w-6 text-green-600" />
-                  </div>
-                  <p className="text-2xl font-light text-white mb-1">${adminMetrics.monthlyRevenue.toLocaleString()}</p>
-                  <p className="text-xs text-white/80 uppercase tracking-wide">Monthly Revenue</p>
-                  <p className="text-xs text-white/60 mt-1">${adminMetrics.totalRevenue.toLocaleString()} total</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
-                    <Target className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <p className="text-2xl font-light text-white mb-1">{adminMetrics.conversionRate}%</p>
-                  <p className="text-xs text-white/80 uppercase tracking-wide">Conversion Rate</p>
-                  <p className="text-xs text-white/60 mt-1">{adminMetrics.totalLeads} total leads</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mx-auto mb-3">
-                    <Bell className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <p className="text-2xl font-light text-white mb-1">{adminMetrics.pendingApprovals}</p>
-                  <p className="text-xs text-white/80 uppercase tracking-wide">Pending Approvals</p>
-                  <p className="text-xs text-white/60 mt-1">Require attention</p>
-                </CardContent>
-              </Card>
+      {/* Main Content Area */}
+      <div className="flex-1 ml-64">
+        {/* Top Header */}
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 capitalize">{selectedSection}</h1>
+              <p className="text-gray-600">Real-time business intelligence and system management</p>
             </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-3 gap-6">
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Database className="h-5 w-5" />
-                    Knowledge Base
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-white">
-                      <span className="text-sm">Articles</span>
-                      <span className="font-medium">{kbStats.totalArticles}</span>
-                    </div>
-                    <div className="flex justify-between text-white">
-                      <span className="text-sm">Categories</span>
-                      <span className="font-medium">{kbStats.totalCategories}</span>
-                    </div>
-                    <div className="flex justify-between text-white">
-                      <span className="text-sm">Monthly Views</span>
-                      <span className="font-medium">{kbStats.monthlyViews}</span>
-                    </div>
-                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                      Manage KB
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Shield className="h-5 w-5" />
-                    System Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">Database</span>
-                      {getStatusIcon(systemHealth.database)}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">HubSpot</span>
-                      {getStatusIcon(systemHealth.hubspot)}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-white">ClickUp</span>
-                      {getStatusIcon(systemHealth.clickup)}
-                    </div>
-                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                      View Details
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Activity className="h-5 w-5" />
-                    Quick Stats
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-white">
-                      <span className="text-sm">Avg Deal Size</span>
-                      <span className="font-medium">${adminMetrics.averageDealSize}</span>
-                    </div>
-                    <div className="flex justify-between text-white">
-                      <span className="text-sm">Active Clients</span>
-                      <span className="font-medium">{clientHealth.length}</span>
-                    </div>
-                    <div className="flex justify-between text-white">
-                      <span className="text-sm">High Risk</span>
-                      <span className="font-medium text-red-400">
-                        {clientHealth.filter(c => c.riskLevel === 'high').length}
-                      </span>
-                    </div>
-                    <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white">
-                      View Analytics
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Sync All
+              </Button>
+              <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
+                <Settings className="h-4 w-4 mr-2" />
+                Configure
+              </Button>
+              <div className="relative">
+                <Bell className="h-5 w-5 text-gray-500" />
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
+                  3
+                </span>
+              </div>
             </div>
-          </TabsContent>
+          </div>
+        </div>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
+        {/* Dashboard Content */}
+        <div className="p-6 space-y-6">
+
+          {/* Executive Summary Cards */}
+          <div className="grid grid-cols-4 gap-6">
+            <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-blue-100 text-sm">Total Revenue</p>
+                    <p className="text-3xl font-bold">$425K</p>
+                    <p className="text-blue-100 text-sm">+12% from last month</p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-blue-200" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-100 text-sm">Active Clients</p>
+                    <p className="text-3xl font-bold">89</p>
+                    <p className="text-green-100 text-sm">+5 new this month</p>
+                  </div>
+                  <Users className="h-8 w-8 text-green-200" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-purple-100 text-sm">Pipeline Value</p>
+                    <p className="text-3xl font-bold">$127K</p>
+                    <p className="text-purple-100 text-sm">18 active deals</p>
+                  </div>
+                  <Target className="h-8 w-8 text-purple-200" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-orange-100 text-sm">System Health</p>
+                    <p className="text-3xl font-bold">98%</p>
+                    <p className="text-orange-100 text-sm">All systems operational</p>
+                  </div>
+                  <Shield className="h-8 w-8 text-orange-200" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Main Dashboard Content */}
+          <div className="grid grid-cols-3 gap-6">
+            {/* Revenue Chart */}
+            <Card className="col-span-2">
               <CardHeader>
-                <CardTitle className="text-white">Revenue Analytics</CardTitle>
-                <CardDescription className="text-white/70">
-                  Monthly revenue trends and performance metrics
-                </CardDescription>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Revenue Analytics</span>
+                  <Badge variant="secondary">Current Week</Badge>
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center">
-                  <div className="text-center text-white/70">
+                <div className="h-80 flex items-center justify-center bg-gray-50 rounded-lg">
+                  <div className="text-center text-gray-500">
                     <BarChart3 className="h-16 w-16 mx-auto mb-4" />
-                    <p>Revenue charts would be integrated here with chart library</p>
-                    <p className="text-sm">Showing monthly trends, deal pipeline, and forecasting</p>
+                    <p className="font-medium">Revenue Chart Integration</p>
+                    <p className="text-sm">Connect to Stripe/Mercury for live data</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Approvals Tab */}
-          <TabsContent value="approvals" className="space-y-6">
-            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
+            {/* System Status */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-white">Commission Approvals</CardTitle>
-                <CardDescription className="text-white/70">
-                  Manage commission overrides, adjustments, and bonus approvals
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="h-5 w-5" />
+                  System Status
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/20">
-                      <TableHead className="text-white">User</TableHead>
-                      <TableHead className="text-white">Deal/Type</TableHead>
-                      <TableHead className="text-white">Amount</TableHead>
-                      <TableHead className="text-white">Date</TableHead>
-                      <TableHead className="text-white">Status</TableHead>
-                      <TableHead className="text-white">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {commissionApprovals.map((approval) => (
-                      <TableRow key={approval.id} className="border-white/20">
-                        <TableCell className="text-white">{approval.userName}</TableCell>
-                        <TableCell className="text-white">
-                          <div>
-                            <p className="font-medium">{approval.dealName}</p>
-                            <Badge variant="secondary" className="text-xs">
-                              {approval.type}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white">${approval.amount}</TableCell>
-                        <TableCell className="text-white">{approval.requestDate}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={approval.status === 'pending' ? 'destructive' : 'default'}
-                            className={approval.status === 'approved' ? 'bg-green-500' : ''}
-                          >
-                            {approval.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {approval.status === 'pending' && (
-                            <div className="flex gap-2">
-                              <Button size="sm" className="bg-green-500 hover:bg-green-600">
-                                Approve
-                              </Button>
-                              <Button size="sm" variant="destructive">
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-4">
+                  {Object.entries(systemHealth).map(([service, status]) => (
+                    <div key={service} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {getStatusIcon(status)}
+                        <span className="font-medium capitalize">{service}</span>
+                      </div>
+                      <Badge variant={status === 'healthy' ? 'default' : 'destructive'} className={status === 'healthy' ? 'bg-green-500' : ''}>
+                        {status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
 
-          {/* System Health Tab */}
-          <TabsContent value="system" className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Server className="h-5 w-5" />
-                    System Services
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {Object.entries(systemHealth).map(([service, status]) => (
-                      <div key={service} className="flex items-center justify-between p-3 bg-white/10 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          {getStatusIcon(status)}
-                          <span className="text-white capitalize">{service}</span>
-                        </div>
-                        <Badge variant={status === 'healthy' ? 'default' : 'destructive'} className={status === 'healthy' ? 'bg-green-500' : ''}>
-                          {status}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+          {/* Integration Status Grid */}
+          <div className="grid grid-cols-4 gap-6">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6 text-center">
+                <CreditCardIcon className="h-12 w-12 text-purple-500 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">Stripe</h3>
+                <p className="text-sm text-gray-600 mb-3">Payment processing</p>
+                <Badge className="bg-green-100 text-green-800">Connected</Badge>
+              </CardContent>
+            </Card>
 
-              <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Monitor className="h-5 w-5" />
-                    Performance Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6 text-center">
+                <Banknote className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">Mercury</h3>
+                <p className="text-sm text-gray-600 mb-3">Business banking</p>
+                <Badge variant="secondary">Setup Required</Badge>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6 text-center">
+                <Receipt className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">QuickBooks</h3>
+                <p className="text-sm text-gray-600 mb-3">Accounting sync</p>
+                <Badge variant="secondary">Setup Required</Badge>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6 text-center">
+                <Video className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <h3 className="font-semibold mb-2">Zoom</h3>
+                <p className="text-sm text-gray-600 mb-3">Meeting analytics</p>
+                <Badge variant="secondary">Setup Required</Badge>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent Activity & Alerts */}
+          <div className="grid grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                     <div>
-                      <div className="flex justify-between text-white mb-2">
-                        <span>API Response Time</span>
-                        <span>120ms</span>
-                      </div>
-                      <Progress value={75} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-white mb-2">
-                        <span>Database Performance</span>
-                        <span>95%</span>
-                      </div>
-                      <Progress value={95} className="h-2" />
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-white mb-2">
-                        <span>System Uptime</span>
-                        <span>99.9%</span>
-                      </div>
-                      <Progress value={99} className="h-2" />
+                      <p className="font-medium">New client onboarded</p>
+                      <p className="text-sm text-gray-600">TechFlow Solutions - $12,000 ARR</p>
+                      <p className="text-xs text-gray-500">2 hours ago</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* ClickUp Tasks Tab */}
-          <TabsContent value="clickup" className="space-y-6">
-            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-white">Active Service Tasks</CardTitle>
-                <CardDescription className="text-white/70">
-                  Monitor client work progress and task assignments
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/20">
-                      <TableHead className="text-white">Task</TableHead>
-                      <TableHead className="text-white">Assignee</TableHead>
-                      <TableHead className="text-white">Priority</TableHead>
-                      <TableHead className="text-white">Due Date</TableHead>
-                      <TableHead className="text-white">Status</TableHead>
-                      <TableHead className="text-white">Project</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clickupTasks.map((task) => (
-                      <TableRow key={task.id} className="border-white/20">
-                        <TableCell className="text-white font-medium">{task.name}</TableCell>
-                        <TableCell className="text-white">{task.assignee}</TableCell>
-                        <TableCell>
-                          <Badge className={getPriorityColor(task.priority)}>
-                            {task.priority}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-white">{task.dueDate}</TableCell>
-                        <TableCell className="text-white capitalize">{task.status}</TableCell>
-                        <TableCell className="text-white">{task.project}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                    <div>
+                      <p className="font-medium">Commission approved</p>
+                      <p className="text-sm text-gray-600">Amanda Rodriguez - $450</p>
+                      <p className="text-xs text-gray-500">4 hours ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                    <div>
+                      <p className="font-medium">System backup completed</p>
+                      <p className="text-sm text-gray-600">All data synchronized</p>
+                      <p className="text-xs text-gray-500">6 hours ago</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
 
-          {/* Client Health Tab */}
-          <TabsContent value="clients" className="space-y-6">
-            <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-white">AI-Powered Client Health Monitoring</CardTitle>
-                <CardDescription className="text-white/70">
-                  Automated risk assessment and client relationship health scores
-                </CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  System Alerts
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/20">
-                      <TableHead className="text-white">Client</TableHead>
-                      <TableHead className="text-white">Health Score</TableHead>
-                      <TableHead className="text-white">Last Contact</TableHead>
-                      <TableHead className="text-white">Risk Level</TableHead>
-                      <TableHead className="text-white">Revenue</TableHead>
-                      <TableHead className="text-white">Issues</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {clientHealth.map((client, index) => (
-                      <TableRow key={index} className="border-white/20">
-                        <TableCell className="text-white">
-                          <div>
-                            <p className="font-medium">{client.clientName}</p>
-                            <p className="text-sm text-white/70">{client.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-medium">{client.healthScore}</span>
-                            <Progress value={client.healthScore} className="w-20 h-2" />
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-white">{client.lastContact}</TableCell>
-                        <TableCell>
-                          <span className={`font-medium ${getRiskColor(client.riskLevel)}`}>
-                            {client.riskLevel.toUpperCase()}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-white">${client.revenue.toLocaleString()}</TableCell>
-                        <TableCell>
-                          {client.issues.length > 0 ? (
-                            <div className="space-y-1">
-                              {client.issues.map((issue, i) => (
-                                <Badge key={i} variant="destructive" className="text-xs block">
-                                  {issue}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <Badge className="bg-green-500 text-white text-xs">No issues</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-yellow-800">ClickUp Integration Warning</p>
+                      <p className="text-sm text-yellow-700">API rate limit approaching</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Clock className="h-5 w-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-blue-800">Scheduled Maintenance</p>
+                      <p className="text-sm text-blue-700">Database backup in 2 hours</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-green-800">Security Scan Complete</p>
+                      <p className="text-sm text-green-700">No vulnerabilities detected</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }

@@ -368,7 +368,7 @@ export default function Dashboard() {
                     <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-4 group-hover:from-red-400 group-hover:to-red-500 transition-all duration-300">
                       <Shield className="h-5 w-5 text-white" />
                     </div>
-                    <h3 className="text-base font-bold text-center text-white leading-tight px-1">Admin<br/>Dashboard</h3>
+                    <h3 className="text-base font-bold text-center text-white leading-tight px-1">SEED<br/>OS</h3>
                   </div>
                 </div>
               </Link>
