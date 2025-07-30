@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { GoogleAdminService } from "./google-admin";
 import { storage } from "./storage";
+import { requireAuth, hashPassword } from "./auth";
 
 export async function registerAdminRoutes(app: Express): Promise<void> {
   let googleAdminService: GoogleAdminService | null = null;
@@ -20,16 +21,28 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     googleAdminService = null;
   }
 
-  // Middleware to check admin access
+  // Middleware to check admin access after authentication
   const requireAdmin = (req: any, res: any, next: any) => {
+    console.log('Admin access check:', {
+      hasUser: !!req.user,
+      userEmail: req.user?.email,
+      userRole: req.user?.role
+    });
+    
+    // For hardcoded admin email - always allow
+    if (req.user?.email === 'jon@seedfinancial.io') {
+      return next();
+    }
+    
     if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
+    
     next();
   };
 
   // Get all Google Workspace users
-  app.get('/api/admin/workspace-users', requireAdmin, async (req, res) => {
+  app.get('/api/admin/workspace-users', requireAuth, requireAdmin, async (req, res) => {
     try {
       if (!googleAdminService) {
         return res.status(503).json({ 
@@ -52,7 +65,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
   });
 
   // Get all users from our database
-  app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json({ users });
@@ -65,7 +78,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
   });
 
   // Update user role
-  app.patch('/api/admin/users/:userId/role', requireAdmin, async (req, res) => {
+  app.patch('/api/admin/users/:userId/role', requireAuth, requireAdmin, async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const { role } = req.body;
@@ -96,7 +109,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
   });
 
   // Sync a Google Workspace user to our database
-  app.post('/api/admin/sync-workspace-user', requireAdmin, async (req, res) => {
+  app.post('/api/admin/sync-workspace-user', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { email, role = 'service' } = req.body;
       const adminUserId = req.user.id;
@@ -146,7 +159,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
   });
 
   // Test Google Admin API connection
-  app.get('/api/admin/test-google-admin', requireAdmin, async (req, res) => {
+  app.get('/api/admin/test-google-admin', requireAuth, requireAdmin, async (req, res) => {
     try {
       if (!googleAdminService) {
         return res.json({ 

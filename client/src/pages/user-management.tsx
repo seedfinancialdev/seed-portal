@@ -45,25 +45,28 @@ export default function UserManagement() {
   // Fetch Google Workspace users
   const { data: workspaceData, isLoading: loadingWorkspace, refetch: refetchWorkspace } = useQuery({
     queryKey: ['/api/admin/workspace-users'],
-    queryFn: () => apiRequest('GET', '/api/admin/workspace-users').then(res => res.json()),
+    queryFn: () => apiRequest('/api/admin/workspace-users'),
   });
 
   // Fetch database users
   const { data: databaseData, isLoading: loadingDatabase, refetch: refetchDatabase } = useQuery({
     queryKey: ['/api/admin/users'],
-    queryFn: () => apiRequest('GET', '/api/admin/users').then(res => res.json()),
+    queryFn: () => apiRequest('/api/admin/users'),
   });
 
   // Test Google Admin connection
   const { data: connectionTest, refetch: testConnection } = useQuery({
     queryKey: ['/api/admin/test-google-admin'],
-    queryFn: () => apiRequest('GET', '/api/admin/test-google-admin').then(res => res.json()),
+    queryFn: () => apiRequest('/api/admin/test-google-admin'),
   });
 
   // Update user role mutation
   const updateRoleMutation = useMutation({
     mutationFn: ({ userId, role }: { userId: number; role: string }) =>
-      apiRequest('PATCH', `/api/admin/users/${userId}/role`, { role }).then(res => res.json()),
+      apiRequest(`/api/admin/users/${userId}/role`, { 
+        method: 'PATCH', 
+        body: JSON.stringify({ role })
+      }),
     onSuccess: () => {
       toast({ title: "Success", description: "User role updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -80,7 +83,10 @@ export default function UserManagement() {
   // Sync workspace user mutation
   const syncUserMutation = useMutation({
     mutationFn: ({ email, role }: { email: string; role: string }) =>
-      apiRequest('POST', '/api/admin/sync-workspace-user', { email, role }).then(res => res.json()),
+      apiRequest('/api/admin/sync-workspace-user', { 
+        method: 'POST', 
+        body: JSON.stringify({ email, role })
+      }),
     onSuccess: (data) => {
       toast({
         title: "Success",
