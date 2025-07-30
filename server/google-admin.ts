@@ -22,7 +22,11 @@ export class GoogleAdminService {
   private initialized = false;
 
   constructor() {
-    this.initialize();
+    // Start initialization but don't wait for it in constructor
+    this.initialize().catch(error => {
+      console.error('Google Admin initialization failed:', error);
+      this.initialized = false;
+    });
   }
 
   private async initialize() {
