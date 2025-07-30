@@ -10,6 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+✓ **Google OAuth Authentication and Admin API Integration** (July 30, 2025)
+  - **Fixed Authentication Flow**: Google OAuth now establishes proper server sessions for subsequent API requests
+  - **Session-Based Auth**: Users authenticated via Google OAuth can now access admin routes without token expiration issues
+  - **Enhanced Error Handling**: Detailed setup instructions displayed when Google Workspace Admin API fails
+  - **IAM Permission Diagnosis**: System now clearly identifies when Service Account Token Creator role is needed
+  - **User Management Interface**: Complete interface ready once Google Workspace Admin API is properly configured
+  - **Setup Instructions**: Comprehensive step-by-step guidance for configuring domain-wide delegation and IAM permissions
+
 ✓ **Complete User Management System with Hardcoded Admin Access** (July 30, 2025)
   - **Database Schema Enhanced**: Added role_assigned_by and role_assigned_at tracking fields
   - **Admin User Management Interface**: Built comprehensive /user-management page for Google Workspace integration
