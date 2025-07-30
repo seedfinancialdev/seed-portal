@@ -12,7 +12,7 @@ import { RoleBasedRedirect } from "@/components/RoleBasedRedirect";
 import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
 import AuthPage from "@/pages/auth-page-google";
-import Dashboard from "@/pages/dashboard-new"; // Main dashboard home page
+import Dashboard from "@/pages/sales-dashboard"; // Main dashboard home page
 import AdminDashboard from "@/pages/admin-dashboard"; // Admin dashboard
 import SalesDashboard from "@/pages/sales-dashboard"; // Sales dashboard
 import ServiceDashboard from "@/pages/service-dashboard"; // Service dashboard
