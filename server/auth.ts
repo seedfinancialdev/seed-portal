@@ -94,7 +94,7 @@ export function setupAuth(app: Express) {
             
             // Create user with default service role (admin must manually assign roles)
             let role = 'service'; // Default role for all new users
-            // Only jon@seedfinancial.io gets admin by default to bootstrap the system
+            // Hardcode jon@seedfinancial.io as permanent admin to bootstrap the system
             if (email === 'jon@seedfinancial.io') {
               role = 'admin';
             }
@@ -124,6 +124,12 @@ export function setupAuth(app: Express) {
               }
             }
           } else {
+            // Ensure jon@seedfinancial.io always has admin role (hardcoded protection)
+            if (user.email === 'jon@seedfinancial.io' && user.role !== 'admin') {
+              console.log(`Updating jon@seedfinancial.io role from ${user.role} to admin`);
+              user = await storage.updateUserRole(user.id, 'admin', user.id);
+            }
+            
             // For existing users, also verify they still exist in HubSpot
             if (hubSpotService) {
               try {

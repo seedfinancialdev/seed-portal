@@ -11,6 +11,12 @@ export function RoleBasedRedirect() {
   useEffect(() => {
     // Only redirect if we're on the root path and user is authenticated
     if (location === '/' && currentUser) {
+      // Hardcode jon@seedfinancial.io to always go to admin dashboard
+      if (currentUser.email === 'jon@seedfinancial.io') {
+        setLocation('/admin');
+        return;
+      }
+      
       const defaultDashboard = getDefaultDashboard();
       if (defaultDashboard !== '/') {
         setLocation(defaultDashboard);

@@ -104,9 +104,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Determine if user should be admin
-        const adminEmails = ['jon@seedfinancial.io', 'anthony@seedfinancial.io'];
-        const role = adminEmails.includes(email.toLowerCase()) ? 'admin' : 'user';
+        // Determine if user should be admin - hardcode jon@seedfinancial.io as permanent admin
+        let role = 'service'; // Default role for all new users
+        if (email === 'jon@seedfinancial.io') {
+          role = 'admin';
+        }
 
         user = await storage.createUser({
           email,
@@ -122,6 +124,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Update existing user to link Google account
         await storage.updateUserGoogleId(user.id, googleId, 'google', picture);
         user = await storage.getUser(user.id);
+      }
+
+      // Ensure jon@seedfinancial.io always has admin role (hardcoded protection)
+      if (user && user.email === 'jon@seedfinancial.io' && user.role !== 'admin') {
+        console.log(`Updating jon@seedfinancial.io role from ${user.role} to admin in Google sync`);
+        user = await storage.updateUserRole(user.id, 'admin', user.id);
       }
 
       // Return user data (excluding password)
