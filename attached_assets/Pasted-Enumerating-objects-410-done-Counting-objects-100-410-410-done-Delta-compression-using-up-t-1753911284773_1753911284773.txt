@@ -1,0 +1,46 @@
+Enumerating objects: 410, done.
+Counting objects: 100% (410/410), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (382/382), done.
+Writing objects: 100% (382/382), 38.85 MiB | 5.91 MiB/s, done.
+Total 382 (delta 298), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (298/298), completed with 23 local objects.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:     
+remote:       —— Google OAuth Client ID ————————————————————————————
+remote:        locations:
+remote:          - commit: 9c28c0519432dc39579fe6444df9ccc4c1cd0ec9
+remote:            path: gcloud/application_default_credentials.json:2
+remote:          - commit: 9c28c0519432dc39579fe6444df9ccc4c1cd0ec9
+remote:            path: server/google-admin.ts:38
+remote:          - commit: 9c28c0519432dc39579fe6444df9ccc4c1cd0ec9
+remote:            path: server/routes.ts:1320
+remote:          - commit: 9c28c0519432dc39579fe6444df9ccc4c1cd0ec9
+remote:            path: server/routes.ts:1342
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/seedfinancialdev/seed-portal/security/secret-scanning/unblock-secret/30bxjKoFbz2R6hsGGDo8DQfxlp2
+remote:     
+remote:     
+remote:       —— Google OAuth Client Secret ————————————————————————
+remote:        locations:
+remote:          - commit: 9c28c0519432dc39579fe6444df9ccc4c1cd0ec9
+remote:            path: gcloud/application_default_credentials.json:3
+remote:          - commit: 9c28c0519432dc39579fe6444df9ccc4c1cd0ec9
+remote:            path: server/google-admin.ts:39
+remote:          - commit: 9c28c0519432dc39579fe6444df9ccc4c1cd0ec9
+remote:            path: server/routes.ts:1343
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/seedfinancialdev/seed-portal/security/secret-scanning/unblock-secret/30bxjOQM1vzlI2kYjEvWZSe9RZg
