@@ -294,8 +294,13 @@ export function setupAuth(app: Express) {
 
 // Middleware to require authentication (supports both session and Google OAuth)
 export async function requireAuth(req: any, res: any, next: any) {
+  console.log('requireAuth: Checking authentication for', req.url);
+  console.log('requireAuth: Session authenticated:', req.isAuthenticated());
+  console.log('requireAuth: Auth header present:', !!req.headers.authorization);
+  
   // First check session-based auth
   if (req.isAuthenticated()) {
+    console.log('requireAuth: Session auth successful for', req.user?.email);
     return next();
   }
   
@@ -303,6 +308,7 @@ export async function requireAuth(req: any, res: any, next: any) {
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
+    console.log('requireAuth: Verifying Google OAuth token...');
     try {
       // Verify the token with Google
       const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -313,20 +319,29 @@ export async function requireAuth(req: any, res: any, next: any) {
       
       if (response.ok) {
         const userInfo = await response.json();
+        console.log('requireAuth: Google token verified for', userInfo.email, 'domain:', userInfo.hd);
         // Check if user is from seedfinancial.io domain
         if (userInfo.hd === 'seedfinancial.io') {
           // Get user from database
           const user = await storage.getUserByEmail(userInfo.email);
           if (user) {
+            console.log('requireAuth: Google OAuth auth successful for', user.email);
             req.user = user;
             return next();
+          } else {
+            console.log('requireAuth: User not found in database:', userInfo.email);
           }
+        } else {
+          console.log('requireAuth: Invalid domain:', userInfo.hd);
         }
+      } else {
+        console.log('requireAuth: Google token verification failed:', response.status);
       }
     } catch (error) {
-      console.error('Token verification failed:', error);
+      console.error('requireAuth: Token verification failed:', error);
     }
   }
   
+  console.log('requireAuth: Authentication failed');
   return res.status(401).json({ message: "Authentication required" });
 }
