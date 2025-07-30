@@ -87,6 +87,48 @@ interface GenerationStep {
 }
 
 export class AnthropicService {
+  private formatContentAsHtml(content: string): string {
+    // If content already looks like HTML, return as-is
+    if (content.includes('<p>') || content.includes('<h1>') || content.includes('<h2>')) {
+      return content;
+    }
+    
+    // Convert plain text/markdown to HTML
+    let html = content
+      .trim()
+      // Convert headings
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      // Convert bold and italic
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      // Convert lists
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+      // Convert line breaks to paragraphs
+      .split('\n\n')
+      .map(paragraph => {
+        const trimmed = paragraph.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('<h') || trimmed.startsWith('<li') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol')) {
+          return trimmed;
+        }
+        return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
+      })
+      .join('\n');
+    
+    // Wrap lists in ul tags
+    html = html.replace(/(<li>.*?<\/li>)/g, (match) => {
+      if (!match.includes('<ul>')) {
+        return `<ul>${match}</ul>`;
+      }
+      return match;
+    });
+    
+    return html;
+  }
+
   private async callClaude(prompt: string, systemPrompt?: string): Promise<string> {
     try {
       const response = await anthropic.messages.create({
@@ -220,9 +262,20 @@ Polishing Requirements:
 7. Add internal linking opportunities
 8. Ensure proper call-to-actions
 
-Provide the polished, publication-ready version:`;
+IMPORTANT: Format the output as clean HTML suitable for a rich text editor. Use proper HTML tags:
+- <h1>, <h2>, <h3> for headings
+- <p> for paragraphs
+- <ul> and <li> for lists
+- <strong> for bold text
+- <em> for emphasis
+- <blockquote> for quotes
 
-    const content = await this.callClaude(prompt, systemPrompt);
+Provide the polished, publication-ready HTML version:`;
+
+    const rawContent = await this.callClaude(prompt, systemPrompt);
+    
+    // Convert to proper HTML if not already formatted
+    const content = this.formatContentAsHtml(rawContent);
     
     return {
       step: 'polish',
@@ -360,7 +413,8 @@ Format as valid JSON only, no other text.`
         }]
       });
 
-      const result = JSON.parse(response.content[0].text);
+      const textContent = response.content.find(block => block.type === 'text');
+      const result = JSON.parse(textContent?.text || '{}');
       return {
         excerpt: result.excerpt || 'Professional knowledge base article with comprehensive guidance.',
         tags: result.tags || ['knowledge-base', 'professional-services', 'seed-financial']
