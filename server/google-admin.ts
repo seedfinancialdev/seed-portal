@@ -12,9 +12,9 @@ export interface GoogleWorkspaceUser {
   isAdmin: boolean;
   suspended: boolean;
   orgUnitPath: string;
-  lastLoginTime?: string;
+  lastLoginTime?: string | null;
   creationTime: string;
-  thumbnailPhotoUrl?: string;
+  thumbnailPhotoUrl?: string | null;
 }
 
 export class GoogleAdminService {
@@ -56,7 +56,7 @@ export class GoogleAdminService {
 
       console.log('Google Admin API credentials discovered successfully via ADC');
       
-      this.admin = google.admin({ version: 'directory_v1', auth: authClient });
+      this.admin = google.admin({ version: 'directory_v1', auth: authClient as any });
       this.initialized = true;
       
       console.log('Google Admin API initialized successfully');
@@ -182,12 +182,12 @@ export class GoogleAdminService {
         creationTime: user.creationTime || '',
         thumbnailPhotoUrl: user.thumbnailPhotoUrl
       };
-    } catch (error) {
+    } catch (error: any) {
       if (error.code === 404) {
         return null;
       }
       console.error('Error fetching Google Workspace user:', error);
-      throw new Error(`Failed to fetch workspace user: ${error}`);
+      throw new Error(`Failed to fetch workspace user: ${error?.message || error}`);
     }
   }
 }
