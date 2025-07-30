@@ -19,9 +19,7 @@ export function useQuoteManagement() {
   } = useQuery<Quote[]>({
     queryKey: ["/api/quotes"],
     queryFn: async () => {
-      const response = await fetch("/api/quotes", { credentials: "include" });
-      if (!response.ok) throw new Error("Failed to fetch quotes");
-      return response.json();
+      return await apiRequest("/api/quotes");
     }
   });
 
@@ -50,11 +48,15 @@ export function useQuoteManagement() {
       };
       
       if (editingQuoteId) {
-        const response = await apiRequest("PUT", `/api/quotes/${editingQuoteId}`, quoteData);
-        return response.json();
+        return await apiRequest(`/api/quotes/${editingQuoteId}`, {
+          method: "PUT",
+          body: JSON.stringify(quoteData)
+        });
       } else {
-        const response = await apiRequest("POST", "/api/quotes", quoteData);
-        return response.json();
+        return await apiRequest("/api/quotes", {
+          method: "POST",
+          body: JSON.stringify(quoteData)
+        });
       }
     },
     onSuccess: (data) => {
@@ -80,8 +82,10 @@ export function useQuoteManagement() {
   // Archive quote mutation
   const archiveQuoteMutation = useMutation({
     mutationFn: async (quoteId: number) => {
-      const response = await apiRequest("PATCH", `/api/quotes/${quoteId}/archive`, {});
-      return response.json();
+      return await apiRequest(`/api/quotes/${quoteId}/archive`, {
+        method: "PATCH",
+        body: JSON.stringify({})
+      });
     },
     onSuccess: () => {
       toast({

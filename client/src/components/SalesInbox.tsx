@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Building2, ExternalLink, Filter, Inbox, Calendar, User, X, Search } from 'lucide-react';
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth';
+import { apiRequest } from '@/lib/queryClient';
 import { useState } from 'react';
 
 interface SalesLead {
@@ -44,11 +45,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   const { data: leadsData, isLoading, error } = useQuery({
     queryKey: ['/api/sales-inbox/leads', limit, user?.email],
     queryFn: async () => {
-      const response = await fetch(`/api/sales-inbox/leads?limit=${limit}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch sales inbox leads');
-      }
-      return response.json();
+      return await apiRequest(`/api/sales-inbox/leads?limit=${limit}`);
     },
     staleTime: 0, // Always consider data stale - fetch fresh data every time
     gcTime: 0, // Don't cache data to prevent user data leakage
@@ -60,11 +57,7 @@ export function SalesInbox({ limit = 8 }: SalesInboxProps) {
   const { data: allLeadsData, isLoading: isLoadingAll } = useQuery({
     queryKey: ['/api/sales-inbox/leads', 'all', user?.email],
     queryFn: async () => {
-      const response = await fetch('/api/sales-inbox/leads?limit=100'); // Get up to 100 leads
-      if (!response.ok) {
-        throw new Error('Failed to fetch all sales inbox leads');
-      }
-      return response.json();
+      return await apiRequest('/api/sales-inbox/leads?limit=100'); // Get up to 100 leads
     },
     staleTime: 0,
     gcTime: 0,

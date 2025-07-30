@@ -261,9 +261,18 @@ export default function Profile() {
     formData.append('photo', file);
 
     try {
+      // Get auth token for the request
+      const token = localStorage.getItem('google_access_token');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const response = await fetch('/api/user/upload-photo', {
         method: 'POST',
         body: formData,
+        headers,
+        credentials: 'include',
       });
 
       if (response.ok) {

@@ -20,6 +20,10 @@ Preferred communication style: Simple, everyday language.
   - **Session Management**: Proper localStorage handling for Google user data and access tokens
   - **Role-Based Access**: Admin role automatically assigned to jon@seedfinancial.io and anthony@seedfinancial.io
   - **Security Enhancement**: Google OAuth tokens properly validated on backend with domain restriction
+  - **Authentication Middleware Fix**: Updated requireAuth to support both session and Google OAuth tokens
+  - **API Client Updates**: Modified queryClient to include authorization header with Google OAuth token
+  - **Component Updates**: Fixed SalesInbox and other components to use apiRequest instead of fetch
+  - **Intermittent Auth Issue**: Some API calls succeed while others fail - investigating timing/race condition
 
 ✓ **Comprehensive AI Article Generator Enhancement with Navigation** (July 29, 2025)
   - **Fixed Template Variables Logic**: Changed from "required" to truly optional - AI can work around missing variables
