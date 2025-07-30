@@ -142,8 +142,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     },
     scope: 'openid email profile',
     hosted_domain: 'seedfinancial.io',
-    flow: 'implicit', // Force popup mode
-    ux_mode: 'popup', // Explicitly use popup UX mode to prevent redirects
+    flow: 'implicit', // Force popup mode to prevent redirects
   });
 
   // Sign out mutation
