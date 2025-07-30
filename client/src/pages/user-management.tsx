@@ -212,6 +212,24 @@ export default function UserManagement() {
                 <div className="text-center py-8 text-gray-500">
                   Google Admin API not configured
                 </div>
+              ) : !connectionTest?.connected ? (
+                <div className="text-center py-8">
+                  <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                  <div className="text-red-600 font-medium mb-1">Connection Failed</div>
+                  <div className="text-sm text-gray-600 max-w-md mx-auto">
+                    {connectionTest?.message || 'Unable to connect to Google Workspace'}
+                  </div>
+                  {connectionTest?.message?.includes('domain-wide delegation') && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-left max-w-md mx-auto">
+                      <div className="text-sm text-yellow-800">
+                        <strong>Setup Required:</strong> Please enable domain-wide delegation for the service account:
+                        <br />• Go to Google Workspace Admin Console
+                        <br />• Navigate to Security → API Controls → Domain-wide Delegation
+                        <br />• Add the service account client ID with required scopes
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : workspaceUsers.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No workspace users found

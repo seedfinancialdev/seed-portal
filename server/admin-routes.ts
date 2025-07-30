@@ -171,11 +171,11 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
         });
       }
 
-      const connected = await googleAdminService.testConnection();
+      const testResult = await googleAdminService.testConnection();
       res.json({ 
-        connected,
+        connected: testResult.connected,
         configured: true,
-        message: connected ? 'Connection successful' : 'Connection failed'
+        message: testResult.connected ? 'Connection successful' : (testResult.error || 'Connection failed')
       });
     } catch (error: any) {
       res.json({ 

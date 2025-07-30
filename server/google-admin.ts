@@ -105,10 +105,10 @@ export class GoogleAdminService {
     return this.initialized && this.admin !== null;
   }
 
-  async testConnection(): Promise<boolean> {
+  async testConnection(): Promise<{ connected: boolean; error?: string }> {
     try {
       if (!this.admin) {
-        return false;
+        return { connected: false, error: 'Google Admin API not initialized' };
       }
 
       // Try to fetch domains to test connection
@@ -116,10 +116,24 @@ export class GoogleAdminService {
         customer: 'my_customer'
       });
       
-      return response.status === 200;
-    } catch (error) {
+      return { connected: response.status === 200 };
+    } catch (error: any) {
       console.error('Google Admin API connection test failed:', error);
-      return false;
+      
+      if (error.code === 403 || error.status === 403) {
+        if (error.message?.includes('iam.serviceAccounts.getAccessToken')) {
+          return { 
+            connected: false, 
+            error: 'Domain-wide delegation not configured. Please enable domain-wide delegation for the service account in Google Workspace Admin Console.' 
+          };
+        }
+        return { 
+          connected: false, 
+          error: 'Insufficient permissions. Check admin permissions and domain-wide delegation settings.' 
+        };
+      }
+      
+      return { connected: false, error: error.message || 'Connection test failed' };
     }
   }
 
@@ -153,9 +167,18 @@ export class GoogleAdminService {
         creationTime: user.creationTime || '',
         thumbnailPhotoUrl: user.thumbnailPhotoUrl
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching Google Workspace users:', error);
-      throw new Error(`Failed to fetch workspace users: ${error}`);
+      
+      // Handle specific permission errors
+      if (error.code === 403 || error.status === 403) {
+        if (error.message?.includes('iam.serviceAccounts.getAccessToken')) {
+          throw new Error('Domain-wide delegation not configured. The service account needs domain-wide delegation enabled in Google Workspace Admin Console.');
+        }
+        throw new Error('Insufficient permissions to access Google Workspace users. Check admin permissions and domain-wide delegation.');
+      }
+      
+      throw new Error(`Failed to fetch workspace users: ${error.message || error}`);
     }
   }
 
