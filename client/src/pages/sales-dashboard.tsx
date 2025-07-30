@@ -360,18 +360,16 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Admin Dashboard - Only visible to admins */}
+            {/* Sales Trainer - Only visible to admins */}
             {(user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin') && (
-              <Link href="/admin">
-                <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 8} as React.CSSProperties}>
-                  <div className="action-card-content">
-                    <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-4 group-hover:from-red-400 group-hover:to-red-500 transition-all duration-300">
-                      <Shield className="h-5 w-5 text-white" />
-                    </div>
-                    <h3 className="text-base font-bold text-center text-white leading-tight px-1">SEED<br/>OS</h3>
+              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 8} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-4 group-hover:from-red-400 group-hover:to-red-500 transition-all duration-300">
+                    <GraduationCap className="h-5 w-5 text-white" />
                   </div>
+                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Sales<br/>Trainer</h3>
                 </div>
-              </Link>
+              </div>
             )}
           </div>
         </div>
