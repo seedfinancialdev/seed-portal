@@ -132,9 +132,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.updateUserRole(user.id, 'admin', user.id);
       }
 
-      // Return user data (excluding password)
-      const { password, ...safeUser } = user;
-      res.json(safeUser);
+      // Log user into session for subsequent API requests
+      req.login(user, (err: any) => {
+        if (err) {
+          console.error('Session login failed:', err);
+          return res.status(500).json({ message: "Failed to establish session" });
+        }
+        
+        console.log('Google OAuth user logged into session:', user.email);
+        // Return user data (excluding password)
+        const { password, ...safeUser } = user;
+        res.json(safeUser);
+      });
     } catch (error) {
       console.error('Error syncing Google user:', error);
       res.status(500).json({ message: "Failed to sync user" });
