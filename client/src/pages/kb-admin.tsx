@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2 } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2, Sparkles, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AIArticleGenerator } from "@/components/AIArticleGenerator";
 import logoPath from "@assets/Nav Logo_1753431362883.png";
@@ -179,8 +179,55 @@ export default function KbAdmin() {
     },
   });
 
+  // Generate metadata mutation
+  const generateMetadataMutation = useMutation({
+    mutationFn: async (data: { content: string; title: string }) => {
+      const response = await apiRequest('/api/kb/ai/generate-metadata', {
+        method: 'POST',  
+        body: JSON.stringify(data)
+      });
+      return response;
+    },
+    onSuccess: (data: { excerpt: string; tags: string[] }) => {
+      form.setValue('excerpt', data.excerpt);
+      form.setValue('tags', data.tags.join(', '));
+      toast({
+        title: "Metadata Generated",
+        description: "Excerpt and tags have been auto-generated based on your content.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate metadata",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleGenerateExcerpt = () => {
+    const content = form.getValues('content');
+    const title = form.getValues('title');
+    if (content && title) {
+      generateMetadataMutation.mutate({ content, title });
+    }
+  };
+
   const handleCreateArticle = (data: ArticleFormData) => {
-    createArticleMutation.mutate(data);
+    // Generate slug from title
+    const slug = data.title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single
+      .trim();
+    
+    const articleData = {
+      ...data,
+      slug
+    };
+    
+    createArticleMutation.mutate(articleData);
   };
 
   const handleUpdateArticle = (data: ArticleFormData) => {
@@ -405,7 +452,24 @@ export default function KbAdmin() {
                             name="excerpt"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Excerpt</FormLabel>
+                                <FormLabel className="flex items-center justify-between">
+                                  Excerpt
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={handleGenerateExcerpt}
+                                    disabled={generateMetadataMutation.isPending || !form.getValues('content') || !form.getValues('title')}
+                                    className="text-xs"
+                                  >
+                                    {generateMetadataMutation.isPending ? (
+                                      <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                                    ) : (
+                                      <Sparkles className="h-3 w-3 mr-1" />
+                                    )}
+                                    Auto Generate
+                                  </Button>
+                                </FormLabel>
                                 <FormControl>
                                   <Textarea placeholder="Brief summary of the article" {...field} />
                                 </FormControl>
@@ -461,7 +525,24 @@ export default function KbAdmin() {
                               name="tags"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Tags</FormLabel>
+                                  <FormLabel className="flex items-center justify-between">
+                                    Tags
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={handleGenerateExcerpt}
+                                      disabled={generateMetadataMutation.isPending || !form.getValues('content') || !form.getValues('title')}
+                                      className="text-xs"
+                                    >
+                                      {generateMetadataMutation.isPending ? (
+                                        <RefreshCw className="h-3 w-3 animate-spin mr-1" />
+                                      ) : (
+                                        <Sparkles className="h-3 w-3 mr-1" />
+                                      )}
+                                      Auto Generate
+                                    </Button>
+                                  </FormLabel>
                                   <FormControl>
                                     <Input placeholder="tag1, tag2, tag3" {...field} />
                                   </FormControl>

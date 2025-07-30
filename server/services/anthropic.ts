@@ -274,8 +274,11 @@ Provide the polished, publication-ready HTML version:`;
 
     const rawContent = await this.callClaude(prompt, systemPrompt);
     
-    // Convert to proper HTML if not already formatted
-    const content = this.formatContentAsHtml(rawContent);
+    // Clean up HTML markers if AI returned them
+    let content = rawContent;
+    if (content.includes('```html')) {
+      content = content.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+    }
     
     return {
       step: 'polish',
@@ -414,7 +417,12 @@ Format as valid JSON only, no other text.`
       });
 
       const textContent = response.content.find(block => block.type === 'text');
-      const result = JSON.parse(textContent?.text || '{}');
+      let rawText = textContent?.text || '{}';
+      
+      // Clean up common JSON formatting issues from AI responses
+      rawText = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      const result = JSON.parse(rawText);
       return {
         excerpt: result.excerpt || 'Professional knowledge base article with comprehensive guidance.',
         tags: result.tags || ['knowledge-base', 'professional-services', 'seed-financial']
