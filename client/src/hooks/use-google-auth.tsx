@@ -83,6 +83,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
+        console.log('Google OAuth success, processing token...');
         // Get user info using the access token
         const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: {
@@ -91,6 +92,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         });
         
         const userInfo = await userInfoResponse.json();
+        console.log('Got user info:', userInfo.email, 'domain:', userInfo.hd);
         
         // Check if user is from seedfinancial.io domain
         if (userInfo.hd !== 'seedfinancial.io') {
@@ -115,6 +117,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         setAccessToken(tokenResponse.access_token);
         setGoogleUser(googleUser);
         
+        console.log('Authentication successful for:', userInfo.email);
         toast({
           title: "Welcome!",
           description: "You have successfully signed in.",
@@ -138,8 +141,9 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       });
     },
     scope: 'openid email profile',
-    hosted_domain: 'seedfinancial.io', // Restrict to seedfinancial.io domain
-    flow: 'implicit', // Use popup flow instead of redirect to avoid localhost issues
+    hosted_domain: 'seedfinancial.io',
+    flow: 'implicit', // Force popup mode
+    ux_mode: 'popup', // Explicitly use popup UX mode to prevent redirects
   });
 
   // Sign out mutation
