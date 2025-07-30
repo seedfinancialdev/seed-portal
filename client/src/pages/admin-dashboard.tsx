@@ -435,9 +435,14 @@ export default function AdminDashboard() {
                 <User className="mr-2 h-4 w-4" />
                 My Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLocation('/')}>
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Portal
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setLocation('/sales-dashboard')}>
+                <BarChart className="mr-2 h-4 w-4" />
+                Sales Dashboard
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLocation('/service-dashboard')}>
+                <Headphones className="mr-2 h-4 w-4" />
+                Service Dashboard
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={signOut} className="text-red-600">
