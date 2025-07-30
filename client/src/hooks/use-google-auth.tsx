@@ -144,17 +144,25 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   // Sign out mutation
   const signOutMutation = useMutation({
     mutationFn: async () => {
-      if (accessToken) {
-        // Notify backend of logout
-        await apiRequest("/api/auth/logout", {
-          method: "POST",
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        });
+      try {
+        if (accessToken) {
+          // Try to notify backend of logout, but don't fail if it errors
+          await apiRequest("/api/logout", {
+            method: "POST",
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          }).catch((error) => {
+            // Log but don't throw - we still want to clear local state
+            console.error('Backend logout error:', error);
+          });
+        }
+      } catch (error) {
+        // Log but continue with local cleanup
+        console.error('Logout API error:', error);
       }
       
-      // Clear local state
+      // Always clear local state regardless of API call success
       localStorage.removeItem('google_access_token');
       localStorage.removeItem('google_user');
       setGoogleUser(null);
@@ -165,6 +173,15 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
+        duration: 2000,
+      });
+    },
+    onError: (error) => {
+      // Even on error, we've cleared local state so user is effectively logged out
+      console.error('Sign out error:', error);
+      toast({
+        title: "Signed out",
+        description: "You have been signed out.",
         duration: 2000,
       });
     },

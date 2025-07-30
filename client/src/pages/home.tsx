@@ -631,15 +631,16 @@ export default function Home() {
   // Query to fetch all quotes
   const { data: allQuotes = [], refetch: refetchQuotes } = useQuery<Quote[]>({
     queryKey: ["/api/quotes", { search: searchTerm, sortField, sortOrder }],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (sortField) params.append('sortField', sortField);
       if (sortOrder) params.append('sortOrder', sortOrder);
       
-      return fetch(`/api/quotes?${params.toString()}`)
-        .then(res => res.json());
-    }
+      const response = await apiRequest(`/api/quotes?${params.toString()}`);
+      return response || [];
+    },
+    retry: false, // Don't retry on auth failures
   });
 
   const createQuoteMutation = useMutation({
