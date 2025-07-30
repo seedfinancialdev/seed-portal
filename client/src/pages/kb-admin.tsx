@@ -18,7 +18,7 @@ import { z } from "zod";
 import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2, Sparkles, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AIArticleGenerator } from "@/components/AIArticleGenerator";
-import logoPath from "@assets/Nav Logo_1753431362883.png";
+import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Types
 interface KbCategory {
@@ -84,7 +84,8 @@ export default function KbAdmin() {
     queryKey: ["/api/kb/articles", selectedCategory],
     queryFn: async () => {
       const params = selectedCategory ? `?categoryId=${selectedCategory}` : '';
-      return apiRequest(`/api/kb/articles${params}`);
+      const response = await apiRequest("GET", `/api/kb/articles${params}`);
+      return response.json();
     },
     enabled: !!user,
   });
