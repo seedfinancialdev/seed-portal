@@ -64,20 +64,23 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       // Provide detailed setup instructions for common errors
       if (error.message?.includes('iam.serviceAccounts.getAccessToken')) {
         return res.status(500).json({ 
-          message: 'Google Workspace Admin API Setup Required',
-          error: 'Domain-wide delegation not properly configured',
+          message: 'Google Workspace Admin API Setup Issue',
+          error: 'Impersonated service account requires complex setup',
           setupInstructions: {
+            currentIssue: 'Impersonated service accounts need additional IAM permissions that can be complex to configure',
+            recommendedSolution: 'Create a direct service account instead (much simpler setup)',
             step1: 'Go to Google Cloud Console → IAM & Admin → Service Accounts',
-            step2: 'Find the service account: seed-admin-api@seedportal.iam.gserviceaccount.com',
-            step3: 'Click on the service account, go to "Permissions" tab',
-            step4: 'Add IAM binding: Service Account Token Creator role',
-            step5: 'Also ensure domain-wide delegation is enabled in Google Workspace Admin Console',
-            clientId: 'Use the service account Client ID in Google Workspace Admin Console',
+            step2: 'Create a new service account (e.g., "seedos-admin-direct")',
+            step3: 'Download the JSON key file',
+            step4: 'Replace the current GOOGLE_SERVICE_ACCOUNT_JSON secret with the new direct service account JSON',
+            step5: 'In Google Workspace Admin Console → Security → API Controls → Domain-wide Delegation',
+            step6: 'Add the new service account client ID with these scopes:',
             scopes: [
               'https://www.googleapis.com/auth/admin.directory.user.readonly',
               'https://www.googleapis.com/auth/admin.directory.group.readonly',
               'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
-            ]
+            ],
+            note: 'Direct service accounts are much more reliable than impersonated ones for this use case'
           }
         });
       }

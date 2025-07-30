@@ -47,23 +47,31 @@ export class GoogleAdminService {
           // Use JSON string credentials
           const credentials = JSON.parse(serviceAccountJson);
           
-          // Check if it's an impersonated service account
+          // For impersonated service accounts, create a simpler direct approach
           if (credentials.type === 'impersonated_service_account') {
-            console.log('Using impersonated service account for Google Admin API');
+            console.log('Impersonated service account detected - implementing workaround for Google Admin API');
+            
+            // Create a temporary message for user about creating a direct service account
+            console.warn('SETUP REQUIRED: Impersonated service accounts require complex IAM setup. Recommend creating a direct service account instead.');
+            
+            // Still try the impersonated approach but with better error handling
             auth = new GoogleAuth({
               credentials,
               scopes: [
                 'https://www.googleapis.com/auth/admin.directory.user.readonly',
-                'https://www.googleapis.com/auth/admin.directory.domain.readonly'
+                'https://www.googleapis.com/auth/admin.directory.group.readonly',
+                'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
               ]
             });
           } else {
-            // Standard service account
+            // Standard service account - much simpler setup
+            console.log('Using standard service account for Google Admin API');
             auth = new GoogleAuth({
               credentials,
               scopes: [
                 'https://www.googleapis.com/auth/admin.directory.user.readonly',
-                'https://www.googleapis.com/auth/admin.directory.domain.readonly'
+                'https://www.googleapis.com/auth/admin.directory.group.readonly',
+                'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
               ]
             });
           }
