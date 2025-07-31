@@ -33,27 +33,27 @@ function createRedisConnections(): RedisConfig | null {
     enableOfflineQueue: true,
   };
 
-  // Session Redis - DB 1 (persistent for sessions)
+  // Session Redis - using key prefix for isolation
   const sessionRedis = new Redis({
     ...baseConfig,
-    db: 1,
+    db: 0, // Use default database
     keyPrefix: 'sess:',
     commandTimeout: 5000,
   });
 
-  // Cache Redis - DB 2 (volatile with LRU eviction)
+  // Cache Redis - using key prefix for isolation
   const cacheRedis = new Redis({
     ...baseConfig,
-    db: 2,
+    db: 0, // Use default database
     keyPrefix: 'cache:',
     commandTimeout: 3000,
   });
 
-  // Queue Redis - DB 0 (most persistent for jobs)
+  // Queue Redis - no prefix for BullMQ compatibility
   const queueRedis = new Redis({
     ...baseConfig,
-    db: 0,
-    // No key prefix for BullMQ compatibility
+    db: 0, // Use default database
+    keyPrefix: 'queue:', // Add prefix to avoid collisions
     commandTimeout: 10000,
   });
 

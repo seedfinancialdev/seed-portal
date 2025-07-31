@@ -10,10 +10,8 @@ import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import * as connectRedisModule from "connect-redis";
+import { RedisStore } from "connect-redis";
 import { redis } from "./redis";
-
-const connectRedis = (connectRedisModule as any).default || connectRedisModule;
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
 
@@ -77,11 +75,10 @@ export class DatabaseStorage implements IStorage {
 
   constructor() {
     // Use Redis for sessions if available, otherwise fall back to memory store
-    if (process.env.REDIS_URL && redis.sessionRedis) {
+    if (process.env.REDIS_URL && redis?.sessionRedis) {
       try {
-        const RedisStore = connectRedis(session);
         this.sessionStore = new RedisStore({
-          client: redis.sessionRedis,
+          client: redis.sessionRedis as any,
           prefix: 'sess:',
           ttl: 24 * 60 * 60, // 24 hours
           disableTouch: false,
