@@ -1288,13 +1288,18 @@ function Home() {
           <p className="text-lg text-green-100">Generate accurate pricing for your services</p>
         </div>
 
-        {/* Prominent Client Information Section */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+        {/* Enhanced Client Information Section */}
+        <div className="max-w-5xl mx-auto mb-10">
+          <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-3">
-                <User className="h-6 w-6 text-[#e24c00]" />
-                <CardTitle className="text-xl text-gray-900">Client Information</CardTitle>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-r from-[#e24c00] to-orange-500 rounded-xl shadow-lg">
+                  <User className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl text-gray-900">Client Information</CardTitle>
+                  <p className="text-gray-600 mt-1">Enter client details to begin quote generation</p>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -1327,7 +1332,6 @@ function Home() {
                                 }
                                 
                                 debouncedVerifyEmail(email);
-                                debouncedCheckExistingQuotes(email);
                                 setHasUnsavedChanges(true);
                               }}
                             />
@@ -1404,17 +1408,22 @@ function Home() {
           </Card>
         </div>
 
-        {/* Service Selection - Expandable for 6 services */}
-        <div className="max-w-6xl mx-auto mb-8">
-          <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Settings className="h-6 w-6 text-[#e24c00]" />
-                <CardTitle className="text-xl text-gray-900">Service Selection</CardTitle>
+        {/* Enhanced Service Selection for 6 services */}
+        <div className="max-w-7xl mx-auto mb-10">
+          <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-lg">
+                  <Settings className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl text-gray-900">Service Selection</CardTitle>
+                  <p className="text-gray-600 mt-1">Choose services to include in this quote</p>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 {/* Bookkeeping Service Card */}
                 <div 
                   className={`
@@ -1515,7 +1524,7 @@ function Home() {
                   </p>
                 </div>
 
-                {/* Coming Soon Services */}
+                {/* Payroll Service Card */}
                 <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
@@ -1523,10 +1532,12 @@ function Home() {
                     </div>
                     <h4 className="font-semibold text-gray-500">Payroll</h4>
                   </div>
-                  <div className="text-sm text-gray-400 mb-2">Coming Soon</div>
-                  <p className="text-xs text-gray-400">Payroll processing and compliance</p>
+                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
+                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
+                  <p className="text-xs text-gray-500">Comprehensive payroll management and compliance</p>
                 </div>
 
+                {/* FP&A Lite Service Card */}
                 <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
@@ -1534,10 +1545,12 @@ function Home() {
                     </div>
                     <h4 className="font-semibold text-gray-500">FP&A Lite</h4>
                   </div>
-                  <div className="text-sm text-gray-400 mb-2">Coming Soon</div>
-                  <p className="text-xs text-gray-400">Financial planning and analysis</p>
+                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
+                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
+                  <p className="text-xs text-gray-500">Financial planning and analysis services</p>
                 </div>
 
+                {/* AP/AR Lite Service Card */}
                 <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
@@ -1545,10 +1558,12 @@ function Home() {
                     </div>
                     <h4 className="font-semibold text-gray-500">AP/AR Lite</h4>
                   </div>
-                  <div className="text-sm text-gray-400 mb-2">Coming Soon</div>
-                  <p className="text-xs text-gray-400">Accounts payable/receivable</p>
+                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
+                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
+                  <p className="text-xs text-gray-500">Accounts payable and receivable management</p>
                 </div>
 
+                {/* Fractional CFO Service Card */}
                 <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
@@ -1556,8 +1571,41 @@ function Home() {
                     </div>
                     <h4 className="font-semibold text-gray-500">Fractional CFO</h4>
                   </div>
-                  <div className="text-sm text-gray-400 mb-2">Coming Soon</div>
-                  <p className="text-xs text-gray-400">Strategic financial leadership</p>
+                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
+                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
+                  <p className="text-xs text-gray-500">Strategic financial leadership and guidance</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Custom Templates Section */}
+        <div className="max-w-7xl mx-auto mb-10">
+          <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-r from-purple-600 to-purple-500 rounded-xl shadow-lg">
+                  <FileText className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-2xl text-gray-900">Quote Templates</CardTitle>
+                  <p className="text-gray-600 mt-1">Save and reuse custom service combinations</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-dashed border-2 hover:border-purple-300 hover:bg-purple-50 text-gray-600 hover:text-purple-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Template
+                </Button>
+                <div className="text-sm text-gray-500 flex items-center">
+                  <span>Templates will appear here once created</span>
                 </div>
               </div>
             </CardContent>
@@ -1568,7 +1616,7 @@ function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Quote Form Card */}
-            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+            <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
               <CardContent className="p-6">
                 {/* Form Navigation for Multiple Services */}
                 {getActiveServices().length > 1 && (
@@ -1624,12 +1672,17 @@ function Home() {
               </CardContent>
             </Card>
 
-            {/* Pricing Summary */}
-            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <DollarSign className="h-6 w-6 text-[#e24c00]" />
-                  <CardTitle className="text-xl text-gray-900">Pricing Summary</CardTitle>
+            {/* Enhanced Pricing Summary */}
+            <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-lg">
+                    <DollarSign className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl text-gray-900">Pricing Summary</CardTitle>
+                    <p className="text-gray-600 mt-1">Real-time pricing calculations</p>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
