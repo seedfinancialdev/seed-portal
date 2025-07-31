@@ -775,57 +775,64 @@ export default function KbAdmin() {
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="max-w-md">
+          <AlertDialogContent className="max-w-lg">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertDialogTitle className="text-red-600 flex items-center gap-2 text-lg font-bold">
                 <Trash2 className="h-5 w-5" />
                 ⚠️ DANGER: Permanent Deletion
               </AlertDialogTitle>
-              <AlertDialogDescription className="space-y-3">
-                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-red-800 font-semibold">This will permanently destroy the article and cannot be undone!</p>
-                </div>
-                
-                <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
-                  <p className="text-orange-800">
-                    <strong>Recommended:</strong> Use "Archive Article" instead to safely hide the article while preserving the content.
-                  </p>
-                </div>
+            </AlertDialogHeader>
+            
+            <div className="space-y-4">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 font-semibold text-center">
+                  This will permanently destroy the article and cannot be undone!
+                </p>
+              </div>
+              
+              <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-orange-800">
+                  <strong>Recommended:</strong> Use "Archive Article" instead to safely hide the article while preserving the content.
+                </p>
+              </div>
 
-                {!showAdvancedDelete ? (
+              {!showAdvancedDelete ? (
+                <div className="text-center pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowAdvancedDelete(true)}
+                    className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                  >
+                    I understand the risks - Show deletion options
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4 pt-2">
                   <div className="text-center">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAdvancedDelete(true)}
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                    >
-                      I understand the risks - Show deletion options
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-sm text-gray-700">
-                      To confirm permanent deletion, type <strong>DELETE</strong> below:
+                    <p className="text-sm text-gray-700 mb-3">
+                      To confirm permanent deletion, type <strong className="text-red-600">DELETE</strong> below:
                     </p>
                     <Input
                       value={deleteConfirmationText}
                       onChange={(e) => setDeleteConfirmationText(e.target.value)}
                       placeholder="Type DELETE to confirm"
-                      className="border-red-300 focus:border-red-500"
+                      className="border-red-300 focus:border-red-500 focus:ring-red-200 text-center font-mono"
+                      autoComplete="off"
                     />
                   </div>
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="gap-2">
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                </div>
+              )}
+            </div>
+
+            <AlertDialogFooter className="flex gap-2 pt-6">
+              <AlertDialogCancel className="flex-1">Cancel</AlertDialogCancel>
               <Button
                 variant="outline"
                 onClick={() => {
                   setDeleteDialogOpen(false);
                   if (selectedArticleId) openArchiveDialog(selectedArticleId);
                 }}
-                className="bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
               >
                 Archive Instead (Safe)
               </Button>
@@ -833,7 +840,7 @@ export default function KbAdmin() {
                 <AlertDialogAction
                   onClick={confirmDelete}
                   disabled={deleteConfirmationText !== "DELETE" || deleteArticleMutation.isPending}
-                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deleteArticleMutation.isPending ? "Deleting..." : "Delete Permanently"}
                 </AlertDialogAction>
