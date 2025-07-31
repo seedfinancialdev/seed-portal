@@ -1100,6 +1100,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         authorId: req.user.id
       });
 
+      // Generate unique slug if not provided or check for duplicates
+      if (!articleData.slug) {
+        const baseSlug = articleData.title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
+        
+        // Add timestamp to ensure uniqueness
+        articleData.slug = `${baseSlug}-${Date.now()}`;
+      }
+
+      // Check for duplicate slug
+      const existingBySlug = await storage.getKbArticleBySlug(articleData.slug);
+      if (existingBySlug) {
+        // Generate a new unique slug with timestamp
+        const baseSlug = articleData.title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
+        articleData.slug = `${baseSlug}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      }
+
+      // Check for duplicate title by same author (prevent accidental duplicates)
+      const existingByTitle = await storage.getKbArticles(undefined, undefined, undefined, articleData.title);
+      const duplicateByAuthor = existingByTitle.find(article => article.authorId === req.user!.id);
+      
+      if (duplicateByAuthor) {
+        return res.status(409).json({ 
+          message: "Article with this title already exists", 
+          existingArticleId: duplicateByAuthor.id 
+        });
+      }
+
       const article = await storage.createKbArticle(articleData);
       res.json(article);
     } catch (error) {
