@@ -1275,7 +1275,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8 animate-fadeIn">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <UniversalNavbar 
           showBackButton={true} 
           backButtonText="Back to Portal" 
@@ -1283,7 +1283,7 @@ export default function Home() {
         />
 
         {/* Service Selection Cards - Optimized for desktop */}
-        <div className="max-w-4xl mx-auto mb-8">
+        <div className="max-w-6xl mx-auto mb-8">
           <div className="grid grid-cols-3 gap-4">
             {/* Bookkeeping Service Card */}
             <div 
@@ -1416,7 +1416,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-8 max-w-none mx-8">
           <style>{`.quote-layout { display: flex; flex-direction: column; } @media (min-width: 1024px) { .quote-layout { flex-direction: row; } }`}</style>
           {/* Quote Builder Form Card */}
           <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card lg:flex-1 hover:shadow-3xl transition-all duration-300" style={{ flex: '1', minWidth: 0 }}>
