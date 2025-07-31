@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/hooks/use-auth';
+import { useGoogleAuth } from '@/hooks/use-google-auth';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -89,11 +89,11 @@ export default function KnowledgeBase() {
   const [selectedArticle, setSelectedArticle] = useState<KbArticle | null>(null);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   
-  const { user, logout } = useAuth();
+  const { dbUser: user, signOut } = useGoogleAuth();
   const [, setLocation] = useLocation();
 
   const handleLogout = async () => {
-    await logout();
+    await signOut();
     setLocation('/');
   };
 
@@ -117,8 +117,7 @@ export default function KnowledgeBase() {
     queryKey: ["/api/kb/search", searchQuery],
     queryFn: async () => {
       if (!searchQuery || searchQuery.length < 2) return [];
-      const response = await apiRequest("GET", `/api/kb/search?q=${encodeURIComponent(searchQuery)}`);
-      return response.json();
+      return apiRequest(`/api/kb/search?q=${encodeURIComponent(searchQuery)}`);
     },
     enabled: searchQuery.length >= 2,
   });
@@ -242,15 +241,39 @@ export default function KnowledgeBase() {
               lineHeight: '1.6',
               color: '#333'
             }}
-            dangerouslySetInnerHTML={{ __html: selectedArticle.content.replace(
-              /<h1([^>]*)>/g, '<h1$1 style="color: #2d3748; margin-top: 2em; border-bottom: 2px solid #f97316; padding-bottom: 10px;">'
-            ).replace(
-              /<h2([^>]*)>/g, '<h2$1 style="color: #2d3748; margin-top: 2em; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">'
-            ).replace(
-              /<h3([^>]*)>/g, '<h3$1 style="color: #2d3748; margin-top: 2em;">'
-            ).replace(
-              /<blockquote([^>]*)>/g, '<blockquote$1 style="border-left: 4px solid #f97316; margin: 20px 0; padding: 10px 20px; background: #fef5e7;">'
-            ) }}
+            dangerouslySetInnerHTML={{ 
+              __html: (() => {
+                let content = selectedArticle.content;
+                
+                // Remove the first h1 tag (duplicate title)
+                content = content.replace(/<h1[^>]*>.*?<\/h1>/, '');
+                
+                // Remove metadata section that typically appears after title
+                // This removes patterns like "Document Type: ... Target Team: ... Last Reviewed: ..."
+                content = content.replace(
+                  /<p[^>]*>\s*(Document Type:[^<]*<[^>]*>[^<]*<\/[^>]*>\s*)?(Target Team:[^<]*<[^>]*>[^<]*<\/[^>]*>\s*)?(Last Reviewed:[^<]*<[^>]*>[^<]*<\/[^>]*>\s*)?<\/p>/gi, 
+                  ''
+                );
+                
+                // Remove any standalone metadata divs or paragraphs
+                content = content.replace(
+                  /<div[^>]*>\s*(Document Type:|Target Team:|Last Reviewed:)[^<]*<\/div>/gi, 
+                  ''
+                );
+                
+                // Clean up any empty paragraphs or divs left behind
+                content = content.replace(/<p[^>]*>\s*<\/p>/g, '');
+                content = content.replace(/<div[^>]*>\s*<\/div>/g, '');
+                
+                // Apply styling to remaining headings and elements
+                return content
+                  .replace(/<h1([^>]*)>/g, '<h1$1 style="color: #2d3748; margin-top: 2em; border-bottom: 2px solid #f97316; padding-bottom: 10px;">')
+                  .replace(/<h2([^>]*)>/g, '<h2$1 style="color: #2d3748; margin-top: 2em; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">')
+                  .replace(/<h3([^>]*)>/g, '<h3$1 style="color: #2d3748; margin-top: 2em;">')
+                  .replace(/<blockquote([^>]*)>/g, '<blockquote$1 style="border-left: 4px solid #f97316; margin: 20px 0; padding: 10px 20px; background: #fef5e7;">')
+                  .trim();
+              })()
+            }}
           />
         </div>
       </div>
