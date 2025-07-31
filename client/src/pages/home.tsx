@@ -1423,24 +1423,34 @@ export default function Home() {
               <CardContent className="p-6 sm:p-8">
               {/* Modern Navigation Toggle - Only show if multiple services are active */}
               {getActiveServices().length > 1 && (
-                <div className="mb-6">
+                <div className="mb-8">
                   <div className="flex items-center justify-center">
-                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-1 flex items-center gap-1 border border-white/30">
-                      {getActiveServices().map((service) => (
-                        <button
-                          key={service}
-                          type="button"
-                          onClick={() => setCurrentFormView(service)}
-                          className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                            currentFormView === service
-                              ? 'bg-white/90 backdrop-blur-sm shadow-lg text-[#e24c00] border border-white/50'
-                              : 'text-white/80 hover:text-white hover:bg-white/20 backdrop-blur-sm'
-                          }`}
-                        >
-                          {service === 'bookkeeping' ? 'Bookkeeping' : 'Tax Service'}
-                        </button>
-                      ))}
+                    <div className="relative bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl p-1.5 shadow-inner">
+                      <div className="flex items-center gap-1 relative">
+                        {getActiveServices().map((service, index) => (
+                          <button
+                            key={service}
+                            type="button"
+                            onClick={() => setCurrentFormView(service)}
+                            className={`relative px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 min-w-[140px] justify-center ${
+                              currentFormView === service
+                                ? 'bg-white shadow-lg text-[#e24c00] scale-105 z-10'
+                                : 'text-gray-600 hover:text-gray-800 hover:bg-white/50'
+                            }`}
+                          >
+                            <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                              currentFormView === service ? 'bg-[#e24c00]' : 'bg-gray-400'
+                            }`} />
+                            {service === 'bookkeeping' ? 'Bookkeeping' : 'Tax Service'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                  </div>
+                  <div className="text-center mt-3">
+                    <p className="text-sm text-gray-600">
+                      Switch between service types to configure pricing
+                    </p>
                   </div>
                 </div>
               )}
