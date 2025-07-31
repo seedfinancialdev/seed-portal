@@ -107,8 +107,7 @@ export default function KnowledgeBase() {
     queryKey: ["/api/kb/articles", selectedCategory?.id],
     queryFn: async () => {
       if (!selectedCategory) return [];
-      const response = await apiRequest("GET", `/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
-      return response.json();
+      return apiRequest(`/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
     },
     enabled: !!selectedCategory,
   });
