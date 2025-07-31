@@ -625,19 +625,19 @@ export default function KbAdmin() {
                 ) : (
                   <div className="space-y-4">
                     {articles.map((article: KbArticle) => (
-                      <Card key={article.id} className="bg-white/10 border-white/20">
+                      <Card key={article.id} className="bg-white border-gray-200 shadow-sm">
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-white mb-2">
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2">
                                 {article.title}
                               </h3>
                               {article.excerpt && (
-                                <p className="text-white/70 text-sm mb-3">
+                                <p className="text-gray-600 text-sm mb-3">
                                   {article.excerpt}
                                 </p>
                               )}
-                              <div className="flex items-center gap-4 text-sm text-white/60">
+                              <div className="flex items-center gap-4 text-sm text-gray-500">
                                 <Badge 
                                   variant={article.status === 'published' ? 'default' : 'secondary'}
                                   className={article.status === 'published' ? 'bg-green-500' : ''}
@@ -645,7 +645,7 @@ export default function KbAdmin() {
                                   {article.status}
                                 </Badge>
                                 {article.featured && (
-                                  <Badge variant="outline" className="border-orange-500 text-orange-200">
+                                  <Badge variant="outline" className="border-orange-500 text-orange-600">
                                     Featured
                                   </Badge>
                                 )}
@@ -655,7 +655,7 @@ export default function KbAdmin() {
                               {article.tags && article.tags.length > 0 && (
                                 <div className="flex gap-2 mt-2">
                                   {article.tags.map((tag, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs border-white/30 text-white/70">
+                                    <Badge key={index} variant="outline" className="text-xs border-gray-300 text-gray-600">
                                       {tag}
                                     </Badge>
                                   ))}
@@ -666,7 +666,7 @@ export default function KbAdmin() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="text-white hover:text-gray-900"
+                                className="text-gray-600 hover:text-gray-900"
                                 onClick={() => handleEditArticle(article)}
                               >
                                 <Edit2 className="h-4 w-4" />
