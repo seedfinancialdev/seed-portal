@@ -18,6 +18,7 @@ import { z } from "zod";
 import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2, Sparkles, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AIArticleGenerator } from "@/components/AIArticleGenerator";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Types
@@ -487,10 +488,11 @@ export default function KbAdmin() {
                               <FormItem>
                                 <FormLabel>Content</FormLabel>
                                 <FormControl>
-                                  <Textarea 
-                                    placeholder="Article content (supports Markdown)" 
-                                    className="min-h-[300px]"
-                                    {...field} 
+                                  <RichTextEditor
+                                    content={field.value}
+                                    onChange={field.onChange}
+                                    placeholder="Start writing your article content..."
+                                    height={400}
                                   />
                                 </FormControl>
                                 <FormMessage />
