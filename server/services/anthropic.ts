@@ -511,6 +511,54 @@ Format as valid JSON only, no other text.`
     }
   }
 
+  async redraftWithImprovements(currentContent: string, selectedImprovements: string[], request: ArticleGenerationRequest): Promise<{ content: string }> {
+    const systemPrompt = `You are a senior editor for Seed Financial. Re-draft articles by implementing only the selected improvements while maintaining the core content and structure.
+
+${BRAND_VOICE_GUIDELINES}
+
+${request.includeCompliance ? COMPLIANCE_REQUIREMENTS : ''}`;
+
+    const improvementsList = selectedImprovements.map((imp, idx) => `${idx + 1}. ${imp}`).join('\n');
+
+    const prompt = `Re-draft this article by implementing ONLY the selected improvements below:
+
+CURRENT ARTICLE:
+${currentContent}
+
+SELECTED IMPROVEMENTS TO IMPLEMENT:
+${improvementsList}
+
+IMPORTANT INSTRUCTIONS:
+- Implement ONLY the specific improvements listed above
+- Maintain the existing structure and flow where not mentioned in improvements
+- Keep all good content that doesn't need the selected improvements
+- Ensure the final result flows naturally after implementing the changes
+- Format output as clean HTML suitable for a rich text editor
+
+Target Audience: ${request.audience}
+Tone: ${request.tone || 'professional'}
+
+Provide the re-drafted HTML content with only the selected improvements applied:`;
+
+    try {
+      const result = await this.callClaude(prompt, systemPrompt);
+      
+      // Clean up HTML markers if AI returned them
+      let content = result;
+      if (content.includes('```html')) {
+        content = content.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+      }
+      
+      // Ensure content is properly formatted as HTML
+      const formattedContent = this.formatContentAsHtml(content);
+      
+      return { content: formattedContent };
+    } catch (error) {
+      console.error('Error in redraftWithImprovements:', error);
+      throw new Error('Failed to re-draft content with selected improvements');
+    }
+  }
+
   getAvailableTemplates() {
     return Object.entries(ARTICLE_TEMPLATES).map(([key, template]) => ({
       id: key,

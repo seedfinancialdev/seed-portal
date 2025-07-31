@@ -113,6 +113,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
   const [generatedContent, setGeneratedContent] = useState<Record<string, string>>({});
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [contentAnalysis, setContentAnalysis] = useState<ContentAnalysis | null>(null);
+  const [selectedImprovements, setSelectedImprovements] = useState<number[]>([]);
   const [audienceVersions, setAudienceVersions] = useState<Record<string, string>>({});
   const [autoExcerpt, setAutoExcerpt] = useState('');
   const [autoTags, setAutoTags] = useState<string[]>([]);
@@ -385,6 +386,39 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     },
   });
 
+  // Re-draft with selected improvements mutation
+  const redraftMutation = useMutation({
+    mutationFn: async () => {
+      const formData = form.getValues();
+      const selectedSuggestions = selectedImprovements.map(index => contentAnalysis!.suggestions[index]);
+      
+      return apiRequest("/api/kb/ai/redraft-with-improvements", {
+        method: "POST",
+        body: JSON.stringify({
+          ...formData,
+          currentContent: generatedContent.draft,
+          selectedImprovements: selectedSuggestions
+        })
+      });
+    },
+    onSuccess: (data: any) => {
+      setGeneratedContent(prev => ({ ...prev, draft: data.content }));
+      setSelectedImprovements([]); // Clear selections
+      setContentAnalysis(null); // Clear old analysis
+      toast({
+        title: "Article Re-drafted",
+        description: "Your draft has been updated with the selected improvements"
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Re-draft Failed",
+        description: error.message || "Failed to re-draft with improvements",
+        variant: "destructive"
+      });
+    }
+  });
+
   const analyzeContentMutation = useMutation({
     mutationFn: async (content: string) => {
       return apiRequest("/api/kb/ai/analyze", { method: "POST", body: JSON.stringify({ content }) });
@@ -450,6 +484,10 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
         baseContent: content 
       });
     }
+  };
+
+  const handleRedraftWithImprovements = () => {
+    redraftMutation.mutate();
   };
 
   // Prevent duplicate article creation with a simple flag
@@ -1089,17 +1127,52 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                           <div className="space-y-2">
                             {contentAnalysis.suggestions.map((suggestion, index) => (
                               <div key={index} className="bg-orange-50 border border-orange-200 rounded-md p-3">
-                                <div className="flex items-start gap-2">
-                                  <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold flex-shrink-0 mt-0.5">
-                                    {index + 1}
-                                  </span>
-                                  <div className="flex-1">
-                                    <p className="text-sm text-gray-700">{suggestion}</p>
-                                  </div>
+                                <div className="flex items-start gap-3">
+                                  <Checkbox
+                                    id={`suggestion-${index}`}
+                                    checked={selectedImprovements.includes(index)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedImprovements(prev => [...prev, index]);
+                                      } else {
+                                        setSelectedImprovements(prev => prev.filter(i => i !== index));
+                                      }
+                                    }}
+                                    className="mt-0.5"
+                                  />
+                                  <label htmlFor={`suggestion-${index}`} className="flex-1 cursor-pointer">
+                                    <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 inline-flex items-center justify-center font-semibold mr-2">
+                                      {index + 1}
+                                    </span>
+                                    <span className="text-sm text-gray-700">{suggestion}</span>
+                                  </label>
                                 </div>
                               </div>
                             ))}
                           </div>
+                          
+                          {/* Re-draft Button */}
+                          {selectedImprovements.length > 0 && (
+                            <div className="mt-4 flex justify-center">
+                              <Button
+                                onClick={handleRedraftWithImprovements}
+                                disabled={redraftMutation.isPending}
+                                className="bg-blue-500 hover:bg-blue-600"
+                              >
+                                {redraftMutation.isPending ? (
+                                  <>
+                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    Re-drafting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Edit3 className="h-4 w-4 mr-2" />
+                                    Re-draft with Selected Improvements ({selectedImprovements.length})
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
 

@@ -1095,10 +1095,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const articleData = insertKbArticleSchema.parse({
+      // Ensure proper data types before validation
+      const requestBody = {
         ...req.body,
-        authorId: req.user.id
-      });
+        categoryId: parseInt(req.body.categoryId),
+        authorId: req.user.id,
+        tags: Array.isArray(req.body.tags) ? req.body.tags : 
+              (req.body.tags ? req.body.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean) : [])
+      };
+
+      const articleData = insertKbArticleSchema.parse(requestBody);
 
       // Generate unique slug if not provided or check for duplicates
       if (!articleData.slug) {
@@ -1141,6 +1147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(article);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Article validation errors:', error.errors);
         res.status(400).json({ message: "Invalid article data", errors: error.errors });
       } else {
         console.error('Error creating article:', error);
@@ -1375,6 +1382,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error polishing article:', error);
       res.status(500).json({ message: "Failed to polish article" });
+    }
+  });
+
+  // Re-draft with selected improvements
+  app.post("/api/kb/ai/redraft-with-improvements", requireAuth, async (req, res) => {
+    try {
+      const { anthropicService } = await import('./services/anthropic.js');
+      const { currentContent, selectedImprovements, ...requestData } = req.body;
+      const result = await anthropicService.redraftWithImprovements(currentContent, selectedImprovements, requestData);
+      res.json(result);
+    } catch (error) {
+      console.error('Error re-drafting with improvements:', error);
+      res.status(500).json({ message: "Failed to re-draft with improvements" });
     }
   });
 
