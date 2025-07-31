@@ -1812,50 +1812,141 @@ export default function Home() {
           </Card>
 
           {/* Pricing Summary Card */}
-          <Card className="bg-white shadow-xl border-0">
-            <CardHeader className="bg-gradient-to-r from-green-600 to-green-500 text-white rounded-t-lg">
-              <CardTitle className="text-xl flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Pricing Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center text-lg">
-                  <span className="font-medium">Monthly Fee:</span>
-                  <span className="font-bold text-green-600">${monthlyFee.toLocaleString()}</span>
+          <Card className="bg-white shadow-xl border-0 quote-card">
+            <CardContent className="p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
                 </div>
-                <div className="flex justify-between items-center text-lg">
-                  <span className="font-medium">Setup Fee:</span>
-                  <span className="font-bold text-green-600">${setupFee.toLocaleString()}</span>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Pricing Summary
+                  </h2>
+                  <p className="text-sm text-gray-500">Your calculated quote breakdown</p>
                 </div>
               </div>
-
-              {isCalculated && (
-                <div className="mt-6 pt-6 border-t">
-                  <div className="space-y-3">
-                    <Button
-                      type="submit"
-                      onClick={form.handleSubmit(onSubmit)}
-                      disabled={saveMutation.isPending}
-                      className="w-full bg-[#e24c00] hover:bg-[#c73e00] text-white"
-                    >
-                      {saveMutation.isPending ? "Saving..." : editingQuoteId ? "Update Quote" : "Save Quote"}
-                    </Button>
-                    
-                    {editingQuoteId && (
+              
+              <div className="space-y-4">
+                {/* Combined Total Card */}
+                {(feeCalculation.includesBookkeeping && feeCalculation.includesTaas) && (
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
+                          <Calculator className="h-4 w-4 text-white" />
+                        </div>
+                        <h4 className="font-semibold text-purple-800">Combined Total</h4>
+                      </div>
                       <Button
                         type="button"
-                        onClick={resetForm}
+                        size="sm"
                         variant="outline"
-                        className="w-full"
+                        className="h-8 px-3 text-xs bg-purple-600 text-white border-purple-600 hover:bg-purple-700 shadow-sm"
+                        onClick={() => copyToClipboard(feeCalculation.combined.monthlyFee.toLocaleString(), 'combined')}
                       >
-                        New Quote
+                        {copiedField === 'combined' ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                        Copy
                       </Button>
-                    )}
+                    </div>
+                    <div className="text-3xl font-bold text-purple-800 mb-2">
+                      ${feeCalculation.combined.monthlyFee.toLocaleString()} / mo
+                    </div>
+                    <div className="text-xl font-semibold text-purple-700 mb-2">
+                      ${feeCalculation.combined.setupFee.toLocaleString()} total setup
+                    </div>
+                    <p className="text-sm text-purple-600">
+                      Complete bookkeeping and tax services package
+                    </p>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Single Service Total */}
+                {(feeCalculation.includesBookkeeping && !feeCalculation.includesTaas) && (
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-green-800">Bookkeeping Package Total</h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 text-xs bg-green-600 text-white border-green-600 hover:bg-green-700 shadow-sm"
+                        onClick={() => copyToClipboard(feeCalculation.bookkeeping.monthlyFee.toLocaleString(), 'bookkeeping')}
+                      >
+                        {copiedField === 'bookkeeping' ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                        Copy
+                      </Button>
+                    </div>
+                    <div className="text-3xl font-bold text-green-800 mb-2">
+                      ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()} / mo
+                    </div>
+                    <div className="text-xl font-semibold text-green-700">
+                      ${feeCalculation.bookkeeping.setupFee.toLocaleString()} setup fee
+                    </div>
+                  </div>
+                )}
+
+                {(!feeCalculation.includesBookkeeping && feeCalculation.includesTaas) && (
+                  <div className="bg-gradient-to-br from-blue-50 to-sky-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-blue-800">TaaS Package Total</h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3 text-xs bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-sm"
+                        onClick={() => copyToClipboard(feeCalculation.taas.monthlyFee.toLocaleString(), 'taas')}
+                      >
+                        {copiedField === 'taas' ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
+                        Copy
+                      </Button>
+                    </div>
+                    <div className="text-3xl font-bold text-blue-800 mb-2">
+                      ${feeCalculation.taas.monthlyFee.toLocaleString()} / mo
+                    </div>
+                    <div className="text-xl font-semibold text-blue-700">
+                      ${feeCalculation.taas.setupFee.toLocaleString()} prior years fee
+                    </div>
+                  </div>
+                )}
+
+                {/* No Services Selected */}
+                {(!feeCalculation.includesBookkeeping && !feeCalculation.includesTaas) && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+                    <div className="text-gray-500 mb-2">
+                      <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    </div>
+                    <h4 className="font-semibold text-gray-600 mb-1">No Services Selected</h4>
+                    <p className="text-sm text-gray-500">Click on the service cards above to start building your quote</p>
+                  </div>
+                )}
+
+                {/* Save Quote Actions */}
+                {isCalculated && (feeCalculation.includesBookkeeping || feeCalculation.includesTaas) && (
+                  <div className="border-t pt-6">
+                    <div className="space-y-3">
+                      <Button
+                        type="submit"
+                        onClick={form.handleSubmit(onSubmit)}
+                        disabled={createQuoteMutation.isPending}
+                        className="w-full bg-[#e24c00] hover:bg-[#c73e00] text-white"
+                      >
+                        {createQuoteMutation.isPending ? "Saving..." : editingQuoteId ? "Update Quote" : "Save Quote"}
+                      </Button>
+                      
+                      {editingQuoteId && (
+                        <Button
+                          type="button"
+                          onClick={resetForm}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          New Quote
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
