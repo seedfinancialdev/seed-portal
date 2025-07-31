@@ -139,12 +139,13 @@ Preferred communication style: Simple, everyday language.
   - **Duplicate Slug Error Fix**: Implemented unique slug generation with timestamp suffixes to prevent database constraint errors
   - **AI Generator Error Resolution**: Fixed article creation failures by ensuring all slugs are unique across both AI-generated and manual articles
 
-✓ **Article Visibility Control & Publishing System** (July 31, 2025)
-  - **Draft Article Issue Fixed**: Resolved critical issue where draft articles were potentially visible in live Knowledge Base
-  - **Publish/Unpublish Controls**: Added prominent green publish buttons to admin interface for easy article status management  
+✓ **Clean Admin Interface & Article Visibility Control** (July 31, 2025)
+  - **Draft Article Issue Fixed**: Resolved critical issue where draft articles were potentially visible in live Knowledge Base due to featured flag priority
+  - **Streamlined Interface**: Moved publish/unpublish controls to dropdown menu for cleaner layout alongside archive and delete options
+  - **Smart Tag Display**: Limited visible tags to first 4 with "+X more" indicator to prevent visual clutter and improve readability
+  - **Dropdown Publishing**: Added Eye/EyeOff icons with "Publish Article" and "Unpublish Article" options in action dropdown
   - **Status-Based Filtering**: Confirmed only published articles appear in public Knowledge Base, drafts hidden from users
-  - **Visual Status Indicators**: Clear "Published" (solid green) vs "Publish" (outline green) buttons show current article state
-  - **One-Click Publishing**: Administrators can instantly toggle articles between draft and published status
+  - **One-Click Publishing**: Administrators can instantly toggle articles between draft and published status from dropdown menu
   - **Database Status Management**: Proper article status tracking ensures content control and prevents accidental exposure
   - **Admin Control**: Full administrative control over which articles are visible to end users in the Knowledge Base
 

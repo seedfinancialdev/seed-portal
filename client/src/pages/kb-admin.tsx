@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2, Sparkles, RefreshCw, MoreVertical, Archive } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2, Sparkles, RefreshCw, MoreVertical, Archive, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AIArticleGenerator } from "@/components/AIArticleGenerator";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -735,28 +735,21 @@ export default function KbAdmin() {
                                 <span>{new Date(article.createdAt).toLocaleDateString()}</span>
                               </div>
                               {article.tags && article.tags.length > 0 && (
-                                <div className="flex gap-2 mt-2">
-                                  {article.tags.map((tag, index) => (
-                                    <Badge key={index} variant="outline" className="text-xs border-gray-300 text-gray-600">
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {article.tags.slice(0, 4).map((tag, index) => (
+                                    <Badge key={index} variant="outline" className="text-xs border-gray-300 text-gray-600 px-2 py-0.5">
                                       {tag}
                                     </Badge>
                                   ))}
+                                  {article.tags.length > 4 && (
+                                    <Badge variant="outline" className="text-xs border-gray-300 text-gray-500 px-2 py-0.5">
+                                      +{article.tags.length - 4} more
+                                    </Badge>
+                                  )}
                                 </div>
                               )}
                             </div>
                             <div className="flex gap-2 ml-4">
-                              <Button
-                                size="sm"
-                                variant={article.status === 'published' ? 'default' : 'outline'}
-                                className={article.status === 'published' 
-                                  ? "bg-green-600 hover:bg-green-700 text-white" 
-                                  : "text-green-600 border-green-600 hover:bg-green-50"
-                                }
-                                onClick={() => togglePublishMutation.mutate({ id: article.id, status: article.status })}
-                                disabled={togglePublishMutation.isPending}
-                              >
-                                {article.status === 'published' ? 'Published' : 'Publish'}
-                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -776,6 +769,26 @@ export default function KbAdmin() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => togglePublishMutation.mutate({ id: article.id, status: article.status })}
+                                    disabled={togglePublishMutation.isPending}
+                                    className={article.status === 'published' 
+                                      ? "text-orange-600 focus:text-orange-700" 
+                                      : "text-green-600 focus:text-green-700"
+                                    }
+                                  >
+                                    {article.status === 'published' ? (
+                                      <>
+                                        <EyeOff className="h-4 w-4 mr-2" />
+                                        Unpublish Article
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        Publish Article
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => openArchiveDialog(article.id)}
                                     className="text-orange-600 focus:text-orange-700"
