@@ -309,10 +309,22 @@ export default function KbAdmin() {
               variant="ghost"
               size="sm"
               className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-              onClick={() => setLocation('/knowledge-base')}
+              onClick={() => setLocation('/admin')}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Knowledge Base
+              Back to Admin Dashboard
+            </Button>
+          </div>
+          
+          <div className="absolute top-0 right-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
+              onClick={() => setLocation('/knowledge-base')}
+            >
+              <BookOpen className="h-4 w-4 mr-1" />
+              View Knowledge Base
             </Button>
           </div>
           
@@ -327,7 +339,7 @@ export default function KbAdmin() {
 
         {/* Title */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+          <h1 className="text-4xl font-bold text-white mb-4" style={{ fontFamily: 'Open Sans, sans-serif' }}>
             Knowledge Base Admin
           </h1>
           <p className="text-white/80 text-lg">
@@ -348,8 +360,10 @@ export default function KbAdmin() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <Button
-                  variant={selectedCategory === null ? "secondary" : "ghost"}
-                  className="w-full justify-start text-white hover:text-gray-900"
+                  variant="ghost"
+                  className={`w-full justify-start text-white hover:text-white hover:bg-white/20 ${
+                    selectedCategory === null ? 'bg-orange-500/80 hover:bg-orange-500 text-white font-semibold' : ''
+                  }`}
                   onClick={() => setSelectedCategory(null)}
                 >
                   All Articles
@@ -357,8 +371,10 @@ export default function KbAdmin() {
                 {(categories as KbCategory[]).map((category: KbCategory) => (
                   <Button
                     key={category.id}
-                    variant={selectedCategory === category.id ? "secondary" : "ghost"}
-                    className="w-full justify-start text-white hover:text-gray-900"
+                    variant="ghost"
+                    className={`w-full justify-start text-white hover:text-white hover:bg-white/20 ${
+                      selectedCategory === category.id ? 'bg-orange-500/80 hover:bg-orange-500 text-white font-semibold' : ''
+                    }`}
                     onClick={() => setSelectedCategory(category.id)}
                   >
                     {category.name}
