@@ -355,17 +355,17 @@ export default function KbAdmin() {
     setIsArticleDialogOpen(true);
   };
 
-  const handleAIArticleGenerated = (article: { title: string; content: string; categoryId: number; }) => {
+  const handleAIArticleGenerated = (article: { title: string; content: string; categoryId: number; excerpt?: string; tags?: string[]; }) => {
     // Pre-populate the regular form with AI-generated content
     setEditingArticle(null);
     form.reset({
       title: article.title,
-      excerpt: "",
+      excerpt: article.excerpt || "",
       content: article.content,
       categoryId: article.categoryId,
       status: "draft",
       featured: false,
-      tags: "",
+      tags: article.tags ? article.tags.join(", ") : "",
     });
     setIsArticleDialogOpen(true);
     setIsAIGeneratorOpen(false);

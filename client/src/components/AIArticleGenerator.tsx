@@ -100,7 +100,7 @@ type GeneratorFormData = z.infer<typeof generatorSchema>;
 
 interface AIArticleGeneratorProps {
   categories: Array<{ id: number; name: string; }>;
-  onArticleGenerated: (article: { title: string; content: string; categoryId: number; }) => void;
+  onArticleGenerated: (article: { title: string; content: string; categoryId: number; excerpt?: string; tags?: string[]; }) => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -488,78 +488,23 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     redraftMutation.mutate();
   };
 
-  // Prevent duplicate article creation with a simple flag
-  const [isSaving, setIsSaving] = useState(false);
-
-  const handleSaveArticle = async (content: string) => {
-    if (isSaving) {
-      console.log('Save already in progress, ignoring duplicate request');
-      return;
-    }
-    
+  // Save draft data and open Create New Article modal - don't create DB record yet
+  const handleSaveArticle = (content: string) => {
     const formData = form.getValues();
-    setIsSaving(true);
     
-    try {
-      // Generate slug from title  
-      const generateSlug = (title: string) => {
-        return title
-          .toLowerCase()
-          .replace(/[^\w\s-]/g, '') // Remove special characters
-          .replace(/\s+/g, '-') // Replace spaces with hyphens
-          .replace(/-+/g, '-') // Replace multiple hyphens with single
-          .trim();
-      };
+    // Just trigger the callback with the article data - modal will handle actual creation
+    onArticleGenerated({
+      title: formData.title,
+      content: content,
+      categoryId: formData.categoryId,
+      excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
+      tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
+    });
 
-      // Create new article - server will handle duplicate checking and unique slug generation
-      await apiRequest("/api/kb/articles", {
-        method: "POST",
-        body: JSON.stringify({
-          title: formData.title,
-          slug: generateSlug(formData.title),
-          content: content,
-          categoryId: formData.categoryId,
-          status: 'draft',
-          excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
-          tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
-        })
-      });
-      
-      toast({
-        title: "Article Created Successfully",
-        description: "Your AI-generated article has been saved as a draft",
-      });
-
-      onArticleGenerated({
-        title: formData.title,
-        content: content,
-        categoryId: formData.categoryId,
-      });
-
-      // Clear the current session after successful save
-      localStorage.removeItem('ai-article-autosave');
-      onClose();
-      resetGenerator();
-    } catch (error: any) {
-      console.error('Save error:', error);
-      
-      if (error.status === 409) {
-        // Duplicate article detected by server
-        toast({
-          title: "Duplicate Article Detected",
-          description: "An article with this title already exists. Please use a different title or update the existing article.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Save Failed",
-          description: error.message || "Failed to save article. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsSaving(false);
-    }
+    // Clear the current session after saving draft
+    localStorage.removeItem('ai-article-autosave');
+    onClose();
+    resetGenerator();
   };
 
   const resetGenerator = () => {
