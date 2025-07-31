@@ -532,35 +532,10 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     });
   };
 
-  // Convert markdown to HTML for proper display in Rich Text Editor
-  const convertMarkdownToHtml = (markdown: string): string => {
-    if (!markdown) return '';
-    
-    return markdown
-      // Headers
-      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-      // Bold
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/__(.*?)__/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/_(.*?)_/g, '<em>$1</em>')
-      // Lists
-      .replace(/^\* (.*$)/gim, '<li>$1</li>')
-      .replace(/^- (.*$)/gim, '<li>$1</li>')
-      .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
-      // Wrap consecutive list items in ul/ol tags
-      .replace(/(<li>.*?<\/li>)/g, '<ul>$1</ul>')
-      // Line breaks
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/^\s*(.+)/gm, '<p>$1</p>')
-      // Clean up multiple paragraph tags
-      .replace(/<\/p><p>/g, '</p>\n<p>')
-      // Clean up list formatting
-      .replace(/<\/p>\s*<ul>/g, '<ul>')
-      .replace(/<\/ul>\s*<p>/g, '</ul><p>');
+  // Server now returns properly formatted HTML, so no conversion needed
+  const ensureCleanHtml = (content: string): string => {
+    if (!content) return '';
+    return content.trim();
   };
 
   return (
@@ -997,7 +972,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
               <CardContent>
                 {generatedContent.outline ? (
                   <RichTextEditor
-                    content={convertMarkdownToHtml(generatedContent.outline)}
+                    content={ensureCleanHtml(generatedContent.outline)}
                     onChange={(content) => setGeneratedContent(prev => ({ ...prev, outline: content }))}
                     placeholder="Your article outline will appear here. Edit with full rich text formatting..."
                     height={400}
@@ -1189,7 +1164,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                 
                 {generatedContent.draft ? (
                   <RichTextEditor
-                    content={convertMarkdownToHtml(generatedContent.draft)}
+                    content={ensureCleanHtml(generatedContent.draft)}
                     onChange={(content) => setGeneratedContent(prev => ({ ...prev, draft: content }))}
                     placeholder="Your article draft will appear here. Edit with full rich text formatting..."
                     height={400}
@@ -1267,7 +1242,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
               <CardContent>
                 {generatedContent.polished ? (
                   <RichTextEditor
-                    content={generatedContent.polished.startsWith('<') ? generatedContent.polished : convertMarkdownToHtml(generatedContent.polished)}
+                    content={ensureCleanHtml(generatedContent.polished)}
                     onChange={(content) => setGeneratedContent(prev => ({ ...prev, polished: content }))}
                     onSave={(content) => handleSaveArticle(content)}
                     placeholder="Your polished article content will appear here. Edit with full rich text formatting..."

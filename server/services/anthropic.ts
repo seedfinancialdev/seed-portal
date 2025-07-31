@@ -178,11 +178,12 @@ Create a comprehensive outline with:
 
 Format as a structured outline with clear hierarchy.`;
 
-    const content = await this.callClaude(prompt, systemPrompt);
+    const rawContent = await this.callClaude(prompt, systemPrompt);
+    const formattedContent = this.formatContentAsHtml(rawContent);
     
     return {
       step: 'outline',
-      content,
+      content: formattedContent,
       nextSteps: ['Generate full draft from this outline', 'Refine specific sections', 'Add compliance elements']
     };
   }
@@ -222,11 +223,12 @@ Requirements:
 
 Write the complete article now:`;
 
-    const content = await this.callClaude(prompt, systemPrompt);
+    const rawContent = await this.callClaude(prompt, systemPrompt);
+    const formattedContent = this.formatContentAsHtml(rawContent);
     
     return {
       step: 'draft',
-      content,
+      content: formattedContent,
       suggestions: [
         'Review for brand voice consistency',
         'Add more specific examples',
@@ -280,9 +282,12 @@ Provide the polished, publication-ready HTML version:`;
       content = content.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
     }
     
+    // Ensure content is properly formatted as HTML
+    const formattedContent = this.formatContentAsHtml(content);
+    
     return {
       step: 'polish',
-      content,
+      content: formattedContent,
       suggestions: [
         'Ready for final compliance review',
         'Consider A/B testing different headlines',
