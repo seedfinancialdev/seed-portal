@@ -557,6 +557,37 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     });
   };
 
+  // Convert markdown to HTML for proper display in Rich Text Editor
+  const convertMarkdownToHtml = (markdown: string): string => {
+    if (!markdown) return '';
+    
+    return markdown
+      // Headers
+      .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.*?)__/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/_(.*?)_/g, '<em>$1</em>')
+      // Lists
+      .replace(/^\* (.*$)/gim, '<li>$1</li>')
+      .replace(/^- (.*$)/gim, '<li>$1</li>')
+      .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+      // Wrap consecutive list items in ul/ol tags
+      .replace(/(<li>.*?<\/li>)/g, '<ul>$1</ul>')
+      // Line breaks
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^\s*(.+)/gm, '<p>$1</p>')
+      // Clean up multiple paragraph tags
+      .replace(/<\/p><p>/g, '</p>\n<p>')
+      // Clean up list formatting
+      .replace(/<\/p>\s*<ul>/g, '<ul>')
+      .replace(/<\/ul>\s*<p>/g, '</ul><p>');
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
@@ -989,12 +1020,18 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <RichTextEditor
-                  content={generatedContent.outline || ''}
-                  onChange={(content) => setGeneratedContent(prev => ({ ...prev, outline: content }))}
-                  placeholder="Your article outline will appear here. Edit with full rich text formatting..."
-                  height={400}
-                />
+                {generatedContent.outline ? (
+                  <RichTextEditor
+                    content={convertMarkdownToHtml(generatedContent.outline)}
+                    onChange={(content) => setGeneratedContent(prev => ({ ...prev, outline: content }))}
+                    placeholder="Your article outline will appear here. Edit with full rich text formatting..."
+                    height={400}
+                  />
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-lg text-center text-gray-500">
+                    Generate an outline to start editing
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1175,12 +1212,18 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                   </Card>
                 )}
                 
-                <RichTextEditor
-                  content={generatedContent.draft || ''}
-                  onChange={(content) => setGeneratedContent(prev => ({ ...prev, draft: content }))}
-                  placeholder="Your article draft will appear here. Edit with full rich text formatting..."
-                  height={400}
-                />
+                {generatedContent.draft ? (
+                  <RichTextEditor
+                    content={convertMarkdownToHtml(generatedContent.draft)}
+                    onChange={(content) => setGeneratedContent(prev => ({ ...prev, draft: content }))}
+                    placeholder="Your article draft will appear here. Edit with full rich text formatting..."
+                    height={400}
+                  />
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-lg text-center text-gray-500">
+                    Generate a draft to start editing
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1247,13 +1290,19 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <RichTextEditor
-                  content={generatedContent.polished || ''}
-                  onChange={(content) => setGeneratedContent(prev => ({ ...prev, polished: content }))}
-                  onSave={(content) => handleSaveArticle(content)}
-                  placeholder="Your polished article content will appear here. Edit with full rich text formatting..."
-                  height={500}
-                />
+                {generatedContent.polished ? (
+                  <RichTextEditor
+                    content={generatedContent.polished.startsWith('<') ? generatedContent.polished : convertMarkdownToHtml(generatedContent.polished)}
+                    onChange={(content) => setGeneratedContent(prev => ({ ...prev, polished: content }))}
+                    onSave={(content) => handleSaveArticle(content)}
+                    placeholder="Your polished article content will appear here. Edit with full rich text formatting..."
+                    height={500}
+                  />
+                ) : (
+                  <div className="bg-gray-50 p-4 rounded-lg text-center text-gray-500">
+                    Polish your draft to start final editing
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

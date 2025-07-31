@@ -62,9 +62,31 @@ export function RichTextEditor({
               }
               code { background: #f1f5f9; padding: 2px 4px; border-radius: 3px; }
               pre { background: #f8fafc; padding: 15px; border-radius: 5px; overflow-x: auto; }
+              .close-button {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #f97316;
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 600;
+                z-index: 1000;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                transition: background-color 0.2s;
+              }
+              .close-button:hover {
+                background: #ea580c;
+              }
             </style>
           </head>
-          <body>${content}</body>
+          <body>
+            <button class="close-button" onclick="window.close()">✕ Close Preview</button>
+            ${content}
+          </body>
           </html>
         `);
         previewWindow.document.close();
