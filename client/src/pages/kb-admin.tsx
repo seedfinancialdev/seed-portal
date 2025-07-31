@@ -217,17 +217,21 @@ export default function KbAdmin() {
   };
 
   const handleCreateArticle = (data: ArticleFormData) => {
-    // Generate slug from title
-    const slug = data.title
+    // Generate base slug from title
+    const baseSlug = data.title
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
       .replace(/\s+/g, '-') // Replace spaces with hyphens
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .trim();
     
+    // Ensure unique slug by adding timestamp suffix
+    const timestamp = Date.now();
+    const uniqueSlug = `${baseSlug}-${timestamp}`;
+    
     const articleData = {
       ...data,
-      slug
+      slug: uniqueSlug
     };
     
     createArticleMutation.mutate(articleData);

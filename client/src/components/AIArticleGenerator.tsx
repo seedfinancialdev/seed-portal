@@ -452,20 +452,24 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
   const handleSaveArticle = async (content: string) => {
     const formData = form.getValues();
     
-    // Generate slug from title
-    const slug = formData.title
+    // Generate base slug from title
+    let baseSlug = formData.title
       .toLowerCase()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();
     
+    // Ensure unique slug by adding timestamp suffix
+    const timestamp = Date.now();
+    const uniqueSlug = `${baseSlug}-${timestamp}`;
+    
     try {
       await apiRequest("/api/kb/articles", {
         method: "POST",
         body: JSON.stringify({
           title: formData.title,
-          slug: slug,
+          slug: uniqueSlug,
           content: content,
           categoryId: formData.categoryId,
           status: 'published',
@@ -493,7 +497,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
       console.error('Save error:', error);
       toast({
         title: "Save Failed",
-        description: error.message || "Failed to save article. Please check the validation requirements.",
+        description: error.message || "Failed to save article. Please try again.",
         variant: "destructive",
       });
     }
