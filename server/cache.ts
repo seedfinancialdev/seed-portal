@@ -1,0 +1,150 @@
+import { redis } from './redis';
+import { createHash } from 'crypto';
+import { logger } from './logger';
+
+const cacheLogger = logger.child({ module: 'cache' });
+
+export interface CacheOptions {
+  ttl?: number; // Time to live in seconds
+  prefix?: string; // Cache key prefix
+  skipCache?: boolean; // Skip cache for this request
+}
+
+export class CacheService {
+  private cacheRedis = redis?.cacheRedis;
+  private defaultTTL = 300; // 5 minutes default
+
+  /**
+   * Generate a cache key from function name and arguments
+   */
+  generateKey(prefix: string, identifier: string | object): string {
+    const hash = createHash('md5')
+      .update(typeof identifier === 'string' ? identifier : JSON.stringify(identifier))
+      .digest('hex');
+    return `${prefix}:${hash}`;
+  }
+
+  /**
+   * Get value from cache
+   */
+  async get<T>(key: string): Promise<T | null> {
+    if (!this.cacheRedis) {
+      return null;
+    }
+
+    try {
+      const cached = await this.cacheRedis.get(key);
+      if (cached) {
+        cacheLogger.debug({ key }, 'Cache hit');
+        return JSON.parse(cached);
+      }
+      cacheLogger.debug({ key }, 'Cache miss');
+      return null;
+    } catch (error) {
+      cacheLogger.error({ error, key }, 'Cache get error');
+      return null;
+    }
+  }
+
+  /**
+   * Set value in cache
+   */
+  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+    if (!this.cacheRedis) {
+      return;
+    }
+
+    try {
+      const serialized = JSON.stringify(value);
+      const expiryTime = ttl || this.defaultTTL;
+      
+      await this.cacheRedis.set(key, serialized, 'EX', expiryTime);
+      cacheLogger.debug({ key, ttl: expiryTime }, 'Cache set');
+    } catch (error) {
+      cacheLogger.error({ error, key }, 'Cache set error');
+    }
+  }
+
+  /**
+   * Delete value from cache
+   */
+  async del(pattern: string): Promise<void> {
+    if (!this.cacheRedis) {
+      return;
+    }
+
+    try {
+      // Find all keys matching the pattern
+      const keys = await this.cacheRedis.keys(`cache:${pattern}*`);
+      if (keys.length > 0) {
+        // Remove the prefix before deletion
+        const keysWithoutPrefix = keys.map(k => k.replace('cache:', ''));
+        await this.cacheRedis.del(...keysWithoutPrefix);
+        cacheLogger.debug({ pattern, count: keys.length }, 'Cache invalidated');
+      }
+    } catch (error) {
+      cacheLogger.error({ error, pattern }, 'Cache delete error');
+    }
+  }
+
+  /**
+   * Wrap a function with caching
+   */
+  async wrap<T>(
+    key: string,
+    fn: () => Promise<T>,
+    options: CacheOptions = {}
+  ): Promise<T> {
+    // Skip cache if requested or Redis not available
+    if (options.skipCache || !this.cacheRedis) {
+      return await fn();
+    }
+
+    // Check cache first
+    const cached = await this.get<T>(key);
+    if (cached !== null) {
+      return cached;
+    }
+
+    // Execute function and cache result
+    const result = await fn();
+    await this.set(key, result, options.ttl);
+    
+    return result;
+  }
+}
+
+// Export singleton instance
+export const cache = new CacheService();
+
+// Cache TTL configurations for different services
+export const CacheTTL = {
+  // HubSpot cache times
+  HUBSPOT_DEALS: 300, // 5 minutes
+  HUBSPOT_METRICS: 300, // 5 minutes
+  HUBSPOT_CONTACT: 900, // 15 minutes
+  HUBSPOT_COMPANY: 900, // 15 minutes
+  
+  // OpenAI cache times
+  OPENAI_ANALYSIS: 3600, // 1 hour
+  OPENAI_ENRICHMENT: 3600, // 1 hour
+  
+  // General cache times
+  USER_PROFILE: 600, // 10 minutes
+  WEATHER_DATA: 1800, // 30 minutes
+  GEOCODING: 86400, // 24 hours
+};
+
+// Cache key prefixes
+export const CachePrefix = {
+  HUBSPOT_DEAL: 'hs:deal',
+  HUBSPOT_DEALS_LIST: 'hs:deals',
+  HUBSPOT_METRICS: 'hs:metrics',
+  HUBSPOT_CONTACT: 'hs:contact',
+  HUBSPOT_COMPANY: 'hs:company',
+  OPENAI_ANALYSIS: 'ai:analysis',
+  OPENAI_ENRICHMENT: 'ai:enrich',
+  USER_PROFILE: 'user:profile',
+  WEATHER: 'weather',
+  GEOCODING: 'geo',
+};

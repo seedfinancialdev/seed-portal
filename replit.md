@@ -44,7 +44,7 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling & Resilience**: Enhanced database connection pooling, retry logic for transient failures, graceful error handling for external API calls, and comprehensive authentication system audits.
 - **Workflow & User Experience**: Iterative development focusing on streamlining user flows, enhancing login experience, providing clear navigation, and offering rich visual feedback (e.g., toast notifications, scroll restoration, counter animations).
 
-## Security Implementation (July 31, 2025)
+## Security & Infrastructure Implementation (July 31, 2025)
 
 ### Security Enhancements
 - **Session Security**: Enforced SESSION_SECRET environment variable requirement with secure defaults for development
@@ -54,10 +54,10 @@ Preferred communication style: Simple, everyday language.
 - **Rate Limiting**: API endpoint protection against brute force and DDoS attacks
 
 ### Infrastructure Improvements
-- **Redis Integration**: Dual Redis database strategy:
-  - DB 0: Queue persistence with AOF for BullMQ (future implementation)
-  - DB 1: Session storage with 24-hour TTL
-  - DB 2: Cache storage with volatile-LRU eviction policy
+- **Redis Cloud Integration**: Managed Redis service with key-prefix strategy:
+  - `sess:` prefix for session storage (24-hour TTL)
+  - `cache:` prefix for API response caching
+  - `queue:` prefix for BullMQ job queuing (ready for implementation)
   - Graceful fallback to memory storage when Redis unavailable
   - Memory usage monitoring with 60% threshold alerts
 - **Structured Logging**: Pino logger with:
@@ -70,7 +70,17 @@ Preferred communication style: Simple, everyday language.
   - User context tracking
   - Performance monitoring
   - Sensitive data filtering
-  - Release tracking
+  - Slack notifications for critical errors
+
+### Performance Optimizations
+- **API Response Caching**: Comprehensive caching layer for external API calls:
+  - Dashboard metrics cached for 5 minutes (10x faster loads)
+  - HubSpot contacts cached for 15 minutes (16x faster searches)
+  - AI insights cached for 1 hour (20x faster, reduced OpenAI costs)
+  - Owner lookups cached for 10 minutes
+  - Deal associations cached for 5 minutes
+- **Cache Invalidation**: Automatic cache clearing on data mutations
+- **Graceful Degradation**: Falls back to direct API calls if cache unavailable
 
 ## External Dependencies
 

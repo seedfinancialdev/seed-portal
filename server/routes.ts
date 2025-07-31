@@ -18,6 +18,7 @@ import multer from "multer";
 import path from "path";
 import { promises as fs } from "fs";
 import express from "express";
+import { cache, CacheTTL, CachePrefix } from "./cache";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -412,7 +413,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
-      const result = await hubSpotService.verifyContactByEmail(email);
+      // Use cache for contact verification
+      const cacheKey = cache.generateKey(CachePrefix.HUBSPOT_CONTACT, email);
+      const result = await cache.wrap(
+        cacheKey,
+        () => hubSpotService.verifyContactByEmail(email),
+        { ttl: CacheTTL.HUBSPOT_CONTACT }
+      );
+      
       res.json(result);
     } catch (error) {
       console.error('Error verifying contact:', error);
@@ -535,6 +543,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyName: companyName
       });
 
+      // Invalidate cache after creating new deal/quote
+      await cache.del(`${CachePrefix.HUBSPOT_METRICS}*`);
+      await cache.del(`${CachePrefix.HUBSPOT_DEALS_LIST}*`);
+      
       res.json({
         success: true,
         hubspotDealId: deal.id,
@@ -712,8 +724,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the logged-in user's email for owner filtering
       const userEmail = (req as any).user?.email;
       
-      // Search HubSpot contacts with AI enrichment, filtered by owner
-      const results = await clientIntelEngine.searchHubSpotContacts(query, userEmail);
+      // Use cache for HubSpot search results
+      const cacheKey = cache.generateKey(CachePrefix.HUBSPOT_CONTACT, { query, userEmail });
+      const results = await cache.wrap(
+        cacheKey,
+        () => clientIntelEngine.searchHubSpotContacts(query, userEmail),
+        { ttl: CacheTTL.HUBSPOT_CONTACT }
+      );
+      
       res.json(results);
     } catch (error) {
       console.error('Client search error:', error);
@@ -768,47 +786,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Client ID is required" });
       }
 
-      // Get client data from HubSpot first
-      let clientData: any = {};
-      
-      try {
-        if (hubSpotService) {
-          const contact = await hubSpotService.getContactById(clientId);
-          if (contact) {
-            clientData = {
-              companyName: contact.properties.company || 'Unknown Company',
-              industry: contact.properties.industry || null,
-              revenue: contact.properties.annualrevenue,
-              employees: parseInt(contact.properties.numemployees) || undefined,
-              lifecycleStage: contact.properties.lifecyclestage || 'lead',
-              services: await clientIntelEngine.getContactServices(clientId),
-              hubspotProperties: contact.properties,
-              lastActivity: contact.properties.lastmodifieddate,
-              recentActivities: [] // Would fetch from activities API
-            };
+      // Use cache for AI insights generation
+      const cacheKey = cache.generateKey(CachePrefix.OPENAI_ANALYSIS, clientId);
+      const insights = await cache.wrap(
+        cacheKey,
+        async () => {
+          // Get client data from HubSpot first
+          let clientData: any = {};
+          
+          try {
+            if (hubSpotService) {
+              const contact = await hubSpotService.getContactById(clientId);
+              if (contact) {
+                clientData = {
+                  companyName: contact.properties.company || 'Unknown Company',
+                  industry: contact.properties.industry || null,
+                  revenue: contact.properties.annualrevenue,
+                  employees: parseInt(contact.properties.numemployees) || undefined,
+                  lifecycleStage: contact.properties.lifecyclestage || 'lead',
+                  services: await clientIntelEngine.getContactServices(clientId),
+                  hubspotProperties: contact.properties,
+                  lastActivity: contact.properties.lastmodifieddate,
+                  recentActivities: [] // Would fetch from activities API
+                };
+              }
+            }
+          } catch (hubspotError) {
+            console.error('HubSpot data fetch failed:', hubspotError);
+            // Continue with limited data for analysis
           }
-        }
-      } catch (hubspotError) {
-        console.error('HubSpot data fetch failed:', hubspotError);
-        // Continue with limited data for analysis
-      }
 
-      // Generate AI insights using the intelligence engine
-      const [painPoints, serviceGaps, riskScore] = await Promise.all([
-        clientIntelEngine.extractPainPoints(clientData),
-        clientIntelEngine.detectServiceGaps(clientData),
-        clientIntelEngine.calculateRiskScore(clientData)
-      ]);
+          // Generate AI insights using the intelligence engine
+          const [painPoints, serviceGaps, riskScore] = await Promise.all([
+            clientIntelEngine.extractPainPoints(clientData),
+            clientIntelEngine.detectServiceGaps(clientData),
+            clientIntelEngine.calculateRiskScore(clientData)
+          ]);
 
-      const insights = {
-        painPoints,
-        upsellOpportunities: serviceGaps.map(signal => 
-          `${signal.title} - ${signal.estimatedValue || 'Pricing TBD'}`
-        ),
-        riskScore,
-        lastAnalyzed: new Date().toISOString(),
-        signals: serviceGaps
-      };
+          return {
+            painPoints,
+            upsellOpportunities: serviceGaps.map(signal => 
+              `${signal.title} - ${signal.estimatedValue || 'Pricing TBD'}`
+            ),
+            riskScore,
+            lastAnalyzed: new Date().toISOString(),
+            signals: serviceGaps
+          };
+        },
+        { ttl: CacheTTL.OPENAI_ANALYSIS }
+      );
 
       res.json(insights);
     } catch (error) {
@@ -970,7 +996,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "HubSpot integration not configured" });
       }
 
-      const metrics = await hubSpotService.getDashboardMetrics(req.user.email);
+      // Use cache for dashboard metrics
+      const cacheKey = cache.generateKey(CachePrefix.HUBSPOT_METRICS, req.user.email);
+      const metrics = await cache.wrap(
+        cacheKey,
+        () => hubSpotService.getDashboardMetrics(req.user.email),
+        { ttl: CacheTTL.HUBSPOT_METRICS }
+      );
+      
       res.json(metrics);
     } catch (error) {
       console.error('Error fetching dashboard metrics:', error);

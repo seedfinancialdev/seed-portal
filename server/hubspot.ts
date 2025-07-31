@@ -24,6 +24,8 @@ export interface HubSpotDeal {
   };
 }
 
+import { cache, CacheTTL, CachePrefix } from './cache.js';
+
 export class HubSpotService {
   private accessToken: string;
   private baseUrl = 'https://api.hubapi.com';
@@ -79,12 +81,20 @@ export class HubSpotService {
 
   async getOwnerByEmail(email: string): Promise<string | null> {
     try {
-      const result = await this.makeRequest('/crm/v3/owners', {
-        method: 'GET'
-      });
-      
-      const owner = result.results?.find((owner: any) => owner.email === email);
-      return owner?.id || null;
+      // Use cache for owner lookups
+      const cacheKey = cache.generateKey(CachePrefix.USER_PROFILE, email);
+      return await cache.wrap(
+        cacheKey,
+        async () => {
+          const result = await this.makeRequest('/crm/v3/owners', {
+            method: 'GET'
+          });
+          
+          const owner = result.results?.find((owner: any) => owner.email === email);
+          return owner?.id || null;
+        },
+        { ttl: CacheTTL.USER_PROFILE }
+      );
     } catch (error) {
       console.error('Error fetching HubSpot owner:', error);
       return null;
@@ -1128,8 +1138,16 @@ Services Include:
   // Get contact by ID for detailed analysis
   async getContactById(contactId: string): Promise<any> {
     try {
-      const contact = await this.makeRequest(`/crm/v3/objects/contacts/${contactId}?properties=email,firstname,lastname,company,industry,annualrevenue,numemployees,phone,city,state,country,notes_last_contacted,notes_last_activity_date,hs_lead_status,lifecyclestage,createdate,lastmodifieddate`);
-      return contact;
+      // Use cache for contact lookups
+      const cacheKey = cache.generateKey(CachePrefix.HUBSPOT_CONTACT, contactId);
+      return await cache.wrap(
+        cacheKey,
+        async () => {
+          const contact = await this.makeRequest(`/crm/v3/objects/contacts/${contactId}?properties=email,firstname,lastname,company,industry,annualrevenue,numemployees,phone,city,state,country,notes_last_contacted,notes_last_activity_date,hs_lead_status,lifecyclestage,createdate,lastmodifieddate`);
+          return contact;
+        },
+        { ttl: CacheTTL.HUBSPOT_CONTACT }
+      );
     } catch (error) {
       console.error('Error fetching contact by ID:', error);
       return null;
@@ -1139,27 +1157,35 @@ Services Include:
   // Get deals associated with a contact to determine services
   async getContactDeals(contactId: string): Promise<any[]> {
     try {
-      const dealsResponse = await this.makeRequest(`/crm/v4/objects/contacts/${contactId}/associations/deals`);
-      
-      if (!dealsResponse?.results?.length) {
-        return [];
-      }
-
-      // Get detailed deal information
-      const dealIds = dealsResponse.results.map((assoc: any) => assoc.toObjectId);
-      const dealDetails = await Promise.all(
-        dealIds.map(async (dealId: string) => {
-          try {
-            const deal = await this.makeRequest(`/crm/v3/objects/deals/${dealId}?properties=dealname,dealstage,amount,closedate,pipeline,deal_type,hs_object_id`);
-            return deal;
-          } catch (error) {
-            console.error(`Error fetching deal ${dealId}:`, error);
-            return null;
+      // Use cache for deal lookups
+      const cacheKey = cache.generateKey(CachePrefix.HUBSPOT_DEAL, `contact:${contactId}`);
+      return await cache.wrap(
+        cacheKey,
+        async () => {
+          const dealsResponse = await this.makeRequest(`/crm/v4/objects/contacts/${contactId}/associations/deals`);
+          
+          if (!dealsResponse?.results?.length) {
+            return [];
           }
-        })
-      );
 
-      return dealDetails.filter(deal => deal !== null);
+          // Get detailed deal information
+          const dealIds = dealsResponse.results.map((assoc: any) => assoc.toObjectId);
+          const dealDetails = await Promise.all(
+            dealIds.map(async (dealId: string) => {
+              try {
+                const deal = await this.makeRequest(`/crm/v3/objects/deals/${dealId}?properties=dealname,dealstage,amount,closedate,pipeline,deal_type,hs_object_id`);
+                return deal;
+              } catch (error) {
+                console.error(`Error fetching deal ${dealId}:`, error);
+                return null;
+              }
+            })
+          );
+
+          return dealDetails.filter(deal => deal !== null);
+        },
+        { ttl: CacheTTL.HUBSPOT_DEALS }
+      );
     } catch (error) {
       console.error('Error fetching contact deals:', error);
       return [];
