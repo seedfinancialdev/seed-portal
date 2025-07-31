@@ -248,28 +248,44 @@ export default function KnowledgeBase() {
                 // Remove the first h1 tag (duplicate title)
                 content = content.replace(/<h1[^>]*>.*?<\/h1>/, '');
                 
-                // Remove metadata section that typically appears after title
-                // This removes patterns like "Document Type: ... Target Team: ... Last Reviewed: ..."
+                // Comprehensive metadata removal - handles all variations
+                // Remove any paragraph containing Document Type, Target Team, or Last Reviewed
                 content = content.replace(
-                  /<p[^>]*>\s*Document Type:[^<]*(?:<[^>]*>[^<]*<\/[^>]*>\s*)?Target Team:[^<]*(?:<[^>]*>[^<]*<\/[^>]*>\s*)?Last Reviewed:[^<]*(?:<[^>]*>[^<]*<\/[^>]*>\s*)?<\/p>/gi, 
+                  /<p[^>]*>.*?(?:Document Type|Target Team|Last Reviewed).*?<\/p>/gi, 
                   ''
                 );
                 
-                // Remove individual metadata lines
+                // Remove any div containing Document Type, Target Team, or Last Reviewed  
                 content = content.replace(
-                  /<p[^>]*>\s*(Document Type:[^<]*|Target Team:[^<]*|Last Reviewed:[^<]*)\s*<\/p>/gi, 
+                  /<div[^>]*>.*?(?:Document Type|Target Team|Last Reviewed).*?<\/div>/gi, 
                   ''
                 );
                 
-                // Remove metadata in divs
+                // Remove any standalone text containing these patterns (in case they're not wrapped)
                 content = content.replace(
-                  /<div[^>]*>\s*(Document Type:[^<]*|Target Team:[^<]*|Last Reviewed:[^<]*)\s*<\/div>/gi, 
+                  /Document Type:\s*[^\n<]*(?:\n|<br[^>]*>)?/gi,
+                  ''
+                );
+                content = content.replace(
+                  /Target Team:\s*[^\n<]*(?:\n|<br[^>]*>)?/gi,
+                  ''
+                );
+                content = content.replace(
+                  /Last Reviewed:\s*[^\n<]*(?:\n|<br[^>]*>)?/gi,
                   ''
                 );
                 
-                // Remove the specific pattern "Document Type: Internal Sales Training Target Team: Sales Team Last Reviewed: July 2025"
+                // Remove any remaining metadata blocks (more aggressive)
                 content = content.replace(
-                  /<p[^>]*>\s*Document Type:\s*Internal Sales Training\s*Target Team:\s*Sales Team\s*Last Reviewed:\s*July 2025\s*<\/p>/gi,
+                  /<[^>]*>\s*Document Type:.*?<\/[^>]*>/gi,
+                  ''
+                );
+                content = content.replace(
+                  /<[^>]*>\s*Target Team:.*?<\/[^>]*>/gi,
+                  ''
+                );
+                content = content.replace(
+                  /<[^>]*>\s*Last Reviewed:.*?<\/[^>]*>/gi,
                   ''
                 );
                 
