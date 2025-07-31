@@ -65,8 +65,6 @@ interface ContentAnalysis {
   complianceChecks: string[];
   suggestions: string[];
   missingElements: string[];
-  improvementPlan?: string[];
-  nextSteps?: string[];
 }
 
 interface SavedSession {
@@ -503,11 +501,22 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     setIsSaving(true);
     
     try {
+      // Generate slug from title  
+      const generateSlug = (title: string) => {
+        return title
+          .toLowerCase()
+          .replace(/[^\w\s-]/g, '') // Remove special characters
+          .replace(/\s+/g, '-') // Replace spaces with hyphens
+          .replace(/-+/g, '-') // Replace multiple hyphens with single
+          .trim();
+      };
+
       // Create new article - server will handle duplicate checking and unique slug generation
       await apiRequest("/api/kb/articles", {
         method: "POST",
         body: JSON.stringify({
           title: formData.title,
+          slug: generateSlug(formData.title),
           content: content,
           categoryId: formData.categoryId,
           status: 'draft',
@@ -1176,43 +1185,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                         </div>
                       )}
 
-                      {/* Improvement Plan */}
-                      {contentAnalysis.improvementPlan && contentAnalysis.improvementPlan.length > 0 && (
-                        <div className="mt-4">
-                          <h5 className="font-semibold text-blue-700 mb-2 flex items-center gap-2">
-                            <Target className="h-4 w-4" />
-                            Improvement Plan
-                          </h5>
-                          <div className="space-y-2">
-                            {contentAnalysis.improvementPlan.map((plan, index) => (
-                              <div key={index} className="flex items-start gap-2 text-sm">
-                                <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold flex-shrink-0 mt-0.5">
-                                  {index + 1}
-                                </span>
-                                <span className="text-gray-700">{plan}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
-                      {/* Next Steps */}
-                      {contentAnalysis.nextSteps && contentAnalysis.nextSteps.length > 0 && (
-                        <div className="mt-4">
-                          <h5 className="font-semibold text-purple-700 mb-2 flex items-center gap-2">
-                            <Zap className="h-4 w-4" />
-                            Next Steps
-                          </h5>
-                          <div className="space-y-2">
-                            {contentAnalysis.nextSteps.map((step, index) => (
-                              <div key={index} className="flex items-center gap-2 text-sm">
-                                <CheckCircle className="h-4 w-4 text-purple-500" />
-                                <span className="text-gray-700">{step}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
                       {/* Compliance Checks */}
                       {contentAnalysis.complianceChecks && contentAnalysis.complianceChecks.length > 0 && (
@@ -1261,15 +1234,6 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                     <span>Polished Article - WYSIWYG Editor</span>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={onClose}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <ArrowLeft className="h-4 w-4 mr-1" />
-                      Close Preview
-                    </Button>
                     <Button
                       size="sm"
                       variant="outline"

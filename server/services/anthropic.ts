@@ -343,8 +343,6 @@ Provide the adapted version:`;
     complianceChecks: string[];
     suggestions: string[];
     missingElements: string[];
-    improvementPlan: string[];
-    nextSteps: string[];
   }> {
     const systemPrompt = `You are a content quality analyst for Seed Financial. Analyze content for brand consistency, readability, and compliance.
 
@@ -366,22 +364,14 @@ Provide analysis in this JSON format:
     "Make headlines more actionable by using specific numbers or outcomes",
     "Add more concrete examples from real client scenarios", 
     "Strengthen the conclusion with a clear call-to-action",
-    "Include more industry-specific terminology to demonstrate expertise"
+    "Include more industry-specific terminology to demonstrate expertise",
+    "Add specific client success metrics (ROI percentages, cost savings)",
+    "Include cross-references to related Seed Financial services"
   ],
-  "missingElements": ["<specific missing element>", "<specific missing element>"],
-  "improvementPlan": [
-    "Add 2-3 specific client success stories in the main content",
-    "Include a 'Key Takeaways' box with 3-5 bullet points",
-    "Add cross-references to related Seed Financial services"
-  ],
-  "nextSteps": [
-    "Review and incorporate suggested improvements",
-    "Validate technical accuracy with subject matter expert", 
-    "Test readability with target audience"
-  ]
+  "missingElements": ["<specific missing element>", "<specific missing element>"]
 }
 
-Focus on providing specific, actionable suggestions that would immediately improve the content quality and business impact.`;
+Focus on providing specific, actionable suggestions that the AI can implement to immediately improve the content quality and business impact.`;
 
     try {
       const response = await this.callClaude(prompt, systemPrompt);
@@ -394,7 +384,7 @@ Focus on providing specific, actionable suggestions that would immediately impro
       
       const parsed = JSON.parse(cleanResponse);
       
-      // Enhance with more specific, actionable insights
+      // Enhance with more specific, actionable insights that AI can implement
       return {
         ...parsed,
         suggestions: parsed.suggestions?.length > 0 ? parsed.suggestions : [
@@ -402,19 +392,8 @@ Focus on providing specific, actionable suggestions that would immediately impro
           "Include real client case studies with quantifiable results", 
           "Strengthen calls-to-action with clear next steps for readers",
           "Add cross-references to related Seed Financial services",
-          "Include industry-specific terminology and compliance requirements"
-        ],
-        improvementPlan: parsed.improvementPlan?.length > 0 ? parsed.improvementPlan : [
-          "Add a 'Key Takeaways' section with 3-5 actionable bullet points",
-          "Include specific client success stories with dollar amounts or percentages",
-          "Add visual elements like charts, tables, or process diagrams",
-          "Include links to related resources and tools"
-        ],
-        nextSteps: parsed.nextSteps?.length > 0 ? parsed.nextSteps : [
-          "Review with subject matter expert for technical accuracy",
-          "Test content with target audience for clarity and usefulness",
-          "Add internal links to related KB articles and services",
-          "Schedule content review date for 3 months from publication"
+          "Include industry-specific terminology and compliance requirements",
+          "Add concrete examples from real client scenarios"
         ]
       };
     } catch (error) {
@@ -433,24 +412,13 @@ Focus on providing specific, actionable suggestions that would immediately impro
           "Add specific client success metrics (ROI percentages, cost savings)",
           "Include more industry-specific terminology to establish expertise",
           "Strengthen conclusion with clear next steps for implementation",
-          "Add cross-references to related Seed Financial services"
+          "Add cross-references to related Seed Financial services",
+          "Include industry-specific terminology and compliance requirements"
         ],
         missingElements: [
           "Specific KPIs or success metrics",
           "Client testimonials or case studies",
           "Visual elements (charts, diagrams, or tables)"
-        ],
-        improvementPlan: [
-          "Add a 'Quick Reference' section with key points summarized",
-          "Include 2-3 real client examples with quantifiable outcomes",
-          "Add internal links to related processes or tools",
-          "Create downloadable template or checklist if applicable"
-        ],
-        nextSteps: [
-          "Review technical accuracy with domain expert",
-          "Test clarity with non-expert staff member",
-          "Add to internal training materials if appropriate",
-          "Schedule quarterly review for content updates"
         ]
       };
     }
