@@ -117,6 +117,10 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
   const [autoTags, setAutoTags] = useState<string[]>([]);
   const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
   const [showSessionHistory, setShowSessionHistory] = useState(false);
+  
+  // Enhanced versions state
+  const [previewingVersion, setPreviewingVersion] = useState<{ audience: string; content: string } | null>(null);
+  const [editingVersion, setEditingVersion] = useState<{ audience: string; content: string } | null>(null);
 
   // Fetch available templates with enhanced Seed-styled previews
   const { data: templates = [], isLoading: templatesLoading } = useQuery({
@@ -1239,26 +1243,61 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
             </Card>
           </TabsContent>
 
-          {/* Versions Tab */}
+          {/* Enhanced Versions Tab */}
           <TabsContent value="versions" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {Object.entries(audienceVersions).map(([audience, content]) => (
-                <Card key={audience}>
+                <Card key={audience} className={`${
+                  audience === 'client' ? 'border-blue-200 bg-blue-50/50' : 
+                  audience === 'sales' ? 'border-orange-200 bg-orange-50/50' : 
+                  'border-green-200 bg-green-50/50'
+                }`}>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between text-base">
-                      <span className="capitalize">{audience} Version</span>
+                      <span className="capitalize font-semibold">{audience} Version</span>
                       <div className="flex gap-1">
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setPreviewingVersion({ audience, content })}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Eye className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingVersion({ audience, content })}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => copyToClipboard(content)}
+                          className="h-8 w-8 p-0"
                         >
                           <Copy className="h-3 w-3" />
                         </Button>
                         <Button
                           size="sm"
-                          onClick={() => handleSaveArticle(content)}
-                          className="bg-green-500 hover:bg-green-600"
+                          onClick={() => {
+                            // Save this version and stay in versions tab
+                            const formData = form.getValues();
+                            onArticleGenerated({
+                              title: `${formData.title} (${audience.charAt(0).toUpperCase() + audience.slice(1)})`,
+                              content: content,
+                              categoryId: formData.categoryId,
+                              excerpt: autoExcerpt || `${audience.charAt(0).toUpperCase() + audience.slice(1)}-focused article with AI-generated content`,
+                              tags: autoTags.length > 0 ? [...autoTags, audience] : ['ai-generated', 'knowledge-base', audience]
+                            });
+                            toast({
+                              title: "Draft Prepared",
+                              description: `${audience.charAt(0).toUpperCase() + audience.slice(1)} version ready for creation`,
+                            });
+                          }}
+                          className="bg-green-500 hover:bg-green-600 h-8 w-8 p-0"
                         >
                           <Save className="h-3 w-3" />
                         </Button>
@@ -1266,13 +1305,114 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-gray-50 p-3 rounded text-xs max-h-48 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap">{content}</pre>
+                    <div className={`p-4 rounded-lg text-sm max-h-48 overflow-y-auto ${
+                      audience === 'client' ? 'bg-white border border-blue-100' : 
+                      audience === 'sales' ? 'bg-white border border-orange-100' : 
+                      'bg-gray-50 border border-gray-200'
+                    }`}>
+                      <div 
+                        className={`prose prose-sm max-w-none ${
+                          audience === 'client' ? 'prose-blue' : 
+                          audience === 'sales' ? 'prose-orange' : 
+                          'prose-gray'
+                        }`}
+                        dangerouslySetInnerHTML={{ __html: content }}
+                      />
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
+            
+            {/* Preview Modal */}
+            {previewingVersion && (
+              <Dialog open={!!previewingVersion} onOpenChange={() => setPreviewingVersion(null)}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Eye className="h-5 w-5" />
+                      {previewingVersion.audience.charAt(0).toUpperCase() + previewingVersion.audience.slice(1)} Version Preview
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className={`${
+                    previewingVersion.audience === 'client' ? 'client-article' : 
+                    previewingVersion.audience === 'sales' ? 'p-6 rounded-lg bg-gradient-to-br from-orange-50 to-yellow-50 border border-orange-200' : 
+                    'p-6 rounded-lg bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div 
+                      className={`prose max-w-none ${
+                        previewingVersion.audience === 'client' ? 'prose-lg prose-blue' : 
+                        previewingVersion.audience === 'sales' ? 'prose-lg prose-orange' : 
+                        'prose-lg prose-gray'
+                      }`}
+                      dangerouslySetInnerHTML={{ __html: previewingVersion.content }}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setPreviewingVersion(null)}>
+                      Close
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setEditingVersion(previewingVersion);
+                        setPreviewingVersion(null);
+                      }}
+                      className="bg-blue-500 hover:bg-blue-600"
+                    >
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Edit Version
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {/* Edit Modal */}
+            {editingVersion && (
+              <Dialog open={!!editingVersion} onOpenChange={() => setEditingVersion(null)}>
+                <DialogContent className="max-w-4xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Edit3 className="h-5 w-5" />
+                      Edit {editingVersion.audience.charAt(0).toUpperCase() + editingVersion.audience.slice(1)} Version
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <RichTextEditor
+                      content={editingVersion.content}
+                      onChange={(content) => setEditingVersion(prev => prev ? { ...prev, content } : null)}
+                      placeholder={`Edit your ${editingVersion.audience} version content...`}
+                      height={400}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setEditingVersion(null)}>
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          if (editingVersion) {
+                            // Update the version content
+                            setAudienceVersions(prev => ({
+                              ...prev,
+                              [editingVersion.audience]: editingVersion.content
+                            }));
+                            setEditingVersion(null);
+                            toast({
+                              title: "Version Updated",
+                              description: `${editingVersion.audience.charAt(0).toUpperCase() + editingVersion.audience.slice(1)} version has been updated`,
+                            });
+                          }
+                        }}
+                        className="bg-green-500 hover:bg-green-600"
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </TabsContent>
         </Tabs>
 

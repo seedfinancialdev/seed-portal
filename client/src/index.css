@@ -178,4 +178,43 @@
   .enhanced-input:focus {
     @apply shadow-lg ring-2 ring-[#e24c00]/20;
   }
+
+  /* Enhanced Client-Facing Article Styles */
+  .prose-blue {
+    --tw-prose-body: rgb(71 85 105);
+    --tw-prose-headings: rgb(30 58 138);
+    --tw-prose-lead: rgb(71 85 105);
+    --tw-prose-links: rgb(37 99 235);
+    --tw-prose-bold: rgb(30 58 138);
+    --tw-prose-counters: rgb(100 116 139);
+    --tw-prose-bullets: rgb(203 213 225);
+    --tw-prose-hr: rgb(226 232 240);
+    --tw-prose-quotes: rgb(30 58 138);
+    --tw-prose-quote-borders: rgb(219 234 254);
+    --tw-prose-captions: rgb(100 116 139);
+    --tw-prose-code: rgb(30 58 138);
+    --tw-prose-pre-code: rgb(219 234 254);
+    --tw-prose-pre-bg: rgb(239 246 255);
+    --tw-prose-th-borders: rgb(219 234 254);
+    --tw-prose-td-borders: rgb(229 231 235);
+  }
+
+  .prose-orange {
+    --tw-prose-body: rgb(120 113 108);
+    --tw-prose-headings: rgb(194 65 12);
+    --tw-prose-lead: rgb(120 113 108);
+    --tw-prose-links: rgb(234 88 12);
+    --tw-prose-bold: rgb(194 65 12);
+    --tw-prose-counters: rgb(146 64 14);
+    --tw-prose-bullets: rgb(251 191 36);
+    --tw-prose-hr: rgb(254 215 170);
+    --tw-prose-quotes: rgb(194 65 12);
+    --tw-prose-quote-borders: rgb(255 237 213);
+    --tw-prose-captions: rgb(146 64 14);
+    --tw-prose-code: rgb(194 65 12);
+    --tw-prose-pre-code: rgb(255 237 213);
+    --tw-prose-pre-bg: rgb(255 251 235);
+    --tw-prose-th-borders: rgb(255 237 213);
+    --tw-prose-td-borders: rgb(229 231 235);
+  }
 }
