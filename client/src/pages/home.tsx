@@ -3,63 +3,27 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings, MoreHorizontal } from "lucide-react";
-import { useLocation } from "wouter";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
-
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { UniversalNavbar } from "@/components/UniversalNavbar";
+import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
-
-// Helper functions for approval logic
-const getApprovalButtonDisabledReason = (formValues: any, isRequestingApproval: boolean, hasRequestedApproval: boolean): string | null => {
-  if (isRequestingApproval) return null;
-  if (!formValues.contactEmail) return "Contact email is required";
-  if (!formValues.overrideReason) return "Please select a reason for override";
-  
-  const overrideReason = formValues.overrideReason;
-  const cleanupMonths = formValues.cleanupMonths || 0;
-  const customSetupFee = formValues.customSetupFee?.trim();
-  const customOverrideReason = formValues.customOverrideReason?.trim();
-  
-  if (overrideReason === "Other") {
-    if (!customOverrideReason) return "Please explain the reason for override";
-    // For "Other", button is enabled if custom setup fee is entered OR cleanup months are decreased
-    const hasCustomSetupFee = customSetupFee && customSetupFee !== "";
-    const hasDecreasedMonths = cleanupMonths < currentMonth;
-    if (!hasCustomSetupFee && !hasDecreasedMonths) {
-      return "Enter a custom setup fee OR reduce cleanup months below the minimum";
-    }
-  } else if (overrideReason === "Brand New Business" || overrideReason === "Books Confirmed Current") {
-    // For these reasons, button is only enabled if cleanup months are decreased
-    if (cleanupMonths >= currentMonth) {
-      return "Reduce cleanup months below the minimum to request approval";
-    }
-  }
-  
-  return null;
-};
-
-const isApprovalButtonDisabled = (formValues: any, isRequestingApproval: boolean, hasRequestedApproval: boolean): boolean => {
-  return getApprovalButtonDisabledReason(formValues, isRequestingApproval, hasRequestedApproval) !== null;
-};
 
 // Create form schema without the calculated fields
 const formSchema = insertQuoteSchema.omit({
@@ -72,25 +36,20 @@ const formSchema = insertQuoteSchema.omit({
   hubspotQuoteId: true,
   hubspotContactVerified: true,
 }).extend({
-  contactEmail: z.string().min(1, "Email is required").email("Please enter a valid email address"),
+  contactEmail: z.string().email("Please enter a valid email address"),
   cleanupMonths: z.number().min(0, "Cannot be negative"),
   cleanupOverride: z.boolean().default(false),
   overrideReason: z.string().optional(),
   customOverrideReason: z.string().optional(),
-  customSetupFee: z.string().optional(),
   companyName: z.string().optional(),
   // TaaS fields
   numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
-  customNumEntities: z.number().min(6, "Custom entities must be at least 6").optional(),
   statesFiled: z.number().min(1, "Must file in at least 1 state").optional(),
-  customStatesFiled: z.number().min(7, "Custom states must be at least 7").max(50, "Maximum 50 states").optional(),
   internationalFiling: z.boolean().optional(),
   numBusinessOwners: z.number().min(1, "Must have at least 1 business owner").optional(),
-  customNumBusinessOwners: z.number().min(6, "Custom owners must be at least 6").optional(),
   include1040s: z.boolean().optional(),
   priorYearsUnfiled: z.number().min(0, "Cannot be negative").max(5, "Maximum 5 years").optional(),
   alreadyOnSeedBookkeeping: z.boolean().optional(),
-  qboSubscription: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   // If cleanup override is checked, require a reason
   if (data.cleanupOverride && !data.overrideReason) {
@@ -101,22 +60,13 @@ const formSchema = insertQuoteSchema.omit({
     });
   }
   
-  // If "Other" is selected as reason, require custom text and setup fee
-  if (data.cleanupOverride && data.overrideReason === "Other") {
-    if (!data.customOverrideReason || data.customOverrideReason.trim() === "") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please provide a detailed reason for the override",
-        path: ["customOverrideReason"]
-      });
-    }
-    if (!data.customSetupFee || data.customSetupFee.trim() === "") {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Please enter a custom setup fee for manual approval",
-        path: ["customSetupFee"]
-      });
-    }
+  // If "Other" is selected as reason, require custom text
+  if (data.cleanupOverride && data.overrideReason === "Other" && (!data.customOverrideReason || data.customOverrideReason.trim() === "")) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Please provide a detailed reason for the override",
+      path: ["customOverrideReason"]
+    });
   }
   
   // If override is not checked or not approved, enforce minimum cleanup months (only for bookkeeping)
@@ -221,7 +171,6 @@ const industryMultipliers = {
   'Property Management': { monthly: 1.3, cleanup: 1.2 },
   'E-commerce/Retail': { monthly: 1.35, cleanup: 1.15 },
   'Restaurant/Food Service': { monthly: 1.6, cleanup: 1.4 },
-  'Hospitality': { monthly: 1.6, cleanup: 1.4 },
   'Construction/Trades': { monthly: 1.5, cleanup: 1.08 },
   'Manufacturing': { monthly: 1.45, cleanup: 1.25 },
   'Transportation/Logistics': { monthly: 1.4, cleanup: 1.2 },
@@ -250,99 +199,32 @@ function roundToNearest25(num: number): number {
 
 function calculateFees(data: Partial<FormData>) {
   if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
-    return { 
-      monthlyFee: 0, 
-      setupFee: 0,
-      breakdown: {
-        baseFee: 0,
-        revenueMultiplier: 1,
-        afterRevenue: 0,
-        txFee: 0,
-        afterTx: 0,
-        industryMultiplier: 1,
-        finalMonthly: 0,
-        cleanupComplexity: 0,
-        cleanupMonths: 0,
-        setupCalc: 0
-      }
-    };
+    return { monthlyFee: 0, setupFee: 0 };
   }
   
   // If cleanup months is 0, cleanup complexity is not required
   if (data.cleanupMonths > 0 && !data.cleanupComplexity) {
-    return { 
-      monthlyFee: 0, 
-      setupFee: 0,
-      breakdown: {
-        baseFee: 0,
-        revenueMultiplier: 1,
-        afterRevenue: 0,
-        txFee: 0,
-        afterTx: 0,
-        industryMultiplier: 1,
-        finalMonthly: 0,
-        cleanupComplexity: 0,
-        cleanupMonths: 0,
-        setupCalc: 0
-      }
-    };
+    return { monthlyFee: 0, setupFee: 0 };
   }
 
   const revenueMultiplier = revenueMultipliers[data.revenueBand as keyof typeof revenueMultipliers] || 1.0;
   const txFee = txSurcharge[data.monthlyTransactions as keyof typeof txSurcharge] || 0;
   const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
   
-  // Step-by-step calculation for breakdown
-  const afterRevenue = baseMonthlyFee * revenueMultiplier;
-  const afterTx = afterRevenue + txFee;
-  let monthlyFee = Math.round(afterTx * industryData.monthly);
-  
-  // Add QBO Subscription fee if selected
-  if (data.qboSubscription) {
-    monthlyFee += 80;
-  }
+  // Dynamic calculation: base fee * revenue multiplier + transaction surcharge, then apply industry multiplier
+  const monthlyFee = Math.round((baseMonthlyFee * revenueMultiplier + txFee) * industryData.monthly);
   
   // Use the actual cleanup months value (override just allows values below normal minimum)
   const effectiveCleanupMonths = data.cleanupMonths;
   
-  // Calculate setup fee - custom setup fee ALWAYS overrides calculated values
+  // If no cleanup months, setup fee is $0, but monthly fee remains normal
   let setupFee = 0;
-  let setupCalc = 0;
-  const cleanupComplexityMultiplier = parseFloat(data.cleanupComplexity || "0.5");
-  let industryCleanupMultiplier = 1;
-  let cleanupBeforeIndustry = 0;
-  
-  // Check for custom setup fee override first (takes precedence regardless of cleanup months)
-  if (data.overrideReason === "Other" && data.customSetupFee && parseFloat(data.customSetupFee) > 0) {
-    setupFee = parseFloat(data.customSetupFee);
-  } else if (effectiveCleanupMonths > 0) {
-    // Standard cleanup calculation only if no custom override
-    industryCleanupMultiplier = industryData.cleanup;
-    cleanupBeforeIndustry = monthlyFee * cleanupComplexityMultiplier * effectiveCleanupMonths;
-    const cleanupMultiplier = cleanupComplexityMultiplier * industryData.cleanup;
-    setupCalc = monthlyFee * cleanupMultiplier * effectiveCleanupMonths;
-    setupFee = roundToNearest25(Math.max(monthlyFee, setupCalc));
+  if (effectiveCleanupMonths > 0) {
+    const cleanupMultiplier = parseFloat(data.cleanupComplexity || "0.75") * industryData.cleanup;
+    setupFee = roundToNearest25(Math.max(monthlyFee, monthlyFee * cleanupMultiplier * effectiveCleanupMonths));
   }
-  // If cleanup months is 0 and no custom override, setup fee remains 0
   
-  return { 
-    monthlyFee, 
-    setupFee,
-    breakdown: {
-      baseFee: baseMonthlyFee,
-      revenueMultiplier,
-      afterRevenue: Math.round(afterRevenue),
-      txFee,
-      afterTx: Math.round(afterTx),
-      industryMultiplier: industryData.monthly,
-      finalMonthly: monthlyFee,
-      cleanupComplexity: cleanupComplexityMultiplier * 100, // As percentage
-      cleanupMonths: effectiveCleanupMonths,
-      setupCalc: Math.round(setupCalc),
-      cleanupBeforeIndustry: Math.round(cleanupBeforeIndustry),
-      industryCleanupMultiplier
-    }
-  };
+  return { monthlyFee, setupFee };
 }
 
 // TaaS-specific calculation function based on provided logic
@@ -350,69 +232,43 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   if (!data.revenueBand || !data.industry || !data.entityType || !data.numEntities || !data.statesFiled || 
       data.internationalFiling === undefined || !data.numBusinessOwners || !data.bookkeepingQuality || 
       data.include1040s === undefined || data.priorYearsUnfiled === undefined || data.alreadyOnSeedBookkeeping === undefined) {
-    return { 
-      monthlyFee: 0, 
-      setupFee: 0,
-      breakdown: {
-        base: 0,
-        entityUpcharge: 0,
-        stateUpcharge: 0,
-        intlUpcharge: 0,
-        ownerUpcharge: 0,
-        bookUpcharge: 0,
-        personal1040: 0,
-        beforeMultipliers: 0,
-        industryMult: 1,
-        revenueMult: 1,
-        afterMultipliers: 0,
-        seedDiscount: 0,
-        finalMonthly: 0,
-        priorYearsUnfiled: 0,
-        perYearFee: 0,
-        setupFee: 0
-      }
-    };
+    return { monthlyFee: 0, setupFee: 0 };
   }
 
   const base = 150;
 
-  // Get effective numbers (use custom values if "more" is selected)
-  const effectiveNumEntities = data.customNumEntities || data.numEntities;
-  const effectiveStatesFiled = data.customStatesFiled || data.statesFiled;
-  const effectiveNumBusinessOwners = data.customNumBusinessOwners || data.numBusinessOwners;
-
-  // Entity upcharge: Every entity above 5 adds $75/mo
-  let entityUpcharge = 0;
-  if (effectiveNumEntities > 5) {
-    entityUpcharge = (effectiveNumEntities - 5) * 75;
-  }
+  // Entity upcharge
+  const entityUpcharge = data.numEntities === 1 ? 0 : data.numEntities <= 3 ? 75 : 150;
   
-  // State upcharge: $50 per state above 1, up to 50 states
-  let stateUpcharge = 0;
-  if (effectiveStatesFiled > 1) {
-    const additionalStates = Math.min(effectiveStatesFiled - 1, 49); // Cap at 49 additional states (50 total)
-    stateUpcharge = additionalStates * 50;
-  }
+  // State upcharge
+  const stateUpcharge = data.statesFiled <= 1 ? 0 : data.statesFiled <= 5 ? 50 : 150;
   
   // International filing upcharge
   const intlUpcharge = data.internationalFiling ? 200 : 0;
   
-  // Owner upcharge: Every owner above 5 is $25/mo per owner
-  let ownerUpcharge = 0;
-  if (effectiveNumBusinessOwners > 5) {
-    ownerUpcharge = (effectiveNumBusinessOwners - 5) * 25;
-  }
+  // Owner upcharge
+  const ownerUpcharge = data.numBusinessOwners <= 1 ? 0 : data.numBusinessOwners <= 3 ? 50 : 100;
   
   // Bookkeeping quality upcharge
   const bookUpcharge = data.bookkeepingQuality === 'Clean (Seed)' ? 0 : 
                        data.bookkeepingQuality === 'Outside CPA' ? 75 : 150;
   
   // Personal 1040s
-  const personal1040 = data.include1040s ? effectiveNumBusinessOwners * 25 : 0;
+  const personal1040 = data.include1040s ? data.numBusinessOwners * 25 : 0;
 
-  // Use the same comprehensive industry multipliers as bookkeeping (monthly values)
-  const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1.0, cleanup: 1.0 };
-  const industryMult = industryData.monthly;
+  // Industry multiplier (simplified mapping from TaaS logic to our existing industries)
+  const taasIndustryMult: Record<string, number> = {
+    'Software/SaaS': 1.0,
+    'Professional Services': 1.1, // Agencies
+    'Consulting': 1.1, // Agencies  
+    'Real Estate': 1.2,
+    'E-commerce/Retail': 1.3,
+    'Construction/Trades': 1.4,
+    'Multi-entity/Holding Companies': 1.5,
+    // Default to SaaS multiplier for others
+  };
+  
+  const industryMult = taasIndustryMult[data.industry] || 1.0;
 
   // Revenue multiplier (map our revenue bands to average monthly revenue)
   const avgMonthlyRevenue = data.revenueBand === '<$10K' ? 5000 :
@@ -428,53 +284,26 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
                      avgMonthlyRevenue <= 250000 ? 1.6 :
                      avgMonthlyRevenue <= 1000000 ? 1.8 : 2.0;
 
-  // Step-by-step calculation for breakdown
-  const beforeMultipliers = base + entityUpcharge + stateUpcharge + intlUpcharge + ownerUpcharge + bookUpcharge + personal1040;
-  const afterMultipliers = beforeMultipliers * industryMult * revenueMult;
+  // Calculate raw fee
+  const rawFee = (base + entityUpcharge + stateUpcharge + intlUpcharge + ownerUpcharge + bookUpcharge + personal1040) * industryMult * revenueMult;
 
-  // Apply Seed Bookkeeping discount if applicable (15% for existing clients)
+  // Apply Seed Bookkeeping discount if applicable
   const isBookkeepingClient = data.alreadyOnSeedBookkeeping;
-  const seedDiscount = isBookkeepingClient ? afterMultipliers * 0.15 : 0;
-  const discountedFee = afterMultipliers - seedDiscount;
-  const monthlyFee = Math.max(150, Math.round(discountedFee / 5) * 5);
+  const monthlyFee = Math.max(150, Math.round((isBookkeepingClient ? rawFee * 0.9 : rawFee) / 5) * 5);
 
-  // Setup fee calculation - 0.5 × monthly × 12 with $1000 minimum per year
-  const perYearFee = Math.max(1000, monthlyFee * 0.5 * 12);
-  const setupFee = data.priorYearsUnfiled > 0 ? Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled) : 0;
-
-  // Add intermediate calculation for better breakdown display
-  const afterIndustryMult = beforeMultipliers * industryMult;
-
-  const breakdown = {
-    base,
-    entityUpcharge,
-    stateUpcharge,
-    intlUpcharge,
-    ownerUpcharge,
-    bookUpcharge,
-    personal1040,
-    beforeMultipliers,
-    industryMult,
-    afterIndustryMult: Math.round(afterIndustryMult),
-    revenueMult,
-    afterMultipliers: Math.round(afterMultipliers),
-    seedDiscount: Math.round(seedDiscount),
-    finalMonthly: monthlyFee,
-    priorYearsUnfiled: data.priorYearsUnfiled,
-    perYearFee: Math.round(perYearFee),
-    setupFee
-  };
+  // Setup fee calculation
+  const perYearFee = monthlyFee * 0.8 * 12;
+  const setupFee = Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled);
 
   // If we have existing bookkeeping fees, add them on top
   if (existingBookkeepingFees) {
     return {
       monthlyFee: monthlyFee + existingBookkeepingFees.monthlyFee,
-      setupFee: setupFee + existingBookkeepingFees.setupFee,
-      breakdown
+      setupFee: setupFee + existingBookkeepingFees.setupFee
     };
   }
 
-  return { monthlyFee, setupFee, breakdown };
+  return { monthlyFee, setupFee };
 }
 
 // Combined calculation function for quotes that include both services
@@ -482,8 +311,8 @@ function calculateCombinedFees(data: Partial<FormData>) {
   const includesBookkeeping = data.includesBookkeeping !== false; // Default to true
   const includesTaas = data.includesTaas === true;
   
-  let bookkeepingFees: any = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
-  let taasFees: any = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
+  let bookkeepingFees = { monthlyFee: 0, setupFee: 0 };
+  let taasFees = { monthlyFee: 0, setupFee: 0 };
   
   if (includesBookkeeping) {
     bookkeepingFees = calculateFees(data);
@@ -505,10 +334,9 @@ function calculateCombinedFees(data: Partial<FormData>) {
   };
 }
 
-function Home() {
+export default function Home() {
   const { toast } = useToast();
   const { user, logoutMutation } = useAuth();
-  const [, setLocation] = useLocation();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -523,13 +351,6 @@ function Home() {
   const [isRequestingApproval, setIsRequestingApproval] = useState(false);
   const [isValidatingCode, setIsValidatingCode] = useState(false);
   const [customOverrideReason, setCustomOverrideReason] = useState("");
-  const [hasRequestedApproval, setHasRequestedApproval] = useState(false);
-  const [customSetupFee, setCustomSetupFee] = useState<string>("");
-  
-  // Simplified approval system - lock fields permanently after approval
-  const [fieldsLocked, setFieldsLocked] = useState(false);
-  const [unlockConfirmDialog, setUnlockConfirmDialog] = useState(false);
-  const [originalCleanupMonths, setOriginalCleanupMonths] = useState<number>(currentMonth);
   
   // Archive dialog state
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -610,7 +431,6 @@ function Home() {
       cleanupOverride: false,
       overrideReason: "",
       customOverrideReason: "",
-      customSetupFee: "",
       companyName: "",
       quoteType: "bookkeeping",
       // Service flags for combined quotes
@@ -624,23 +444,21 @@ function Home() {
       include1040s: false,
       priorYearsUnfiled: 0,
       alreadyOnSeedBookkeeping: false,
-      qboSubscription: false,
     },
   });
 
   // Query to fetch all quotes
   const { data: allQuotes = [], refetch: refetchQuotes } = useQuery<Quote[]>({
     queryKey: ["/api/quotes", { search: searchTerm, sortField, sortOrder }],
-    queryFn: async () => {
+    queryFn: () => {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (sortField) params.append('sortField', sortField);
       if (sortOrder) params.append('sortOrder', sortOrder);
       
-      const response = await apiRequest(`/api/quotes?${params.toString()}`);
-      return response || [];
-    },
-    retry: false, // Don't retry on auth failures
+      return fetch(`/api/quotes?${params.toString()}`)
+        .then(res => res.json());
+    }
   });
 
   const createQuoteMutation = useMutation({
@@ -663,17 +481,11 @@ function Home() {
       console.log('Final quote data:', quoteData);
       
       if (editingQuoteId) {
-        const response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
-          method: "PUT",
-          body: JSON.stringify(quoteData)
-        });
-        return response;
+        const response = await apiRequest("PUT", `/api/quotes/${editingQuoteId}`, quoteData);
+        return response.json();
       } else {
-        const response = await apiRequest("/api/quotes", {
-          method: "POST",
-          body: JSON.stringify(quoteData)
-        });
-        return response;
+        const response = await apiRequest("POST", "/api/quotes", quoteData);
+        return response.json();
       }
     },
     onSuccess: (data) => {
@@ -682,10 +494,7 @@ function Home() {
         title: editingQuoteId ? "Quote Updated" : "Quote Saved",
         description: editingQuoteId ? "Your quote has been updated successfully." : "Your quote has been saved successfully.",
       });
-      // When saving a new quote, set editingQuoteId so user can immediately update it in HubSpot
-      if (!editingQuoteId && data.id) {
-        setEditingQuoteId(data.id);
-      }
+      setEditingQuoteId(null);
       setHasUnsavedChanges(false);
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       refetchQuotes();
@@ -703,11 +512,8 @@ function Home() {
   // Archive quote mutation
   const archiveQuoteMutation = useMutation({
     mutationFn: async (quoteId: number) => {
-      const response = await apiRequest(`/api/quotes/${quoteId}/archive`, {
-        method: "PATCH",
-        body: JSON.stringify({})
-      });
-      return response;
+      const response = await apiRequest("PATCH", `/api/quotes/${quoteId}/archive`, {});
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -768,24 +574,18 @@ function Home() {
     
     try {
       // Check for existing quotes and verify HubSpot contact in parallel
-      const [hubspotResult, existingQuotesResult] = await Promise.all([
-        apiRequest('/api/hubspot/verify-contact', {
-          method: 'POST',
-          body: JSON.stringify({ email })
-        }),
-        apiRequest('/api/quotes/check-existing', {
-          method: 'POST',
-          body: JSON.stringify({ email })
-        })
+      const [hubspotResponse, existingQuotesResponse] = await Promise.all([
+        apiRequest('POST', '/api/hubspot/verify-contact', { email }),
+        apiRequest('POST', '/api/quotes/check-existing', { email })
       ]);
+      
+      const hubspotResult = await hubspotResponse.json();
+      const existingQuotesResult = await existingQuotesResponse.json();
       
       // Handle HubSpot verification
       if (hubspotResult.verified && hubspotResult.contact) {
         setHubspotVerificationStatus('verified');
         setHubspotContact(hubspotResult.contact);
-        
-        // Clear any email validation errors since HubSpot verification succeeded
-        form.clearErrors('contactEmail');
         
         // Auto-fill company name if available
         if (hubspotResult.contact.properties.company && !form.getValues('companyName')) {
@@ -838,21 +638,14 @@ function Home() {
   // Push to HubSpot mutation
   const pushToHubSpotMutation = useMutation({
     mutationFn: async (quoteId: number) => {
-      const result = await apiRequest("/api/hubspot/push-quote", {
-        method: "POST",
-        body: JSON.stringify({ quoteId })
-      });
-      return { ...result, quoteId }; // Include the original quoteId in the response
+      const response = await apiRequest("POST", "/api/hubspot/push-quote", { quoteId });
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: "Pushed to HubSpot",
         description: `Deal "${data.dealName}" created successfully in HubSpot.`,
       });
-      // Set editingQuoteId so subsequent changes can update the HubSpot quote
-      if (data.quoteId) {
-        setEditingQuoteId(data.quoteId);
-      }
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       refetchQuotes();
     },
@@ -870,24 +663,11 @@ function Home() {
   const updateHubSpotMutation = useMutation({
     mutationFn: async (quoteId: number) => {
       const currentFormData = form.getValues();
-      
-      // Ensure calculated fees are included in form data
-      const enhancedFormData = {
-        ...currentFormData,
-        monthlyFee: feeCalculation.combined.monthlyFee.toString(),
-        setupFee: feeCalculation.combined.setupFee.toString(),
-        taasMonthlyFee: feeCalculation.taas.monthlyFee.toString(),
-        taasPriorYearsFee: feeCalculation.taas.setupFee.toString()
-      };
-      
-      const result = await apiRequest("/api/hubspot/update-quote", {
-        method: "POST",
-        body: JSON.stringify({
-          quoteId, 
-          currentFormData: enhancedFormData 
-        })
+      const response = await apiRequest("POST", "/api/hubspot/update-quote", { 
+        quoteId, 
+        currentFormData 
       });
-      return result;
+      return response.json();
     },
     onSuccess: (data) => {
       if (data.success) {
@@ -993,38 +773,15 @@ function Home() {
       cleanupOverride: quote.cleanupOverride || false,
       overrideReason: quote.overrideReason || "",
       companyName: quote.companyName || "",
-      // Quote type and service flags
-      quoteType: quote.quoteType || "bookkeeping",
-      includesBookkeeping: quote.includesBookkeeping ?? true,
-      includesTaas: quote.includesTaas ?? false,
-      // TaaS-specific fields (ensure proper type conversion)
-      entityType: quote.entityType || "LLC",
-      numEntities: quote.numEntities ? Number(quote.numEntities) : 1,
-      statesFiled: quote.statesFiled ? Number(quote.statesFiled) : 1,
-      internationalFiling: quote.internationalFiling ?? false,
-      numBusinessOwners: quote.numBusinessOwners ? Number(quote.numBusinessOwners) : 1,
-      bookkeepingQuality: quote.bookkeepingQuality || "Clean (Seed)",
-      include1040s: quote.include1040s ?? false,
-      priorYearsUnfiled: quote.priorYearsUnfiled ? Number(quote.priorYearsUnfiled) : 0,
-      alreadyOnSeedBookkeeping: quote.alreadyOnSeedBookkeeping ?? false,
     };
     
-    console.log('Loading quote into form:', quote.id);
-    
+    console.log('Resetting form with data:', formData);
     form.reset(formData);
     
-    // Force trigger and individual field updates to ensure all form fields update properly
+    // Use setTimeout to ensure form is reset before checking values
     setTimeout(() => {
-      // Force update individual TaaS fields to ensure Select components render correctly
-      if (quote.entityType) form.setValue('entityType', quote.entityType);
-      if (quote.numEntities) form.setValue('numEntities', Number(quote.numEntities));
-      if (quote.statesFiled) form.setValue('statesFiled', Number(quote.statesFiled));
-      if (quote.numBusinessOwners) form.setValue('numBusinessOwners', Number(quote.numBusinessOwners));
-      if (quote.priorYearsUnfiled !== undefined) form.setValue('priorYearsUnfiled', Number(quote.priorYearsUnfiled));
-      if (quote.bookkeepingQuality) form.setValue('bookkeepingQuality', quote.bookkeepingQuality);
-      
-      form.trigger();
-    }, 100);
+      console.log('Form values after reset:', form.getValues());
+    }, 50);
     
     // Reset HubSpot verification state and re-verify if email exists
     setHubspotVerificationStatus('idle');
@@ -1035,20 +792,6 @@ function Home() {
     if (quote.contactEmail) {
       debouncedVerifyEmail(quote.contactEmail);
     }
-    
-    // Set the appropriate form view based on the quote's services (delayed to ensure form reset completes)
-    setTimeout(() => {
-      if (quote.includesBookkeeping && quote.includesTaas) {
-        // Combined quote - default to bookkeeping view
-        setCurrentFormView('bookkeeping');
-      } else if (quote.includesTaas) {
-        // TaaS only
-        setCurrentFormView('taas');
-      } else {
-        // Bookkeeping only (default)
-        setCurrentFormView('bookkeeping');
-      }
-    }, 150);
     
     setHasUnsavedChanges(false);
   };
@@ -1066,22 +809,7 @@ function Home() {
       cleanupOverride: false,
       overrideReason: "",
       customOverrideReason: "",
-      customSetupFee: "",
       companyName: "",
-      quoteType: "bookkeeping",
-      // Service flags for combined quotes
-      includesBookkeeping: true,
-      includesTaas: false,
-      // TaaS defaults
-      entityType: "LLC",
-      numEntities: 1,
-      statesFiled: 1,
-      internationalFiling: false,
-      numBusinessOwners: 1,
-      bookkeepingQuality: "Clean (Seed)",
-      include1040s: false,
-      priorYearsUnfiled: 0,
-      alreadyOnSeedBookkeeping: false,
     });
     
     // Reset all HubSpot verification state
@@ -1089,8 +817,6 @@ function Home() {
     setHubspotContact(null);
     setLastVerifiedEmail('');
     setIsApproved(false);
-    setHasRequestedApproval(false);
-    setCustomSetupFee("");
     
     // Reset existing quotes state
     setExistingQuotesForEmail([]);
@@ -1098,9 +824,6 @@ function Home() {
     
     // Clear search term to show all quotes again
     setSearchTerm("");
-    
-    // Reset form view to default (bookkeeping)
-    setCurrentFormView('bookkeeping');
     
     setHasUnsavedChanges(false);
   };
@@ -1130,34 +853,22 @@ function Home() {
       const formData = form.getValues();
       const fees = calculateFees(formData);
       
-      // Include custom setup fee if "Other" reason is selected
-      const setupFee = formData.overrideReason === "Other" && formData.customSetupFee 
-        ? parseFloat(formData.customSetupFee) 
-        : fees.setupFee;
-      
-      const result = await apiRequest("/api/approval/request", {
-        method: "POST",
-        body: JSON.stringify({
+      const response = await apiRequest("POST", "/api/approval/request", {
+        contactEmail: formData.contactEmail,
+        quoteData: {
           contactEmail: formData.contactEmail,
-          quoteData: {
-            contactEmail: formData.contactEmail,
-            revenueBand: formData.revenueBand,
-            monthlyTransactions: formData.monthlyTransactions,
-            industry: formData.industry,
-            cleanupMonths: formData.cleanupMonths,
-            requestedCleanupMonths: formData.cleanupMonths, // Add requested months
-            overrideReason: formData.overrideReason || "",
-            customOverrideReason: formData.customOverrideReason || "",
-            customSetupFee: formData.customSetupFee || "",
-            monthlyFee: fees.monthlyFee,
-            setupFee: setupFee,
-            originalCleanupMonths: currentMonth // Include original minimum
-          }
-        })
+          revenueBand: formData.revenueBand,
+          monthlyTransactions: formData.monthlyTransactions,
+          industry: formData.industry,
+          cleanupMonths: formData.cleanupMonths,
+          overrideReason: formData.overrideReason || "",
+          customOverrideReason: formData.customOverrideReason || "",
+          monthlyFee: fees.monthlyFee,
+          setupFee: fees.setupFee
+        }
       });
       
-      if (result) {
-        setHasRequestedApproval(true);
+      if (response.ok) {
         toast({
           title: "Approval Requested",
           description: "Check Slack for the approval code.",
@@ -1191,23 +902,20 @@ function Home() {
 
     setIsValidatingCode(true);
     try {
-      const result = await apiRequest("/api/approval/validate", {
-        method: "POST",
-        body: JSON.stringify({
-          code: approvalCode,
-          contactEmail: form.getValues().contactEmail
-        })
+      const response = await apiRequest("POST", "/api/approval/validate", {
+        code: approvalCode,
+        contactEmail: form.getValues().contactEmail
       });
       
+      const result = await response.json();
+      
       if (result.valid) {
-        // Lock all fields permanently after approval
         setIsApproved(true);
-        setFieldsLocked(true);
         setIsApprovalDialogOpen(false);
         setApprovalCode("");
         toast({
           title: "Approval Granted",
-          description: "Setup fee fields are now locked. Use the unlock button to make changes.",
+          description: "You can now modify cleanup months.",
         });
       } else {
         toast({
@@ -1228,23 +936,6 @@ function Home() {
     }
   };
 
-  // Handle unlocking fields with confirmation
-  const handleUnlockFields = () => {
-    setUnlockConfirmDialog(true);
-  };
-
-  const confirmUnlockFields = () => {
-    setFieldsLocked(false);
-    setIsApproved(false);
-    setHasRequestedApproval(false);
-    setUnlockConfirmDialog(false);
-    toast({
-      title: "Fields Unlocked",
-      description: "You can now make changes, but will need a new approval code before saving.",
-      variant: "destructive",
-    });
-  };
-
   const onSubmit = (data: FormData) => {
     console.log('onSubmit called with data:', data);
     if (!isCalculated) {
@@ -1257,149 +948,482 @@ function Home() {
       return;
     }
     
-    // Check if override is used but not approved
-    if (data.cleanupOverride && !isApproved) {
-      toast({
-        title: "Approval Required",
-        description: "You must get approval before saving quotes with cleanup overrides.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     console.log('Submitting quote via createQuoteMutation');
     createQuoteMutation.mutate(data);
   };
 
   // Remove the old breakdown function since it's now handled in the calculation logic above
 
-  // Scroll to top on component mount
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
-      <UniversalNavbar 
-        showBackButton={true} 
-        backButtonText="Back to Portal" 
-        backButtonPath="/" 
-      />
-      
-      <main className="container mx-auto px-6 py-8">
-        {/* Main Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Quote Calculator</h1>
-          <p className="text-lg text-green-100">Generate accurate pricing for your services</p>
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-8">
+          {/* User Menu - Top Right */}
+          <div className="absolute top-0 right-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
+                  <User className="h-4 w-4 mr-2" />
+                  {user?.email}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem disabled>
+                  <User className="h-4 w-4 mr-2" />
+                  {user?.email}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => logoutMutation.mutate()}
+                  disabled={logoutMutation.isPending}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  {logoutMutation.isPending ? "Signing out..." : "Sign out"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
+          {/* Logo and Title - Center */}
+          <div className="text-center">
+            <img 
+              src={logoPath} 
+              alt="Seed Financial Logo" 
+              className="h-16 mx-auto mb-4"
+            />
+            <p className="text-lg text-gray-200">
+              Internal Pricing Calculator
+            </p>
+          </div>
         </div>
 
-        {/* Enhanced Client Information Section */}
-        <div className="max-w-5xl mx-auto mb-10">
-          <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-r from-[#e24c00] to-orange-500 rounded-xl shadow-lg">
-                  <User className="h-7 w-7 text-white" />
+        {/* Service Selection Cards - Optimized for desktop */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Bookkeeping Service Card */}
+            <div 
+              className={`
+                cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
+                ${feeCalculation.includesBookkeeping 
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
+                  : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
+                }
+              `}
+              onClick={() => {
+                const newValue = !feeCalculation.includesBookkeeping;
+                form.setValue('includesBookkeeping', newValue);
+                form.trigger();
+                
+                // Navigation logic
+                if (!feeCalculation.includesBookkeeping) {
+                  // Activating bookkeeping - navigate to bookkeeping form
+                  setCurrentFormView('bookkeeping');
+                } else {
+                  // Deactivating bookkeeping - navigate to next active service
+                  if (feeCalculation.includesTaas) {
+                    setCurrentFormView('taas');
+                  }
+                }
+              }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
+                }`}>
+                  {feeCalculation.includesBookkeeping && <Check className="h-4 w-4 text-white" />}
+                </div>
+                <h4 className={`font-semibold ${
+                  feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-600'
+                }`}>
+                  Bookkeeping
+                </h4>
+              </div>
+              <div className={`text-2xl font-bold mb-1 ${
+                feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
+              </div>
+              <div className={`text-sm font-medium mb-2 ${
+                feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
+              </div>
+              <p className={`text-xs ${
+                feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
+              }`}>
+                Monthly bookkeeping, cleanup, and financial management
+              </p>
+            </div>
+
+            {/* TaaS Service Card */}
+            <div 
+              className={`
+                cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
+                ${feeCalculation.includesTaas 
+                  ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
+                  : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                }
+              `}
+              onClick={() => {
+                const newValue = !feeCalculation.includesTaas;
+                form.setValue('includesTaas', newValue);
+                form.trigger();
+                
+                // Navigation logic
+                if (!feeCalculation.includesTaas) {
+                  // Activating TaaS - navigate to TaaS form
+                  setCurrentFormView('taas');
+                } else {
+                  // Deactivating TaaS - navigate to next active service
+                  if (feeCalculation.includesBookkeeping) {
+                    setCurrentFormView('bookkeeping');
+                  }
+                }
+              }}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
+                }`}>
+                  {feeCalculation.includesTaas && <Check className="h-4 w-4 text-white" />}
+                </div>
+                <h4 className={`font-semibold ${
+                  feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-600'
+                }`}>
+                  TaaS
+                </h4>
+              </div>
+              <div className={`text-2xl font-bold mb-1 ${
+                feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
+              </div>
+              <div className={`text-sm font-medium mb-2 ${
+                feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
+              }`}>
+                ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} prior years
+              </div>
+              <p className={`text-xs ${
+                feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
+              }`}>
+                Tax preparation, filing, and compliance services
+              </p>
+            </div>
+
+            {/* Other Services Card - Coming Soon */}
+            <div className="cursor-not-allowed rounded-xl p-5 border-2 border-dashed border-gray-300 shadow-sm bg-gray-50">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
+                  <Plus className="h-4 w-4 text-gray-500" />
+                </div>
+                <h4 className="font-semibold text-gray-500">Other Services</h4>
+              </div>
+              <div className="text-2xl font-bold mb-1 text-gray-400">
+                Coming Soon
+              </div>
+              <div className="text-sm font-medium mb-2 text-gray-400">
+                Additional services
+              </div>
+              <p className="text-xs text-gray-500">
+                Payroll, FBAR filing, APAP Lite, and more
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Quote Builder Form Card */}
+          <Card className="bg-gray-50 shadow-xl border-0 quote-card">
+            <CardContent className="p-6 sm:p-8">
+              {/* Modern Navigation Toggle - Only show if multiple services are active */}
+              {getActiveServices().length > 1 && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-center">
+                    <div className="bg-gray-100 rounded-lg p-1 flex items-center gap-1">
+                      {getActiveServices().map((service) => (
+                        <button
+                          key={service}
+                          type="button"
+                          onClick={() => setCurrentFormView(service)}
+                          className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                            currentFormView === service
+                              ? 'bg-white shadow-sm text-[#e24c00] border border-gray-200'
+                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                          }`}
+                        >
+                          {service === 'bookkeeping' ? 'Bookkeeping' : 'Tax Service'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Form Header */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
+                  {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
                 </div>
                 <div>
-                  <CardTitle className="text-2xl text-gray-900">Client Information</CardTitle>
-                  <p className="text-gray-600 mt-1">Enter client details to begin quote generation</p>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {currentFormView === 'bookkeeping' ? 'Bookkeeping Quote' : 'Tax as a Service (TaaS) Quote'}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {currentFormView === 'bookkeeping' ? 'Configure your bookkeeping pricing' : 'Configure your tax preparation requirements'}
+                  </p>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
+              
               <Form {...form}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Core Fields - Always Shown */}
+                  <div className="space-y-6">
+                    {/* Contact Email */}
                   <FormField
                     control={form.control}
                     name="contactEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-semibold text-gray-700">Contact Email *</FormLabel>
+                        <FormLabel>Contact Email</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Input 
                               type="email"
                               placeholder="client@company.com"
-                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-[#e24c00] text-lg h-12"
+                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
                               {...field}
                               onChange={(e) => {
                                 field.onChange(e);
                                 const email = e.target.value;
                                 
+                                // If email is cleared, reset existing quotes state
                                 if (!email.trim()) {
                                   setExistingQuotesForEmail([]);
                                   setShowExistingQuotesNotification(false);
                                   setHubspotVerificationStatus('idle');
                                   setHubspotContact(null);
                                   setLastVerifiedEmail('');
-                                  return;
+                                  setSearchTerm(""); // Clear search filter when email is cleared
+                                  form.setValue('companyName', ''); // Clear company name when email is cleared
                                 }
                                 
                                 debouncedVerifyEmail(email);
-                                setHasUnsavedChanges(true);
                               }}
                             />
-                            {hubspotVerificationStatus === 'verifying' && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                              {hubspotVerificationStatus === 'verifying' && (
                                 <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                              </div>
-                            )}
-                            {hubspotVerificationStatus === 'verified' && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              )}
+                              {hubspotVerificationStatus === 'verified' && (
                                 <CheckCircle className="h-4 w-4 text-green-500" />
-                              </div>
-                            )}
-                            {hubspotVerificationStatus === 'not-found' && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                              )}
+                              {hubspotVerificationStatus === 'not-found' && (
                                 <XCircle className="h-4 w-4 text-red-500" />
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         </FormControl>
                         <FormMessage />
-                        {hubspotVerificationStatus === 'verified' && hubspotContact && (
-                          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              <span className="text-sm font-medium text-green-800">Contact verified in HubSpot</span>
-                            </div>
-                            {hubspotContact.companyName && (
-                              <div className="mt-1 text-sm text-green-700">
-                                Company: <span className="font-medium">{hubspotContact.companyName}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        {hubspotVerificationStatus === 'not-found' && (
-                          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <XCircle className="h-4 w-4 text-red-600" />
-                              <span className="text-sm font-medium text-red-800">Contact not found in HubSpot</span>
-                            </div>
-                            <div className="mt-1 text-sm text-red-700">
-                              This contact will be created when you save the quote.
-                            </div>
-                          </div>
-                        )}
                       </FormItem>
                     )}
                   />
 
+                  {/* Company Name */}
                   <FormField
                     control={form.control}
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-semibold text-gray-700">Company Name</FormLabel>
+                        <FormLabel>Company Name (Optional)</FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="Company Name"
-                            className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-[#e24c00] text-lg h-12"
+                            className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
+                          <p className="text-xs text-green-600 mt-1">
+                            ✓ Found in HubSpot: {hubspotContact.properties.company}
+                          </p>
+                        )}
+                        {hubspotVerificationStatus === 'not-found' && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            ⚠ Contact not found in HubSpot - quote will be saved but cannot be pushed to HubSpot
+                          </p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Existing Quotes Notification */}
+                  {showExistingQuotesNotification && existingQuotesForEmail.length > 0 && (
+                    <Alert className="border-blue-200 bg-blue-50">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertDescription className="text-blue-800">
+                        <strong>Existing quotes found!</strong> This email has {existingQuotesForEmail.length} existing quote{existingQuotesForEmail.length > 1 ? 's' : ''}. 
+                        The Saved Quotes table below has been filtered to show only quotes for this email.
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 ml-2 text-blue-600 underline"
+                          onClick={() => setShowExistingQuotesNotification(false)}
+                        >
+                          Dismiss
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Industry */}
+                  <FormField
+                    control={form.control}
+                    name="industry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Industry</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                              <SelectValue placeholder="Select industry" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
+                            <SelectItem value="Professional Services">Professional Services</SelectItem>
+                            <SelectItem value="Consulting">Consulting</SelectItem>
+                            <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
+                            <SelectItem value="Real Estate">Real Estate</SelectItem>
+                            <SelectItem value="Property Management">Property Management</SelectItem>
+                            <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
+                            <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
+                            <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
+                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                            <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
+                            <SelectItem value="Nonprofit">Nonprofit</SelectItem>
+                            <SelectItem value="Law Firm">Law Firm</SelectItem>
+                            <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
+                            <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
+                            <SelectItem value="Insurance">Insurance</SelectItem>
+                            <SelectItem value="Automotive">Automotive</SelectItem>
+                            <SelectItem value="Education">Education</SelectItem>
+                            <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
+                            <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
+                            <SelectItem value="Agriculture">Agriculture</SelectItem>
+                            <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
+                            <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Revenue Band */}
+                  <FormField
+                    control={form.control}
+                    name="revenueBand"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monthly Revenue Band</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                              <SelectValue placeholder="Select revenue band" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="<$10K">&lt;$10K</SelectItem>
+                            <SelectItem value="10K-25K">$10K - $25K</SelectItem>
+                            <SelectItem value="25K-75K">$25K - $75K</SelectItem>
+                            <SelectItem value="75K-250K">$75K - $250K</SelectItem>
+                            <SelectItem value="250K-1M">$250K - $1M</SelectItem>
+                            <SelectItem value="1M+">$1M+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Monthly Transactions */}
+                  <FormField
+                    control={form.control}
+                    name="monthlyTransactions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Monthly Transactions</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                              <SelectValue placeholder="Select transaction volume" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="<100">&lt;100</SelectItem>
+                            <SelectItem value="100-300">100 - 300</SelectItem>
+                            <SelectItem value="300-600">300 - 600</SelectItem>
+                            <SelectItem value="600-1000">600 - 1,000</SelectItem>
+                            <SelectItem value="1000-2000">1,000 - 2,000</SelectItem>
+                            <SelectItem value="2000+">2,000+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Cleanup Complexity */}
+                  <FormField
+                    control={form.control}
+                    name="cleanupComplexity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cleanup Complexity</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                              <SelectValue placeholder="Select complexity" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0.5">Clean and Current</SelectItem>
+                            <SelectItem value="0.75">Standard</SelectItem>
+                            <SelectItem value="1.0">Not Done / Years Behind</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Cleanup Months */}
+                  <FormField
+                    control={form.control}
+                    name="cleanupMonths"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Months of Cleanup Required</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number"
+                            min={(form.watch("cleanupOverride") && isApproved) ? "0" : currentMonth.toString()}
+                            max="120"
+                            placeholder={currentMonth.toString()}
+                            className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                            disabled={form.watch("cleanupOverride") && !isApproved}
                             {...field}
                             onChange={(e) => {
-                              field.onChange(e);
-                              setHasUnsavedChanges(true);
+                              const value = parseInt(e.target.value);
+                              if (isNaN(value)) {
+                                field.onChange(form.watch("cleanupOverride") && isApproved ? 0 : currentMonth);
+                              } else {
+                                field.onChange(Math.max(0, value));
+                              }
                             }}
                           />
                         </FormControl>
@@ -1407,1032 +1431,548 @@ function Home() {
                       </FormItem>
                     )}
                   />
-                </div>
+
+                  {/* Cleanup Override Checkbox with Request Approval Button */}
+                  <FormField
+                    control={form.control}
+                    name="cleanupOverride"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between space-y-0">
+                        <div className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                if (!checked) {
+                                  form.setValue("overrideReason", "");
+                                  setIsApproved(false);
+                                }
+                              }}
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              Override Minimum Cleanup
+                            </FormLabel>
+                          </div>
+                        </div>
+                        
+                        {/* Request Approval Button */}
+                        {form.watch("cleanupOverride") && !isApproved && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={requestApproval}
+                            disabled={
+                              isRequestingApproval || 
+                              !form.watch("contactEmail") || 
+                              !form.watch("overrideReason") ||
+                              (form.watch("overrideReason") === "Other" && (!form.watch("customOverrideReason") || form.watch("customOverrideReason")?.trim() === ""))
+                            }
+                            className="ml-4"
+                          >
+                            {isRequestingApproval ? "Requesting..." : "Request Approval"}
+                          </Button>
+                        )}
+                        
+                        {/* Approval Status */}
+                        {form.watch("cleanupOverride") && isApproved && (
+                          <div className="text-sm text-green-600 font-medium ml-4">
+                            ✓ Approved
+                          </div>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Override Reason */}
+                  {form.watch("cleanupOverride") && (
+                    <FormField
+                      control={form.control}
+                      name="overrideReason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reason</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                <SelectValue placeholder="Select reason for override" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Brand New Business">Brand New Business</SelectItem>
+                              <SelectItem value="Books Confirmed Current">Books Confirmed Current</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {/* Custom reason text field when "Other" is selected */}
+                  {form.watch("cleanupOverride") && form.watch("overrideReason") === "Other" && (
+                    <FormField
+                      control={form.control}
+                      name="customOverrideReason"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Please explain the reason for override</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder="Enter detailed reason for cleanup months override..."
+                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent min-h-[80px]"
+                              {...field}
+                              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                                field.onChange(e);
+                                setCustomOverrideReason(e.target.value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  </div>
+
+                  {/* TaaS-specific Fields - Only show when currentFormView is 'taas' */}
+                  {currentFormView === 'taas' && (
+                    <div className="space-y-6 border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-800">Tax Service Details</h3>
+                      
+                      {/* Entity Type */}
+                      <FormField
+                        control={form.control}
+                        name="entityType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Entity Type</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select entity type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="LLC">LLC</SelectItem>
+                                <SelectItem value="C-Corp">C-Corp</SelectItem>
+                                <SelectItem value="S-Corp">S-Corp</SelectItem>
+                                <SelectItem value="Partnership">Partnership</SelectItem>
+                                <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Number of Entities */}
+                      <FormField
+                        control={form.control}
+                        name="numEntities"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Entities</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of entities" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* States Filed */}
+                      <FormField
+                        control={form.control}
+                        name="statesFiled"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>States Filed</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of states" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                                <SelectItem value="6">6+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* International Filing */}
+                      <FormField
+                        control={form.control}
+                        name="internationalFiling"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>International Filing Required</FormLabel>
+                              <p className="text-sm text-gray-500">Check if international tax filings are needed</p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Number of Business Owners */}
+                      <FormField
+                        control={form.control}
+                        name="numBusinessOwners"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Business Owners</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of owners" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Include 1040s */}
+                      <FormField
+                        control={form.control}
+                        name="include1040s"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Include Personal 1040s</FormLabel>
+                              <p className="text-sm text-gray-500">Check if personal tax returns should be included</p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Prior Years Unfiled */}
+                      <FormField
+                        control={form.control}
+                        name="priorYearsUnfiled"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prior Years Unfiled</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select number of years" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="0">0</SelectItem>
+                                <SelectItem value="1">1</SelectItem>
+                                <SelectItem value="2">2</SelectItem>
+                                <SelectItem value="3">3</SelectItem>
+                                <SelectItem value="4">4</SelectItem>
+                                <SelectItem value="5">5</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Bookkeeping Quality */}
+                      <FormField
+                        control={form.control}
+                        name="bookkeepingQuality"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Bookkeeping Quality</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select bookkeeping quality" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
+                                <SelectItem value="Outside CPA">Outside CPA</SelectItem>
+                                <SelectItem value="Self-managed">Self-managed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Already on Seed Bookkeeping */}
+                      <FormField
+                        control={form.control}
+                        name="alreadyOnSeedBookkeeping"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Already on Seed Bookkeeping</FormLabel>
+                              <p className="text-sm text-gray-500">Check if client is already using Seed Bookkeeping services</p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                </form>
               </Form>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Enhanced Service Selection - Compact for 6 services */}
-        <div className="max-w-7xl mx-auto mb-10">
-          <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-lg">
-                    <Settings className="h-7 w-7 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-2xl text-gray-900">Service Selection</CardTitle>
-                    <p className="text-gray-600 mt-1">Choose services to include in this quote</p>
-                  </div>
-                </div>
-                {/* Templates Menu */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <FileText className="h-4 w-4" />
-                      Templates
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Template
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem disabled className="text-gray-500">
-                      No templates saved
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+          {/* Pricing Summary Card */}
+          <Card className="bg-white shadow-xl border-0">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-green-500 text-white rounded-t-lg">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Pricing Summary
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-6 gap-4">
-                {/* Bookkeeping Service Card - Compact */}
-                <div 
-                  className={`
-                    cursor-pointer transition-all duration-300 rounded-lg p-4 border shadow-md hover:shadow-lg transform hover:scale-105
-                    ${feeCalculation.includesBookkeeping 
-                      ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300 shadow-green-200/50' 
-                      : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
-                    }
-                  `}
-                  onClick={() => {
-                    const newValue = !feeCalculation.includesBookkeeping;
-                    form.setValue('includesBookkeeping', newValue);
-                    form.trigger();
-                    
-                    if (newValue) {
-                      setCurrentFormView('bookkeeping');
-                    } else if (feeCalculation.includesTaas) {
-                      setCurrentFormView('taas');
-                    }
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                      feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
-                    }`}>
-                      {feeCalculation.includesBookkeeping && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                    <h4 className={`font-semibold text-sm ${
-                      feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-600'
-                    }`}>
-                      Bookkeeping
-                    </h4>
-                  </div>
-                  <p className={`text-xs ${
-                    feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
-                  }`}>
-                    Monthly books & statements
-                  </p>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center text-lg">
+                  <span className="font-medium">Monthly Fee:</span>
+                  <span className="font-bold text-green-600">${monthlyFee.toLocaleString()}</span>
                 </div>
-
-                {/* TaaS Service Card - Compact */}
-                <div 
-                  className={`
-                    cursor-pointer transition-all duration-300 rounded-lg p-4 border shadow-md hover:shadow-lg transform hover:scale-105
-                    ${feeCalculation.includesTaas 
-                      ? 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300 shadow-blue-200/50' 
-                      : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
-                    }
-                  `}
-                  onClick={() => {
-                    const newValue = !feeCalculation.includesTaas;
-                    form.setValue('includesTaas', newValue);
-                    form.trigger();
-                    
-                    if (newValue) {
-                      setCurrentFormView('taas');
-                    } else if (feeCalculation.includesBookkeeping) {
-                      setCurrentFormView('bookkeeping');
-                    }
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                      feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
-                    }`}>
-                      {feeCalculation.includesTaas && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                    <h4 className={`font-semibold text-sm ${
-                      feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-600'
-                    }`}>
-                      TaaS
-                    </h4>
-                  </div>
-                  <p className={`text-xs ${
-                    feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
-                  }`}>
-                    Tax prep & planning
-                  </p>
-                </div>
-
-                {/* Payroll Service Card - Compact */}
-                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <h4 className="font-semibold text-sm text-gray-500">Payroll</h4>
-                  </div>
-                  <p className="text-xs text-gray-500">Coming Soon</p>
-                </div>
-
-                {/* FP&A Lite Service Card - Compact */}
-                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <h4 className="font-semibold text-sm text-gray-500">FP&A Lite</h4>
-                  </div>
-                  <p className="text-xs text-gray-500">Coming Soon</p>
-                </div>
-
-                {/* AP/AR Lite Service Card - Compact */}
-                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <h4 className="font-semibold text-sm text-gray-500">AP/AR Lite</h4>
-                  </div>
-                  <p className="text-xs text-gray-500">Coming Soon</p>
-                </div>
-
-                {/* Fractional CFO Service Card - Compact */}
-                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-3 w-3 text-gray-500" />
-                    </div>
-                    <h4 className="font-semibold text-sm text-gray-500">Fractional CFO</h4>
-                  </div>
-                  <p className="text-xs text-gray-500">Coming Soon</p>
+                <div className="flex justify-between items-center text-lg">
+                  <span className="font-medium">Setup Fee:</span>
+                  <span className="font-bold text-green-600">${setupFee.toLocaleString()}</span>
                 </div>
               </div>
+
+              {isCalculated && (
+                <div className="mt-6 pt-6 border-t">
+                  <div className="space-y-3">
+                    <Button
+                      type="submit"
+                      onClick={form.handleSubmit(onSubmit)}
+                      disabled={saveMutation.isPending}
+                      className="w-full bg-[#e24c00] hover:bg-[#c73e00] text-white"
+                    >
+                      {saveMutation.isPending ? "Saving..." : editingQuoteId ? "Update Quote" : "Save Quote"}
+                    </Button>
+                    
+                    {editingQuoteId && (
+                      <Button
+                        type="button"
+                        onClick={resetForm}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        New Quote
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content Area - Form and Pricing */}
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Quote Form Card */}
-            <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
-              <CardContent className="p-6">
-                {/* Form Navigation for Multiple Services */}
-                {getActiveServices().length > 1 && (
-                  <div className="mb-6">
-                    <div className="flex items-center justify-center">
-                      <div className="relative bg-gray-100 rounded-xl p-1">
-                        <div className="flex items-center gap-1 relative">
-                          {getActiveServices().map((service) => (
-                            <button
-                              key={service}
-                              type="button"
-                              onClick={() => setCurrentFormView(service)}
-                              className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
-                                currentFormView === service
-                                  ? 'bg-white shadow-md text-[#e24c00] scale-105'
-                                  : 'text-gray-600 hover:text-gray-800'
-                              }`}
-                            >
-                              {service === 'bookkeeping' ? 'Bookkeeping' : 'Tax Service'}
-                            </button>
-                          ))}
+        {/* Saved Quotes Section */}
+        <Card className="mt-8 bg-white shadow-xl border-0">
+          <CardHeader className="bg-gradient-to-r from-gray-600 to-gray-500 text-white rounded-t-lg">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              Saved Quotes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            {/* Search and Filter Bar */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by email, company, or quote ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Quotes Table */}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50" 
+                      onClick={() => handleSort('id')}
+                    >
+                      <div className="flex items-center gap-1">
+                        ID
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50" 
+                      onClick={() => handleSort('contactEmail')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Contact
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50" 
+                      onClick={() => handleSort('monthlyFee')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Monthly
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer hover:bg-gray-50" 
+                      onClick={() => handleSort('setupFee')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Setup
+                        <ArrowUpDown className="h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedQuotes.map((quote) => (
+                    <TableRow key={quote.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">#{quote.id}</TableCell>
+                      <TableCell>{quote.contactEmail}</TableCell>
+                      <TableCell>{quote.companyName || 'N/A'}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          quote.quoteType === 'bookkeeping' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {quote.quoteType === 'bookkeeping' ? 'Bookkeeping' : 'TaaS'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-medium">${quote.monthlyFee.toLocaleString()}</TableCell>
+                      <TableCell className="font-medium">${quote.setupFee.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => loadQuoteIntoForm(quote)}
+                            className="h-8 px-2"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
 
-                {/* Dynamic Form Content Based on Selected Services */}
-                {getActiveServices().length > 0 ? (
-                  <div>
-                    {/* Form Header */}
-                    <div className="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-xl">
-                      <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
-                        {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-bold text-gray-900">
-                          {currentFormView === 'bookkeeping' ? 'Bookkeeping Configuration' : 'Tax Service Configuration'}
-                        </h2>
-                        <p className="text-sm text-gray-600">
-                          {currentFormView === 'bookkeeping' ? 'Configure bookkeeping service parameters' : 'Configure tax service parameters'}
-                        </p>
-                      </div>
-                    </div>
+            {filteredAndSortedQuotes.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                {quotes.length === 0 ? "No quotes saved yet" : "No quotes match your search"}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-                    {/* Bookkeeping Form */}
-                    {currentFormView === 'bookkeeping' && feeCalculation.includesBookkeeping && (
-                      <Form {...form}>
-                        <div className="space-y-6">
-                          {/* Contact Email */}
-                          <FormField
-                            control={form.control}
-                            name="contactEmail"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Contact Email</FormLabel>
-                                <FormControl>
-                                  <div className="relative">
-                                    <Input 
-                                      {...field} 
-                                      type="email" 
-                                      placeholder="Enter client email address"
-                                      className="pr-10"
-                                      onChange={(e) => {
-                                        field.onChange(e);
-                                        const email = e.target.value;
-                                        setLastVerifiedEmail(email);
-                                        
-                                        // Debounced email verification
-                                        if (email && email.includes('@') && email.includes('.')) {
-                                          debouncedVerifyEmail(email);
-                                        } else {
-                                          setHubspotVerificationStatus('idle');
-                                          setHubspotContact(null);
-                                          setExistingQuotesForEmail([]);
-                                          setShowExistingQuotesNotification(false);
-                                        }
-                                      }}
-                                    />
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                                      {hubspotVerificationStatus === 'verifying' && (
-                                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                                      )}
-                                      {hubspotVerificationStatus === 'verified' && (
-                                        <CheckCircle className="h-4 w-4 text-green-500" />
-                                      )}
-                                      {hubspotVerificationStatus === 'not-found' && (
-                                        <XCircle className="h-4 w-4 text-red-500" />
-                                      )}
-                                    </div>
-                                  </div>
-                                </FormControl>
-                                {hubspotVerificationStatus === 'verified' && hubspotContact && (
-                                  <div className="mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                                    <div className="flex items-start gap-3">
-                                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-green-800">
-                                          Contact verified in HubSpot
-                                        </p>
-                                        <div className="mt-1 space-y-1">
-                                          <p className="text-xs text-green-700">
-                                            <span className="font-medium">{hubspotContact.properties.firstname} {hubspotContact.properties.lastname}</span>
-                                            {hubspotContact.properties.company && (
-                                              <span> • {hubspotContact.properties.company}</span>
-                                            )}
-                                          </p>
-                                          {hubspotContact.properties.phone && (
-                                            <p className="text-xs text-green-600">📞 {hubspotContact.properties.phone}</p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                                {hubspotVerificationStatus === 'not-found' && (
-                                  <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
-                                    <div className="flex items-start gap-3">
-                                      <XCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
-                                      <div>
-                                        <p className="text-sm font-medium text-red-800">Contact not found in HubSpot</p>
-                                        <p className="text-xs text-red-600 mt-1">This email address was not found in our CRM system.</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+        {/* Confirmation Dialogs */}
+        <AlertDialog open={resetConfirmDialog} onOpenChange={setResetConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Reset Form</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will clear all form data and start a new quote. Any unsaved changes will be lost.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                doResetForm();
+                setResetConfirmDialog(false);
+              }}>
+                Reset Form
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-                          {/* Company Name */}
-                          <FormField
-                            control={form.control}
-                            name="companyName"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Company Name (Optional)</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="Enter company name" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="revenueBand"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Revenue Band</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select revenue band" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="<$10K">&lt;$10K</SelectItem>
-                                      <SelectItem value="10K-25K">$10K - $25K</SelectItem>
-                                      <SelectItem value="25K-75K">$25K - $75K</SelectItem>
-                                      <SelectItem value="75K-250K">$75K - $250K</SelectItem>
-                                      <SelectItem value="250K-1M">$250K - $1M</SelectItem>
-                                      <SelectItem value="1M+">$1M+</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="monthlyTransactions"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Monthly Transactions</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select transaction volume" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="0-50">0 - 50</SelectItem>
-                                      <SelectItem value="51-150">51 - 150</SelectItem>
-                                      <SelectItem value="151-300">151 - 300</SelectItem>
-                                      <SelectItem value="301-500">301 - 500</SelectItem>
-                                      <SelectItem value="501-1000">501 - 1000</SelectItem>
-                                      <SelectItem value="1000+">1000+</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="industry"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Industry</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select industry" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
-                                      <SelectItem value="Professional Services">Professional Services</SelectItem>
-                                      <SelectItem value="Consulting">Consulting</SelectItem>
-                                      <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
-                                      <SelectItem value="Real Estate">Real Estate</SelectItem>
-                                      <SelectItem value="Property Management">Property Management</SelectItem>
-                                      <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
-                                      <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
-                                      <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
-                                      <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                                      <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
-                                      <SelectItem value="Nonprofit">Nonprofit</SelectItem>
-                                      <SelectItem value="Law Firm">Law Firm</SelectItem>
-                                      <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
-                                      <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
-                                      <SelectItem value="Insurance">Insurance</SelectItem>
-                                      <SelectItem value="Automotive">Automotive</SelectItem>
-                                      <SelectItem value="Education">Education</SelectItem>
-                                      <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
-                                      <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
-                                      <SelectItem value="Agriculture">Agriculture</SelectItem>
-                                      <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
-                                      <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
-                                      <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="cleanupMonths"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Cleanup Months</FormLabel>
-                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select months" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="1">1 month</SelectItem>
-                                      <SelectItem value="2">2 months</SelectItem>
-                                      <SelectItem value="3">3 months</SelectItem>
-                                      <SelectItem value="4">4 months</SelectItem>
-                                      <SelectItem value="5">5 months</SelectItem>
-                                      <SelectItem value="6">6 months</SelectItem>
-                                      <SelectItem value="7">7 months</SelectItem>
-                                      <SelectItem value="8">8 months</SelectItem>
-                                      <SelectItem value="9">9 months</SelectItem>
-                                      <SelectItem value="10">10 months</SelectItem>
-                                      <SelectItem value="11">11 months</SelectItem>
-                                      <SelectItem value="12">12 months</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="cleanupComplexity"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Cleanup Complexity</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select complexity" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="1">Low (1x)</SelectItem>
-                                      <SelectItem value="1.25">Medium (1.25x)</SelectItem>
-                                      <SelectItem value="1.5">High (1.5x)</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            {/* Cleanup Override */}
-                            <FormField
-                              control={form.control}
-                              name="cleanupOverride"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value || false}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel>Override Setup Fee</FormLabel>
-                                    <p className="text-sm text-gray-500">
-                                      Check to override automatic setup fee calculation
-                                    </p>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Override Reason */}
-                          {form.watch("cleanupOverride") && (
-                            <FormField
-                              control={form.control}
-                              name="overrideReason"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Override Reason</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select reason for override" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="Brand New Business">Brand New Business</SelectItem>
-                                      <SelectItem value="Books Confirmed Current">Books Confirmed Current</SelectItem>
-                                      <SelectItem value="Other">Other</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-
-                          {/* Custom Override Reason */}
-                          {form.watch("overrideReason") === "Other" && (
-                            <FormField
-                              control={form.control}
-                              name="customOverrideReason"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Explain Override Reason</FormLabel>
-                                  <FormControl>
-                                    <Textarea 
-                                      {...field} 
-                                      placeholder="Please explain the reason for overriding the setup fee..."
-                                      rows={3}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-
-                          {/* Custom Setup Fee */}
-                          {(form.watch("overrideReason") === "Other" || 
-                            form.watch("overrideReason") === "Brand New Business" || 
-                            form.watch("overrideReason") === "Books Confirmed Current") && (
-                            <FormField
-                              control={form.control}
-                              name="customSetupFee"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Custom Setup Fee</FormLabel>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                                      <Input 
-                                        {...field} 
-                                        type="number"
-                                        placeholder="0"
-                                        className="pl-8"
-                                        min="0"
-                                        step="0.01"
-                                      />
-                                    </div>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                        </div>
-                      </Form>
-                    )}
-
-                    {/* TaaS Form */}
-                    {currentFormView === 'taas' && feeCalculation.includesTaas && (
-                      <Form {...form}>
-                        <div className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="entityType"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Entity Type</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value || ""}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select entity type" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="LLC">LLC</SelectItem>
-                                      <SelectItem value="S-Corp">S-Corp</SelectItem>
-                                      <SelectItem value="C-Corp">C-Corp</SelectItem>
-                                      <SelectItem value="Partnership">Partnership</SelectItem>
-                                      <SelectItem value="Non-Profit">Non-Profit</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="numEntities"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Number of Entities</FormLabel>
-                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select entities" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="1">1</SelectItem>
-                                      <SelectItem value="2">2</SelectItem>
-                                      <SelectItem value="3">3</SelectItem>
-                                      <SelectItem value="4">4</SelectItem>
-                                      <SelectItem value="5">5</SelectItem>
-                                      <SelectItem value="6">6</SelectItem>
-                                      <SelectItem value="7">7</SelectItem>
-                                      <SelectItem value="8">8</SelectItem>
-                                      <SelectItem value="9">9</SelectItem>
-                                      <SelectItem value="10">10</SelectItem>
-                                      <SelectItem value="more">More</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Custom Number of Entities */}
-                          {form.watch("numEntities") === "more" && (
-                            <FormField
-                              control={form.control}
-                              name="customNumEntities"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Custom Number of Entities</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      {...field} 
-                                      type="number"
-                                      placeholder="Enter number of entities"
-                                      min="11"
-                                      onChange={(e) => field.onChange(Number(e.target.value))}
-                                      value={field.value?.toString() || ""}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="statesFiled"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>States Filed</FormLabel>
-                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select number of states" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="1">1</SelectItem>
-                                      <SelectItem value="2">2</SelectItem>
-                                      <SelectItem value="3">3</SelectItem>
-                                      <SelectItem value="4">4</SelectItem>
-                                      <SelectItem value="5">5</SelectItem>
-                                      <SelectItem value="6">6</SelectItem>
-                                      <SelectItem value="7">7</SelectItem>
-                                      <SelectItem value="8">8</SelectItem>
-                                      <SelectItem value="9">9</SelectItem>
-                                      <SelectItem value="10">10</SelectItem>
-                                      <SelectItem value="more">More</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="numBusinessOwners"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Number of Business Owners</FormLabel>
-                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select number of owners" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="1">1</SelectItem>
-                                      <SelectItem value="2">2</SelectItem>
-                                      <SelectItem value="3">3</SelectItem>
-                                      <SelectItem value="4">4</SelectItem>
-                                      <SelectItem value="5">5</SelectItem>
-                                      <SelectItem value="6">6</SelectItem>
-                                      <SelectItem value="7">7</SelectItem>
-                                      <SelectItem value="8">8</SelectItem>
-                                      <SelectItem value="9">9</SelectItem>
-                                      <SelectItem value="10">10</SelectItem>
-                                      <SelectItem value="more">More</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Custom States Filed */}
-                          {form.watch("statesFiled") === "more" && (
-                            <FormField
-                              control={form.control}
-                              name="customStatesFiled"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Custom Number of States</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      {...field} 
-                                      type="number"
-                                      placeholder="Enter number of states"
-                                      min="11"
-                                      max="50"
-                                      onChange={(e) => field.onChange(Number(e.target.value))}
-                                      value={field.value?.toString() || ""}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-
-                          {/* Custom Number of Business Owners */}
-                          {form.watch("numBusinessOwners") === "more" && (
-                            <FormField
-                              control={form.control}
-                              name="customNumBusinessOwners"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Custom Number of Business Owners</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      {...field} 
-                                      type="number"
-                                      placeholder="Enter number of business owners"
-                                      min="11"
-                                      onChange={(e) => field.onChange(Number(e.target.value))}
-                                      value={field.value?.toString() || ""}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* International Filing */}
-                            <FormField
-                              control={form.control}
-                              name="internationalFiling"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value || false}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel>International Filing Required</FormLabel>
-                                    <p className="text-sm text-gray-500">Check if international tax filings are needed</p>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-
-                            {/* Include 1040s */}
-                            <FormField
-                              control={form.control}
-                              name="include1040s"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value || false}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel>Include Personal 1040s</FormLabel>
-                                    <p className="text-sm text-gray-500">Check if personal tax returns should be included</p>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name="priorYearsUnfiled"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Prior Years Unfiled</FormLabel>
-                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select number of years" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="0">0</SelectItem>
-                                      <SelectItem value="1">1</SelectItem>
-                                      <SelectItem value="2">2</SelectItem>
-                                      <SelectItem value="3">3</SelectItem>
-                                      <SelectItem value="4">4</SelectItem>
-                                      <SelectItem value="5">5</SelectItem>
-                                      <SelectItem value="6">6</SelectItem>
-                                      <SelectItem value="7">7</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name="bookkeepingQuality"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Bookkeeping Quality</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value || ""}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Select bookkeeping quality" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
-                                      <SelectItem value="Outside CPA">Outside CPA</SelectItem>
-                                      <SelectItem value="Self-managed">Self-managed</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Already on Seed Bookkeeping */}
-                          <FormField
-                            control={form.control}
-                            name="alreadyOnSeedBookkeeping"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value || false}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel>Already on Seed Bookkeeping</FormLabel>
-                                  <p className="text-sm text-gray-500">Check if client is already using Seed Bookkeeping services (15% discount applies)</p>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </Form>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="p-4 bg-gray-100 rounded-full">
-                        <Settings className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Select Services</h3>
-                        <p className="text-gray-600">Choose at least one service above to configure pricing.</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Enhanced Pricing Summary */}
-            <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-lg">
-                    <DollarSign className="h-7 w-7 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-2xl text-gray-900">Pricing Summary</CardTitle>
-                    <p className="text-gray-600 mt-1">Real-time pricing calculations</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {getActiveServices().length > 0 ? (
-                  <div className="space-y-6">
-                    {/* Bookkeeping Pricing */}
-                    {feeCalculation.includesBookkeeping && feeCalculation.bookkeeping && (
-                      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-green-800">Bookkeeping Service</h3>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-green-800">
-                              ${(feeCalculation.bookkeeping.monthlyFee || 0).toLocaleString()}/mo
-                            </div>
-                            <div className="text-sm text-green-600">
-                              ${(feeCalculation.bookkeeping.setupFee || 0).toLocaleString()} setup
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-sm text-green-700">Monthly bookkeeping, cleanup, and financial statements</p>
-                      </div>
-                    )}
-
-                    {/* TaaS Pricing */}
-                    {feeCalculation.includesTaas && feeCalculation.taas && (
-                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-semibold text-blue-800">Tax Service (TaaS)</h3>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-blue-800">
-                              ${(feeCalculation.taas.monthlyFee || 0).toLocaleString()}/mo
-                            </div>
-                            <div className="text-sm text-blue-600">
-                              ${(feeCalculation.taas.setupFee || 0).toLocaleString()} setup
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-sm text-blue-700">Tax preparation, filing and planning services</p>
-                      </div>
-                    )}
-
-                    {/* Total Summary */}
-                    <div className="border-t pt-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">Total Monthly</h3>
-                          <p className="text-sm text-gray-600">Recurring monthly fees</p>
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                          ${(feeCalculation.combined?.monthlyFee || 0).toLocaleString()}/mo
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">Total Setup</h3>
-                          <p className="text-sm text-gray-600">One-time setup fees</p>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900">
-                          ${(feeCalculation.combined?.setupFee || 0).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="space-y-3 pt-4">
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold py-3"
-                        disabled={!form.formState.isValid}
-                      >
-                        Save Quote
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="w-full border-green-300 text-green-700 hover:bg-green-50"
-                      >
-                        Push to HubSpot
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="p-4 bg-gray-100 rounded-full">
-                        <DollarSign className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Services Selected</h3>
-                        <p className="text-gray-600">Select services to see pricing calculations.</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </main>
+        <AlertDialog open={discardChangesDialog} onOpenChange={setDiscardChangesDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard Changes</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have unsaved changes. Loading this quote will discard your current work.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                if (pendingQuoteToLoad) {
+                  doLoadQuote(pendingQuoteToLoad);
+                  setPendingQuoteToLoad(null);
+                }
+                setDiscardChangesDialog(false);
+              }}>
+                Load Quote
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   );
 }
-
-export default Home;
