@@ -1416,10 +1416,11 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-none mx-8">
-          {/* Quote Builder Form Card */}
-          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
-            <CardContent className="p-6 sm:p-8">
+        <div className="max-w-none mx-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+            {/* Quote Builder Form Card */}
+            <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card hover:shadow-3xl transition-all duration-300 min-w-0">
+              <CardContent className="p-6 sm:p-8">
               {/* Modern Navigation Toggle - Only show if multiple services are active */}
               {getActiveServices().length > 1 && (
                 <div className="mb-6">
@@ -2283,11 +2284,11 @@ export default function Home() {
                   )}
                 </form>
               </Form>
-            </CardContent>
-          </Card>
-          {/* Pricing Summary Card */}
-          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
-            <CardContent className="p-6 sm:p-8">
+              </CardContent>
+            </Card>
+            {/* Pricing Summary Card */}
+            <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card hover:shadow-3xl transition-all duration-300 min-w-0">
+              <CardContent className="p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
                   <DollarSign className="h-5 w-5 text-white" />
@@ -2732,8 +2733,9 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
         
         {/* Commission Tracking Section */}
