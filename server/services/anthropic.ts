@@ -338,6 +338,8 @@ Provide the adapted version:`;
     complianceChecks: string[];
     suggestions: string[];
     missingElements: string[];
+    improvementPlan: string[];
+    nextSteps: string[];
   }> {
     const systemPrompt = `You are a content quality analyst for Seed Financial. Analyze content for brand consistency, readability, and compliance.
 
@@ -345,7 +347,7 @@ ${BRAND_VOICE_GUIDELINES}
 
 ${COMPLIANCE_REQUIREMENTS}`;
 
-    const prompt = `Analyze this content and provide a detailed quality assessment:
+    const prompt = `Analyze this content and provide a comprehensive, actionable quality assessment:
 
 Content to Analyze:
 ${content}
@@ -354,17 +356,27 @@ Provide analysis in this JSON format:
 {
   "brandFitScore": <1-5 score>,
   "readabilityLevel": "<grade level or description>",
-  "complianceChecks": ["<compliance item 1>", "<compliance item 2>"],
-  "suggestions": ["<improvement suggestion 1>", "<improvement suggestion 2>"],
-  "missingElements": ["<missing element 1>", "<missing element 2>"]
+  "complianceChecks": ["<specific compliance item passed>", "<specific compliance item passed>"],
+  "suggestions": [
+    "Make headlines more actionable by using specific numbers or outcomes",
+    "Add more concrete examples from real client scenarios", 
+    "Strengthen the conclusion with a clear call-to-action",
+    "Include more industry-specific terminology to demonstrate expertise"
+  ],
+  "missingElements": ["<specific missing element>", "<specific missing element>"],
+  "improvementPlan": [
+    "Add 2-3 specific client success stories in the main content",
+    "Include a 'Key Takeaways' box with 3-5 bullet points",
+    "Add cross-references to related Seed Financial services"
+  ],
+  "nextSteps": [
+    "Review and incorporate suggested improvements",
+    "Validate technical accuracy with subject matter expert", 
+    "Test readability with target audience"
+  ]
 }
 
-Focus on:
-- Brand voice consistency (1-5 scale)
-- Reading level appropriateness
-- Required compliance elements
-- Structural improvements
-- Missing best practices`;
+Focus on providing specific, actionable suggestions that would immediately improve the content quality and business impact.`;
 
     try {
       const response = await this.callClaude(prompt, systemPrompt);
@@ -373,10 +385,12 @@ Focus on:
       console.error('Content analysis failed:', error);
       return {
         brandFitScore: 3,
-        readabilityLevel: "Standard",
+        readabilityLevel: "Standard", 
         complianceChecks: ["Manual review required"],
         suggestions: ["Review content quality manually"],
-        missingElements: ["Analysis unavailable"]
+        missingElements: ["Analysis unavailable"],
+        improvementPlan: ["Manual review needed"],
+        nextSteps: ["Contact administrator for assistance"]
       };
     }
   }

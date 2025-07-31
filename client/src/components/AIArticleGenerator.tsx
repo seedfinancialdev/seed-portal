@@ -65,6 +65,8 @@ interface ContentAnalysis {
   complianceChecks: string[];
   suggestions: string[];
   missingElements: string[];
+  improvementPlan?: string[];
+  nextSteps?: string[];
 }
 
 interface SavedSession {
@@ -450,15 +452,34 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     }
   };
 
+  // Prevent duplicate article creation with a simple flag
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleSaveArticle = async (content: string) => {
+    if (isSaving) {
+      console.log('Save already in progress, ignoring duplicate request');
+      return;
+    }
+    
     const formData = form.getValues();
+    setIsSaving(true);
     
     try {
-      // Check if article with same title already exists
+      // Create unique slug with timestamp to prevent duplicates
+      const timestamp = Date.now();
+      const baseSlug = formData.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
+      const uniqueSlug = `${baseSlug}-${timestamp}`;
+      
+      // Check if article with same title already exists (more reliable check)
       const existingArticles = await apiRequest(`/api/kb/articles?title=${encodeURIComponent(formData.title)}`);
       
       if (existingArticles && existingArticles.length > 0) {
-        // Update existing article instead of creating duplicate
+        // Update the most recent existing article instead of creating duplicate
         const existingId = existingArticles[0].id;
         await apiRequest(`/api/kb/articles/${existingId}`, {
           method: "PATCH",
@@ -466,7 +487,7 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
             title: formData.title,
             content: content,
             categoryId: formData.categoryId,
-            status: 'draft', // Save as draft for AI-generated content
+            status: 'draft',
             excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
             tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
           })
@@ -477,22 +498,15 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
           description: "Your existing article has been updated with new AI-generated content",
         });
       } else {
-        // Create new article if none exists
-        const baseSlug = formData.title
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .replace(/\s+/g, '-')
-          .replace(/-+/g, '-')
-          .trim();
-        
+        // Create new article with unique slug
         await apiRequest("/api/kb/articles", {
           method: "POST",
           body: JSON.stringify({
             title: formData.title,
-            slug: baseSlug,
+            slug: uniqueSlug,
             content: content,
             categoryId: formData.categoryId,
-            status: 'draft', // Save as draft for AI-generated content
+            status: 'draft',
             excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
             tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
           })
@@ -521,6 +535,8 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
         description: error.message || "Failed to save article. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -973,9 +989,12 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <pre className="whitespace-pre-wrap text-sm">{generatedContent.outline}</pre>
-                </div>
+                <RichTextEditor
+                  content={generatedContent.outline || ''}
+                  onChange={(content) => setGeneratedContent(prev => ({ ...prev, outline: content }))}
+                  placeholder="Your article outline will appear here. Edit with full rich text formatting..."
+                  height={400}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -1088,16 +1107,47 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                                     {index + 1}
                                   </span>
                                   <div className="flex-1">
-                                    <p className="text-sm text-gray-800 font-medium">{suggestion.title}</p>
-                                    <p className="text-sm text-gray-600 mt-1">{suggestion.description}</p>
-                                    {suggestion.implementation && (
-                                      <div className="mt-2 bg-white/70 rounded p-2">
-                                        <p className="text-xs font-medium text-gray-700 mb-1">How to implement:</p>
-                                        <p className="text-xs text-gray-600">{suggestion.implementation}</p>
-                                      </div>
-                                    )}
+                                    <p className="text-sm text-gray-700">{suggestion}</p>
                                   </div>
                                 </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Improvement Plan */}
+                      {contentAnalysis.improvementPlan && contentAnalysis.improvementPlan.length > 0 && (
+                        <div className="mt-4">
+                          <h5 className="font-semibold text-blue-700 mb-2 flex items-center gap-2">
+                            <Target className="h-4 w-4" />
+                            Improvement Plan
+                          </h5>
+                          <div className="space-y-2">
+                            {contentAnalysis.improvementPlan.map((plan, index) => (
+                              <div key={index} className="flex items-start gap-2 text-sm">
+                                <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold flex-shrink-0 mt-0.5">
+                                  {index + 1}
+                                </span>
+                                <span className="text-gray-700">{plan}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Next Steps */}
+                      {contentAnalysis.nextSteps && contentAnalysis.nextSteps.length > 0 && (
+                        <div className="mt-4">
+                          <h5 className="font-semibold text-purple-700 mb-2 flex items-center gap-2">
+                            <Zap className="h-4 w-4" />
+                            Next Steps
+                          </h5>
+                          <div className="space-y-2">
+                            {contentAnalysis.nextSteps.map((step, index) => (
+                              <div key={index} className="flex items-center gap-2 text-sm">
+                                <CheckCircle className="h-4 w-4 text-purple-500" />
+                                <span className="text-gray-700">{step}</span>
                               </div>
                             ))}
                           </div>
@@ -1125,9 +1175,12 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                   </Card>
                 )}
                 
-                <div className="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">
-                  <pre className="whitespace-pre-wrap text-sm">{generatedContent.draft}</pre>
-                </div>
+                <RichTextEditor
+                  content={generatedContent.draft || ''}
+                  onChange={(content) => setGeneratedContent(prev => ({ ...prev, draft: content }))}
+                  placeholder="Your article draft will appear here. Edit with full rich text formatting..."
+                  height={400}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -1142,6 +1195,15 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                     <span>Polished Article - WYSIWYG Editor</span>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={onClose}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                      Close Preview
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
