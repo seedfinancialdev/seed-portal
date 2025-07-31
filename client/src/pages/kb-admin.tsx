@@ -214,6 +214,33 @@ export default function KbAdmin() {
     },
   });
 
+  // Publish/Unpublish article mutation
+  const togglePublishMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const newStatus = status === 'published' ? 'draft' : 'published';
+      return apiRequest(`/api/kb/articles/${id}`, { 
+        method: "PATCH", 
+        body: JSON.stringify({ status: newStatus }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
+      const newStatus = variables.status === 'published' ? 'draft' : 'published';
+      toast({
+        title: "Success",
+        description: `Article ${newStatus === 'published' ? 'published' : 'unpublished'} successfully`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update article status",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Generate metadata mutation
   const generateMetadataMutation = useMutation({
     mutationFn: async (data: { content: string; title: string }) => {
@@ -718,6 +745,18 @@ export default function KbAdmin() {
                               )}
                             </div>
                             <div className="flex gap-2 ml-4">
+                              <Button
+                                size="sm"
+                                variant={article.status === 'published' ? 'default' : 'outline'}
+                                className={article.status === 'published' 
+                                  ? "bg-green-600 hover:bg-green-700 text-white" 
+                                  : "text-green-600 border-green-600 hover:bg-green-50"
+                                }
+                                onClick={() => togglePublishMutation.mutate({ id: article.id, status: article.status })}
+                                disabled={togglePublishMutation.isPending}
+                              >
+                                {article.status === 'published' ? 'Published' : 'Publish'}
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
