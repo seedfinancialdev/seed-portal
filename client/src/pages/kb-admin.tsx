@@ -84,10 +84,19 @@ export default function KbAdmin() {
     queryKey: ["/api/kb/articles", selectedCategory],
     queryFn: async () => {
       const params = selectedCategory ? `?categoryId=${selectedCategory}` : '';
-      const response = await apiRequest("GET", `/api/kb/articles${params}`);
-      return response.json();
+      const result = await apiRequest(`/api/kb/articles${params}`);
+      console.log('KB Admin articles loaded:', result);
+      return result;
     },
     enabled: !!user,
+  });
+
+  // Debug logging
+  console.log('KB Admin debug:', { 
+    articlesCount: articles.length, 
+    selectedCategory, 
+    articlesLoading,
+    user: !!user 
   });
 
   // Article form
