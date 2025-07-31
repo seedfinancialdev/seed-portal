@@ -148,65 +148,71 @@ export default function KnowledgeBase() {
   // Article detail view
   if (selectedArticle) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          
-          {/* Header */}
-          <div className="relative mb-8">
-            <div className="absolute top-0 left-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-                onClick={handleBackToArticles}
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to {selectedCategory?.name}
-              </Button>
-            </div>
+      <div className="min-h-screen bg-white">
+        {/* Navigation Header */}
+        <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 hover:text-orange-500 hover:bg-orange-50"
+              onClick={handleBackToArticles}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to {selectedCategory?.name}
+            </Button>
             
-            <div className="absolute top-0 right-0">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20">
-                    <User className="h-4 w-4 mr-2" />
-                    {user?.firstName || user?.email?.split('@')[0] || 'User'}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem onClick={() => setLocation('/profile')}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setLocation('/kb-admin')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Knowledge Base Admin</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            
-            <div className="flex justify-center">
-              <img 
-                src={logoPath} 
-                alt="Seed Financial Logo" 
-                className="h-16 brightness-0 invert"
-                style={{filter: 'brightness(0) invert(1)'}}
-              />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-orange-500 hover:bg-orange-50">
+                  <User className="h-4 w-4 mr-2" />
+                  {user?.firstName || user?.email?.split('@')[0] || 'User'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setLocation('/profile')}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLocation('/kb-admin')}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Knowledge Base Admin</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+        </div>
 
+        {/* Article Content */}
+        <div className="max-w-4xl mx-auto px-6 py-8">
           {/* Article Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-4" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-4 border-b-2 border-orange-500 pb-3" style={{ fontFamily: 'League Spartan, sans-serif' }}>
               {selectedArticle.title}
             </h1>
-            <div className="flex items-center justify-center gap-6 text-white/70 text-sm">
+            
+            {/* Article Metadata */}
+            <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500 mb-4">
+              <div className="flex items-center gap-1">
+                <span className="font-medium">Document Type:</span>
+                <span>Internal Sales Training</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-medium">Target Team:</span>
+                <span>Sales Team</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="font-medium">Last Reviewed:</span>
+                <span>{new Date(selectedArticle.updatedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 text-sm text-gray-500">
               <span className="flex items-center gap-1">
                 <Eye className="h-4 w-4" />
                 {selectedArticle.viewCount} views
@@ -216,10 +222,11 @@ export default function KnowledgeBase() {
                 {new Date(selectedArticle.updatedAt).toLocaleDateString()}
               </span>
             </div>
+            
             {selectedArticle.tags && selectedArticle.tags.length > 0 && (
-              <div className="flex gap-2 mt-4 justify-center">
+              <div className="flex gap-2 mt-4">
                 {selectedArticle.tags.map((tag, index) => (
-                  <Badge key={index} variant="outline" className="border-white/30 text-white/70">
+                  <Badge key={index} variant="outline" className="border-orange-200 text-orange-700 bg-orange-50">
                     {tag}
                   </Badge>
                 ))}
@@ -227,15 +234,24 @@ export default function KnowledgeBase() {
             )}
           </div>
 
-          {/* Article Content */}
-          <Card className="bg-white border-gray-200 shadow-lg">
-            <div className="p-8">
-              <div 
-                className="prose max-w-none text-gray-900 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: selectedArticle.content }}
-              />
-            </div>
-          </Card>
+          {/* Article Body */}
+          <div 
+            className="prose max-w-none text-gray-900 leading-relaxed"
+            style={{
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+              lineHeight: '1.6',
+              color: '#333'
+            }}
+            dangerouslySetInnerHTML={{ __html: selectedArticle.content.replace(
+              /<h1([^>]*)>/g, '<h1$1 style="color: #2d3748; margin-top: 2em; border-bottom: 2px solid #f97316; padding-bottom: 10px;">'
+            ).replace(
+              /<h2([^>]*)>/g, '<h2$1 style="color: #2d3748; margin-top: 2em; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">'
+            ).replace(
+              /<h3([^>]*)>/g, '<h3$1 style="color: #2d3748; margin-top: 2em;">'
+            ).replace(
+              /<blockquote([^>]*)>/g, '<blockquote$1 style="border-left: 4px solid #f97316; margin: 20px 0; padding: 10px 20px; background: #fef5e7;">'
+            ) }}
+          />
         </div>
       </div>
     );
