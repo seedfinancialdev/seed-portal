@@ -1544,12 +1544,12 @@ export default function Home() {
                     </div>
                     <div className="w-8 h-0.5 bg-gray-300"></div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 ${includesBookkeeping || includesTaas ? 'bg-[#e24c00] text-white' : 'bg-gray-300 text-gray-500'} rounded-full flex items-center justify-center text-sm font-bold transition-colors`}>2</div>
+                      <div className={`w-8 h-8 ${feeCalculation.includesBookkeeping || feeCalculation.includesTaas ? 'bg-[#e24c00] text-white' : 'bg-gray-300 text-gray-500'} rounded-full flex items-center justify-center text-sm font-bold transition-colors`}>2</div>
                       <span className="text-sm font-medium text-gray-700">Services</span>
                     </div>
                     <div className="w-8 h-0.5 bg-gray-300"></div>
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 ${form.watch('contactEmail') && (includesBookkeeping || includesTaas) ? 'bg-[#e24c00] text-white' : 'bg-gray-300 text-gray-500'} rounded-full flex items-center justify-center text-sm font-bold transition-colors`}>3</div>
+                      <div className={`w-8 h-8 ${form.watch('contactEmail') && (feeCalculation.includesBookkeeping || feeCalculation.includesTaas) ? 'bg-[#e24c00] text-white' : 'bg-gray-300 text-gray-500'} rounded-full flex items-center justify-center text-sm font-bold transition-colors`}>3</div>
                       <span className="text-sm font-medium text-gray-700">Pricing</span>
                     </div>
                   </div>
