@@ -170,6 +170,7 @@ Preferred communication style: Simple, everyday language.
   - **Modern Visual Effects**: Backdrop blur, enhanced shadows, and professional card styling create cohesive enterprise-grade interface
   - **Improved Layout Spacing**: Widened calculator layout with reduced margins for better screen real estate utilization and breathing room
   - **Equal Width Cards**: Changed from flexbox to CSS Grid layout ensuring form and pricing summary cards are perfectly equal width
+  - **Aligned Table Width**: Constrained saved quotes table to match exact width of cards above using same container constraints
 
 ✓ **Complete Authentication System Audit & Article Content Enhancement** (July 31, 2025)
   - **Comprehensive Authentication Fix**: Scanned entire codebase and fixed all remaining useAuth import issues

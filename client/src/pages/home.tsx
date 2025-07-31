@@ -2889,7 +2889,8 @@ export default function Home() {
         })()}
         
         {/* Quote History Section */}
-        <Card className="bg-white/90 backdrop-blur-md shadow-2xl mt-8 border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
+        <div className="max-w-none mx-8 mt-8">
+          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
@@ -3030,6 +3031,7 @@ export default function Home() {
             )}
           </CardContent>
         </Card>
+        </div>
 
         {/* Footer */}
         <div className="text-center mt-8">
