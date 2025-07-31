@@ -13,13 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
@@ -1755,7 +1755,7 @@ function Home() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Entity Type</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue placeholder="Select entity type" />
@@ -1892,16 +1892,16 @@ function Home() {
                 {getActiveServices().length > 0 ? (
                   <div className="space-y-6">
                     {/* Bookkeeping Pricing */}
-                    {feeCalculation.includesBookkeeping && (
+                    {feeCalculation.includesBookkeeping && feeCalculation.bookkeeping && (
                       <div className="p-4 bg-green-50 rounded-xl border border-green-200">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-semibold text-green-800">Bookkeeping Service</h3>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-green-800">
-                              ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()}/mo
+                              ${(feeCalculation.bookkeeping.monthlyFee || 0).toLocaleString()}/mo
                             </div>
                             <div className="text-sm text-green-600">
-                              ${feeCalculation.bookkeeping.setupFee.toLocaleString()} setup
+                              ${(feeCalculation.bookkeeping.setupFee || 0).toLocaleString()} setup
                             </div>
                           </div>
                         </div>
@@ -1910,16 +1910,16 @@ function Home() {
                     )}
 
                     {/* TaaS Pricing */}
-                    {feeCalculation.includesTaas && (
+                    {feeCalculation.includesTaas && feeCalculation.taas && (
                       <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-semibold text-blue-800">Tax Service (TaaS)</h3>
                           <div className="text-right">
                             <div className="text-2xl font-bold text-blue-800">
-                              ${feeCalculation.taas.monthlyFee.toLocaleString()}/mo
+                              ${(feeCalculation.taas.monthlyFee || 0).toLocaleString()}/mo
                             </div>
                             <div className="text-sm text-blue-600">
-                              ${feeCalculation.taas.setupFee.toLocaleString()} setup
+                              ${(feeCalculation.taas.setupFee || 0).toLocaleString()} setup
                             </div>
                           </div>
                         </div>
@@ -1935,7 +1935,7 @@ function Home() {
                           <p className="text-sm text-gray-600">Recurring monthly fees</p>
                         </div>
                         <div className="text-3xl font-bold text-gray-900">
-                          ${feeCalculation.totalMonthly.toLocaleString()}/mo
+                          ${(feeCalculation.combined?.monthlyFee || 0).toLocaleString()}/mo
                         </div>
                       </div>
                       
@@ -1945,7 +1945,7 @@ function Home() {
                           <p className="text-sm text-gray-600">One-time setup fees</p>
                         </div>
                         <div className="text-2xl font-bold text-gray-900">
-                          ${feeCalculation.totalSetup.toLocaleString()}
+                          ${(feeCalculation.combined?.setupFee || 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
