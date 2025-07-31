@@ -138,6 +138,7 @@ Preferred communication style: Simple, everyday language.
   - **KB-Admin Articles Loading**: Fixed missing articles issue - now properly displays all existing articles including "Bookkeeping 101 (For Salespeople)"
   - **Database Query Fixed**: Corrected API request structure to properly fetch articles from PostgreSQL database
   - **User Authentication Consistency**: Aligned all admin pages to use consistent Google OAuth authentication system
+  - **Plain White Article Display**: Removed glassmorphism effects from article content for better readability with clean white background
 
 ✓ **Enhanced Login Experience and Bug Fixes** (July 28, 2025)
   - **Password Reveal Toggle**: Added eye/eye-off icon button in password field for password visibility control

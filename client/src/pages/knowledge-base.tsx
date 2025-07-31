@@ -228,10 +228,10 @@ export default function KnowledgeBase() {
           </div>
 
           {/* Article Content */}
-          <Card className="bg-white/10 backdrop-blur-md border-white/30">
+          <Card className="bg-white border-gray-200 shadow-lg">
             <div className="p-8">
               <div 
-                className="prose prose-invert max-w-none text-white/90 leading-relaxed"
+                className="prose max-w-none text-gray-900 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: selectedArticle.content }}
               />
             </div>
