@@ -1,0 +1,56 @@
+Below is a blunt audit. Anything marked **✅ Keep** is solid; **⚠️ Tweak** means good idea-poor tool or missing nuance; **❌ Replace** means use something else (and why).
+
+| #      | Issue / Package                                     | Verdict                                    | Why / Better Alternative (if any)                                                                                                                                                              |
+| ------ | --------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1**  | **SESSION\_SECRET fallback**                        | ✅ Keep (*but move to env var immediately*) | Hard-coding a default secret is an obvious foot-gun. Nothing to change except do it.                                                                                                           |
+|        | **helmet**                                          | ✅ Keep                                     | Still a near-zero-cost header hardener.                                                                                                                                                        |
+|        | **express-rate-limit**                              | ⚠️ Tweak                                   | Fine for low-traffic internal apps. If you ever need distributed limit-tracking, use **Rate-Limit** (Cloudflare), **envoy-ratelimit**, or an API-gateway tier (e.g. Fastly’s Edge-Rate-Limit). |
+|        | **csurf**                                           | ✅ Keep                                     | Express + cookies? Works. If you go stateless JWT with SameSite=Strict you can skip CSRF middleware.                                                                                           |
+|        | **clamav.js**                                       | ⚠️ Tweak                                   | Works if ClamAV daemon is running - expect deployment friction. SaaS virus scanning (Filestack, Cloudflare AV, S3 + GuardDuty) removes that ops headache.                                      |
+|        | **argon2 (node-rs)**                                | ✅ Keep                                     | Faster than scrypt/bcrypt, solid defaults.                                                                                                                                                     |
+|        | **speakeasy / qrcode** for 2FA                      | ✅ Keep                                     | Lightweight; if you adopt Clerk/Auth0 later, they ship 2FA out-of-the-box.                                                                                                                     |
+| **2**  | **connect-redis / ioredis**                         | ✅ Keep                                     | The de-facto session store combo.                                                                                                                                                              |
+|        | **connect-pg-simple**                               | ⚠️ Tweak                                   | OK fallback if you hate Redis, but session write-amplification hurts Postgres.                                                                                                                 |
+| **3**  | **@47ng/crypto** field-level encryption             | ⚠️ Tweak                                   | Works but opinionated. Alternatives: **TypeORM’s built-in encryption**, **Prisma’s Field Encryption plugin**, or column-level encryption in Supabase (pgcrypto) – keeps crypto closer to DB.   |
+|        | **winston + daily-rotate**                          | ✅ Keep                                     | Boring but battle-tested; pipe to Loki/Datadog if volume grows.                                                                                                                                |
+| **4**  | **@sentry/node**                                    | ✅ Keep                                     | Leader for JS error capture.                                                                                                                                                                   |
+|        | **pino**                                            | ✅ Keep                                     | Faster than winston; choose one logger, don’t mix. Pino pairs well with OpenTelemetry exporters.                                                                                               |
+|        | **OpenTelemetry SDK**                               | ✅ Keep                                     | Sets the standard. Pair with an OTEL-native backend (Grafana Tempo, Honeycomb) instead of bolt-on APM.                                                                                         |
+| **5**  | **node-cache**                                      | ❌ Replace                                  | Single-instance memory cache breaks at two replicas. Use **cache-manager with Redis** or **Upstash/Redis Cloud**—same API, network-safe.                                                       |
+|        | **cache-manager-ioredis**                           | ✅ Keep                                     | Works cross-instance; add an eviction TTL strategy.                                                                                                                                            |
+|        | “No CDN”                                            | ✅ Add a CDN                                | In 2025 there’s no excuse—point your static assets at Cloudflare R2 + Workers, Vercel Edge, or AWS CloudFront.                                                                                 |
+| **6**  | **bullmq**                                          | ✅ Keep                                     | Good Redis-based queue. If you’re already on Supabase or want cloud-managed, look at **Cloud Tasks**, **Inngest**, or **Temporal Cloud** (stateful, retries, Cron built-in).                   |
+|        | **node-cron**                                       | ⚠️ Tweak                                   | Fine for tiny tasks but fails on multi-instance. Prefer **Inngest scheduled functions** or **BullMQ repeatable jobs**.                                                                         |
+| **7**  | **swagger-ui-express / swagger-jsdoc**              | ✅ Keep                                     | Quick win. If you adopt tRPC or Fastify + Zod you get typed routes & auto OpenAPI anyway.                                                                                                      |
+|        | **joi**                                             | ⚠️ Tweak                                   | Solid, but if you’re on TypeScript use **Zod** or **Yup**—keeps types in sync.                                                                                                                 |
+| **8**  | **nodemon**                                         | ⚠️ Tweak                                   | Fine locally; in Replit you already get hot-reload. For Next.js/TS use **tsx** or **vite-node**—faster starts.                                                                                 |
+|        | **prettier + eslint + husky**                       | ✅ Keep                                     | Standard DX stack.                                                                                                                                                                             |
+| **9**  | **jest / supertest / testing-library / playwright** | ✅ Keep                                     | Covers unit → E2E. If you prefer all-in-one, **Vitest** replaces Jest + supertest and matches Vite ecosystem.                                                                                  |
+| **10** | **pg-pool**                                         | ✅ Keep                                     | If you’re on Supabase or Neon they already pool; still fine.                                                                                                                                   |
+|        | **db-migrate**                                      | ❌ Replace                                  | Unmaintained. Use **Prisma Migrate**, **Knex + Objection**, or **Atlas**—all maintained and give rollbacks.                                                                                    |
+
+---
+
+### Revised priority hits (what I’d actually do first)
+
+1. **Secrets & headers** (SESSION\_SECRET, helmet, secure cookies).
+2. **External session store** (Redis) — fixes CSRF token storage & horizontal scaling at once.
+3. **Structured logging + Sentry** — otherwise you fly blind during every other refactor.
+4. **Input validation & rate-limit on auth** (express-rate-limit + Zod).
+5. **BullMQ + Inngest for background / retries** — stops long-running request blocks.
+6. **Swap local cache to Redis cache-manager** — prevents “works on my pod” bugs.
+7. **Password policy & 2FA** — easy win if you’re rolling your own auth; otherwise delegate to Clerk/Auth0 and skip bespoke 2FA code.
+8. **OpenAPI docs** — spec drives front-end & tests; keeps guests out of private routes.
+
+Everything else (field-level crypto, AV scanning, GDPR tooling, full test matrix) can follow once core auth-session-logging stack is solid.
+
+---
+
+### Why the alternates?
+
+* **Avoid home-grown complexity:** Clerk/Auth0 give 2FA, social login, breached-password checking. One integration replaces five DIY libs.
+* **Single-point caching:** Redis (or Upstash) covers sessions *and* cache *and* job queue—less infra, fewer mental models.
+* **Modern TypeScript type-safety:** Zod/tRPC eliminate “code-gen” lag between models and OpenAPI.
+* **Managed jobs > cron in web servers:** Cron scripts die silently in auto-scaled containers; durable event systems (Inngest, Temporal) survive redeploys.
+
+That’s it—no tool worship, just trade-offs. Adopt the swaps above and you’ll cover the real foot-guns without drowning in dependencies.
