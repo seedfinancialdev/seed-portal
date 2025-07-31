@@ -1125,7 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete article
+  // Delete article (permanently removes from database)
   app.delete("/api/kb/articles/:id", requireAuth, async (req, res) => {
     try {
       const { id } = req.params;
@@ -1134,6 +1134,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting article:', error);
       res.status(500).json({ message: "Failed to delete article" });
+    }
+  });
+
+  // Archive article (sets status to archived)
+  app.patch("/api/kb/articles/:id/archive", requireAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.archiveKbArticle(parseInt(id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error archiving article:', error);
+      res.status(500).json({ message: "Failed to archive article" });
     }
   });
 

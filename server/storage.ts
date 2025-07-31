@@ -499,10 +499,17 @@ export class DatabaseStorage implements IStorage {
 
   async deleteKbArticle(id: number): Promise<void> {
     await safeDbQuery(async () => {
+      await db.delete(kbArticles)
+        .where(eq(kbArticles.id, id));
+    }, 'deleteKbArticle');
+  }
+
+  async archiveKbArticle(id: number): Promise<void> {
+    await safeDbQuery(async () => {
       await db.update(kbArticles)
         .set({ status: 'archived' })
         .where(eq(kbArticles.id, id));
-    }, 'deleteKbArticle');
+    }, 'archiveKbArticle');
   }
 
   async incrementArticleViews(id: number): Promise<void> {

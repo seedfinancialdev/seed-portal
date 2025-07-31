@@ -452,41 +452,61 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
   const handleSaveArticle = async (content: string) => {
     const formData = form.getValues();
     
-    // Generate base slug from title
-    let baseSlug = formData.title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .trim();
-    
-    // Ensure unique slug by adding timestamp suffix
-    const timestamp = Date.now();
-    const uniqueSlug = `${baseSlug}-${timestamp}`;
-    
     try {
-      await apiRequest("/api/kb/articles", {
-        method: "POST",
-        body: JSON.stringify({
-          title: formData.title,
-          slug: uniqueSlug,
-          content: content,
-          categoryId: formData.categoryId,
-          status: 'published',
-          excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
-          tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
-        })
-      });
+      // Check if article with same title already exists
+      const existingArticles = await apiRequest(`/api/kb/articles?title=${encodeURIComponent(formData.title)}`);
+      
+      if (existingArticles && existingArticles.length > 0) {
+        // Update existing article instead of creating duplicate
+        const existingId = existingArticles[0].id;
+        await apiRequest(`/api/kb/articles/${existingId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            title: formData.title,
+            content: content,
+            categoryId: formData.categoryId,
+            status: 'draft', // Save as draft for AI-generated content
+            excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
+            tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
+          })
+        });
+        
+        toast({
+          title: "Article Updated Successfully",
+          description: "Your existing article has been updated with new AI-generated content",
+        });
+      } else {
+        // Create new article if none exists
+        const baseSlug = formData.title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
+        
+        await apiRequest("/api/kb/articles", {
+          method: "POST",
+          body: JSON.stringify({
+            title: formData.title,
+            slug: baseSlug,
+            content: content,
+            categoryId: formData.categoryId,
+            status: 'draft', // Save as draft for AI-generated content
+            excerpt: autoExcerpt || 'AI-generated article with advanced content analysis',
+            tags: autoTags.length > 0 ? autoTags : ['ai-generated', 'knowledge-base']
+          })
+        });
+        
+        toast({
+          title: "Article Created Successfully",
+          description: "Your AI-generated article has been saved as a draft",
+        });
+      }
 
       onArticleGenerated({
         title: formData.title,
         content: content,
         categoryId: formData.categoryId,
-      });
-
-      toast({
-        title: "Article Saved Successfully",
-        description: "Your AI-generated article is now live in the knowledge base",
       });
 
       // Clear the current session after successful save

@@ -9,13 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2, Sparkles, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, Edit2, Trash2, BookOpen, Users, Search, Bookmark, Wand2, Sparkles, RefreshCw, MoreVertical, Archive } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { AIArticleGenerator } from "@/components/AIArticleGenerator";
 import { RichTextEditor } from "@/components/RichTextEditor";
@@ -73,6 +75,9 @@ export default function KbAdmin() {
   const [isArticleDialogOpen, setIsArticleDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<KbArticle | null>(null);
   const [isAIGeneratorOpen, setIsAIGeneratorOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
 
   // Fetch categories - only when authenticated
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
@@ -161,22 +166,47 @@ export default function KbAdmin() {
     },
   });
 
-  // Delete article mutation
+  // Delete article mutation (permanent deletion)
   const deleteArticleMutation = useMutation({
     mutationFn: async (id: number) => {
       return apiRequest(`/api/kb/articles/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
+      setDeleteDialogOpen(false);
+      setSelectedArticleId(null);
       toast({
         title: "Success",
-        description: "Article deleted successfully",
+        description: "Article permanently deleted from database",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to delete article",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Archive article mutation
+  const archiveArticleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest(`/api/kb/articles/${id}/archive`, { method: "PATCH" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
+      setArchiveDialogOpen(false);
+      setSelectedArticleId(null);
+      toast({
+        title: "Success",
+        description: "Article archived successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to archive article",
         variant: "destructive",
       });
     },
@@ -257,9 +287,26 @@ export default function KbAdmin() {
     setIsArticleDialogOpen(true);
   };
 
-  const handleDeleteArticle = (id: number) => {
-    if (confirm("Are you sure you want to delete this article?")) {
-      deleteArticleMutation.mutate(id);
+  // Handler functions for delete and archive confirmation dialogs
+  const openDeleteDialog = (id: number) => {
+    setSelectedArticleId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const openArchiveDialog = (id: number) => {
+    setSelectedArticleId(id);
+    setArchiveDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedArticleId) {
+      deleteArticleMutation.mutate(selectedArticleId);
+    }
+  };
+
+  const confirmArchive = () => {
+    if (selectedArticleId) {
+      archiveArticleMutation.mutate(selectedArticleId);
     }
   };
 
@@ -675,14 +722,33 @@ export default function KbAdmin() {
                               >
                                 <Edit2 className="h-4 w-4" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-red-400 hover:text-red-600 hover:bg-red-50"
-                                onClick={() => handleDeleteArticle(article.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-gray-600 hover:text-gray-900"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => openArchiveDialog(article.id)}
+                                    className="text-orange-600 focus:text-orange-700"
+                                  >
+                                    <Archive className="h-4 w-4 mr-2" />
+                                    Archive Article
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => openDeleteDialog(article.id)}
+                                    className="text-red-600 focus:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Permanently
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
                         </CardContent>
@@ -702,6 +768,50 @@ export default function KbAdmin() {
           isOpen={isAIGeneratorOpen}
           onClose={() => setIsAIGeneratorOpen(false)}
         />
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Article Permanently</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the article from the database.
+                If you want to keep the article but hide it from users, consider archiving it instead.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleteArticleMutation.isPending ? "Deleting..." : "Delete Permanently"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Archive Confirmation Dialog */}
+        <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Archive Article</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will archive the article and hide it from users. The article will remain in the database
+                and can be restored later by changing its status back to published or draft.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmArchive}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {archiveArticleMutation.isPending ? "Archiving..." : "Archive Article"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
