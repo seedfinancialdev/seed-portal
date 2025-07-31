@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings, MoreHorizontal } from "lucide-react";
 import { useLocation } from "wouter";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 
@@ -1273,6 +1273,11 @@ function Home() {
 
   // Remove the old breakdown function since it's now handled in the calculation logic above
 
+  // Scroll to top on component mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <UniversalNavbar 
@@ -1290,7 +1295,7 @@ function Home() {
 
         {/* Enhanced Client Information Section */}
         <div className="max-w-5xl mx-auto mb-10">
-          <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
+          <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
             <CardHeader className="pb-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-gradient-to-r from-[#e24c00] to-orange-500 rounded-xl shadow-lg">
@@ -1408,26 +1413,48 @@ function Home() {
           </Card>
         </div>
 
-        {/* Enhanced Service Selection for 6 services */}
+        {/* Enhanced Service Selection - Compact for 6 services */}
         <div className="max-w-7xl mx-auto mb-10">
-          <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
+          <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
             <CardHeader className="pb-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-lg">
-                  <Settings className="h-7 w-7 text-white" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-lg">
+                    <Settings className="h-7 w-7 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl text-gray-900">Service Selection</CardTitle>
+                    <p className="text-gray-600 mt-1">Choose services to include in this quote</p>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-2xl text-gray-900">Service Selection</CardTitle>
-                  <p className="text-gray-600 mt-1">Choose services to include in this quote</p>
-                </div>
+                {/* Templates Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      Templates
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Template
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled className="text-gray-500">
+                      No templates saved
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                {/* Bookkeeping Service Card */}
+              <div className="grid grid-cols-6 gap-4">
+                {/* Bookkeeping Service Card - Compact */}
                 <div 
                   className={`
-                    cursor-pointer transition-all duration-300 rounded-xl p-5 border shadow-lg hover:shadow-xl transform hover:scale-105
+                    cursor-pointer transition-all duration-300 rounded-lg p-4 border shadow-md hover:shadow-lg transform hover:scale-105
                     ${feeCalculation.includesBookkeeping 
                       ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300 shadow-green-200/50' 
                       : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
@@ -1445,39 +1472,29 @@ function Home() {
                     }
                   }}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
                       feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
                     }`}>
-                      {feeCalculation.includesBookkeeping && <Check className="h-4 w-4 text-white" />}
+                      {feeCalculation.includesBookkeeping && <Check className="h-3 w-3 text-white" />}
                     </div>
-                    <h4 className={`font-semibold ${
+                    <h4 className={`font-semibold text-sm ${
                       feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-600'
                     }`}>
                       Bookkeeping
                     </h4>
                   </div>
-                  <div className={`text-2xl font-bold mb-1 ${
-                    feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
-                  }`}>
-                    ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
-                  </div>
-                  <div className={`text-sm font-medium mb-2 ${
-                    feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
-                  }`}>
-                    ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
-                  </div>
                   <p className={`text-xs ${
                     feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
                   }`}>
-                    Monthly bookkeeping, cleanup, and financial statements
+                    Monthly books & statements
                   </p>
                 </div>
 
-                {/* TaaS Service Card */}
+                {/* TaaS Service Card - Compact */}
                 <div 
                   className={`
-                    cursor-pointer transition-all duration-300 rounded-xl p-5 border shadow-lg hover:shadow-xl transform hover:scale-105
+                    cursor-pointer transition-all duration-300 rounded-lg p-4 border shadow-md hover:shadow-lg transform hover:scale-105
                     ${feeCalculation.includesTaas 
                       ? 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300 shadow-blue-200/50' 
                       : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
@@ -1495,117 +1512,67 @@ function Home() {
                     }
                   }}
                 >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
                       feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
                     }`}>
-                      {feeCalculation.includesTaas && <Check className="h-4 w-4 text-white" />}
+                      {feeCalculation.includesTaas && <Check className="h-3 w-3 text-white" />}
                     </div>
-                    <h4 className={`font-semibold ${
+                    <h4 className={`font-semibold text-sm ${
                       feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-600'
                     }`}>
                       TaaS
                     </h4>
                   </div>
-                  <div className={`text-2xl font-bold mb-1 ${
-                    feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
-                  }`}>
-                    ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
-                  </div>
-                  <div className={`text-sm font-medium mb-2 ${
-                    feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
-                  }`}>
-                    ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} setup
-                  </div>
                   <p className={`text-xs ${
                     feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
                   }`}>
-                    Tax preparation, filing and planning services
+                    Tax prep & planning
                   </p>
                 </div>
 
-                {/* Payroll Service Card */}
-                <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-4 w-4 text-gray-500" />
+                {/* Payroll Service Card - Compact */}
+                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
+                      <Plus className="h-3 w-3 text-gray-500" />
                     </div>
-                    <h4 className="font-semibold text-gray-500">Payroll</h4>
+                    <h4 className="font-semibold text-sm text-gray-500">Payroll</h4>
                   </div>
-                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
-                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
-                  <p className="text-xs text-gray-500">Comprehensive payroll management and compliance</p>
+                  <p className="text-xs text-gray-500">Coming Soon</p>
                 </div>
 
-                {/* FP&A Lite Service Card */}
-                <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-4 w-4 text-gray-500" />
+                {/* FP&A Lite Service Card - Compact */}
+                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
+                      <Plus className="h-3 w-3 text-gray-500" />
                     </div>
-                    <h4 className="font-semibold text-gray-500">FP&A Lite</h4>
+                    <h4 className="font-semibold text-sm text-gray-500">FP&A Lite</h4>
                   </div>
-                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
-                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
-                  <p className="text-xs text-gray-500">Financial planning and analysis services</p>
+                  <p className="text-xs text-gray-500">Coming Soon</p>
                 </div>
 
-                {/* AP/AR Lite Service Card */}
-                <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-4 w-4 text-gray-500" />
+                {/* AP/AR Lite Service Card - Compact */}
+                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
+                      <Plus className="h-3 w-3 text-gray-500" />
                     </div>
-                    <h4 className="font-semibold text-gray-500">AP/AR Lite</h4>
+                    <h4 className="font-semibold text-sm text-gray-500">AP/AR Lite</h4>
                   </div>
-                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
-                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
-                  <p className="text-xs text-gray-500">Accounts payable and receivable management</p>
+                  <p className="text-xs text-gray-500">Coming Soon</p>
                 </div>
 
-                {/* Fractional CFO Service Card */}
-                <div className="cursor-not-allowed rounded-xl p-5 border border-gray-200 bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                      <Plus className="h-4 w-4 text-gray-500" />
+                {/* Fractional CFO Service Card - Compact */}
+                <div className="cursor-not-allowed rounded-lg p-4 border border-gray-200 bg-gray-50 opacity-60">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center">
+                      <Plus className="h-3 w-3 text-gray-500" />
                     </div>
-                    <h4 className="font-semibold text-gray-500">Fractional CFO</h4>
+                    <h4 className="font-semibold text-sm text-gray-500">Fractional CFO</h4>
                   </div>
-                  <div className="text-2xl font-bold mb-1 text-gray-400">Coming Soon</div>
-                  <div className="text-sm font-medium mb-2 text-gray-400">Custom pricing</div>
-                  <p className="text-xs text-gray-500">Strategic financial leadership and guidance</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Custom Templates Section */}
-        <div className="max-w-7xl mx-auto mb-10">
-          <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-r from-purple-600 to-purple-500 rounded-xl shadow-lg">
-                  <FileText className="h-7 w-7 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl text-gray-900">Quote Templates</CardTitle>
-                  <p className="text-gray-600 mt-1">Save and reuse custom service combinations</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="border-dashed border-2 hover:border-purple-300 hover:bg-purple-50 text-gray-600 hover:text-purple-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Template
-                </Button>
-                <div className="text-sm text-gray-500 flex items-center">
-                  <span>Templates will appear here once created</span>
+                  <p className="text-xs text-gray-500">Coming Soon</p>
                 </div>
               </div>
             </CardContent>
@@ -1616,7 +1583,7 @@ function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Quote Form Card */}
-            <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
+            <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
               <CardContent className="p-6">
                 {/* Form Navigation for Multiple Services */}
                 {getActiveServices().length > 1 && (
@@ -1644,36 +1611,272 @@ function Home() {
                   </div>
                 )}
 
-                {/* Form Header */}
-                <div className="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-xl">
-                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
-                    {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">
-                      {currentFormView === 'bookkeeping' ? 'Bookkeeping Configuration' : 'Tax Service Configuration'}
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      {currentFormView === 'bookkeeping' ? 'Configure bookkeeping service parameters' : 'Configure tax service parameters'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* This form section will be implemented properly below */}
+                {/* Dynamic Form Content Based on Selected Services */}
                 {getActiveServices().length > 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">Select services above to configure pricing.</p>
+                  <div>
+                    {/* Form Header */}
+                    <div className="flex items-center gap-3 mb-6 p-4 bg-gray-50 rounded-xl">
+                      <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
+                        {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-900">
+                          {currentFormView === 'bookkeeping' ? 'Bookkeeping Configuration' : 'Tax Service Configuration'}
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                          {currentFormView === 'bookkeeping' ? 'Configure bookkeeping service parameters' : 'Configure tax service parameters'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Bookkeeping Form */}
+                    {currentFormView === 'bookkeeping' && feeCalculation.includesBookkeeping && (
+                      <Form {...form}>
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="revenueBand"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Revenue Band</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select revenue band" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="0-250k">$0 - $250K</SelectItem>
+                                      <SelectItem value="250k-500k">$250K - $500K</SelectItem>
+                                      <SelectItem value="500k-1m">$500K - $1M</SelectItem>
+                                      <SelectItem value="1m-3m">$1M - $3M</SelectItem>
+                                      <SelectItem value="3m-5m">$3M - $5M</SelectItem>
+                                      <SelectItem value="5m+">$5M+</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="monthlyTransactions"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Monthly Transactions</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select transaction volume" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="0-50">0 - 50</SelectItem>
+                                      <SelectItem value="51-150">51 - 150</SelectItem>
+                                      <SelectItem value="151-300">151 - 300</SelectItem>
+                                      <SelectItem value="301-500">301 - 500</SelectItem>
+                                      <SelectItem value="501-1000">501 - 1000</SelectItem>
+                                      <SelectItem value="1000+">1000+</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="industry"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Industry</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select industry" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Professional Services">Professional Services</SelectItem>
+                                      <SelectItem value="E-commerce">E-commerce</SelectItem>
+                                      <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
+                                      <SelectItem value="Hospitality">Hospitality</SelectItem>
+                                      <SelectItem value="Real Estate">Real Estate</SelectItem>
+                                      <SelectItem value="Healthcare">Healthcare</SelectItem>
+                                      <SelectItem value="Technology">Technology</SelectItem>
+                                      <SelectItem value="Construction">Construction</SelectItem>
+                                      <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="cleanupComplexity"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Cleanup Complexity</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select complexity" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">Low (1x)</SelectItem>
+                                      <SelectItem value="1.25">Medium (1.25x)</SelectItem>
+                                      <SelectItem value="1.5">High (1.5x)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </Form>
+                    )}
+
+                    {/* TaaS Form */}
+                    {currentFormView === 'taas' && feeCalculation.includesTaas && (
+                      <Form {...form}>
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="entityType"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Entity Type</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select entity type" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="LLC">LLC</SelectItem>
+                                      <SelectItem value="S-Corp">S-Corp</SelectItem>
+                                      <SelectItem value="C-Corp">C-Corp</SelectItem>
+                                      <SelectItem value="Partnership">Partnership</SelectItem>
+                                      <SelectItem value="Non-Profit">Non-Profit</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="numEntities"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Number of Entities</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select entities" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1</SelectItem>
+                                      <SelectItem value="2">2</SelectItem>
+                                      <SelectItem value="3">3</SelectItem>
+                                      <SelectItem value="4">4</SelectItem>
+                                      <SelectItem value="5">5</SelectItem>
+                                      <SelectItem value="6">6+</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="statesFiled"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>States Filed</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select states" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1</SelectItem>
+                                      <SelectItem value="2">2</SelectItem>
+                                      <SelectItem value="3">3</SelectItem>
+                                      <SelectItem value="4">4</SelectItem>
+                                      <SelectItem value="5">5</SelectItem>
+                                      <SelectItem value="6">6</SelectItem>
+                                      <SelectItem value="7">7+</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="numBusinessOwners"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Business Owners</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select owners" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1</SelectItem>
+                                      <SelectItem value="2">2</SelectItem>
+                                      <SelectItem value="3">3</SelectItem>
+                                      <SelectItem value="4">4</SelectItem>
+                                      <SelectItem value="5">5</SelectItem>
+                                      <SelectItem value="6">6+</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </Form>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">Please select at least one service to continue.</p>
+                  <div className="text-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="p-4 bg-gray-100 rounded-full">
+                        <Settings className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Select Services</h3>
+                        <p className="text-gray-600">Choose at least one service above to configure pricing.</p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Enhanced Pricing Summary */}
-            <Card className="bg-white/98 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
+            <Card className="bg-white/95 backdrop-blur-lg border-0 shadow-2xl ring-1 ring-white/20">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-gradient-to-r from-green-600 to-green-500 rounded-xl shadow-lg">
@@ -1686,11 +1889,97 @@ function Home() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center py-8">
-                    <p className="text-gray-600">Pricing will appear here once services are configured.</p>
+                {getActiveServices().length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Bookkeeping Pricing */}
+                    {feeCalculation.includesBookkeeping && (
+                      <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-green-800">Bookkeeping Service</h3>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-green-800">
+                              ${feeCalculation.bookkeeping.monthlyFee.toLocaleString()}/mo
+                            </div>
+                            <div className="text-sm text-green-600">
+                              ${feeCalculation.bookkeeping.setupFee.toLocaleString()} setup
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-green-700">Monthly bookkeeping, cleanup, and financial statements</p>
+                      </div>
+                    )}
+
+                    {/* TaaS Pricing */}
+                    {feeCalculation.includesTaas && (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-blue-800">Tax Service (TaaS)</h3>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-blue-800">
+                              ${feeCalculation.taas.monthlyFee.toLocaleString()}/mo
+                            </div>
+                            <div className="text-sm text-blue-600">
+                              ${feeCalculation.taas.setupFee.toLocaleString()} setup
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-blue-700">Tax preparation, filing and planning services</p>
+                      </div>
+                    )}
+
+                    {/* Total Summary */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">Total Monthly</h3>
+                          <p className="text-sm text-gray-600">Recurring monthly fees</p>
+                        </div>
+                        <div className="text-3xl font-bold text-gray-900">
+                          ${feeCalculation.totalMonthly.toLocaleString()}/mo
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">Total Setup</h3>
+                          <p className="text-sm text-gray-600">One-time setup fees</p>
+                        </div>
+                        <div className="text-2xl font-bold text-gray-900">
+                          ${feeCalculation.totalSetup.toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="space-y-3 pt-4">
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold py-3"
+                        disabled={!form.formState.isValid}
+                      >
+                        Save Quote
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-green-300 text-green-700 hover:bg-green-50"
+                      >
+                        Push to HubSpot
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="p-4 bg-gray-100 rounded-full">
+                        <DollarSign className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Services Selected</h3>
+                        <p className="text-gray-600">Select services to see pricing calculations.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
