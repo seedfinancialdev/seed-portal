@@ -217,4 +217,91 @@
     --tw-prose-th-borders: rgb(255 237 213);
     --tw-prose-td-borders: rgb(229 231 235);
   }
+
+  /* Client-facing article container with professional styling */
+  .client-article {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 12px;
+    padding: 2.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+    margin: 1rem 0;
+  }
+
+  .client-article::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8, #2563eb);
+  }
+
+  .client-article h1 {
+    color: #1e3a8a !important;
+    font-size: 2.25rem !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.75rem !important;
+    text-align: center;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid #dbeafe;
+  }
+
+  .client-article h2 {
+    color: #1e40af !important;
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;  
+    margin-top: 2rem !important;
+    margin-bottom: 1rem !important;
+    border-bottom: 2px solid #dbeafe !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .client-article h3, .client-article h4 {
+    color: #2563eb !important;
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    margin-top: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .client-article p {
+    color: #475569 !important;
+    font-size: 1.125rem !important;
+    line-height: 1.7 !important;
+    margin-bottom: 1.25rem !important;
+  }
+
+  .client-article ul, .client-article ol {
+    color: #475569 !important;
+    font-size: 1.125rem !important;
+    line-height: 1.7 !important;
+    margin-bottom: 1.25rem !important;
+    padding-left: 1.5rem !important;
+  }
+
+  .client-article li {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .client-article blockquote {
+    border-left: 4px solid #3b82f6 !important;
+    background: #f1f5f9 !important;
+    padding: 1rem 1.5rem !important;
+    margin: 1.5rem 0 !important;
+    font-style: italic !important;
+    color: #334155 !important;
+    border-radius: 4px;
+  }
+
+  .client-article strong, .client-article b {
+    background: linear-gradient(120deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    color: #1e40af !important;
+  }
 }
