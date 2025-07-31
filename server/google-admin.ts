@@ -60,11 +60,11 @@ export class GoogleAdminService {
       this.initialized = true;
       
     } catch (error) {
-      // Log only once per startup, not as error to avoid Sentry noise
-      if (!this.loggedInitError) {
-        console.log('Google Admin API not configured (this is optional)');
-        this.loggedInitError = true;
-      }
+      // Log the actual error for debugging
+      console.error('Failed to initialize Google Admin API:', error);
+      console.log('To use Google Admin API:');
+      console.log('1. Run: gcloud auth application-default login --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly');
+      console.log('2. Copy the ADC file to: ~/.config/gcloud/application_default_credentials.json');
       
       this.admin = null;
       this.initialized = false;
