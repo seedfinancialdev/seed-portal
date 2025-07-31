@@ -1129,8 +1129,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete article (permanently removes from database)
   app.delete("/api/kb/articles/:id", requireAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       const { id } = req.params;
-      await storage.deleteKbArticle(parseInt(id));
+      const articleId = parseInt(id);
+      
+      // Get article details for audit log
+      const article = await storage.getKbArticle(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Log deletion attempt
+      console.log(`🗑️ ARTICLE DELETION AUDIT: User ${req.user.email} permanently deleted article "${article.title}" (ID: ${articleId}) at ${new Date().toISOString()}`);
+      
+      await storage.deleteKbArticle(articleId);
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting article:', error);
@@ -1141,12 +1156,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Archive article (sets status to archived)
   app.patch("/api/kb/articles/:id/archive", requireAuth, async (req, res) => {
     try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
       const { id } = req.params;
-      await storage.archiveKbArticle(parseInt(id));
+      const articleId = parseInt(id);
+      
+      // Get article details for audit log
+      const article = await storage.getKbArticle(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Log archive attempt
+      console.log(`📦 ARTICLE ARCHIVE AUDIT: User ${req.user.email} archived article "${article.title}" (ID: ${articleId}) at ${new Date().toISOString()}`);
+      
+      await storage.archiveKbArticle(articleId);
       res.json({ success: true });
     } catch (error) {
       console.error('Error archiving article:', error);
       res.status(500).json({ message: "Failed to archive article" });
+    }
+  });
+
+  // Undelete article (restore from archive)
+  app.patch("/api/kb/articles/:id/undelete", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const { id } = req.params;
+      const articleId = parseInt(id);
+      
+      // Get article details for audit log
+      const article = await storage.getKbArticle(articleId);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // Log undelete attempt
+      console.log(`♻️ ARTICLE RESTORE AUDIT: User ${req.user.email} restored article "${article.title}" (ID: ${articleId}) at ${new Date().toISOString()}`);
+      
+      await storage.undeleteKbArticle(articleId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error restoring article:', error);
+      res.status(500).json({ message: "Failed to restore article" });
     }
   });
 

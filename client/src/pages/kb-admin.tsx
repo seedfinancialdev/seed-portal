@@ -78,6 +78,8 @@ export default function KbAdmin() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [showAdvancedDelete, setShowAdvancedDelete] = useState(false);
 
   // Fetch categories - only when authenticated
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
@@ -290,6 +292,8 @@ export default function KbAdmin() {
   // Handler functions for delete and archive confirmation dialogs
   const openDeleteDialog = (id: number) => {
     setSelectedArticleId(id);
+    setDeleteConfirmationText("");
+    setShowAdvancedDelete(false);
     setDeleteDialogOpen(true);
   };
 
@@ -299,7 +303,7 @@ export default function KbAdmin() {
   };
 
   const confirmDelete = () => {
-    if (selectedArticleId) {
+    if (selectedArticleId && deleteConfirmationText === "DELETE") {
       deleteArticleMutation.mutate(selectedArticleId);
     }
   };
@@ -738,14 +742,14 @@ export default function KbAdmin() {
                                     className="text-orange-600 focus:text-orange-700"
                                   >
                                     <Archive className="h-4 w-4 mr-2" />
-                                    Archive Article
+                                    Archive Article (Recommended)
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => openDeleteDialog(article.id)}
-                                    className="text-red-600 focus:text-red-700"
+                                    className="text-red-600 focus:text-red-700 focus:bg-red-50 border-t border-gray-200"
                                   >
                                     <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Permanently
+                                    ⚠️ Delete Permanently
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -771,22 +775,69 @@ export default function KbAdmin() {
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Article Permanently</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the article from the database.
-                If you want to keep the article but hide it from users, consider archiving it instead.
+              <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+                <Trash2 className="h-5 w-5" />
+                ⚠️ DANGER: Permanent Deletion
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-3">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-800 font-semibold">This will permanently destroy the article and cannot be undone!</p>
+                </div>
+                
+                <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
+                  <p className="text-orange-800">
+                    <strong>Recommended:</strong> Use "Archive Article" instead to safely hide the article while preserving the content.
+                  </p>
+                </div>
+
+                {!showAdvancedDelete ? (
+                  <div className="text-center">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAdvancedDelete(true)}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      I understand the risks - Show deletion options
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-700">
+                      To confirm permanent deletion, type <strong>DELETE</strong> below:
+                    </p>
+                    <Input
+                      value={deleteConfirmationText}
+                      onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                      placeholder="Type DELETE to confirm"
+                      className="border-red-300 focus:border-red-500"
+                    />
+                  </div>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="gap-2">
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmDelete}
-                className="bg-red-600 hover:bg-red-700"
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  if (selectedArticleId) openArchiveDialog(selectedArticleId);
+                }}
+                className="bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
               >
-                {deleteArticleMutation.isPending ? "Deleting..." : "Delete Permanently"}
-              </AlertDialogAction>
+                Archive Instead (Safe)
+              </Button>
+              {showAdvancedDelete && (
+                <AlertDialogAction
+                  onClick={confirmDelete}
+                  disabled={deleteConfirmationText !== "DELETE" || deleteArticleMutation.isPending}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleteArticleMutation.isPending ? "Deleting..." : "Delete Permanently"}
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

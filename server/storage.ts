@@ -508,9 +508,17 @@ export class DatabaseStorage implements IStorage {
   async archiveKbArticle(id: number): Promise<void> {
     await safeDbQuery(async () => {
       await db.update(kbArticles)
-        .set({ status: 'archived' })
+        .set({ status: 'archived', updatedAt: new Date() })
         .where(eq(kbArticles.id, id));
     }, 'archiveKbArticle');
+  }
+
+  async undeleteKbArticle(id: number): Promise<void> {
+    await safeDbQuery(async () => {
+      await db.update(kbArticles)
+        .set({ status: 'draft', updatedAt: new Date() })
+        .where(eq(kbArticles.id, id));
+    }, 'undeleteKbArticle');
   }
 
   async incrementArticleViews(id: number): Promise<void> {
