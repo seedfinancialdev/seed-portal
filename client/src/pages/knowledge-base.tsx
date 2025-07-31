@@ -191,7 +191,7 @@ export default function KnowledgeBase() {
         <div className="max-w-4xl mx-auto px-6 py-8">
           {/* Article Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-4 border-b-2 border-orange-500 pb-3" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+            <h1 className="text-3xl font-bold text-gray-900 mb-4 border-b-2 border-orange-500 pb-3" style={{ fontFamily: 'Open Sans, sans-serif' }}>
               {selectedArticle.title}
             </h1>
             
@@ -359,7 +359,7 @@ export default function KnowledgeBase() {
                       <Card key={article.id} className="p-4 hover:shadow-md transition-shadow cursor-pointer">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold text-lg mb-2">{article.title}</h3>
+                            <h3 className="font-semibold text-lg mb-2" style={{ fontFamily: 'Open Sans, sans-serif' }}>{article.title}</h3>
                             {article.excerpt && (
                               <p className="text-gray-600 text-sm mb-3">{article.excerpt}</p>
                             )}
@@ -621,7 +621,7 @@ export default function KnowledgeBase() {
                     onClick={() => handleArticleClick(article)}
                   >
                     <div className="p-6">
-                      <h3 className="text-lg font-semibold text-white mb-3">
+                      <h3 className="text-lg font-semibold text-white mb-3" style={{ fontFamily: 'Open Sans, sans-serif' }}>
                         {article.title}
                       </h3>
                       {article.excerpt && (
