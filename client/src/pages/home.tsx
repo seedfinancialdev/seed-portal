@@ -1416,6 +1416,85 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Quick Start Presets - Sales Optimized */}
+        <div className="max-w-none mx-8 mb-8">
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/30 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Quick Start Templates</h3>
+              <div className="text-sm text-gray-500">Choose a common scenario to get started faster</div>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <button 
+                onClick={() => {
+                  // Preset for Small Business Bookkeeping
+                  form.setValue('revenueBand', '<$10K');
+                  form.setValue('monthlyTransactions', '<100');
+                  form.setValue('industry', 'Professional Services');
+                  form.setValue('includesBookkeeping', true);
+                  form.setValue('includesTaas', false);
+                  setCurrentFormView('bookkeeping');
+                }}
+                className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 transition-all duration-200 text-left group hover:scale-105"
+              >
+                <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">📊</div>
+                <div className="font-medium text-gray-800">Small Business</div>
+                <div className="text-xs text-gray-600">Under $100K • Books Only</div>
+                <div className="text-xs text-gray-500 mt-1">~$500/mo</div>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  form.setValue('revenueBand', '250K-1M');
+                  form.setValue('monthlyTransactions', '300-600');
+                  form.setValue('industry', 'Professional Services');
+                  form.setValue('includesBookkeeping', true);
+                  form.setValue('includesTaas', true);
+                  setCurrentFormView('bookkeeping');
+                }}
+                className="p-4 rounded-xl bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border border-green-200 transition-all duration-200 text-left group hover:scale-105"
+              >
+                <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🚀</div>
+                <div className="font-medium text-gray-800">Growing Business</div>
+                <div className="text-xs text-gray-600">$250K-1M • Books + Tax</div>
+                <div className="text-xs text-gray-500 mt-1">~$1,200/mo</div>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  form.setValue('revenueBand', '1M+');
+                  form.setValue('monthlyTransactions', '1000-2000');
+                  form.setValue('industry', 'Restaurant/Food Service');
+                  form.setValue('includesBookkeeping', true);
+                  form.setValue('includesTaas', true);
+                  setCurrentFormView('bookkeeping');
+                }}
+                className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border border-purple-200 transition-all duration-200 text-left group hover:scale-105"
+              >
+                <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🏢</div>
+                <div className="font-medium text-gray-800">Enterprise</div>
+                <div className="text-xs text-gray-600">$1M+ • Full Service</div>
+                <div className="text-xs text-gray-500 mt-1">~$2,500/mo</div>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  // Reset for custom
+                  form.reset();
+                  form.setValue('includesBookkeeping', false);
+                  form.setValue('includesTaas', false);
+                  setCurrentFormView('bookkeeping');
+                }}
+                className="p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-200 transition-all duration-200 text-left group hover:scale-105"
+              >
+                <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">⚙️</div>
+                <div className="font-medium text-gray-800">Custom Build</div>
+                <div className="text-xs text-gray-600">Start from scratch</div>
+                <div className="text-xs text-gray-500 mt-1">Your pricing</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="max-w-none mx-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
             {/* Quote Builder Form Card */}
@@ -1455,38 +1534,78 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Form Header */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
-                  {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
+              {/* Progress Steps */}
+              <div className="mb-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-[#e24c00] text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                      <span className="text-sm font-medium text-gray-700">Client Info</span>
+                    </div>
+                    <div className="w-8 h-0.5 bg-gray-300"></div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 ${includesBookkeeping || includesTaas ? 'bg-[#e24c00] text-white' : 'bg-gray-300 text-gray-500'} rounded-full flex items-center justify-center text-sm font-bold transition-colors`}>2</div>
+                      <span className="text-sm font-medium text-gray-700">Services</span>
+                    </div>
+                    <div className="w-8 h-0.5 bg-gray-300"></div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 ${form.watch('contactEmail') && (includesBookkeeping || includesTaas) ? 'bg-[#e24c00] text-white' : 'bg-gray-300 text-gray-500'} rounded-full flex items-center justify-center text-sm font-bold transition-colors`}>3</div>
+                      <span className="text-sm font-medium text-gray-700">Pricing</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {currentFormView === 'bookkeeping' ? 'Bookkeeping Configuration' : 'Tax Service Configuration'}
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {currentFormView === 'bookkeeping' ? 'Bookkeeping Quote' : 'Tax as a Service (TaaS) Quote'}
+              </div>
+
+              {/* Enhanced Form Header */}
+              <div className="flex items-center gap-4 mb-6 p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl border border-gray-200">
+                <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-xl shadow-lg">
+                  {currentFormView === 'bookkeeping' ? <Calculator className="h-6 w-6 text-white" /> : <FileText className="h-6 w-6 text-white" />}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    {currentFormView === 'bookkeeping' ? 'Bookkeeping Services' : 'Tax as a Service (TaaS)'}
                   </h2>
-                  <p className="text-sm text-gray-700">
-                    {currentFormView === 'bookkeeping' ? 'Configure your bookkeeping pricing' : 'Configure your tax preparation requirements'}
+                  <p className="text-sm text-gray-600">
+                    {currentFormView === 'bookkeeping' ? 'Monthly bookkeeping, cleanup, and financial statements' : 'Tax preparation, filing and planning services'}
                   </p>
                 </div>
+                {(feeCalculation.includesBookkeeping || feeCalculation.includesTaas) && (
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-700">Services Selected</div>
+                    <div className="text-xs text-gray-500">
+                      {feeCalculation.includesBookkeeping && feeCalculation.includesTaas ? 'Books + Tax' : feeCalculation.includesBookkeeping ? 'Bookkeeping' : 'Tax Only'}
+                    </div>
+                  </div>
+                )}
               </div>
               
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   {/* Core Fields - Always Shown */}
+                  {/* Client Information Section */}
                   <div className="space-y-6">
-                    {/* Contact Email */}
-                  <FormField
-                    control={form.control}
-                    name="contactEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Email</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input 
-                              type="email"
-                              placeholder="client@company.com"
-                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                        <User className="h-5 w-5 text-blue-600" />
+                        Client Details
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Contact Email */}
+                        <FormField
+                          control={form.control}
+                          name="contactEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm font-medium text-gray-700">Contact Email *</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input 
+                                    type="email"
+                                    placeholder="client@company.com"
+                                    className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
                               {...field}
                               onChange={(e) => {
                                 field.onChange(e);
@@ -1553,6 +1672,8 @@ export default function Home() {
                       </FormItem>
                     )}
                   />
+                      </div>
+                    </div>
 
                   {/* Existing Quotes Notification */}
                   {showExistingQuotesNotification && existingQuotesForEmail.length > 0 && (
