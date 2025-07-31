@@ -1274,7 +1274,7 @@ export default function Home() {
   // Remove the old breakdown function since it's now handled in the calculation logic above
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8 animate-fadeIn">
       <div className="max-w-4xl mx-auto">
         <UniversalNavbar 
           showBackButton={true} 
@@ -1288,10 +1288,10 @@ export default function Home() {
             {/* Bookkeeping Service Card */}
             <div 
               className={`
-                cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
+                cursor-pointer transition-all duration-300 rounded-xl p-5 border backdrop-blur-sm shadow-xl hover:shadow-2xl transform hover:scale-105
                 ${feeCalculation.includesBookkeeping 
-                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
-                  : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
+                  ? 'bg-white/90 border-white/30 shadow-green-200/50' 
+                  : 'bg-white/20 border-white/20 hover:bg-white/30 hover:border-white/40'
                 }
               `}
               onClick={() => {
@@ -1343,10 +1343,10 @@ export default function Home() {
             {/* TaaS Service Card */}
             <div 
               className={`
-                cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
+                cursor-pointer transition-all duration-300 rounded-xl p-5 border backdrop-blur-sm shadow-xl hover:shadow-2xl transform hover:scale-105
                 ${feeCalculation.includesTaas 
-                  ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
-                  : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                  ? 'bg-white/90 border-white/30 shadow-blue-200/50' 
+                  : 'bg-white/20 border-white/20 hover:bg-white/30 hover:border-white/40'
                 }
               `}
               onClick={() => {
@@ -1396,7 +1396,7 @@ export default function Home() {
             </div>
 
             {/* Other Services Card - Coming Soon */}
-            <div className="cursor-not-allowed rounded-xl p-5 border-2 border-dashed border-gray-300 shadow-sm bg-gray-50">
+            <div className="cursor-not-allowed rounded-xl p-5 border border-dashed border-white/30 shadow-xl bg-white/10 backdrop-blur-sm">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
                   <Plus className="h-4 w-4 text-gray-500" />
@@ -1419,13 +1419,13 @@ export default function Home() {
         <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
           <style>{`.quote-layout { display: flex; flex-direction: column; } @media (min-width: 1024px) { .quote-layout { flex-direction: row; } }`}</style>
           {/* Quote Builder Form Card */}
-          <Card className="bg-gray-50 shadow-xl border-0 quote-card lg:flex-1" style={{ flex: '1', minWidth: 0 }}>
+          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card lg:flex-1 hover:shadow-3xl transition-all duration-300" style={{ flex: '1', minWidth: 0 }}>
             <CardContent className="p-6 sm:p-8">
               {/* Modern Navigation Toggle - Only show if multiple services are active */}
               {getActiveServices().length > 1 && (
                 <div className="mb-6">
                   <div className="flex items-center justify-center">
-                    <div className="bg-gray-100 rounded-lg p-1 flex items-center gap-1">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-lg p-1 flex items-center gap-1 border border-white/30">
                       {getActiveServices().map((service) => (
                         <button
                           key={service}
@@ -1433,8 +1433,8 @@ export default function Home() {
                           onClick={() => setCurrentFormView(service)}
                           className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                             currentFormView === service
-                              ? 'bg-white shadow-sm text-[#e24c00] border border-gray-200'
-                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                              ? 'bg-white/90 backdrop-blur-sm shadow-lg text-[#e24c00] border border-white/50'
+                              : 'text-white/80 hover:text-white hover:bg-white/20 backdrop-blur-sm'
                           }`}
                         >
                           {service === 'bookkeeping' ? 'Bookkeeping' : 'Tax Service'}
@@ -1451,10 +1451,10 @@ export default function Home() {
                   {currentFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : <FileText className="h-5 w-5 text-white" />}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     {currentFormView === 'bookkeeping' ? 'Bookkeeping Quote' : 'Tax as a Service (TaaS) Quote'}
                   </h2>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-700">
                     {currentFormView === 'bookkeeping' ? 'Configure your bookkeeping pricing' : 'Configure your tax preparation requirements'}
                   </p>
                 </div>
@@ -2287,17 +2287,17 @@ export default function Home() {
             </CardContent>
           </Card>
           {/* Pricing Summary Card */}
-          <Card className="bg-white shadow-xl border-0 quote-card lg:flex-1" style={{ flex: '1', minWidth: 0 }}>
+          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card lg:flex-1 hover:shadow-3xl transition-all duration-300" style={{ flex: '1', minWidth: 0 }}>
             <CardContent className="p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
                   <DollarSign className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
+                  <h2 className="text-2xl font-bold text-gray-900">
                     Pricing Summary
                   </h2>
-                  <p className="text-sm text-gray-500">Your calculated quote breakdown</p>
+                  <p className="text-sm text-gray-700">Your calculated quote breakdown</p>
                 </div>
               </div>
               
@@ -2756,7 +2756,7 @@ export default function Home() {
           const totalFirstYearCommission = totalMonth1Commission + totalOngoingCommission;
           
           return (
-            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 shadow-xl mt-8 border border-green-200 quote-card">
+            <Card className="bg-white/90 backdrop-blur-md shadow-2xl mt-8 border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
@@ -2773,7 +2773,7 @@ export default function Home() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Month 1 Commission */}
-                  <div className="bg-white rounded-lg p-6 shadow-md border border-green-100">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white/40">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-800">Month 1 Commission</h3>
                       <div className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
@@ -2807,7 +2807,7 @@ export default function Home() {
                   </div>
 
                   {/* Ongoing Commission */}
-                  <div className="bg-white rounded-lg p-6 shadow-md border border-green-100">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white/40">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-gray-800">Ongoing Commission</h3>
                       <div className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
@@ -2888,7 +2888,7 @@ export default function Home() {
         })()}
         
         {/* Quote History Section */}
-        <Card className="bg-white shadow-xl mt-8 border-0 quote-card">
+        <Card className="bg-white/90 backdrop-blur-md shadow-2xl mt-8 border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
