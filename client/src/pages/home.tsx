@@ -1633,6 +1633,103 @@ function Home() {
                     {currentFormView === 'bookkeeping' && feeCalculation.includesBookkeeping && (
                       <Form {...form}>
                         <div className="space-y-6">
+                          {/* Contact Email */}
+                          <FormField
+                            control={form.control}
+                            name="contactEmail"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Contact Email</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <Input 
+                                      {...field} 
+                                      type="email" 
+                                      placeholder="Enter client email address"
+                                      className="pr-10"
+                                      onChange={(e) => {
+                                        field.onChange(e);
+                                        const email = e.target.value;
+                                        setLastVerifiedEmail(email);
+                                        
+                                        // Debounced email verification
+                                        if (email && email.includes('@') && email.includes('.')) {
+                                          debouncedVerifyEmail(email);
+                                        } else {
+                                          setHubspotVerificationStatus('idle');
+                                          setHubspotContact(null);
+                                          setExistingQuotesForEmail([]);
+                                          setShowExistingQuotesNotification(false);
+                                        }
+                                      }}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                      {hubspotVerificationStatus === 'verifying' && (
+                                        <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                      )}
+                                      {hubspotVerificationStatus === 'verified' && (
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                      )}
+                                      {hubspotVerificationStatus === 'not-found' && (
+                                        <XCircle className="h-4 w-4 text-red-500" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </FormControl>
+                                {hubspotVerificationStatus === 'verified' && hubspotContact && (
+                                  <div className="mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                                    <div className="flex items-start gap-3">
+                                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-green-800">
+                                          Contact verified in HubSpot
+                                        </p>
+                                        <div className="mt-1 space-y-1">
+                                          <p className="text-xs text-green-700">
+                                            <span className="font-medium">{hubspotContact.properties.firstname} {hubspotContact.properties.lastname}</span>
+                                            {hubspotContact.properties.company && (
+                                              <span> • {hubspotContact.properties.company}</span>
+                                            )}
+                                          </p>
+                                          {hubspotContact.properties.phone && (
+                                            <p className="text-xs text-green-600">📞 {hubspotContact.properties.phone}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                {hubspotVerificationStatus === 'not-found' && (
+                                  <div className="mt-2 p-3 bg-red-50 rounded-lg border border-red-200">
+                                    <div className="flex items-start gap-3">
+                                      <XCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                                      <div>
+                                        <p className="text-sm font-medium text-red-800">Contact not found in HubSpot</p>
+                                        <p className="text-xs text-red-600 mt-1">This email address was not found in our CRM system.</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Company Name */}
+                          <FormField
+                            control={form.control}
+                            name="companyName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Company Name (Optional)</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Enter company name" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
                               control={form.control}
@@ -1647,12 +1744,12 @@ function Home() {
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="0-250k">$0 - $250K</SelectItem>
-                                      <SelectItem value="250k-500k">$250K - $500K</SelectItem>
-                                      <SelectItem value="500k-1m">$500K - $1M</SelectItem>
-                                      <SelectItem value="1m-3m">$1M - $3M</SelectItem>
-                                      <SelectItem value="3m-5m">$3M - $5M</SelectItem>
-                                      <SelectItem value="5m+">$5M+</SelectItem>
+                                      <SelectItem value="<$10K">&lt;$10K</SelectItem>
+                                      <SelectItem value="10K-25K">$10K - $25K</SelectItem>
+                                      <SelectItem value="25K-75K">$25K - $75K</SelectItem>
+                                      <SelectItem value="75K-250K">$75K - $250K</SelectItem>
+                                      <SelectItem value="250K-1M">$250K - $1M</SelectItem>
+                                      <SelectItem value="1M+">$1M+</SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1719,6 +1816,40 @@ function Home() {
 
                             <FormField
                               control={form.control}
+                              name="cleanupMonths"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Cleanup Months</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select months" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="1">1 month</SelectItem>
+                                      <SelectItem value="2">2 months</SelectItem>
+                                      <SelectItem value="3">3 months</SelectItem>
+                                      <SelectItem value="4">4 months</SelectItem>
+                                      <SelectItem value="5">5 months</SelectItem>
+                                      <SelectItem value="6">6 months</SelectItem>
+                                      <SelectItem value="7">7 months</SelectItem>
+                                      <SelectItem value="8">8 months</SelectItem>
+                                      <SelectItem value="9">9 months</SelectItem>
+                                      <SelectItem value="10">10 months</SelectItem>
+                                      <SelectItem value="11">11 months</SelectItem>
+                                      <SelectItem value="12">12 months</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
                               name="cleanupComplexity"
                               render={({ field }) => (
                                 <FormItem>
@@ -1739,7 +1870,105 @@ function Home() {
                                 </FormItem>
                               )}
                             />
+
+                            {/* Cleanup Override */}
+                            <FormField
+                              control={form.control}
+                              name="cleanupOverride"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value || false}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel>Override Setup Fee</FormLabel>
+                                    <p className="text-sm text-gray-500">
+                                      Check to override automatic setup fee calculation
+                                    </p>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
                           </div>
+
+                          {/* Override Reason */}
+                          {form.watch("cleanupOverride") && (
+                            <FormField
+                              control={form.control}
+                              name="overrideReason"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Override Reason</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select reason for override" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Brand New Business">Brand New Business</SelectItem>
+                                      <SelectItem value="Books Confirmed Current">Books Confirmed Current</SelectItem>
+                                      <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          {/* Custom Override Reason */}
+                          {form.watch("overrideReason") === "Other" && (
+                            <FormField
+                              control={form.control}
+                              name="customOverrideReason"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Explain Override Reason</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      {...field} 
+                                      placeholder="Please explain the reason for overriding the setup fee..."
+                                      rows={3}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          {/* Custom Setup Fee */}
+                          {(form.watch("overrideReason") === "Other" || 
+                            form.watch("overrideReason") === "Brand New Business" || 
+                            form.watch("overrideReason") === "Books Confirmed Current") && (
+                            <FormField
+                              control={form.control}
+                              name="customSetupFee"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Custom Setup Fee</FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                      <Input 
+                                        {...field} 
+                                        type="number"
+                                        placeholder="0"
+                                        className="pl-8"
+                                        min="0"
+                                        step="0.01"
+                                      />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
                         </div>
                       </Form>
                     )}
@@ -1792,7 +2021,12 @@ function Home() {
                                       <SelectItem value="3">3</SelectItem>
                                       <SelectItem value="4">4</SelectItem>
                                       <SelectItem value="5">5</SelectItem>
-                                      <SelectItem value="6">6+</SelectItem>
+                                      <SelectItem value="6">6</SelectItem>
+                                      <SelectItem value="7">7</SelectItem>
+                                      <SelectItem value="8">8</SelectItem>
+                                      <SelectItem value="9">9</SelectItem>
+                                      <SelectItem value="10">10</SelectItem>
+                                      <SelectItem value="more">More</SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1800,6 +2034,30 @@ function Home() {
                               )}
                             />
                           </div>
+
+                          {/* Custom Number of Entities */}
+                          {form.watch("numEntities") === "more" && (
+                            <FormField
+                              control={form.control}
+                              name="customNumEntities"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Custom Number of Entities</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      type="number"
+                                      placeholder="Enter number of entities"
+                                      min="11"
+                                      onChange={(e) => field.onChange(Number(e.target.value))}
+                                      value={field.value?.toString() || ""}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField
@@ -1811,7 +2069,7 @@ function Home() {
                                   <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                                     <FormControl>
                                       <SelectTrigger>
-                                        <SelectValue placeholder="Select states" />
+                                        <SelectValue placeholder="Select number of states" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -1821,7 +2079,11 @@ function Home() {
                                       <SelectItem value="4">4</SelectItem>
                                       <SelectItem value="5">5</SelectItem>
                                       <SelectItem value="6">6</SelectItem>
-                                      <SelectItem value="7">7+</SelectItem>
+                                      <SelectItem value="7">7</SelectItem>
+                                      <SelectItem value="8">8</SelectItem>
+                                      <SelectItem value="9">9</SelectItem>
+                                      <SelectItem value="10">10</SelectItem>
+                                      <SelectItem value="more">More</SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1834,11 +2096,11 @@ function Home() {
                               name="numBusinessOwners"
                               render={({ field }) => (
                                 <FormItem>
-                                  <FormLabel>Business Owners</FormLabel>
+                                  <FormLabel>Number of Business Owners</FormLabel>
                                   <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
                                     <FormControl>
                                       <SelectTrigger>
-                                        <SelectValue placeholder="Select owners" />
+                                        <SelectValue placeholder="Select number of owners" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -1847,7 +2109,12 @@ function Home() {
                                       <SelectItem value="3">3</SelectItem>
                                       <SelectItem value="4">4</SelectItem>
                                       <SelectItem value="5">5</SelectItem>
-                                      <SelectItem value="6">6+</SelectItem>
+                                      <SelectItem value="6">6</SelectItem>
+                                      <SelectItem value="7">7</SelectItem>
+                                      <SelectItem value="8">8</SelectItem>
+                                      <SelectItem value="9">9</SelectItem>
+                                      <SelectItem value="10">10</SelectItem>
+                                      <SelectItem value="more">More</SelectItem>
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1855,6 +2122,170 @@ function Home() {
                               )}
                             />
                           </div>
+
+                          {/* Custom States Filed */}
+                          {form.watch("statesFiled") === "more" && (
+                            <FormField
+                              control={form.control}
+                              name="customStatesFiled"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Custom Number of States</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      type="number"
+                                      placeholder="Enter number of states"
+                                      min="11"
+                                      max="50"
+                                      onChange={(e) => field.onChange(Number(e.target.value))}
+                                      value={field.value?.toString() || ""}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          {/* Custom Number of Business Owners */}
+                          {form.watch("numBusinessOwners") === "more" && (
+                            <FormField
+                              control={form.control}
+                              name="customNumBusinessOwners"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Custom Number of Business Owners</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      type="number"
+                                      placeholder="Enter number of business owners"
+                                      min="11"
+                                      onChange={(e) => field.onChange(Number(e.target.value))}
+                                      value={field.value?.toString() || ""}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* International Filing */}
+                            <FormField
+                              control={form.control}
+                              name="internationalFiling"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value || false}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel>International Filing Required</FormLabel>
+                                    <p className="text-sm text-gray-500">Check if international tax filings are needed</p>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+
+                            {/* Include 1040s */}
+                            <FormField
+                              control={form.control}
+                              name="include1040s"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value || false}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel>Include Personal 1040s</FormLabel>
+                                    <p className="text-sm text-gray-500">Check if personal tax returns should be included</p>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="priorYearsUnfiled"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Prior Years Unfiled</FormLabel>
+                                  <Select onValueChange={(value) => field.onChange(Number(value))} value={field.value?.toString()}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select number of years" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="0">0</SelectItem>
+                                      <SelectItem value="1">1</SelectItem>
+                                      <SelectItem value="2">2</SelectItem>
+                                      <SelectItem value="3">3</SelectItem>
+                                      <SelectItem value="4">4</SelectItem>
+                                      <SelectItem value="5">5</SelectItem>
+                                      <SelectItem value="6">6</SelectItem>
+                                      <SelectItem value="7">7</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="bookkeepingQuality"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Bookkeeping Quality</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select bookkeeping quality" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Clean (Seed)">Clean (Seed)</SelectItem>
+                                      <SelectItem value="Outside CPA">Outside CPA</SelectItem>
+                                      <SelectItem value="Self-managed">Self-managed</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Already on Seed Bookkeeping */}
+                          <FormField
+                            control={form.control}
+                            name="alreadyOnSeedBookkeeping"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value || false}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Already on Seed Bookkeeping</FormLabel>
+                                  <p className="text-sm text-gray-500">Check if client is already using Seed Bookkeeping services (15% discount applies)</p>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
                         </div>
                       </Form>
                     )}
