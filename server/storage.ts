@@ -434,13 +434,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Knowledge Base Articles
-  async getKbArticles(categoryId?: number, status?: string, featured?: boolean): Promise<KbArticle[]> {
+  async getKbArticles(categoryId?: number, status?: string, featured?: boolean, title?: string): Promise<KbArticle[]> {
     return await safeDbQuery(async () => {
       const conditions = [];
       
       if (categoryId) conditions.push(eq(kbArticles.categoryId, categoryId));
       if (status) conditions.push(eq(kbArticles.status, status));
       if (featured !== undefined) conditions.push(eq(kbArticles.featured, featured));
+      if (title) conditions.push(eq(kbArticles.title, title));
       
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
       

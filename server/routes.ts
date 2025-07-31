@@ -1032,12 +1032,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get articles (with optional filters)
   app.get("/api/kb/articles", requireAuth, async (req, res) => {
     try {
-      const { categoryId, status, featured } = req.query;
+      const { categoryId, status, featured, title } = req.query;
       
       const articles = await storage.getKbArticles(
         categoryId ? parseInt(categoryId as string) : undefined,
         status as string,
-        featured === 'true' ? true : featured === 'false' ? false : undefined
+        featured === 'true' ? true : featured === 'false' ? false : undefined,
+        title as string
       );
       
       res.json(articles);
