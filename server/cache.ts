@@ -77,9 +77,8 @@ export class CacheService {
       // Find all keys matching the pattern
       const keys = await this.cacheRedis.keys(`cache:${pattern}*`);
       if (keys.length > 0) {
-        // Remove the prefix before deletion
-        const keysWithoutPrefix = keys.map(k => k.replace('cache:', ''));
-        await this.cacheRedis.del(...keysWithoutPrefix);
+        // Delete the keys directly (with their full key names including prefix)
+        await this.cacheRedis.del(...keys);
         cacheLogger.debug({ pattern, count: keys.length }, 'Cache invalidated');
       }
     } catch (error) {

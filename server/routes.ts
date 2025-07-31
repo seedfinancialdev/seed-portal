@@ -108,6 +108,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUserGoogleId(user.id, googleId, 'google', picture);
         user = await storage.getUser(user.id);
       }
+      
+      // Ensure user object is valid
+      if (!user || !user.id) {
+        console.error('Invalid user object after retrieval:', user);
+        return res.status(500).json({ message: "Invalid user data" });
+      }
 
       // Ensure jon@seedfinancial.io always has admin role (hardcoded protection)
       if (user && user.email === 'jon@seedfinancial.io' && user.role !== 'admin') {
@@ -123,6 +129,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.login(user, (err: any) => {
         if (err) {
           console.error('Session login failed:', err);
+          console.error('Session login error details:', {
+            message: err.message,
+            stack: err.stack,
+            user: user ? { id: user.id, email: user.email } : null
+          });
           return res.status(500).json({ message: "Failed to establish session" });
         }
         
@@ -133,6 +144,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Error syncing Google user:', error);
+      console.error('Sync error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error: error
+      });
       res.status(500).json({ message: "Failed to sync user" });
     }
   });

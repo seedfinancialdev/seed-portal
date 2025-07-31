@@ -102,6 +102,12 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           },
         });
         
+        if (!userInfoResponse.ok) {
+          const errorText = await userInfoResponse.text();
+          console.error('User info API error:', userInfoResponse.status, errorText);
+          throw new Error(`Failed to get user info: ${userInfoResponse.status} ${errorText}`);
+        }
+        
         const userInfo = await userInfoResponse.json();
         console.log('Got user info:', userInfo.email, 'domain:', userInfo.hd);
         
@@ -136,9 +142,14 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         });
       } catch (error) {
         console.error('Error getting user info:', error);
+        console.error('Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          error: error
+        });
         toast({
           title: "Sign in failed",
-          description: "Failed to get user information",
+          description: error instanceof Error ? error.message : "Failed to get user information",
           variant: "destructive",
         });
       }
