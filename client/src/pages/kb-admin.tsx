@@ -495,7 +495,7 @@ export default function KbAdmin() {
                           New Article
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle>
                           {editingArticle ? "Edit Article" : "Create New Article"}
@@ -590,7 +590,7 @@ export default function KbAdmin() {
                                     content={field.value}
                                     onChange={field.onChange}
                                     placeholder="Start writing your article content..."
-                                    height={400}
+                                    height={600}
                                   />
                                 </FormControl>
                                 <FormMessage />
