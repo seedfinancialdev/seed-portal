@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -460,6 +460,48 @@ export default function Home() {
         .then(res => res.json());
     }
   });
+
+  // Filter and sort quotes based on search term and sort preferences
+  const quotes = allQuotes || [];
+  
+  const filteredAndSortedQuotes = useMemo(() => {
+    if (!quotes) return [];
+    
+    // Apply search filter
+    let filtered = quotes.filter((quote: Quote) => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        quote.contactEmail?.toLowerCase().includes(searchLower) ||
+        quote.companyName?.toLowerCase().includes(searchLower) ||
+        quote.id?.toString().includes(searchTerm)
+      );
+    });
+
+    // Apply sorting
+    filtered.sort((a: Quote, b: Quote) => {
+      let aValue: any = a[sortField as keyof Quote];
+      let bValue: any = b[sortField as keyof Quote];
+      
+      // Handle numeric fields
+      if (sortField === 'monthlyFee' || sortField === 'setupFee') {
+        aValue = parseFloat(aValue) || 0;
+        bValue = parseFloat(bValue) || 0;
+      }
+      
+      // Handle date fields
+      if (sortField === 'createdAt' || sortField === 'updatedAt') {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      }
+      
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [quotes, searchTerm, sortField, sortOrder]);
 
   const createQuoteMutation = useMutation({
     mutationFn: async (data: FormData) => {
