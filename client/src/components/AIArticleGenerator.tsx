@@ -35,7 +35,8 @@ import {
   RotateCcw,
   History,
   Edit,
-  ArrowLeft
+  ArrowLeft,
+  Shield
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { RichTextEditor } from './RichTextEditor';
@@ -1047,20 +1048,79 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                 {contentAnalysis && (
                   <Card className="bg-blue-50 border-blue-200">
                     <CardContent className="p-4">
-                      <h4 className="font-semibold mb-2 flex items-center gap-2">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-green-500" />
                         Content Analysis
                       </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p><strong>Brand Fit Score:</strong> {contentAnalysis.brandFitScore}/5</p>
-                          <p><strong>Reading Level:</strong> {contentAnalysis.readabilityLevel}</p>
+                      
+                      {/* Score Overview */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 text-sm">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{contentAnalysis.brandFitScore}/5</div>
+                          <div className="text-gray-600">Brand Fit</div>
                         </div>
-                        <div>
-                          <p><strong>Compliance:</strong> {contentAnalysis.complianceChecks.length} checks</p>
-                          <p><strong>Suggestions:</strong> {contentAnalysis.suggestions.length} items</p>
+                        <div className="text-center">
+                          <div className="text-lg font-semibold text-gray-700">{contentAnalysis.readabilityLevel}</div>
+                          <div className="text-gray-600">Reading Level</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-semibold text-green-600">{contentAnalysis.complianceChecks.length}</div>
+                          <div className="text-gray-600">Compliance</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-semibold text-orange-600">{contentAnalysis.suggestions.length}</div>
+                          <div className="text-gray-600">Suggestions</div>
                         </div>
                       </div>
+
+                      {/* Suggestions Section */}
+                      {contentAnalysis.suggestions && contentAnalysis.suggestions.length > 0 && (
+                        <div className="mt-4">
+                          <h5 className="font-semibold text-orange-700 mb-2 flex items-center gap-2">
+                            <Lightbulb className="h-4 w-4" />
+                            Improvement Suggestions
+                          </h5>
+                          <div className="space-y-2">
+                            {contentAnalysis.suggestions.map((suggestion, index) => (
+                              <div key={index} className="bg-orange-50 border border-orange-200 rounded-md p-3">
+                                <div className="flex items-start gap-2">
+                                  <span className="bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-semibold flex-shrink-0 mt-0.5">
+                                    {index + 1}
+                                  </span>
+                                  <div className="flex-1">
+                                    <p className="text-sm text-gray-800 font-medium">{suggestion.title}</p>
+                                    <p className="text-sm text-gray-600 mt-1">{suggestion.description}</p>
+                                    {suggestion.implementation && (
+                                      <div className="mt-2 bg-white/70 rounded p-2">
+                                        <p className="text-xs font-medium text-gray-700 mb-1">How to implement:</p>
+                                        <p className="text-xs text-gray-600">{suggestion.implementation}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Compliance Checks */}
+                      {contentAnalysis.complianceChecks && contentAnalysis.complianceChecks.length > 0 && (
+                        <div className="mt-4">
+                          <h5 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            Compliance Status
+                          </h5>
+                          <div className="grid grid-cols-1 gap-2">
+                            {contentAnalysis.complianceChecks.map((check, index) => (
+                              <div key={index} className="flex items-center gap-2 text-sm">
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <span className="text-gray-700">{check}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
