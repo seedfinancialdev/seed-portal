@@ -251,13 +251,25 @@ export default function KnowledgeBase() {
                 // Remove metadata section that typically appears after title
                 // This removes patterns like "Document Type: ... Target Team: ... Last Reviewed: ..."
                 content = content.replace(
-                  /<p[^>]*>\s*(Document Type:[^<]*<[^>]*>[^<]*<\/[^>]*>\s*)?(Target Team:[^<]*<[^>]*>[^<]*<\/[^>]*>\s*)?(Last Reviewed:[^<]*<[^>]*>[^<]*<\/[^>]*>\s*)?<\/p>/gi, 
+                  /<p[^>]*>\s*Document Type:[^<]*(?:<[^>]*>[^<]*<\/[^>]*>\s*)?Target Team:[^<]*(?:<[^>]*>[^<]*<\/[^>]*>\s*)?Last Reviewed:[^<]*(?:<[^>]*>[^<]*<\/[^>]*>\s*)?<\/p>/gi, 
                   ''
                 );
                 
-                // Remove any standalone metadata divs or paragraphs
+                // Remove individual metadata lines
                 content = content.replace(
-                  /<div[^>]*>\s*(Document Type:|Target Team:|Last Reviewed:)[^<]*<\/div>/gi, 
+                  /<p[^>]*>\s*(Document Type:[^<]*|Target Team:[^<]*|Last Reviewed:[^<]*)\s*<\/p>/gi, 
+                  ''
+                );
+                
+                // Remove metadata in divs
+                content = content.replace(
+                  /<div[^>]*>\s*(Document Type:[^<]*|Target Team:[^<]*|Last Reviewed:[^<]*)\s*<\/div>/gi, 
+                  ''
+                );
+                
+                // Remove the specific pattern "Document Type: Internal Sales Training Target Team: Sales Team Last Reviewed: July 2025"
+                content = content.replace(
+                  /<p[^>]*>\s*Document Type:\s*Internal Sales Training\s*Target Team:\s*Sales Team\s*Last Reviewed:\s*July 2025\s*<\/p>/gi,
                   ''
                 );
                 
