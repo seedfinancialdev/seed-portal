@@ -21,6 +21,7 @@ export class GoogleAdminService {
   private admin: admin_directory_v1.Admin | null = null;
   private initialized = false;
   private initializationPromise: Promise<void> | null = null;
+  private loggedInitError = false;
 
   constructor() {
     // Store initialization promise to await in methods
@@ -59,11 +60,11 @@ export class GoogleAdminService {
       this.initialized = true;
       
     } catch (error) {
-      console.error('Failed to initialize Google Admin API:', error);
-      console.warn('To use Google Admin API in development:');
-      console.warn('1. Run: gcloud auth application-default login --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly');
-      console.warn('2. Copy the ADC file to: ~/.config/gcloud/application_default_credentials.json');
-      console.warn('3. Do NOT set GOOGLE_APPLICATION_CREDENTIALS environment variable');
+      // Log only once per startup, not as error to avoid Sentry noise
+      if (!this.loggedInitError) {
+        console.log('Google Admin API not configured (this is optional)');
+        this.loggedInitError = true;
+      }
       
       this.admin = null;
       this.initialized = false;

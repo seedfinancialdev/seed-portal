@@ -13,13 +13,13 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 1000));
     const isConfigured = await googleAdminService.isConfigured();
     if (!isConfigured) {
-      console.warn('Google Admin API not configured - user management will be limited');
+      // Don't log as warning - this is optional
       googleAdminService = null;
     } else {
       console.log('Google Admin API configured successfully');
     }
   } catch (error) {
-    console.warn('Google Admin service initialization failed:', error);
+    // Don't log as warning - this is optional functionality
     googleAdminService = null;
   }
 
