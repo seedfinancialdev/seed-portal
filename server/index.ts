@@ -13,7 +13,7 @@ const app = express();
 const sentryInitialized = initializeSentry(app);
 
 // The Sentry request handler must be the first middleware (only if initialized)
-if (sentryInitialized) {
+if (sentryInitialized && Sentry.Handlers?.requestHandler) {
   app.use(Sentry.Handlers.requestHandler());
 }
 
@@ -73,7 +73,7 @@ app.use((req, res, next) => {
   const server = await registerRoutes(app);
 
   // The Sentry error handler must be before any other error middleware (only if initialized)
-  if (sentryInitialized) {
+  if (sentryInitialized && Sentry.Handlers?.errorHandler) {
     app.use(Sentry.Handlers.errorHandler());
   }
 

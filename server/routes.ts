@@ -1447,6 +1447,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Sentry error tracking (remove in production)
+  app.get("/api/test-sentry", (_req, res) => {
+    throw new Error("Test Sentry error - this is intentional!");
+  });
+
   // Register admin routes
   await registerAdminRoutes(app);
 
