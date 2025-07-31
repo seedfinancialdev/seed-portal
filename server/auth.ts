@@ -38,13 +38,26 @@ export function setupAuth(app: Express) {
     console.warn('HubSpot service not available for user verification:', error);
   }
 
+  // Require SESSION_SECRET in production
+  if (!process.env.SESSION_SECRET) {
+    console.error('CRITICAL: SESSION_SECRET environment variable is not set!');
+    console.error('Generate a secure secret with: openssl rand -base64 32');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SESSION_SECRET is required in production');
+    }
+    // Development warning but allow to continue
+    console.warn('Using insecure default session secret - DO NOT USE IN PRODUCTION');
+  }
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || 'seed-financial-quote-calculator',
+    secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: false, // Set to true in production with HTTPS
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      httpOnly: true, // Prevent XSS attacks
+      sameSite: 'strict', // CSRF protection
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   };

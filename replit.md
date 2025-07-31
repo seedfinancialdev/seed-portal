@@ -27,6 +27,11 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL with Drizzle ORM
 - **Database Provider**: Neon Database (serverless PostgreSQL)
 - **Validation**: Zod schemas shared between frontend and backend
+- **Session Management**: Redis-backed sessions with connect-redis (falls back to memory store in development)
+- **Security Middleware**: Helmet for security headers, CSRF protection with csurf
+- **Logging**: Structured logging with Pino, request logging middleware
+- **Error Tracking**: Sentry integration for production error monitoring
+- **Rate Limiting**: Express-rate-limit on API endpoints
 
 ### System Design Choices
 - **Authentication**: Google Workspace OIDC authentication, restricted to `@seedfinancial.io` email addresses, with multi-layer admin enforcement and manual role assignment. User management includes Google Admin API integration for user syncing.
@@ -38,6 +43,34 @@ Preferred communication style: Simple, everyday language.
 - **AI Integration**: AI article generation with versioning, AI-powered client intelligence for prospect scoring and data enhancement, and AI features within SEEDKB (e.g., AI Search Copilot).
 - **Error Handling & Resilience**: Enhanced database connection pooling, retry logic for transient failures, graceful error handling for external API calls, and comprehensive authentication system audits.
 - **Workflow & User Experience**: Iterative development focusing on streamlining user flows, enhancing login experience, providing clear navigation, and offering rich visual feedback (e.g., toast notifications, scroll restoration, counter animations).
+
+## Security Implementation (July 31, 2025)
+
+### Security Enhancements
+- **Session Security**: Enforced SESSION_SECRET environment variable requirement with secure defaults for development
+- **Security Headers**: Comprehensive security headers via Helmet (HSTS, CSP, X-Frame-Options, etc.)
+- **CSRF Protection**: Conditional CSRF middleware for form submissions and state-changing operations
+- **Cookie Security**: SameSite=strict, httpOnly, and secure flags on session cookies
+- **Rate Limiting**: API endpoint protection against brute force and DDoS attacks
+
+### Infrastructure Improvements
+- **Redis Integration**: Dual Redis database strategy:
+  - DB 0: Queue persistence with AOF for BullMQ (future implementation)
+  - DB 1: Session storage with 24-hour TTL
+  - DB 2: Cache storage with volatile-LRU eviction policy
+  - Graceful fallback to memory storage when Redis unavailable
+  - Memory usage monitoring with 60% threshold alerts
+- **Structured Logging**: Pino logger with:
+  - Request/response logging
+  - Sensitive data redaction
+  - Module-specific child loggers
+  - Pretty printing in development, JSON in production
+- **Error Monitoring**: Sentry integration with:
+  - Automatic error capture
+  - User context tracking
+  - Performance monitoring
+  - Sensitive data filtering
+  - Release tracking
 
 ## External Dependencies
 

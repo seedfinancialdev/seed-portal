@@ -1,11 +1,43 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
+import * as Sentry from "@sentry/node";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { checkDatabaseHealth, closeDatabaseConnections } from "./db";
+import { initializeSentry } from "./sentry";
+import { logger, requestLogger } from "./logger";
 
 const app = express();
+
+// Initialize Sentry before other middleware
+const sentryInitialized = initializeSentry(app);
+
+// The Sentry request handler must be the first middleware (only if initialized)
+if (sentryInitialized) {
+  app.use(Sentry.Handlers.requestHandler());
+}
+
+// Security headers with helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.tiny.cloud", "https://accounts.google.com", "https://apis.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tiny.cloud"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https://api.openai.com", "https://api.hubapi.com", "https://api.airtable.com", "https://api.open-meteo.com", "https://nominatim.openstreetmap.org", "https://accounts.google.com"],
+      frameSrc: ["'self'", "https://cdn.tiny.cloud", "https://accounts.google.com"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow embedding resources
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Add structured logging
+app.use(requestLogger());
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -40,7 +72,10 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-
+  // The Sentry error handler must be before any other error middleware (only if initialized)
+  if (sentryInitialized) {
+    app.use(Sentry.Handlers.errorHandler());
+  }
 
   // Enhanced error handler with database error handling
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

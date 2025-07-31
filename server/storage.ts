@@ -10,6 +10,10 @@ import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import * as connectRedisModule from "connect-redis";
+import { redis } from "./redis";
+
+const connectRedis = (connectRedisModule as any).default || connectRedisModule;
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
 
@@ -72,11 +76,32 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Use memory store for sessions to avoid database connection complexity
+    // Use Redis for sessions if available, otherwise fall back to memory store
+    if (process.env.REDIS_URL && redis.sessionRedis) {
+      try {
+        const RedisStore = connectRedis(session);
+        this.sessionStore = new RedisStore({
+          client: redis.sessionRedis,
+          prefix: 'sess:',
+          ttl: 24 * 60 * 60, // 24 hours
+          disableTouch: false,
+        });
+        console.log('Using Redis for session storage');
+      } catch (error) {
+        console.error('Failed to initialize Redis session store:', error);
+        this.initMemoryStore();
+      }
+    } else {
+      this.initMemoryStore();
+    }
+  }
+
+  private initMemoryStore() {
     const MemStore = MemoryStore(session);
     this.sessionStore = new MemStore({
       checkPeriod: 86400000 // prune expired entries every 24h
     });
+    console.log('Using in-memory session storage (development only)');
   }
 
   async getUser(id: number): Promise<User | undefined> {

@@ -13,6 +13,7 @@ import { registerAdminRoutes } from "./admin-routes";
 import { calculateCombinedFees } from "@shared/pricing";
 import { clientIntelEngine } from "./client-intel";
 import { apiRateLimit, searchRateLimit, enhancementRateLimit } from "./middleware/rate-limiter";
+import { conditionalCsrf, provideCsrfToken } from "./middleware/csrf";
 import multer from "multer";
 import path from "path";
 import { promises as fs } from "fs";
@@ -56,11 +57,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication first
   setupAuth(app);
 
+  // Apply CSRF protection after sessions are initialized
+  app.use(conditionalCsrf);
+  app.use(provideCsrfToken);
+
   // Apply rate limiting to all API routes
   app.use('/api', apiRateLimit);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+  // CSRF token endpoint for SPAs
+  app.get('/api/csrf-token', (req, res) => {
+    res.json({ csrfToken: req.csrfToken ? req.csrfToken() : null });
+  });
 
   // Google OAuth user sync endpoint
   app.post("/api/auth/google/sync", async (req, res) => {
