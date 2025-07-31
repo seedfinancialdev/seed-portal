@@ -790,6 +790,16 @@ export default function KbAdmin() {
                                     )}
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
+                                    onClick={() => {
+                                      setEditingArticle(article);
+                                      setIsAIGeneratorOpen(true);
+                                    }}
+                                    className="text-purple-600 focus:text-purple-700"
+                                  >
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    Create Versions
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
                                     onClick={() => openArchiveDialog(article.id)}
                                     className="text-orange-600 focus:text-orange-700"
                                   >
@@ -822,7 +832,11 @@ export default function KbAdmin() {
           categories={categories as KbCategory[]}
           onArticleGenerated={handleAIArticleGenerated}
           isOpen={isAIGeneratorOpen}
-          onClose={() => setIsAIGeneratorOpen(false)}
+          onClose={() => {
+            setIsAIGeneratorOpen(false);
+            setEditingArticle(null);
+          }}
+          existingArticle={editingArticle}
         />
 
         {/* Delete Confirmation Dialog */}

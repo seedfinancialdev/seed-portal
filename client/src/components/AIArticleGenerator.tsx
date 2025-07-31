@@ -103,11 +103,19 @@ interface AIArticleGeneratorProps {
   onArticleGenerated: (article: { title: string; content: string; categoryId: number; excerpt?: string; tags?: string[]; }) => void;
   isOpen: boolean;
   onClose: () => void;
+  existingArticle?: {
+    id: number;
+    title: string;
+    content: string;
+    categoryId: number;
+    excerpt: string | null;
+    tags: string[] | null;
+  } | null;
 }
 
-export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onClose }: AIArticleGeneratorProps) {
+export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onClose, existingArticle }: AIArticleGeneratorProps) {
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState<'setup' | 'outline' | 'draft' | 'polish' | 'versions'>('setup');
+  const [currentStep, setCurrentStep] = useState<'setup' | 'outline' | 'draft' | 'polish' | 'versions'>(existingArticle ? 'versions' : 'setup');
   const [generatedContent, setGeneratedContent] = useState<Record<string, string>>({});
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [contentAnalysis, setContentAnalysis] = useState<ContentAnalysis | null>(null);
@@ -127,6 +135,39 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
     queryKey: ["/api/kb/ai/templates"],
     enabled: isOpen,
   });
+
+  // Function to generate versions from existing article
+  const handleGenerateVersionsFromExisting = async () => {
+    if (!existingArticle) return;
+    
+    try {
+      const response = await apiRequest('/api/kb/ai/generate-versions', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: existingArticle.title,
+          categoryId: existingArticle.categoryId,
+          audience: 'internal',
+          tone: 'professional',
+          length: 'standard',
+          includeCompliance: true,
+          baseContent: existingArticle.content
+        })
+      });
+
+      setAudienceVersions(response);
+      toast({
+        title: "Versions Generated",
+        description: "AI-generated versions for different audiences are ready",
+      });
+    } catch (error) {
+      console.error('Error generating versions:', error);
+      toast({
+        title: "Generation Failed",
+        description: "Unable to generate versions. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Form setup
   const form = useForm<GeneratorFormData>({
@@ -165,6 +206,38 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
       });
     }
   }, [templates, form]);
+
+  // Initialize form with existing article data when provided
+  useEffect(() => {
+    if (existingArticle && isOpen) {
+      // Pre-populate form with existing article data
+      form.reset({
+        title: existingArticle.title,
+        categoryId: existingArticle.categoryId,
+        templateType: 'existing-article',
+        audience: 'internal',
+        tone: 'professional',
+        length: 'standard',
+        includeCompliance: true,
+        customRequirements: `Generate audience-specific versions of this existing article: "${existingArticle.title}"`,
+        variables: '',
+      });
+      
+      // Set polished content to existing article content
+      setGeneratedContent({
+        polished: existingArticle.content
+      });
+      
+      // Auto-generate versions from existing content
+      handleGenerateVersionsFromExisting();
+      
+      // Show loading message
+      toast({
+        title: "Creating Versions",
+        description: "Generating audience-specific versions of your article...",
+      });
+    }
+  }, [existingArticle, isOpen, form]);
 
   // Session persistence functions (moved after form initialization)
   const saveSession = () => {
@@ -1245,6 +1318,34 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
 
           {/* Enhanced Versions Tab */}
           <TabsContent value="versions" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-500" />
+                    AI-Generated Versions
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentStep('setup')}
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-1" />
+                      Back to Setup
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentStep('polish')}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Back to Polish
+                    </Button>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+            </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {Object.entries(audienceVersions).map(([audience, content]) => (
                 <Card key={audience} className={`${
@@ -1283,18 +1384,10 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                         <Button
                           size="sm"
                           onClick={() => {
-                            // Save this version and stay in versions tab
-                            const formData = form.getValues();
-                            onArticleGenerated({
-                              title: `${formData.title} (${audience.charAt(0).toUpperCase() + audience.slice(1)})`,
-                              content: content,
-                              categoryId: formData.categoryId,
-                              excerpt: autoExcerpt || `${audience.charAt(0).toUpperCase() + audience.slice(1)}-focused article with AI-generated content`,
-                              tags: autoTags.length > 0 ? [...autoTags, audience] : ['ai-generated', 'knowledge-base', audience]
-                            });
+                            // Just save version content locally - don't create article
                             toast({
-                              title: "Draft Prepared",
-                              description: `${audience.charAt(0).toUpperCase() + audience.slice(1)} version ready for creation`,
+                              title: "Version Saved",
+                              description: `${audience.charAt(0).toUpperCase() + audience.slice(1)} version content saved locally`,
                             });
                           }}
                           className="bg-green-500 hover:bg-green-600 h-8 w-8 p-0"
@@ -1307,13 +1400,11 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                   <CardContent>
                     <div className={`p-4 rounded-lg text-sm max-h-48 overflow-y-auto ${
                       audience === 'client' ? 'bg-white border border-blue-100' : 
-                      audience === 'sales' ? 'bg-white border border-orange-100' : 
                       'bg-gray-50 border border-gray-200'
                     }`}>
                       <div 
                         className={`prose prose-sm max-w-none ${
                           audience === 'client' ? 'prose-blue' : 
-                          audience === 'sales' ? 'prose-orange' : 
                           'prose-gray'
                         }`}
                         dangerouslySetInnerHTML={{ __html: content }}
@@ -1336,13 +1427,11 @@ export function AIArticleGenerator({ categories, onArticleGenerated, isOpen, onC
                   </DialogHeader>
                   <div className={`${
                     previewingVersion.audience === 'client' ? 'client-article' : 
-                    previewingVersion.audience === 'sales' ? 'p-6 rounded-lg bg-gradient-to-br from-orange-50 to-yellow-50 border border-orange-200' : 
-                    'p-6 rounded-lg bg-gray-50 border border-gray-200'
+                    'p-6 rounded-lg bg-white border border-gray-200'
                   }`}>
                     <div 
                       className={`prose max-w-none ${
                         previewingVersion.audience === 'client' ? 'prose-lg prose-blue' : 
-                        previewingVersion.audience === 'sales' ? 'prose-lg prose-orange' : 
                         'prose-lg prose-gray'
                       }`}
                       dangerouslySetInnerHTML={{ __html: previewingVersion.content }}
