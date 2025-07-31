@@ -1416,10 +1416,9 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 max-w-none mx-8">
-          <style>{`.quote-layout { display: flex; flex-direction: column; } @media (min-width: 1024px) { .quote-layout { flex-direction: row; } }`}</style>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-none mx-8">
           {/* Quote Builder Form Card */}
-          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card lg:flex-1 hover:shadow-3xl transition-all duration-300" style={{ flex: '1', minWidth: 0 }}>
+          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
             <CardContent className="p-6 sm:p-8">
               {/* Modern Navigation Toggle - Only show if multiple services are active */}
               {getActiveServices().length > 1 && (
@@ -2287,7 +2286,7 @@ export default function Home() {
             </CardContent>
           </Card>
           {/* Pricing Summary Card */}
-          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card lg:flex-1 hover:shadow-3xl transition-all duration-300" style={{ flex: '1', minWidth: 0 }}>
+          <Card className="bg-white/90 backdrop-blur-md shadow-2xl border border-white/30 quote-card hover:shadow-3xl transition-all duration-300">
             <CardContent className="p-6 sm:p-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
