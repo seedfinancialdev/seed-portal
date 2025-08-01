@@ -32,6 +32,7 @@ export async function applyRedisSessionsAtStartup(app: Express): Promise<void> {
       secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
       resave: false,
       saveUninitialized: false,
+      rolling: true, // Extend session on each request
       store: redisStore,
       cookie: {
         secure: process.env.NODE_ENV === 'production',

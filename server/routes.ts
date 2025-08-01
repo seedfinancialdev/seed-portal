@@ -91,6 +91,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
         resave: false,
         saveUninitialized: false,
+        rolling: true, // Extend session on each request
         store: sessionStore,
         cookie: {
           secure: process.env.NODE_ENV === 'production',
@@ -442,9 +443,27 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           return res.status(500).json({ message: "Failed to establish session" });
         }
         
-        // Return user data (excluding password)
-        const { password, ...safeUser } = user!;
-        res.json(safeUser);
+        // Regenerate session after successful login for security
+        req.session.regenerate((regenerateErr: any) => {
+          if (regenerateErr) {
+            console.error('Session regeneration failed:', regenerateErr);
+            return res.status(500).json({ message: "Failed to secure session" });
+          }
+          
+          // Re-establish user in the new session
+          req.login(user, (loginErr: any) => {
+            if (loginErr) {
+              console.error('Session re-login failed:', loginErr);
+              return res.status(500).json({ message: "Failed to establish secure session" });
+            }
+            
+            console.log('✅ Session regenerated after OAuth login for:', user.email);
+            
+            // Return user data (excluding password)
+            const { password, ...safeUser } = user!;
+            res.json(safeUser);
+          });
+        });
       });
     } catch (error) {
       console.error('Error syncing Google user:', error);

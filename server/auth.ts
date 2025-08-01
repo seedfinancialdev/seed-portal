@@ -102,6 +102,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
     resave: false,
     saveUninitialized: false,
+    rolling: true, // Extend session on each request
     store: sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === 'production',

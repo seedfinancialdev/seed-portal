@@ -68,6 +68,7 @@ Preferred communication style: Simple, everyday language.
   - 24-hour TTL and secure cookie configuration
   - **BREAKTHROUGH**: Core Redis session functionality proven working via test endpoint
   - **STATUS**: Manual application works perfectly, automatic startup configuration in progress
+  - **Security Enhancements**: Rolling sessions and session regeneration after OAuth login implemented
 - **Structured Logging**: Pino logger with:
   - Request/response logging
   - Sensitive data redaction
