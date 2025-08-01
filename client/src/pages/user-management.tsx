@@ -112,12 +112,16 @@ export default function UserManagement() {
 
   // Sync workspace user mutation
   const syncUserMutation = useMutation({
-    mutationFn: ({ email, role }: { email: string; role: string }) =>
-      apiRequest('/api/admin/sync-workspace-user', { 
-        method: 'POST', 
+    mutationFn: async ({ email, role }: { email: string; role: string }) => {
+      const response = await fetch('/api/admin/sync-workspace-user', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, role })
-      }),
-    onSuccess: (data) => {
+      });
+      if (!response.ok) throw new Error('Failed to sync workspace user');
+      return response.json();
+    },
+    onSuccess: (data: any) => {
       toast({
         title: "Success",
         description: `User ${data.action} successfully with ${data.user.role} role`
