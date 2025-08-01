@@ -2051,13 +2051,25 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         Current Month Charges: ${currentMonthCharges.data.length} total, ${currentMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded
         Year to Date Charges: ${yearToDateCharges.data.length} total, ${yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded  
         Last Month Charges: ${lastMonthCharges.data.length} total, ${lastMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded
+        
+        Year to Date Breakdown:
+        - Live mode charges: ${yearToDateCharges.data.filter((c: any) => c.livemode === true).length}
+        - Test mode charges: ${yearToDateCharges.data.filter((c: any) => c.livemode === false).length}
+        - Succeeded charges: ${yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length}
+        - Failed charges: ${yearToDateCharges.data.filter((c: any) => c.status === 'failed').length}
+        - Pending charges: ${yearToDateCharges.data.filter((c: any) => c.status === 'pending').length}
+        - Refunded charges: ${yearToDateCharges.data.filter((c: any) => c.refunded === true).length}
       `);
 
-      // Calculate totals from successful charges
+      // Calculate totals from successful live mode charges only
       const calculateRevenue = (charges: any) => {
         return charges.data
-          .filter((charge: any) => charge.status === 'succeeded')
+          .filter((charge: any) => charge.status === 'succeeded' && charge.livemode === true)
           .reduce((sum: number, charge: any) => sum + charge.amount, 0) / 100; // Convert from cents
+      };
+
+      const calculateTransactionCount = (charges: any) => {
+        return charges.data.filter((c: any) => c.status === 'succeeded' && c.livemode === true).length;
       };
 
       const currentMonthRevenue = calculateRevenue(currentMonthCharges);
@@ -2072,15 +2084,15 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       res.json({
         currentMonth: {
           revenue: currentMonthRevenue,
-          transactions: currentMonthCharges.data.filter((c: any) => c.status === 'succeeded').length,
+          transactions: calculateTransactionCount(currentMonthCharges),
         },
         lastMonth: {
           revenue: lastMonthRevenue,
-          transactions: lastMonthCharges.data.filter((c: any) => c.status === 'succeeded').length,
+          transactions: calculateTransactionCount(lastMonthCharges),
         },
         yearToDate: {
           revenue: yearToDateRevenue,
-          transactions: yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length,
+          transactions: calculateTransactionCount(yearToDateCharges),
         },
         growth: {
           monthOverMonth: monthOverMonthGrowth,
