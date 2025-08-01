@@ -1063,18 +1063,28 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // Get the logged-in user's email for owner filtering
       const userEmail = (req as any).user?.email;
       
-      // Use cache for HubSpot search results
-      const cacheKey = cache.generateKey(CachePrefix.HUBSPOT_CONTACT, { query, userEmail });
-      const results = await cache.wrap(
-        cacheKey,
-        () => clientIntelEngine.searchHubSpotContacts(query, userEmail),
-        { ttl: CacheTTL.HUBSPOT_CONTACT }
-      );
+      console.log(`[Search] Searching for: "${query}" by user: ${userEmail}`);
       
-      res.json(results);
+      let results;
+      try {
+        // Try to use cache for HubSpot search results
+        const cacheKey = cache.generateKey(CachePrefix.HUBSPOT_CONTACT, { query, userEmail });
+        results = await cache.wrap(
+          cacheKey,
+          () => clientIntelEngine.searchHubSpotContacts(query, userEmail),
+          { ttl: CacheTTL.HUBSPOT_CONTACT }
+        );
+      } catch (cacheError) {
+        console.log('[Search] Cache unavailable, searching directly:', cacheError.message);
+        // Fallback to direct search without cache
+        results = await clientIntelEngine.searchHubSpotContacts(query, userEmail);
+      }
+      
+      console.log(`[Search] Found ${results?.length || 0} results`);
+      res.json(results || []);
     } catch (error) {
       console.error('Client search error:', error);
-      res.status(500).json({ message: "Search failed" });
+      res.status(500).json({ message: "Search failed", error: error.message });
     }
   });
 
