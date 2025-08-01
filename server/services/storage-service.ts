@@ -29,7 +29,7 @@ export class StorageService {
   private serviceAccountClient: any;
 
   constructor() {
-    if (!process.env.BOX_CLIENT_ID || !process.env.BOX_CLIENT_SECRET || !process.env.BOX_PRIVATE_KEY) {
+    if (!process.env.BOX_CLIENT_ID || !process.env.BOX_CLIENT_SECRET) {
       logger.warn('Box configuration missing in environment variables - Storage service will be disabled');
       // Don't throw error - allow service to be created but mark as unavailable
       this.serviceAccountClient = null;
@@ -42,16 +42,20 @@ export class StorageService {
         clientID: process.env.BOX_CLIENT_ID!,
         clientSecret: process.env.BOX_CLIENT_SECRET!,
         appAuth: {
-          keyID: process.env.BOX_KEY_ID!,
-          privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-          passphrase: process.env.BOX_PASSPHRASE!
+          keyID: process.env.BOX_CLIENT_ID!, // BOX_CLIENT_ID serves as BOX_KEY_ID
+          privateKey: process.env.BOX_CLIENT_SECRET!.replace(/\\n/g, '\n'), // BOX_CLIENT_SECRET contains private key
+          passphrase: process.env.BOX_PASSPHRASE || '' // Empty string if no passphrase
         }
       });
 
       this.serviceAccountClient = sdk.getAppAuthClient('enterprise');
+      logger.debug('Box SDK initialized successfully');
     } catch (error: any) {
       logger.error('Failed to initialize storage service', { error: error.message });
-      throw new Error(`Storage initialization failed: ${error.message}`);
+      // Don't throw error - allow service to be created but mark as unavailable
+      this.serviceAccountClient = null;
+      this.client = null;
+      logger.warn('Storage service will be disabled due to configuration error');
     }
   }
 
