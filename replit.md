@@ -156,7 +156,7 @@ Preferred communication style: Simple, everyday language.
   - `AIService` (OpenAI) ✅ **Healthy** - Client analysis, content generation, and insights working
   - `WeatherService` (Open-Meteo) ✅ **Healthy** - Weather data for user locations operational
   - `GeocodingService` (Nominatim) ✅ **Healthy** - Address validation and geocoding working
-  - `StorageService` (Box) ⚠️ **Pending** - File storage configuration in progress (non-blocking)
+  - `StorageService` (Box) ⚠️ **Authorization Required** - JWT credentials configured, needs enterprise admin approval
 - **Health Endpoints**: `/api/health` for global status, `/api/health/:service` for individual services
 - **Benefits Achieved**: Easy service switching, centralized error handling, consistent caching, proactive monitoring
 - **Production Ready**: Core quote calculator functionality fully supported by operational services

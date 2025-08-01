@@ -29,26 +29,19 @@ export class StorageService {
   private serviceAccountClient: any;
 
   constructor() {
-    if (!process.env.BOX_CLIENT_ID || !process.env.BOX_CLIENT_SECRET) {
-      logger.warn('Box configuration missing in environment variables - Storage service will be disabled');
-      // Don't throw error - allow service to be created but mark as unavailable
+    const requiredVars = ['BOX_CLIENT_ID', 'BOX_CLIENT_SECRET', 'BOX_KEY_ID', 'BOX_PRIVATE_KEY', 'BOX_ENTERPRISE_ID'];
+    const missingVars = requiredVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      logger.warn(`Box configuration missing: ${missingVars.join(', ')} - Storage service will be disabled`);
       this.serviceAccountClient = null;
       this.client = null;
       return;
     }
 
     try {
-      // Temporary configuration to handle current credential setup
-      // The user needs to provide proper Box JWT credentials
-      logger.warn('Box service temporarily disabled - requires proper JWT configuration');
-      logger.info('Current Box credential setup detected but needs JWT format');
+      logger.info('Initializing Box SDK with JWT authentication...');
       
-      // For now, disable the service gracefully
-      this.serviceAccountClient = null;
-      this.client = null;
-      
-      // Future implementation when proper credentials are provided:
-      /*
       const sdk = new BoxSDK({
         clientID: process.env.BOX_CLIENT_ID!,
         clientSecret: process.env.BOX_CLIENT_SECRET!,
@@ -58,12 +51,15 @@ export class StorageService {
           passphrase: process.env.BOX_PASSPHRASE || undefined
         }
       });
-      this.serviceAccountClient = sdk.getAppAuthClient('enterprise');
-      */
+
+      this.serviceAccountClient = sdk.getAppAuthClient('enterprise', process.env.BOX_ENTERPRISE_ID!);
+      logger.info('✅ Box SDK initialized successfully with JWT authentication');
     } catch (error: any) {
       logger.error('Failed to initialize storage service', { error: error.message });
+      // Don't throw error - allow service to be created but mark as unavailable
       this.serviceAccountClient = null;
       this.client = null;
+      logger.warn('Storage service will be disabled due to configuration error');
     }
   }
 
@@ -80,8 +76,8 @@ export class StorageService {
         };
       }
       
-      // Simple health check - get current user info
-      await this.serviceAccountClient.users.getCurrentUser();
+      // Simple health check - get root folder to verify authentication
+      await this.serviceAccountClient.folders.get('0');
       return {
         status: 'healthy',
         responseTime: Date.now() - startTime
