@@ -37,7 +37,7 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Google Workspace OIDC authentication, restricted to `@seedfinancial.io` email addresses, with multi-layer admin enforcement and manual role assignment. User management includes Google Admin API integration for user syncing.
 - **Role-Based Access Control**: Implemented with Admin, Sales, and Service roles, controlling dashboard access, feature visibility, and functionality.
 - **Data Integration Strategy**: Direct API integrations with third-party services. Future consideration for Apache Airbyte for unified data pipeline beyond 4-5 integrations.
-- **Secret Management**: All secrets managed via environment variables (e.g., GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) and never hardcoded or committed. ADC files are used for Google API authentication.
+- **Secret Management**: All secrets managed via environment variables (e.g., GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, HUBSPOT_ACCESS_TOKEN) and never hardcoded or committed. ADC files are used for Google API authentication.
 - **Data Storage**: PostgreSQL as the primary database, using Drizzle ORM for type-safe operations.
 - **Core Functionality**: Quote generation, commission tracking, client intelligence (HubSpot and OpenAI driven), user profile management, and a comprehensive Knowledge Base (SEEDKB).
 - **AI Integration**: AI article generation with versioning, AI-powered client intelligence for prospect scoring and data enhancement, and AI features within SEEDKB (e.g., AI Search Copilot).

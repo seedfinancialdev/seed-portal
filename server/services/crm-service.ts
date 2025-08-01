@@ -53,15 +53,18 @@ export class CRMService {
   };
 
   constructor() {
-    const apiKey = process.env.HUBSPOT_API_KEY;
+    const apiKey = process.env.HUBSPOT_ACCESS_TOKEN;
+    logger.debug('CRM Service initialized with HUBSPOT_ACCESS_TOKEN');
+    
     if (!apiKey) {
-      logger.warn('HUBSPOT_API_KEY not found in environment variables - CRM service will be disabled');
+      logger.warn('HUBSPOT_ACCESS_TOKEN not found in environment variables - CRM service will be disabled');
       // Don't throw error - allow service to be created but mark as unavailable
       this.client = null as any;
       return;
     }
     
     this.client = new Client({ accessToken: apiKey });
+    logger.debug('CRM Client created successfully with HubSpot SDK');
   }
 
   async healthCheck(): Promise<ServiceHealthResult> {
@@ -70,14 +73,14 @@ export class CRMService {
     if (!this.client) {
       return {
         status: 'unhealthy',
-        message: 'CRM service not configured - missing HUBSPOT_API_KEY',
+        message: 'CRM service not configured - missing HUBSPOT_ACCESS_TOKEN',
         responseTime: Date.now() - startTime
       };
     }
     
     try {
-      // Simple health check - get account info
-      await this.client.oauth.accessTokensApi.get();
+      // Simple health check - try to get contacts (limited to 1)
+      await this.client.crm.contacts.basicApi.getPage(1);
       return {
         status: 'healthy',
         responseTime: Date.now() - startTime
