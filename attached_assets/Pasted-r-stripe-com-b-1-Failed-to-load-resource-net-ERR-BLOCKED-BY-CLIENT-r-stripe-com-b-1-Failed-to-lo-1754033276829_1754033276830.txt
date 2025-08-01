@@ -1,0 +1,79 @@
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Abeacon%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A7d8bc3ac&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=24d6bfd6-efed-48e5-8fbb-9ee0f3de68a0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-dcf16bcf65ad11b7becd6b335652ce17.js:1:218445
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'ambient-light-sensor'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'battery'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'layout-animations'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'legacy-image-formats'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'navigation-override'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'oversized-images'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'publickey-credentials'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'speaker-selection'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'unoptimized-images'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'unsized-media'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Unrecognized feature: 'pointer-lock'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+3170-8a34000569863ea5.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+(anonymous) @ 3170-8a34000569863ea5.js:1
+Error with Permissions-Policy header: Unrecognized feature: 'browsing-topics'.
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+Error with Permissions-Policy header: Unrecognized feature: 'browsing-topics'.
+6Refused to load the font '<URL>' because it violates the following Content Security Policy directive: "font-src 'self' <URL>".
+
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/admin:1 Refused to load the script 'https://replit.com/public/js/replit-dev-banner.js' because it violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tiny.cloud https://accounts.google.com https://apis.google.com". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.
+
+workspace_iframe.html?initialPath=%2Fadmin&id=%3Ar13p7%3A:142 Refused to load the script 'https://replit.com/public/js/beacon.js' because it violates the following Content Security Policy directive: "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tiny.cloud https://accounts.google.com https://apis.google.com". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback.
+
+onIframeLoad @ workspace_iframe.html?initialPath=%2Fadmin&id=%3Ar13p7%3A:142
+Console.js:61 Admin Dashboard Debug: Object
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Abeacon%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A7d8bc3ac&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=f87ed6a1-129b-4dd2-8062-b5166603f427:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1  POST https://r.stripe.com/b net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+e @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+c @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+(anonymous) @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-dcf16bcf65ad11b7becd6b335652ce17.js:1:218445
