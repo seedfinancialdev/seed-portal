@@ -2366,6 +2366,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Register admin routes
   await registerAdminRoutes(app);
 
+  // Register health check routes for service monitoring
+  const { healthRoutes } = await import('./routes/health.js');
+  app.use('/api', healthRoutes);
+
   const httpServer = createServer(app);
   return httpServer;
 }
