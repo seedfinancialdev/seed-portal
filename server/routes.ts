@@ -1343,6 +1343,21 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Test Slack integration endpoint
+  app.post("/api/test-slack", requireAuth, async (req, res) => {
+    try {
+      await sendSystemAlert(
+        'Infrastructure Test Alert',
+        'Testing Slack integration from Seed Financial Portal. All systems operational.',
+        'low'
+      );
+      res.json({ message: "Test Slack message sent successfully" });
+    } catch (error) {
+      console.error('Test Slack error:', error);
+      res.status(500).json({ message: "Failed to send test Slack message", error: error.message });
+    }
+  });
+
   // Sync profile data from HubSpot
   app.post("/api/user/sync-hubspot", requireAuth, async (req, res) => {
     try {
