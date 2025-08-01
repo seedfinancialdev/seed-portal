@@ -38,6 +38,20 @@ export const quotes = pgTable("quotes", {
   priorYearsUnfiled: integer("prior_years_unfiled"),
   alreadyOnSeedBookkeeping: boolean("already_on_seed_bookkeeping"),
   qboSubscription: boolean("qbo_subscription").default(false),
+  // Service selections - new 5-card system
+  serviceBookkeeping: boolean("service_bookkeeping").default(false),
+  serviceTaas: boolean("service_taas").default(false), 
+  servicePayroll: boolean("service_payroll").default(false),
+  serviceApArLite: boolean("service_ap_ar_lite").default(false),
+  serviceFpaLite: boolean("service_fpa_lite").default(false),
+  // Client address information for MSA generation
+  clientStreetAddress: text("client_street_address"),
+  clientCity: text("client_city"),
+  clientState: text("client_state"),
+  clientZipCode: text("client_zip_code"),
+  clientCountry: text("client_country").default("US"),
+  // Company name unlock status
+  companyNameLocked: boolean("company_name_locked").default(true),
   // User ownership
   ownerId: integer("owner_id").notNull(),
   // HubSpot integration fields

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings, Lock, Unlock, Building } from "lucide-react";
 import { useLocation } from "wouter";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 
@@ -79,6 +79,20 @@ const formSchema = insertQuoteSchema.omit({
   customOverrideReason: z.string().optional(),
   customSetupFee: z.string().optional(),
   companyName: z.string().optional(),
+  // New 5-service system
+  serviceBookkeeping: z.boolean().default(false),
+  serviceTaas: z.boolean().default(false), 
+  servicePayroll: z.boolean().default(false),
+  serviceApArLite: z.boolean().default(false),
+  serviceFpaLite: z.boolean().default(false),
+  // Client address fields for MSA generation
+  clientStreetAddress: z.string().optional(),
+  clientCity: z.string().optional(),
+  clientState: z.string().optional(),
+  clientZipCode: z.string().optional(),
+  clientCountry: z.string().default("US"),
+  // Company name lock status
+  companyNameLocked: z.boolean().default(true),
   // TaaS fields
   numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
   customNumEntities: z.number().min(6, "Custom entities must be at least 6").optional(),
@@ -1076,6 +1090,28 @@ export default function Home() {
       customOverrideReason: "",
       customSetupFee: "",
       companyName: "",
+      // New 5-service system
+      serviceBookkeeping: false,
+      serviceTaas: false,
+      servicePayroll: false,
+      serviceApArLite: false,
+      serviceFpaLite: false,
+      // Client address fields
+      clientStreetAddress: "",
+      clientCity: "",
+      clientState: "",
+      clientZipCode: "",
+      clientCountry: "US",
+      // Company name lock status
+      companyNameLocked: true,
+      // Client address fields
+      clientStreetAddress: "",
+      clientCity: "",
+      clientState: "",
+      clientZipCode: "",
+      clientCountry: "US",
+      // Company name lock status
+      companyNameLocked: true,
       quoteType: "bookkeeping",
       // Service flags for combined quotes
       includesBookkeeping: true,
@@ -1290,136 +1326,143 @@ export default function Home() {
           backButtonPath="/" 
         />
 
-        {/* Service Selection Cards - Optimized for desktop */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className="grid grid-cols-3 gap-4">
+        {/* New 5-Service Card System */}
+        <div className="max-w-5xl mx-auto mb-8">
+          <h2 className="text-xl font-semibold text-white mb-4 text-center">Select Services</h2>
+          <div className="grid grid-cols-5 gap-3">
             {/* Bookkeeping Service Card */}
             <div 
               className={`
-                cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
-                ${feeCalculation.includesBookkeeping 
-                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-300 shadow-green-100' 
-                  : 'bg-gray-50 border-gray-200 hover:border-green-200 hover:bg-green-50/50'
+                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                ${form.watch('serviceBookkeeping')
+                  ? 'bg-white border-green-500 shadow-green-200' 
+                  : 'bg-white/90 border-gray-300 hover:border-green-300 hover:shadow-md'
                 }
               `}
               onClick={() => {
-                const newValue = !feeCalculation.includesBookkeeping;
-                form.setValue('includesBookkeeping', newValue);
+                const newValue = !form.watch('serviceBookkeeping');
+                form.setValue('serviceBookkeeping', newValue);
                 form.trigger();
-                
-                // Navigation logic
-                if (!feeCalculation.includesBookkeeping) {
-                  // Activating bookkeeping - navigate to bookkeeping form
-                  setCurrentFormView('bookkeeping');
-                } else {
-                  // Deactivating bookkeeping - navigate to next active service
-                  if (feeCalculation.includesTaas) {
-                    setCurrentFormView('taas');
-                  }
-                }
               }}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  feeCalculation.includesBookkeeping ? 'bg-green-500' : 'bg-gray-300'
-                }`}>
-                  {feeCalculation.includesBookkeeping && <Check className="h-4 w-4 text-white" />}
-                </div>
-                <h4 className={`font-semibold ${
-                  feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-600'
-                }`}>
-                  Bookkeeping
-                </h4>
-              </div>
-              <div className={`text-2xl font-bold mb-1 ${
-                feeCalculation.includesBookkeeping ? 'text-green-800' : 'text-gray-400'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
+                form.watch('serviceBookkeeping') ? 'bg-green-500' : 'bg-gray-300'
               }`}>
-                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.monthlyFee.toLocaleString() : '0'} / mo
+                {form.watch('serviceBookkeeping') && <Check className="h-5 w-5 text-white" />}
               </div>
-              <div className={`text-sm font-medium mb-2 ${
-                feeCalculation.includesBookkeeping ? 'text-green-700' : 'text-gray-400'
+              <h4 className={`font-semibold text-sm ${
+                form.watch('serviceBookkeeping') ? 'text-green-800' : 'text-gray-600'
               }`}>
-                ${feeCalculation.includesBookkeeping ? feeCalculation.bookkeeping.setupFee.toLocaleString() : '0'} setup
-              </div>
-              <p className={`text-xs ${
-                feeCalculation.includesBookkeeping ? 'text-green-600' : 'text-gray-500'
-              }`}>
-                Monthly bookkeeping, cleanup, and financial statements
-              </p>
+                Bookkeeping
+              </h4>
             </div>
 
             {/* TaaS Service Card */}
             <div 
               className={`
-                cursor-pointer transition-all duration-200 rounded-xl p-5 border-2 shadow-sm
-                ${feeCalculation.includesTaas 
-                  ? 'bg-gradient-to-br from-blue-50 to-sky-50 border-blue-300 shadow-blue-100' 
-                  : 'bg-gray-50 border-gray-200 hover:border-blue-200 hover:bg-blue-50/50'
+                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                ${form.watch('serviceTaas')
+                  ? 'bg-white border-blue-500 shadow-blue-200' 
+                  : 'bg-white/90 border-gray-300 hover:border-blue-300 hover:shadow-md'
                 }
               `}
               onClick={() => {
-                const newValue = !feeCalculation.includesTaas;
-                form.setValue('includesTaas', newValue);
+                const newValue = !form.watch('serviceTaas');
+                form.setValue('serviceTaas', newValue);
                 form.trigger();
-                
-                // Navigation logic
-                if (!feeCalculation.includesTaas) {
-                  // Activating TaaS - navigate to TaaS form
-                  setCurrentFormView('taas');
-                } else {
-                  // Deactivating TaaS - navigate to next active service
-                  if (feeCalculation.includesBookkeeping) {
-                    setCurrentFormView('bookkeeping');
-                  }
-                }
               }}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  feeCalculation.includesTaas ? 'bg-blue-500' : 'bg-gray-300'
-                }`}>
-                  {feeCalculation.includesTaas && <Check className="h-4 w-4 text-white" />}
-                </div>
-                <h4 className={`font-semibold ${
-                  feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-600'
-                }`}>
-                  TaaS
-                </h4>
-              </div>
-              <div className={`text-2xl font-bold mb-1 ${
-                feeCalculation.includesTaas ? 'text-blue-800' : 'text-gray-400'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
+                form.watch('serviceTaas') ? 'bg-blue-500' : 'bg-gray-300'
               }`}>
-                ${feeCalculation.includesTaas ? feeCalculation.taas.monthlyFee.toLocaleString() : '0'} / mo
+                {form.watch('serviceTaas') && <Check className="h-5 w-5 text-white" />}
               </div>
-              <div className={`text-sm font-medium mb-2 ${
-                feeCalculation.includesTaas ? 'text-blue-700' : 'text-gray-400'
+              <h4 className={`font-semibold text-sm ${
+                form.watch('serviceTaas') ? 'text-blue-800' : 'text-gray-600'
               }`}>
-                ${feeCalculation.includesTaas ? feeCalculation.taas.setupFee.toLocaleString() : '0'} prior years
-              </div>
-              <p className={`text-xs ${
-                feeCalculation.includesTaas ? 'text-blue-600' : 'text-gray-500'
-              }`}>
-                Tax preparation, filing and planning services
-              </p>
+                TaaS
+              </h4>
             </div>
 
-            {/* Other Services Card - Coming Soon */}
-            <div className="cursor-not-allowed rounded-xl p-5 border-2 border-dashed border-gray-300 shadow-sm bg-gray-50">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                  <Plus className="h-4 w-4 text-gray-500" />
-                </div>
-                <h4 className="font-semibold text-gray-500">Other Services</h4>
+            {/* Payroll Service Card */}
+            <div 
+              className={`
+                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                ${form.watch('servicePayroll')
+                  ? 'bg-white border-purple-500 shadow-purple-200' 
+                  : 'bg-white/90 border-gray-300 hover:border-purple-300 hover:shadow-md'
+                }
+              `}
+              onClick={() => {
+                const newValue = !form.watch('servicePayroll');
+                form.setValue('servicePayroll', newValue);
+                form.trigger();
+              }}
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
+                form.watch('servicePayroll') ? 'bg-purple-500' : 'bg-gray-300'
+              }`}>
+                {form.watch('servicePayroll') && <Check className="h-5 w-5 text-white" />}
               </div>
-              <div className="text-2xl font-bold mb-1 text-gray-400">
-                Coming Soon
+              <h4 className={`font-semibold text-sm ${
+                form.watch('servicePayroll') ? 'text-purple-800' : 'text-gray-600'
+              }`}>
+                Payroll
+              </h4>
+            </div>
+
+            {/* AP/AR Lite Service Card */}
+            <div 
+              className={`
+                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                ${form.watch('serviceApArLite')
+                  ? 'bg-white border-orange-500 shadow-orange-200' 
+                  : 'bg-white/90 border-gray-300 hover:border-orange-300 hover:shadow-md'
+                }
+              `}
+              onClick={() => {
+                const newValue = !form.watch('serviceApArLite');
+                form.setValue('serviceApArLite', newValue);
+                form.trigger();
+              }}
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
+                form.watch('serviceApArLite') ? 'bg-orange-500' : 'bg-gray-300'
+              }`}>
+                {form.watch('serviceApArLite') && <Check className="h-5 w-5 text-white" />}
               </div>
-              <div className="text-sm font-medium mb-2 text-gray-400">
-                Additional services
+              <h4 className={`font-semibold text-sm ${
+                form.watch('serviceApArLite') ? 'text-orange-800' : 'text-gray-600'
+              }`}>
+                AP/AR Lite
+              </h4>
+            </div>
+
+            {/* FP&A Lite Service Card */}
+            <div 
+              className={`
+                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                ${form.watch('serviceFpaLite')
+                  ? 'bg-white border-teal-500 shadow-teal-200' 
+                  : 'bg-white/90 border-gray-300 hover:border-teal-300 hover:shadow-md'
+                }
+              `}
+              onClick={() => {
+                const newValue = !form.watch('serviceFpaLite');
+                form.setValue('serviceFpaLite', newValue);
+                form.trigger();
+              }}
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
+                form.watch('serviceFpaLite') ? 'bg-teal-500' : 'bg-gray-300'
+              }`}>
+                {form.watch('serviceFpaLite') && <Check className="h-5 w-5 text-white" />}
               </div>
-              <p className="text-xs text-gray-500">
-                Payroll, FP&A Lite, AP/AR Lite, and more
-              </p>
+              <h4 className={`font-semibold text-sm ${
+                form.watch('serviceFpaLite') ? 'text-teal-800' : 'text-gray-600'
+              }`}>
+                FP&A Lite
+              </h4>
             </div>
           </div>
         </div>
@@ -1522,35 +1565,189 @@ export default function Home() {
                     )}
                   />
 
-                  {/* Company Name */}
-                  <FormField
-                    control={form.control}
-                    name="companyName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Name</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Company Name"
-                            className="bg-gray-100 border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                            readOnly
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                        {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
-                          <p className="text-xs text-green-600 mt-1">
-                            ✓ Found in HubSpot: {hubspotContact.properties.company}
-                          </p>
+                  {/* Enhanced Client Details Section */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building className="h-5 w-5 text-blue-600" />
+                      <h3 className="text-lg font-semibold text-blue-800">Client Details</h3>
+                    </div>
+
+                    {/* Company Name with Unlock */}
+                    <FormField
+                      control={form.control}
+                      name="companyName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Name</FormLabel>
+                          <FormControl>
+                            <div className="flex gap-2">
+                              <Input 
+                                placeholder="Company Name"
+                                className={`${form.watch('companyNameLocked') ? 'bg-gray-100' : 'bg-white'} border-gray-300 focus:ring-[#e24c00] focus:border-transparent flex-1`}
+                                readOnly={form.watch('companyNameLocked')}
+                                {...field}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const newValue = !form.watch('companyNameLocked');
+                                  form.setValue('companyNameLocked', newValue);
+                                  if (!newValue) {
+                                    // Focus the input when unlocked
+                                    setTimeout(() => {
+                                      const input = document.querySelector('input[name="companyName"]') as HTMLInputElement;
+                                      input?.focus();
+                                    }, 100);
+                                  }
+                                }}
+                                className="px-3"
+                              >
+                                {form.watch('companyNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                          {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
+                            <p className="text-xs text-green-600 mt-1">
+                              ✓ Found in HubSpot: {hubspotContact.properties.company}
+                            </p>
+                          )}
+                          {hubspotVerificationStatus === 'not-found' && (
+                            <p className="text-xs text-amber-600 mt-1">
+                              ⚠ Contact not found in HubSpot - quote will be saved but cannot be pushed to HubSpot
+                            </p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Entity Type - Moved here from TaaS section */}
+                    <FormField
+                      control={form.control}
+                      name="entityType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Entity Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                <SelectValue placeholder="Select entity type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="LLC">LLC</SelectItem>
+                              <SelectItem value="Corporation">Corporation</SelectItem>
+                              <SelectItem value="S-Corporation">S-Corporation</SelectItem>
+                              <SelectItem value="Partnership">Partnership</SelectItem>
+                              <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Client Address Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="clientStreetAddress"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel>Street Address</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="123 Main Street"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                        {hubspotVerificationStatus === 'not-found' && (
-                          <p className="text-xs text-amber-600 mt-1">
-                            ⚠ Contact not found in HubSpot - quote will be saved but cannot be pushed to HubSpot
-                          </p>
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="clientCity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>City</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Los Angeles"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                      </FormItem>
-                    )}
-                  />
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="clientState"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>State</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="CA"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="clientZipCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ZIP Code</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="90210"
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="clientCountry"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Country</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || "US"}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select country" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="US">United States</SelectItem>
+                                <SelectItem value="CA">Canada</SelectItem>
+                                <SelectItem value="GB">United Kingdom</SelectItem>
+                                <SelectItem value="AU">Australia</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
 
                   {/* Existing Quotes Notification */}
                   {showExistingQuotesNotification && existingQuotesForEmail.length > 0 && (

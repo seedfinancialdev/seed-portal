@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a comprehensive Seed Financial Internal Employee Portal built with React, TypeScript, Express.js, and PostgreSQL. The application features a centralized dashboard as the home page (/) with integrated tools including a sophisticated quote calculator (/calculator), commission tracker, client intelligence engine, and profile management. The portal provides HubSpot integration, real-time weather services, address autocomplete, and advanced sales analytics. The quote calculator calculates pricing based on various business parameters like revenue bands, transaction volumes, and industry complexity. The overall vision is to create a centralized command center for all Seed Financial business operations, enhancing internal efficiency and client engagement.
+This is a comprehensive Seed Financial Internal Employee Portal built with React, TypeScript, Express.js, and PostgreSQL. The application features a centralized dashboard as the home page (/) with integrated tools including a sophisticated quote calculator (/calculator), commission tracker, client intelligence engine, and profile management. The portal provides HubSpot integration, real-time weather services, address autocomplete, and advanced sales analytics. The quote calculator now features a modern 5-service selection system (Bookkeeping, TaaS, Payroll, AP/AR Lite, FP&A Lite), enhanced client details with address collection, automated MSA document generation, and Box integration for client folder management. The overall vision is to create a centralized command center for all Seed Financial business operations, enhancing internal efficiency and client engagement.
 
 ## User Preferences
 
