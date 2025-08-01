@@ -40,20 +40,26 @@ async function processAIInsights(job: Job<AIInsightsJobData>): Promise<JobResult
     await job.updateProgress(25);
     
     // Generate AI insights using the intelligence engine (expensive operations)
+    console.log(`[Worker] Starting pain points analysis for ${clientData.companyName}`);
     const painPointsPromise = clientIntelEngine.extractPainPoints(clientData);
     await job.updateProgress(50);
     
+    console.log(`[Worker] Starting service gaps analysis for ${clientData.companyName}`);
     const serviceGapsPromise = clientIntelEngine.detectServiceGaps(clientData);
     await job.updateProgress(75);
     
+    console.log(`[Worker] Starting risk score calculation for ${clientData.companyName}`);
     const riskScorePromise = clientIntelEngine.calculateRiskScore(clientData);
     
     // Wait for all AI operations to complete
+    console.log(`[Worker] Waiting for all AI operations to complete...`);
     const [painPoints, serviceGaps, riskScore] = await Promise.all([
       painPointsPromise,
       serviceGapsPromise,
       riskScorePromise
     ]);
+    
+    console.log(`[Worker] AI operations completed: ${painPoints.length} pain points, ${serviceGaps.length} gaps, risk score: ${riskScore}`);
     
     await job.updateProgress(100);
     
@@ -78,6 +84,15 @@ async function processAIInsights(job: Job<AIInsightsJobData>): Promise<JobResult
     updateQueueMetrics(processingTime, true);
     
     console.error(`[Worker] ❌ AI insights failed for contact ${job.data.contactId}:`, error);
+    console.error(`[Worker] ❌ Error details:`, {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType: error.constructor.name,
+      clientData: {
+        companyName: job.data.clientData?.companyName,
+        industry: job.data.clientData?.industry
+      }
+    });
     throw error;
   }
 }
@@ -104,6 +119,11 @@ export async function startAIInsightsWorker(): Promise<Worker | null> {
 
   worker.on('failed', (job, err) => {
     console.error(`[Worker] ❌ Job ${job?.id} failed:`, err);
+    console.error(`[Worker] ❌ Failure details:`, {
+      jobData: job?.data,
+      errorMessage: err.message,
+      errorStack: err.stack
+    });
   });
 
   worker.on('error', (err) => {
