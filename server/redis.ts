@@ -33,11 +33,10 @@ function createRedisConnections(): RedisConfig | null {
     enableOfflineQueue: true,
   };
 
-  // Session Redis - using key prefix for isolation
+  // Session Redis - no prefix, connect-redis will handle prefixing
   const sessionRedis = new Redis({
     ...baseConfig,
     db: 0, // Use default database
-    keyPrefix: 'sess:',
     commandTimeout: 5000,
   });
 

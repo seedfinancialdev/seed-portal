@@ -129,15 +129,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.login(user, (err: any) => {
         if (err) {
           console.error('Session login failed:', err);
-          console.error('Session login error details:', {
-            message: err.message,
-            stack: err.stack,
-            user: user ? { id: user.id, email: user.email } : null
-          });
           return res.status(500).json({ message: "Failed to establish session" });
         }
         
-        console.log('Google OAuth user logged into session:', user!.email);
         // Return user data (excluding password)
         const { password, ...safeUser } = user!;
         res.json(safeUser);
