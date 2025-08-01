@@ -456,17 +456,13 @@ export default function AdminDashboard() {
 
         {/* Navigation Menu */}
         <div className="p-4 space-y-6">
-          {navigationItems.map((category) => {
-            console.log(`Rendering category: ${category.category} with ${category.items.length} items`);
-            return (
+          {navigationItems.map((category) => (
             <div key={category.category}>
               <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">
                 {category.category}
               </h3>
               <div className="space-y-1">
-                {category.items.map((item) => {
-                  console.log(`Rendering nav item: ${item.name} -> ${item.path}`);
-                  return (
+                {category.items.map((item) => (
                   <button
                     key={item.name}
                     onClick={() => item.path.startsWith('/admin') ? setSelectedSection(item.name.toLowerCase()) : setLocation(item.path)}
@@ -482,12 +478,10 @@ export default function AdminDashboard() {
                       <ExternalLink className="h-3 w-3 ml-auto text-white/50" />
                     )}
                   </button>
-                  );
-                })}
+                ))}
               </div>
             </div>
-            );
-          })}
+          ))}
         </div>
       </div>
 

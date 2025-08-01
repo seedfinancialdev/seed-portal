@@ -90,6 +90,9 @@ export default function CDNMonitoring() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/cdn/compression-stats'] });
+    },
+    onError: (error) => {
+      console.error('Failed to reset compression stats:', error);
     }
   });
 
@@ -101,6 +104,9 @@ export default function CDNMonitoring() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assets/manifest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/cdn/performance'] });
+    },
+    onError: (error) => {
+      console.error('Failed to rebuild asset manifest:', error);
     }
   });
 
