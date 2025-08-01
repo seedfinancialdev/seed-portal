@@ -104,12 +104,58 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.log('[Routes] ✅ Session middleware applied with RedisStore');
       
     } catch (error) {
-      console.warn('[Routes] ❌ Redis failed, skipping session setup:', error.message);
-      storeType = 'Failed';
+      console.warn('[Routes] ❌ Redis failed, falling back to memory store:', error.message);
+      // Fall back to memory store when Redis fails
+      const session = (await import('express-session')).default;
+      const MemoryStore = require('memorystore')(session);
+      
+      sessionStore = new MemoryStore({
+        checkPeriod: 86400000 // prune expired entries every 24h
+      });
+      storeType = 'MemoryStore (Redis fallback)';
+      
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        rolling: true,
+        store: sessionStore,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000
+        }
+      }));
+      
+      console.log('[Routes] ✅ Memory session fallback applied');
     }
   } else {
-    console.log('[Routes] No REDIS_URL, skipping Redis session setup');
-    storeType = 'Skipped';
+    console.log('[Routes] No REDIS_URL, using memory sessions');
+    // Use memory store when no Redis URL is provided
+    const session = (await import('express-session')).default;
+    const MemoryStore = require('memorystore')(session);
+    
+    sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    });
+    storeType = 'MemoryStore (no Redis)';
+    
+    app.use(session({
+      secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      store: sessionStore,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000
+      }
+    }));
+    
+    console.log('[Routes] ✅ Memory session middleware applied');
   }
   
   console.log('[Routes] Final session store type:', storeType);
