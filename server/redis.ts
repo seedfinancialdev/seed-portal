@@ -56,10 +56,10 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
       keyPrefix: 'cache:',
     });
 
-    // Queue Redis - using key prefix for isolation
+    // Queue Redis - NO keyPrefix for BullMQ compatibility  
     const queueRedis = new Redis(redisUrl, {
       ...baseOptions,
-      keyPrefix: 'queue:',
+      keyPrefix: '', // BullMQ doesn't support keyPrefix in ioredis instances
     });
     
     console.log('[createRedisConnections] Waiting for Redis connections to be ready...');

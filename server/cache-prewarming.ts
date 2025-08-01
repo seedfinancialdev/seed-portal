@@ -16,16 +16,16 @@ export async function initializePreWarmQueue(): Promise<void> {
   }
 
   try {
-    const { getCacheRedis } = await import('./redis.js');
-    const queueRedis = getCacheRedis();
+    const { getRedisAsync } = await import('./redis.js');
+    const redisConfig = await getRedisAsync();
     
-    if (!queueRedis) {
-      preWarmLogger.warn('Redis not available for pre-warm queue');
+    if (!redisConfig?.queueRedis) {
+      preWarmLogger.warn('Redis queue not available for pre-warm queue');
       return;
     }
 
     preWarmQueue = new Queue('cache-prewarming', {
-      connection: queueRedis,
+      connection: redisConfig.queueRedis,
       defaultJobOptions: {
         removeOnComplete: 5,
         removeOnFail: 10,

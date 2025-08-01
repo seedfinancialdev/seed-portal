@@ -40,16 +40,36 @@ export class GoogleAdminService {
       if (serviceAccountJson) {
         console.log('Using GOOGLE_SERVICE_ACCOUNT_JSON secret for Google Admin API');
         
-        const credentials = JSON.parse(serviceAccountJson);
+        let credentials;
+        try {
+          // Fix malformed JSON by ensuring it has proper closing brace
+          let fixedJson = serviceAccountJson.trim();
+          if (!fixedJson.endsWith('}')) {
+            fixedJson += '}';
+          }
+          credentials = JSON.parse(fixedJson);
+          
+          // Validate it's the right type of credential
+          if (credentials.type !== 'authorized_user' && credentials.type !== 'service_account') {
+            throw new Error(`Unsupported credential type: ${credentials.type}`);
+          }
+          
+          console.log(`Using ${credentials.type} credentials for Google Admin API`);
+        } catch (parseError) {
+          console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', parseError);
+          console.error('Service account JSON length:', serviceAccountJson.length);
+          console.error('First 100 chars:', serviceAccountJson.substring(0, 100));
+          throw new Error(`Invalid JSON in GOOGLE_SERVICE_ACCOUNT_JSON: ${parseError.message}`);
+        }
         const auth = new GoogleAuth({
           credentials,
           scopes: [
             'https://www.googleapis.com/auth/admin.directory.user.readonly',
             'https://www.googleapis.com/auth/admin.directory.group.readonly',
             'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
-          ],
-          // Subject impersonation for domain-wide delegation
-          subject: 'jon@seedfinancial.io' // Admin user for domain-wide delegation
+          ]
+          // Note: authorized_user credentials don't support subject impersonation
+          // Only service_account credentials support domain-wide delegation
         });
 
         const authClient = await auth.getClient();

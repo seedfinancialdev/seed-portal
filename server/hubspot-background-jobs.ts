@@ -22,16 +22,16 @@ export async function initializeHubSpotQueue(): Promise<void> {
   }
 
   try {
-    const { getCacheRedis } = await import('./redis.js');
-    const queueRedis = getCacheRedis();
+    const { getRedisAsync } = await import('./redis.js');
+    const redisConfig = await getRedisAsync();
     
-    if (!queueRedis) {
-      hubspotLogger.warn('Redis not available for HubSpot queue');
+    if (!redisConfig?.queueRedis) {
+      hubspotLogger.warn('Redis queue not available for HubSpot queue');
       return;
     }
 
     hubspotQueue = new Queue('hubspot-sync', {
-      connection: queueRedis,
+      connection: redisConfig.queueRedis,
       defaultJobOptions: {
         removeOnComplete: 10,
         removeOnFail: 20,

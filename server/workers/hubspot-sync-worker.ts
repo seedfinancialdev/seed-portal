@@ -15,16 +15,16 @@ export async function startHubSpotSyncWorker(): Promise<Worker | null> {
   }
 
   try {
-    const { getCacheRedis } = await import('../redis.js');
-    const workerRedis = getCacheRedis();
+    const { getRedisAsync } = await import('../redis.js');
+    const redisConfig = await getRedisAsync();
     
-    if (!workerRedis) {
-      hubspotWorkerLogger.warn('Redis not available for HubSpot sync worker');
+    if (!redisConfig?.queueRedis) {
+      hubspotWorkerLogger.warn('Redis queue not available for HubSpot sync worker');
       return null;
     }
 
     hubspotWorker = new Worker('hubspot-sync', processHubSpotJob, {
-      connection: workerRedis,
+      connection: redisConfig.queueRedis,
       concurrency: 2, // Process up to 2 HubSpot jobs simultaneously
       limiter: {
         max: 5, // Maximum 5 jobs per minute
