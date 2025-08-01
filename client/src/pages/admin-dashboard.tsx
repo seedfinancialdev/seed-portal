@@ -630,7 +630,7 @@ export default function AdminDashboard() {
 
           {/* Integration Status Grid */}
           <div className="grid grid-cols-4 gap-6">
-            <Card className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-lg hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/stripe-dashboard')}>
               <CardContent className="p-6 text-center">
                 <CreditCardIcon className="h-12 w-12 text-purple-500 mx-auto mb-4" />
                 <h3 className="font-semibold mb-2 text-gray-900">Stripe</h3>

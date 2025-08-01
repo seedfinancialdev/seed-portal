@@ -107,7 +107,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.warn('[Routes] ❌ Redis failed, falling back to memory store:', error.message);
       // Fall back to memory store when Redis fails
       const session = (await import('express-session')).default;
-      const MemoryStore = require('memorystore')(session);
+      const memorystore = await import('memorystore');
+      const MemoryStore = memorystore.default(session);
       
       sessionStore = new MemoryStore({
         checkPeriod: 86400000 // prune expired entries every 24h
@@ -134,7 +135,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.log('[Routes] No REDIS_URL, using memory sessions');
     // Use memory store when no Redis URL is provided
     const session = (await import('express-session')).default;
-    const MemoryStore = require('memorystore')(session);
+    const memorystore = await import('memorystore');
+    const MemoryStore = memorystore.default(session);
     
     sessionStore = new MemoryStore({
       checkPeriod: 86400000 // prune expired entries every 24h
@@ -1998,6 +2000,138 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Test Sentry error tracking (remove in production)
   app.get("/api/test-sentry", (_req, res) => {
     throw new Error("Test Sentry error - this is intentional!");
+  });
+
+  // Stripe routes for revenue data
+  app.get("/api/stripe/revenue", requireAuth, async (req, res) => {
+    try {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(503).json({ 
+          status: 'error', 
+          message: 'Stripe not configured - missing STRIPE_SECRET_KEY' 
+        });
+      }
+
+      const Stripe = await import('stripe');
+      const stripe = new Stripe.default(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2023-10-16',
+      });
+
+      // Get current date and calculate time ranges
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfYear = new Date(now.getFullYear(), 0, 1);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+      // Fetch revenue data from Stripe
+      const [currentMonthCharges, yearToDateCharges, lastMonthCharges] = await Promise.all([
+        stripe.charges.list({
+          created: {
+            gte: Math.floor(startOfMonth.getTime() / 1000),
+          },
+          limit: 100,
+        }),
+        stripe.charges.list({
+          created: {
+            gte: Math.floor(startOfYear.getTime() / 1000),
+          },
+          limit: 100,
+        }),
+        stripe.charges.list({
+          created: {
+            gte: Math.floor(lastMonth.getTime() / 1000),
+            lt: Math.floor(endOfLastMonth.getTime() / 1000),
+          },
+          limit: 100,
+        }),
+      ]);
+
+      // Calculate totals from successful charges
+      const calculateRevenue = (charges: any) => {
+        return charges.data
+          .filter((charge: any) => charge.status === 'succeeded')
+          .reduce((sum: number, charge: any) => sum + charge.amount, 0) / 100; // Convert from cents
+      };
+
+      const currentMonthRevenue = calculateRevenue(currentMonthCharges);
+      const yearToDateRevenue = calculateRevenue(yearToDateCharges);
+      const lastMonthRevenue = calculateRevenue(lastMonthCharges);
+
+      // Calculate growth percentage
+      const monthOverMonthGrowth = lastMonthRevenue > 0 
+        ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 
+        : 0;
+
+      res.json({
+        currentMonth: {
+          revenue: currentMonthRevenue,
+          transactions: currentMonthCharges.data.filter((c: any) => c.status === 'succeeded').length,
+        },
+        lastMonth: {
+          revenue: lastMonthRevenue,
+          transactions: lastMonthCharges.data.filter((c: any) => c.status === 'succeeded').length,
+        },
+        yearToDate: {
+          revenue: yearToDateRevenue,
+          transactions: yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length,
+        },
+        growth: {
+          monthOverMonth: monthOverMonthGrowth,
+        },
+        lastUpdated: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Stripe revenue fetch error:', error);
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Failed to fetch revenue data from Stripe',
+        error: error.message 
+      });
+    }
+  });
+
+  app.get("/api/stripe/recent-transactions", requireAuth, async (req, res) => {
+    try {
+      if (!process.env.STRIPE_SECRET_KEY) {
+        return res.status(503).json({ 
+          status: 'error', 
+          message: 'Stripe not configured - missing STRIPE_SECRET_KEY' 
+        });
+      }
+
+      const Stripe = await import('stripe');
+      const stripe = new Stripe.default(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2023-10-16',
+      });
+
+      const charges = await stripe.charges.list({
+        limit: 10,
+      });
+
+      const transactions = charges.data.map((charge: any) => ({
+        id: charge.id,
+        amount: charge.amount / 100, // Convert from cents
+        currency: charge.currency.toUpperCase(),
+        status: charge.status,
+        description: charge.description || 'No description',
+        customer: charge.billing_details?.name || 'Unknown',
+        created: new Date(charge.created * 1000).toISOString(),
+        receipt_url: charge.receipt_url,
+      }));
+
+      res.json({
+        transactions,
+        lastUpdated: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error('Stripe transactions fetch error:', error);
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Failed to fetch recent transactions from Stripe',
+        error: error.message 
+      });
+    }
   });
 
   // CDN and Asset Optimization endpoints
