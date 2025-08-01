@@ -2081,12 +2081,20 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.log(`Failed: ${yearToDateCharges.data.filter((c: any) => c.status === 'failed').length}`);
       console.log(`Refunded: ${yearToDateCharges.data.filter((c: any) => c.refunded === true).length}`);
       
-      // Log individual charges for year to date to see what we're getting
-      console.log('=== YTD CHARGES SAMPLE ===');
-      yearToDateCharges.data.slice(0, 5).forEach((charge: any) => {
-        console.log(`Charge ${charge.id}: $${charge.amount/100}, status: ${charge.status}, live: ${charge.livemode}, date: ${new Date(charge.created * 1000).toISOString()}`);
+      // Log ALL charges for year to date to see what we're getting
+      console.log('=== ALL YTD CHARGES ===');
+      const succeededCharges = yearToDateCharges.data
+        .filter((c: any) => c.status === 'succeeded' && c.livemode === true)
+        .sort((a: any, b: any) => b.created - a.created); // Sort by most recent first
+      
+      console.log(`Found ${succeededCharges.length} successful live charges:`);
+      succeededCharges.forEach((charge: any, index: number) => {
+        const chargeType = charge.id.startsWith('ch_') ? 'CHARGE' : 
+                          charge.id.startsWith('py_') ? 'PAYMENT' : 
+                          charge.id.startsWith('pi_') ? 'INTENT' : 'OTHER';
+        console.log(`${index + 1}. ${charge.id} (${chargeType}): $${charge.amount/100}, ${new Date(charge.created * 1000).toLocaleDateString()}, ${charge.description || 'No description'}`);
       });
-      console.log('=== END DEBUG ===');
+      console.log('=== END CHARGES ===');
 
       // Calculate totals from successful live mode charges only
       const calculateRevenue = (charges: any) => {
