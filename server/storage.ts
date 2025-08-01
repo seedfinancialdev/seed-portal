@@ -1,8 +1,9 @@
 import { 
-  users, quotes, approvalCodes, kbCategories, kbArticles, kbBookmarks, kbSearchHistory,
+  users, quotes, approvalCodes, kbCategories, kbArticles, kbBookmarks, kbSearchHistory, workspaceUsers,
   type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, 
   type KbCategory, type InsertKbCategory, type KbArticle, type InsertKbArticle, type KbBookmark, type InsertKbBookmark,
-  type KbSearchHistory, type InsertKbSearchHistory, updateQuoteSchema, type UpdateProfile 
+  type KbSearchHistory, type InsertKbSearchHistory, type WorkspaceUser, type InsertWorkspaceUser, 
+  updateQuoteSchema, type UpdateProfile 
 } from "@shared/schema";
 import { db } from "./db";
 import { safeDbQuery } from "./db-utils";
@@ -67,6 +68,15 @@ export interface IStorage {
   getUserKbBookmarks(userId: number): Promise<KbBookmark[]>;
   createKbBookmark(bookmark: InsertKbBookmark): Promise<KbBookmark>;
   deleteKbBookmark(userId: number, articleId: number): Promise<void>;
+  
+  // Workspace Users - synced from Google Admin API
+  getAllWorkspaceUsers(): Promise<WorkspaceUser[]>;
+  getWorkspaceUserByEmail(email: string): Promise<WorkspaceUser | undefined>;
+  getWorkspaceUserByGoogleId(googleId: string): Promise<WorkspaceUser | undefined>;
+  upsertWorkspaceUser(user: InsertWorkspaceUser): Promise<WorkspaceUser>;
+  updateWorkspaceUser(googleId: string, user: Partial<InsertWorkspaceUser>): Promise<WorkspaceUser>;
+  deleteInactiveWorkspaceUsers(activeGoogleIds: string[]): Promise<number>; // Returns count of deleted users
+  syncWorkspaceUsers(users: InsertWorkspaceUser[]): Promise<{ created: number; updated: number; deleted: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -641,6 +651,131 @@ export class DatabaseStorage implements IStorage {
           )
         );
     }, 'deleteKbBookmark');
+  }
+
+  // Workspace Users - synced from Google Admin API
+  async getAllWorkspaceUsers(): Promise<WorkspaceUser[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(workspaceUsers)
+        .orderBy(asc(workspaceUsers.fullName));
+    }, 'getAllWorkspaceUsers');
+  }
+
+  async getWorkspaceUserByEmail(email: string): Promise<WorkspaceUser | undefined> {
+    return await safeDbQuery(async () => {
+      const [user] = await db.select().from(workspaceUsers)
+        .where(eq(workspaceUsers.email, email))
+        .limit(1);
+      return user;
+    }, 'getWorkspaceUserByEmail');
+  }
+
+  async getWorkspaceUserByGoogleId(googleId: string): Promise<WorkspaceUser | undefined> {
+    return await safeDbQuery(async () => {
+      const [user] = await db.select().from(workspaceUsers)
+        .where(eq(workspaceUsers.googleId, googleId))
+        .limit(1);
+      return user;
+    }, 'getWorkspaceUserByGoogleId');
+  }
+
+  async upsertWorkspaceUser(insertUser: InsertWorkspaceUser): Promise<WorkspaceUser> {
+    return await safeDbQuery(async () => {
+      // Try to update existing user first
+      const existingUser = await this.getWorkspaceUserByGoogleId(insertUser.googleId);
+      
+      if (existingUser) {
+        // Update existing user
+        const [updatedUser] = await db.update(workspaceUsers)
+          .set({
+            ...insertUser,
+            lastSyncedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(workspaceUsers.googleId, insertUser.googleId))
+          .returning();
+        
+        if (!updatedUser) {
+          throw new Error('Failed to update workspace user');
+        }
+        
+        return updatedUser;
+      } else {
+        // Create new user
+        const [newUser] = await db.insert(workspaceUsers)
+          .values({
+            ...insertUser,
+            lastSyncedAt: new Date()
+          })
+          .returning();
+        
+        if (!newUser) {
+          throw new Error('Failed to create workspace user');
+        }
+        
+        return newUser;
+      }
+    }, 'upsertWorkspaceUser');
+  }
+
+  async updateWorkspaceUser(googleId: string, updateData: Partial<InsertWorkspaceUser>): Promise<WorkspaceUser> {
+    return await safeDbQuery(async () => {
+      const [updatedUser] = await db.update(workspaceUsers)
+        .set({
+          ...updateData,
+          lastSyncedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(workspaceUsers.googleId, googleId))
+        .returning();
+      
+      if (!updatedUser) {
+        throw new Error('Failed to update workspace user');
+      }
+      
+      return updatedUser;
+    }, 'updateWorkspaceUser');
+  }
+
+  async deleteInactiveWorkspaceUsers(activeGoogleIds: string[]): Promise<number> {
+    return await safeDbQuery(async () => {
+      if (activeGoogleIds.length === 0) {
+        // Don't delete all users if the list is empty (safety check)
+        return 0;
+      }
+      
+      const result = await db.delete(workspaceUsers)
+        .where(sql`${workspaceUsers.googleId} NOT IN (${activeGoogleIds.map(id => `'${id}'`).join(', ')})`);
+      
+      return result.rowCount || 0;
+    }, 'deleteInactiveWorkspaceUsers');
+  }
+
+  async syncWorkspaceUsers(users: InsertWorkspaceUser[]): Promise<{ created: number; updated: number; deleted: number }> {
+    return await safeDbQuery(async () => {
+      let created = 0;
+      let updated = 0;
+      
+      // Get current Google IDs to track what should remain active
+      const activeGoogleIds = users.map(user => user.googleId);
+      
+      // Upsert each user
+      for (const user of users) {
+        const existingUser = await this.getWorkspaceUserByGoogleId(user.googleId);
+        if (existingUser) {
+          await this.updateWorkspaceUser(user.googleId, user);
+          updated++;
+        } else {
+          await this.upsertWorkspaceUser(user);
+          created++;
+        }
+      }
+      
+      // Delete users that are no longer in Google Workspace
+      const deleted = await this.deleteInactiveWorkspaceUsers(activeGoogleIds);
+      
+      return { created, updated, deleted };
+    }, 'syncWorkspaceUsers');
   }
 }
 

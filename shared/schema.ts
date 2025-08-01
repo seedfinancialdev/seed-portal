@@ -63,6 +63,36 @@ export const updateQuoteSchema = createInsertSchema(quotes).omit({
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;
 export type Quote = typeof quotes.$inferSelect;
 
+// Google Workspace Users table - synced nightly from Google Admin API
+export const workspaceUsers = pgTable("workspace_users", {
+  id: serial("id").primaryKey(),
+  googleId: text("google_id").notNull().unique(), // Google user ID
+  email: text("email").notNull().unique(), // Primary email from Google Workspace
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  fullName: text("full_name"),
+  isAdmin: boolean("is_admin").default(false).notNull(),
+  suspended: boolean("suspended").default(false).notNull(),
+  orgUnitPath: text("org_unit_path").default("/"),
+  lastLoginTime: timestamp("last_login_time"),
+  creationTime: timestamp("creation_time"),
+  thumbnailPhotoUrl: text("thumbnail_photo_url"),
+  // Sync metadata
+  lastSyncedAt: timestamp("last_synced_at").defaultNow().notNull(),
+  syncSource: text("sync_source").default("google_admin_api").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertWorkspaceUserSchema = createInsertSchema(workspaceUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWorkspaceUser = z.infer<typeof insertWorkspaceUserSchema>;
+export type WorkspaceUser = typeof workspaceUsers.$inferSelect;
+
 // Users with HubSpot integration
 export const users: any = pgTable("users", {
   id: serial("id").primaryKey(),

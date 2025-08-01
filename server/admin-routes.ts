@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { GoogleAdminService } from "./google-admin";
 import { storage } from "./storage";
 import { requireAuth, hashPassword } from "./auth";
+import { scheduleWorkspaceSync } from "./jobs";
 
 export async function registerAdminRoutes(app: Express): Promise<void> {
   let googleAdminService: GoogleAdminService | null = null;
@@ -228,6 +229,40 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       console.error('Error syncing workspace user:', error);
       res.status(500).json({ 
         message: 'Failed to sync workspace user: ' + error.message 
+      });
+    }
+  });
+
+  // Get workspace users from database
+  app.get('/api/admin/workspace-users-db', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const workspaceUsers = await storage.getAllWorkspaceUsers();
+      res.json({ 
+        users: workspaceUsers,
+        count: workspaceUsers.length,
+        source: 'database'
+      });
+    } catch (error: any) {
+      console.error('Error fetching workspace users from database:', error);
+      res.status(500).json({ 
+        message: 'Failed to fetch workspace users from database: ' + error.message 
+      });
+    }
+  });
+
+  // Trigger manual workspace sync
+  app.post('/api/admin/sync-workspace', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const job = await scheduleWorkspaceSync('manual', req.user.id);
+      res.json({ 
+        message: 'Workspace sync job scheduled successfully',
+        jobId: job.id,
+        status: 'scheduled'
+      });
+    } catch (error: any) {
+      console.error('Error scheduling workspace sync:', error);
+      res.status(500).json({ 
+        message: 'Failed to schedule workspace sync: ' + error.message 
       });
     }
   });

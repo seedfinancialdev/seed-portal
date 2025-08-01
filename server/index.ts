@@ -10,6 +10,7 @@ import { checkDatabaseHealth, closeDatabaseConnections } from "./db";
 import { initializeSentry } from "./sentry";
 import { logger, requestLogger } from "./logger";
 import Redis from "ioredis";
+import "./jobs"; // Initialize job workers and cron jobs
 
 console.log('[Index] ===============================================');
 console.log('[Index] server/index.ts file loaded at top level');
