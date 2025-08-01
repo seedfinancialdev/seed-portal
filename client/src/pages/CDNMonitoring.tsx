@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { apiRequest } from '@/lib/queryClient';
 import { 
   Server, 
@@ -322,23 +320,31 @@ export default function CDNMonitoring() {
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span>Static Assets Cache</span>
-                  <Badge variant="success">1 year</Badge>
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-sm">1 year</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Immutable Assets</span>
-                  <Badge variant="success">Enabled</Badge>
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-sm">Enabled</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Security Headers</span>
-                  <Badge variant={cdnPerformance?.cacheHeaders === 'enabled' ? 'success' : 'secondary'}>
+                  <span className={`px-2 py-1 rounded-md text-sm ${
+                    cdnPerformance?.cacheHeaders === 'enabled' ? 
+                    'bg-green-100 text-green-800' : 
+                    'bg-gray-100 text-gray-800'
+                  }`}>
                     {cdnPerformance?.cacheHeaders || 'Unknown'}
-                  </Badge>
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Compression</span>
-                  <Badge variant={cdnPerformance?.compression === 'enabled' ? 'success' : 'secondary'}>
+                  <span className={`px-2 py-1 rounded-md text-sm ${
+                    cdnPerformance?.compression === 'enabled' ? 
+                    'bg-green-100 text-green-800' : 
+                    'bg-gray-100 text-gray-800'
+                  }`}>
                     {cdnPerformance?.compression || 'Unknown'}
-                  </Badge>
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -429,10 +435,12 @@ export default function CDNMonitoring() {
                       <span>Compression Efficiency</span>
                       <span>{Math.round((1 - compressionStats.averageCompressionRatio) * 100)}%</span>
                     </div>
-                    <Progress 
-                      value={Math.round((1 - compressionStats.averageCompressionRatio) * 100)} 
-                      className="h-2"
-                    />
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full" 
+                        style={{ width: `${Math.round((1 - compressionStats.averageCompressionRatio) * 100)}%` }}
+                      ></div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
@@ -551,15 +559,13 @@ export default function CDNMonitoring() {
                               <div className="text-sm text-red-600">{test.error}</div>
                             )}
                           </div>
-                          <Badge 
-                            variant={
-                              test.status === 'passed' ? 'success' : 
-                              test.status === 'warning' ? 'secondary' : 
-                              'destructive'
-                            }
-                          >
+                          <span className={`px-2 py-1 rounded-md text-sm ${
+                            test.status === 'passed' ? 'bg-green-100 text-green-800' : 
+                            test.status === 'warning' ? 'bg-yellow-100 text-yellow-800' : 
+                            'bg-red-100 text-red-800'
+                          }`}>
                             {test.status}
-                          </Badge>
+                          </span>
                         </div>
                       ))}
                     </>

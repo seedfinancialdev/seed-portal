@@ -195,6 +195,7 @@ const navigationItems = [
     items: [
       { name: 'System Health', icon: Monitor, path: '/admin/system' },
       { name: 'User Management', icon: UserCheck, path: '/user-management' },
+      { name: 'CDN Monitoring', icon: Server, path: '/cdn-monitoring' },
       { name: 'API Integrations', icon: CloudCog, path: '/admin/apis' },
       { name: 'Security Center', icon: Shield, path: '/admin/security' }
     ]
