@@ -2024,21 +2024,43 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-      // Fetch all revenue data from Stripe (remove arbitrary limits)
+      // Fetch all revenue data from Stripe with pagination to get all transactions
+      const fetchAllCharges = async (params: any) => {
+        let allCharges = [];
+        let hasMore = true;
+        let startingAfter = undefined;
+        
+        while (hasMore) {
+          const response = await stripe.charges.list({
+            ...params,
+            limit: 100,
+            starting_after: startingAfter,
+          });
+          
+          allCharges.push(...response.data);
+          hasMore = response.has_more;
+          if (hasMore && response.data.length > 0) {
+            startingAfter = response.data[response.data.length - 1].id;
+          }
+        }
+        
+        return { data: allCharges };
+      };
+
       const [currentMonthCharges, yearToDateCharges, lastMonthCharges] = await Promise.all([
-        stripe.charges.list({
+        fetchAllCharges({
           created: {
             gte: Math.floor(startOfMonth.getTime() / 1000),
           },
           expand: ['data.balance_transaction'],
         }),
-        stripe.charges.list({
+        fetchAllCharges({
           created: {
             gte: Math.floor(startOfYear.getTime() / 1000),
           },
           expand: ['data.balance_transaction'],
         }),
-        stripe.charges.list({
+        fetchAllCharges({
           created: {
             gte: Math.floor(lastMonth.getTime() / 1000),
             lt: Math.floor(endOfLastMonth.getTime() / 1000),
@@ -2047,19 +2069,24 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         }),
       ]);
 
-      console.log(`Stripe Revenue Debug:
-        Current Month Charges: ${currentMonthCharges.data.length} total, ${currentMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded
-        Year to Date Charges: ${yearToDateCharges.data.length} total, ${yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded  
-        Last Month Charges: ${lastMonthCharges.data.length} total, ${lastMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded
-        
-        Year to Date Breakdown:
-        - Live mode charges: ${yearToDateCharges.data.filter((c: any) => c.livemode === true).length}
-        - Test mode charges: ${yearToDateCharges.data.filter((c: any) => c.livemode === false).length}
-        - Succeeded charges: ${yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length}
-        - Failed charges: ${yearToDateCharges.data.filter((c: any) => c.status === 'failed').length}
-        - Pending charges: ${yearToDateCharges.data.filter((c: any) => c.status === 'pending').length}
-        - Refunded charges: ${yearToDateCharges.data.filter((c: any) => c.refunded === true).length}
-      `);
+      console.log('=== STRIPE REVENUE DEBUG ===');
+      console.log(`Current Month: ${currentMonthCharges.data.length} total, ${currentMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded`);
+      console.log(`Year to Date: ${yearToDateCharges.data.length} total, ${yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded`);
+      console.log(`Last Month: ${lastMonthCharges.data.length} total, ${lastMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded`);
+      
+      console.log('=== YEAR TO DATE BREAKDOWN ===');
+      console.log(`Live mode: ${yearToDateCharges.data.filter((c: any) => c.livemode === true).length}`);
+      console.log(`Test mode: ${yearToDateCharges.data.filter((c: any) => c.livemode === false).length}`);
+      console.log(`Live + Succeeded: ${yearToDateCharges.data.filter((c: any) => c.status === 'succeeded' && c.livemode === true).length}`);
+      console.log(`Failed: ${yearToDateCharges.data.filter((c: any) => c.status === 'failed').length}`);
+      console.log(`Refunded: ${yearToDateCharges.data.filter((c: any) => c.refunded === true).length}`);
+      
+      // Log individual charges for year to date to see what we're getting
+      console.log('=== YTD CHARGES SAMPLE ===');
+      yearToDateCharges.data.slice(0, 5).forEach((charge: any) => {
+        console.log(`Charge ${charge.id}: $${charge.amount/100}, status: ${charge.status}, live: ${charge.livemode}, date: ${new Date(charge.created * 1000).toISOString()}`);
+      });
+      console.log('=== END DEBUG ===');
 
       // Calculate totals from successful live mode charges only
       const calculateRevenue = (charges: any) => {
