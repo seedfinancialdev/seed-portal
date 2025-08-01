@@ -17,9 +17,13 @@ async function initializeJobSystem() {
 
     console.log('[Jobs] Initializing workspace sync job system...');
 
+    // Create dedicated Redis connection for BullMQ jobs
+    const jobRedis = redis.duplicate();
+    await jobRedis.ping(); // Test connection
+
     // Job queues
     workspaceQueue = new Queue('workspace-sync', {
-      connection: redis,
+      connection: jobRedis,
       defaultJobOptions: {
         removeOnComplete: 50, // Keep last 50 completed jobs
         removeOnFail: 20,     // Keep last 20 failed jobs
@@ -36,7 +40,7 @@ async function initializeJobSystem() {
     workspaceWorker = new Worker('workspace-sync', async (job: Job<WorkspaceSyncJobData>) => {
       return await workspaceSyncJob(job);
     }, {
-      connection: redis,
+      connection: jobRedis.duplicate(), // Each worker needs its own connection
       concurrency: 1, // Process one sync job at a time
     });
 
