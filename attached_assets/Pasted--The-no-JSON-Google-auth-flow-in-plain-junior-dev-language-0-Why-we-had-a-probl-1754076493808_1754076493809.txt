@@ -1,0 +1,100 @@
+### The “no-JSON” Google auth flow in **plain junior-dev language**
+
+---
+
+#### 0. Why we had a problem
+
+* Google usually wants a big JSON file called **service-account key**.
+* Our company’s security rules say **“no downloadable keys allowed.”**
+* Replit kept asking for that file because our code was telling Google’s library:
+
+  > “Hey, load credentials from a JSON file.”
+
+---
+
+#### 1. The simple fix (conceptually)
+
+1. **Keep** your own Google login (refresh-token) in Replit secrets.
+2. **Ask Google:** “Please give me a **1-hour guest pass** that lets me act as the service account.”
+
+   * That request is allowed because you (the human) have the **Service Account Token Creator** role.
+3. Google hands back a **short-lived access token** (the guest pass).
+4. We plug that token into the Admin SDK call.
+5. After an hour it auto-expires, so there’s nothing to leak or rotate.
+
+Think of it like borrowing the master key from the janitor for one class period instead of making a copy of the key.
+
+---
+
+#### 2. What we store in Replit secrets now
+
+| Secret name            | What it is                                          |
+| ---------------------- | --------------------------------------------------- |
+| `GOOGLE_CLIENT_ID`     | Your OAuth client ID                                |
+| `GOOGLE_CLIENT_SECRET` | Matching client secret                              |
+| `GOOGLE_REFRESH_TOKEN` | Your long-lived refresh token                       |
+| `IMP_SA_EMAIL`         | `seed-admin-api@seedportal.iam.gserviceaccount.com` |
+
+**No JSON file, no private key.**
+
+---
+
+#### 3. The replacement code (Node / TypeScript)
+
+```ts
+import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
+
+export async function getAdminSDK() {
+  // A. Authenticate as YOU using refresh token
+  const userAuth = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID!,
+    process.env.GOOGLE_CLIENT_SECRET!
+  );
+  userAuth.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN! });
+
+  // B. Ask Google to impersonate the service account for 1 hour
+  const iam = google.iamcredentials({ version: 'v1', auth: userAuth });
+  const { data } = await iam.projects.serviceAccounts.generateAccessToken({
+    name: `projects/-/serviceAccounts/${process.env.IMP_SA_EMAIL}`,
+    requestBody: {
+      scope: ['https://www.googleapis.com/auth/admin.directory.user.readonly'],
+      lifetime: '3600s',
+    },
+  });
+
+  // C. Use that 1-hour token with the Admin SDK
+  const adminAuth = new OAuth2Client();
+  adminAuth.setCredentials({ access_token: data.accessToken });
+  return google.admin({ version: 'directory_v1', auth: adminAuth });
+}
+```
+
+*Call `getAdminSDK()` whenever you need Google Workspace users.*
+
+---
+
+#### 4. One-time Google Cloud setup (already done)
+
+1. Service account **seed-admin-api** created.
+2. In IAM → **seed-admin-api → Permissions**, you ([jon@seedfinancial.io](mailto:jon@seedfinancial.io)) have the role
+   **Service Account Token Creator**.
+3. Domain-Wide Delegation scopes added in Google Workspace Admin Console.
+
+---
+
+#### 5. Things **not** to forget
+
+* Delete all old `GOOGLE_APPLICATION_CREDENTIALS` env vars and any `fromJSON()` calls.
+* Never paste real access tokens in chat or logs (they live only 1 h, but still).
+* If you need more Google scopes later, just add them to the `scope` array.
+
+---
+
+#### 6. Why this is better
+
+* **Security:** No permanent key file to lose.
+* **Compliance:** Org policy stays happy (key creation disabled).
+* **Ops:** Tokens auto-rotate every hour; nothing to remember to renew.
+
+Now Replit stops nagging for a JSON file, and your Admin → User Management page can load Google Workspace users with zero credential headaches.
