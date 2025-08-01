@@ -7,38 +7,25 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// Helper to get authorization header
-function getAuthHeader(): Record<string, string> {
-  const token = localStorage.getItem('google_access_token');
-  if (token) {
-    return { 'Authorization': `Bearer ${token}` };
-  }
-  return {};
-}
-
 export async function apiRequest(
+  method: string,
   url: string,
-  options?: {
-    method?: string;
-    body?: string;
-    headers?: Record<string, string>;
-  }
-): Promise<any> {
-  const { method = 'GET', body, headers = {} } = options || {};
-  
-  const res = await fetch(url, {
+  data?: any
+): Promise<Response> {
+  const options: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...getAuthHeader(),
-      ...headers,
     },
-    body,
-    credentials: "include",
-  });
+    credentials: 'include', // This sends session cookies
+  };
 
-  await throwIfResNotOk(res);
-  return await res.json();
+  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+    options.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(url, options);
+  return response;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -48,10 +35,7 @@ export const getQueryFn: <T>(options: {
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
-      headers: {
-        ...getAuthHeader(),
-      },
-      credentials: "include",
+      credentials: "include", // Session cookies only, no OAuth token
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

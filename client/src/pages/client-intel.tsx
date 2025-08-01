@@ -146,8 +146,25 @@ export default function ClientIntel() {
     queryKey: ["/api/client-intel/search", debouncedSearchTerm],
     queryFn: async () => {
       if (!debouncedSearchTerm.trim()) return [];
-      const response = await apiRequest("GET", `/api/client-intel/search?q=${encodeURIComponent(debouncedSearchTerm)}`);
-      return response.json();
+      
+      console.log(`[Frontend] Searching for: "${debouncedSearchTerm}"`);
+      
+      try {
+        const response = await apiRequest("GET", `/api/client-intel/search?q=${encodeURIComponent(debouncedSearchTerm)}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[Frontend] Search failed with status ${response.status}:`, errorText);
+          throw new Error(`Search failed: ${response.status} ${errorText}`);
+        }
+        
+        const results = await response.json();
+        console.log(`[Frontend] Search results:`, results);
+        return results;
+      } catch (error) {
+        console.error('[Frontend] Search error details:', error);
+        throw error;
+      }
     },
     enabled: debouncedSearchTerm.length > 2,
     staleTime: 30000, // Cache for 30 seconds instead of 0
