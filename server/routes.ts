@@ -2087,20 +2087,48 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         .filter((c: any) => c.status === 'succeeded' && c.livemode === true)
         .sort((a: any, b: any) => b.created - a.created); // Sort by most recent first
       
+      // Simple currency conversion rates (in a production app, you'd use a real-time API)
+      const exchangeRates: Record<string, number> = {
+        'usd': 1.0,
+        'mxn': 0.059, // 1 MXN = ~0.059 USD (approximate)
+        'eur': 1.09,
+        'gbp': 1.27,
+        'cad': 0.73
+      };
+
       console.log(`Found ${succeededCharges.length} successful live charges:`);
       succeededCharges.forEach((charge: any, index: number) => {
         const chargeType = charge.id.startsWith('ch_') ? 'CHARGE' : 
                           charge.id.startsWith('py_') ? 'PAYMENT' : 
                           charge.id.startsWith('pi_') ? 'INTENT' : 'OTHER';
-        console.log(`${index + 1}. ${charge.id} (${chargeType}): $${charge.amount/100}, ${new Date(charge.created * 1000).toLocaleDateString()}, ${charge.description || 'No description'}`);
+        const originalAmount = charge.amount / 100;
+        const currency = charge.currency.toLowerCase();
+        const exchangeRate = exchangeRates[currency] || 1.0;
+        const usdAmount = originalAmount * exchangeRate;
+        
+        console.log(`${index + 1}. ${charge.id} (${chargeType}): ${originalAmount} ${currency.toUpperCase()} (~$${usdAmount.toFixed(2)} USD), ${new Date(charge.created * 1000).toLocaleDateString()}, ${charge.description || 'No description'}`);
       });
       console.log('=== END CHARGES ===');
 
-      // Calculate totals from successful live mode charges only
+      // Calculate totals from successful live mode charges only with currency conversion
       const calculateRevenue = (charges: any) => {
+        const exchangeRates: Record<string, number> = {
+          'usd': 1.0,
+          'mxn': 0.059, // 1 MXN = ~0.059 USD 
+          'eur': 1.09,
+          'gbp': 1.27,
+          'cad': 0.73
+        };
+
         return charges.data
           .filter((charge: any) => charge.status === 'succeeded' && charge.livemode === true)
-          .reduce((sum: number, charge: any) => sum + charge.amount, 0) / 100; // Convert from cents
+          .reduce((sum: number, charge: any) => {
+            const originalAmount = charge.amount / 100; // Convert from cents
+            const currency = charge.currency.toLowerCase();
+            const exchangeRate = exchangeRates[currency] || 1.0;
+            const usdAmount = originalAmount * exchangeRate;
+            return sum + usdAmount;
+          }, 0);
       };
 
       const calculateTransactionCount = (charges: any) => {
