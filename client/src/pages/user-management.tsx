@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Users, UserCheck, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, ArrowLeft } from "lucide-react";
-import { useLocation } from "wouter";
+import { useNavigationHistory } from "@/hooks/use-navigation-history";
+import { BackButton } from "@/components/BackButton";
 
 interface WorkspaceUser {
   id: string;
@@ -39,35 +40,63 @@ interface DatabaseUser {
 
 export default function UserManagement() {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const { navigateTo } = useNavigationHistory();
   const [selectedRole, setSelectedRole] = useState<{[key: string]: string}>({});
 
   // Fetch Google Workspace users
   const { data: workspaceData, isLoading: loadingWorkspace, refetch: refetchWorkspace, error: workspaceError } = useQuery({
     queryKey: ['/api/admin/workspace-users'],
-    queryFn: () => apiRequest('/api/admin/workspace-users'),
+    queryFn: async () => {
+      const response = await fetch('/api/admin/workspace-users', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch workspace users');
+      }
+      return response.json();
+    },
     retry: false, // Don't retry on errors so we can display setup instructions
   });
 
   // Fetch database users
   const { data: databaseData, isLoading: loadingDatabase, refetch: refetchDatabase } = useQuery({
     queryKey: ['/api/admin/users'],
-    queryFn: () => apiRequest('/api/admin/users'),
+    queryFn: async () => {
+      const response = await fetch('/api/admin/users', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to fetch database users');
+      return response.json();
+    },
   });
 
   // Test Google Admin connection
   const { data: connectionTest, refetch: testConnection } = useQuery({
     queryKey: ['/api/admin/test-google-admin'],
-    queryFn: () => apiRequest('/api/admin/test-google-admin'),
+    queryFn: async () => {
+      const response = await fetch('/api/admin/test-google-admin', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to test Google Admin connection');
+      return response.json();
+    },
   });
 
   // Update user role mutation
   const updateRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: number; role: string }) =>
-      apiRequest(`/api/admin/users/${userId}/role`, { 
-        method: 'PATCH', 
+    mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
+      const response = await fetch(`/api/admin/users/${userId}/role`, { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role })
-      }),
+      });
+      if (!response.ok) throw new Error('Failed to update user role');
+      return response.json();
+    },
     onSuccess: () => {
       toast({ title: "Success", description: "User role updated successfully" });
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
@@ -137,14 +166,10 @@ export default function UserManagement() {
       <div className="bg-white/10 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={() => setLocation('/admin')}
+            <BackButton 
+              fallbackPath="/admin"
               className="text-white hover:bg-white/20"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to SEEDOS
-            </Button>
+            />
             <h1 className="text-xl font-semibold text-white">User Management</h1>
             <div></div>
           </div>
