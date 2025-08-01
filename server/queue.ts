@@ -1,6 +1,7 @@
 // BullMQ Queue and Worker setup
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import Redis from 'ioredis';
+import { sendJobFailureAlert } from './slack';
 
 // Redis connection for queues
 let queueRedis: Redis | null = null;
@@ -40,6 +41,9 @@ export async function initializeQueue(): Promise<void> {
     aiInsightsQueueEvents = new QueueEvents('ai-insights', {
       connection: queueRedis,
     });
+
+    // Set up failure monitoring
+    setupFailureMonitoring();
     
     console.log('[Queue] ✅ BullMQ queues initialized');
   } catch (error) {
@@ -58,6 +62,12 @@ export function getAIInsightsQueue(): Queue | null {
 export function getAIInsightsQueueEvents(): QueueEvents | null {
   return aiInsightsQueueEvents;
 }
+
+// Failure tracking for alerts
+const failureTracking = {
+  recentFailures: [] as Array<{ timestamp: number; error: string; jobId: string }>,
+  lastAlertSent: 0
+};
 
 // Job Types
 export interface AIInsightsJobData {
@@ -87,16 +97,76 @@ export function getQueueMetrics() {
   return { ...queueMetrics };
 }
 
-export function updateQueueMetrics(processingTime: number, failed = false) {
+export function updateQueueMetrics(processingTime?: number, failed = false) {
   if (failed) {
     queueMetrics.jobsFailed++;
   } else {
     queueMetrics.jobsProcessed++;
-    queueMetrics.averageProcessingTime = 
-      (queueMetrics.averageProcessingTime * (queueMetrics.jobsProcessed - 1) + processingTime) / 
-      queueMetrics.jobsProcessed;
+    if (processingTime) {
+      queueMetrics.averageProcessingTime = 
+        (queueMetrics.averageProcessingTime * (queueMetrics.jobsProcessed - 1) + processingTime) / 
+        queueMetrics.jobsProcessed;
+    }
   }
   queueMetrics.lastProcessedAt = new Date();
+}
+
+// Setup failure monitoring with Slack alerts
+function setupFailureMonitoring(): void {
+  if (!aiInsightsQueueEvents) return;
+
+  aiInsightsQueueEvents.on('failed', async ({ jobId, failedReason, prev }) => {
+    const now = Date.now();
+    
+    // Track this failure
+    failureTracking.recentFailures.push({
+      timestamp: now,
+      error: failedReason || 'Unknown error',
+      jobId: jobId
+    });
+
+    // Remove failures older than 5 minutes
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    failureTracking.recentFailures = failureTracking.recentFailures.filter(
+      f => f.timestamp > fiveMinutesAgo
+    );
+
+    // Check if we should send an alert (>3 failures in 5 minutes, max 1 alert per 10 minutes)
+    const failureCount = failureTracking.recentFailures.length;
+    const tenMinutesAgo = now - (10 * 60 * 1000);
+    
+    if (failureCount >= 3 && failureTracking.lastAlertSent < tenMinutesAgo) {
+      try {
+        const errors = failureTracking.recentFailures.map(f => 
+          `${f.error.substring(0, 100)}${f.error.length > 100 ? '...' : ''}`
+        );
+        
+        await sendJobFailureAlert(
+          'ai-insights',
+          failureCount,
+          'last 5 minutes',
+          errors
+        );
+        
+        failureTracking.lastAlertSent = now;
+        console.log(`[Queue] 🚨 Sent failure alert: ${failureCount} failures in 5 minutes`);
+      } catch (error) {
+        console.error('[Queue] Failed to send failure alert:', error);
+      }
+    }
+
+    // Update metrics
+    updateQueueMetrics(undefined, true);
+  });
+
+  // Monitor job completion for metrics
+  aiInsightsQueueEvents.on('completed', async ({ jobId }) => {
+    updateQueueMetrics();
+  });
+
+  aiInsightsQueueEvents.on('active', async ({ jobId }) => {
+    updateQueueMetrics();
+  });
 }
 
 // Don't initialize automatically on import - wait for explicit call

@@ -1,90 +1,122 @@
-import { type ChatPostMessageArguments, WebClient } from "@slack/web-api"
+import { WebClient } from "@slack/web-api";
+import { logger } from './logger';
 
-// Use
+const slackLogger = logger.child({ module: 'slack' });
+
+// Use Slack Bot Token
 if (!process.env.SLACK_BOT_TOKEN) {
-  console.warn("SLACK_BOT_TOKEN environment variable not set - Slack notifications disabled");
+  throw new Error("SLACK_BOT_TOKEN environment variable must be set");
 }
 
 if (!process.env.SLACK_CHANNEL_ID) {
-  console.warn("SLACK_CHANNEL_ID environment variable not set - Slack notifications disabled");
+  throw new Error("SLACK_CHANNEL_ID environment variable must be set");
 }
 
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
 
 /**
  * Sends a structured message to a Slack channel using the Slack Web API
- * Prefer using Channel ID to Channel names because they don't change when the
- * channel is renamed.
- * @param message - Structured message to send
+ * @param message - Message content and configuration
  * @returns Promise resolving to the sent message's timestamp
  */
-async function sendSlackMessage(
-  message: ChatPostMessageArguments
-): Promise<string | undefined> {
-  if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
-    console.log("Slack not configured - would have sent:", message);
-    return undefined;
+export async function sendSlackMessage(
+  message: {
+    text?: string;
+    blocks?: any[];
+    channel?: string;
+    attachments?: any[];
   }
-
+): Promise<string | undefined> {
   try {
+    const channel = message.channel || process.env.SLACK_CHANNEL_ID;
+    
     // Send the message
-    const response = await slack.chat.postMessage(message);
+    const response = await slack.chat.postMessage({
+      channel,
+      text: message.text,
+      blocks: message.blocks,
+      attachments: message.attachments
+    });
 
-    // Return the timestamp of the sent message
+    slackLogger.info({ channel, ts: response.ts }, 'Slack message sent');
     return response.ts;
   } catch (error) {
-    console.error('Error sending Slack message:', error);
+    slackLogger.error({ error }, 'Error sending Slack message');
     throw error;
   }
 }
 
 /**
- * Sends a notification about a cleanup override request
+ * Send alert for system errors
  */
-async function sendCleanupOverrideNotification(quoteData: {
-  contactEmail: string;
-  revenueBand: string;
-  monthlyTransactions: string;
-  industry: string;
-  cleanupMonths: number;
-  requestedCleanupMonths?: number;
-  originalCleanupMonths?: number;
-  overrideReason: string;
-  customOverrideReason?: string;
-  customSetupFee?: string;
-  monthlyFee: number;
-  setupFee: number;
-  approvalCode: string;
-}) {
-  if (!process.env.SLACK_BOT_TOKEN || !process.env.SLACK_CHANNEL_ID) {
-    console.log("Slack not configured - cleanup override notification skipped");
-    return;
-  }
+export async function sendSystemAlert(
+  title: string,
+  description: string,
+  severity: 'low' | 'medium' | 'high' | 'critical' = 'medium'
+): Promise<void> {
+  const severityColors = {
+    low: '#36C5F0',      // Blue
+    medium: '#ECB22E',   // Yellow  
+    high: '#E01E5A',     // Red
+    critical: '#FF0000'  // Bright Red
+  };
 
-  // Try both channel ID and channel name formats
-  let channel = process.env.SLACK_CHANNEL_ID;
-  if (!channel.startsWith('C') && !channel.startsWith('#')) {
-    channel = `#${channel}`;
-  }
+  const severityEmojis = {
+    low: ':information_source:',
+    medium: ':warning:',
+    high: ':rotating_light:',
+    critical: ':fire:'
+  };
 
-  // Try sending the message, with fallback to simple channel ID if channel name fails
   try {
     await sendSlackMessage({
-      channel,
-      text: "An active quote needs a cleanup override approval!",
+      text: `${severityEmojis[severity]} ${title}`,
+      attachments: [
+        {
+          color: severityColors[severity],
+          fields: [
+            {
+              title: 'Severity',
+              value: severity.toUpperCase(),
+              short: true
+            },
+            {
+              title: 'Timestamp',
+              value: new Date().toISOString(),
+              short: true
+            },
+            {
+              title: 'Description',
+              value: description,
+              short: false
+            }
+          ]
+        }
+      ]
+    });
+  } catch (error) {
+    slackLogger.error({ error, title, description, severity }, 'Failed to send system alert');
+  }
+}
+
+/**
+ * Send BullMQ job failure alert
+ */
+export async function sendJobFailureAlert(
+  jobName: string,
+  failureCount: number,
+  timeWindow: string,
+  errors: string[]
+): Promise<void> {
+  try {
+    await sendSlackMessage({
+      text: `:rotating_light: BullMQ Job Failures Detected`,
       blocks: [
         {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: '🚨 Cleanup Override Request'
-          }
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Approval Code: ${quoteData.approvalCode}*`
+            text: `🚨 BullMQ Alert: ${jobName} Failures`
           }
         },
         {
@@ -92,44 +124,45 @@ async function sendCleanupOverrideNotification(quoteData: {
           fields: [
             {
               type: 'mrkdwn',
-              text: `*Contact:* ${quoteData.contactEmail}`
+              text: `*Failed Jobs:* ${failureCount}`
             },
             {
               type: 'mrkdwn',
-              text: `*Industry:* ${quoteData.industry}`
+              text: `*Time Window:* ${timeWindow}`
             },
             {
               type: 'mrkdwn',
-              text: `*Cleanup Months:* ${quoteData.originalCleanupMonths || quoteData.cleanupMonths} → ${quoteData.requestedCleanupMonths || quoteData.cleanupMonths}`
+              text: `*Queue:* ${jobName}`
             },
             {
               type: 'mrkdwn',
-              text: `*Override Reason:* ${quoteData.overrideReason}`
+              text: `*Timestamp:* ${new Date().toISOString()}`
             }
           ]
         },
-        // Add custom override reason and setup fee if provided
-        ...(quoteData.overrideReason === "Other" ? [{
+        {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Details:* ${quoteData.customOverrideReason || 'No details provided'}${quoteData.customSetupFee ? `\n*Custom Setup Fee:* $${parseInt(quoteData.customSetupFee).toLocaleString()}` : ''}`
+            text: `*Recent Errors:*\n${errors.slice(0, 3).map(e => `• ${e}`).join('\n')}`
           }
-        } as any] : [])
+        },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: 'View Queue Metrics'
+              },
+              url: `${process.env.APP_URL || 'https://app.seedfinancial.io'}/admin/queue`
+            }
+          ]
+        }
       ]
     });
   } catch (error) {
-    // If channel format with # fails, try with the original channel ID
-    if (channel.startsWith('#')) {
-      const originalChannel = process.env.SLACK_CHANNEL_ID;
-      await sendSlackMessage({
-        channel: originalChannel,
-        text: `🚨 *Cleanup Override Request*\n\n*Approval Code: ${quoteData.approvalCode}*\n\n*Contact:* ${quoteData.contactEmail}\n*Industry:* ${quoteData.industry}\n*Cleanup Months:* ${quoteData.originalCleanupMonths || quoteData.cleanupMonths} → ${quoteData.requestedCleanupMonths || quoteData.cleanupMonths}\n*Override Reason:* ${quoteData.overrideReason}${quoteData.overrideReason === "Other" && quoteData.customOverrideReason ? `\n*Details:* ${quoteData.customOverrideReason}` : ""}${quoteData.overrideReason === "Other" && quoteData.customSetupFee ? `\n*Custom Setup Fee:* $${parseInt(quoteData.customSetupFee).toLocaleString()}` : ""}`
-      });
-    } else {
-      throw error;
-    }
+    slackLogger.error({ error, jobName, failureCount }, 'Failed to send job failure alert');
   }
 }
-
-export { sendSlackMessage, sendCleanupOverrideNotification };

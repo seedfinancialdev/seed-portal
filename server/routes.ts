@@ -7,7 +7,7 @@ import {
   insertKbCategorySchema, insertKbArticleSchema, insertKbBookmarkSchema, insertKbSearchHistorySchema
 } from "@shared/schema";
 import { z } from "zod";
-import { sendCleanupOverrideNotification } from "./slack";
+import { sendSystemAlert } from "./slack";
 import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
 import { registerAdminRoutes } from "./admin-routes";
@@ -695,11 +695,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           customOverrideReason: quoteData.customOverrideReason
         });
         
-        await sendCleanupOverrideNotification({
-          ...quoteData,
-          approvalCode,
-          customOverrideReason: quoteData.customOverrideReason
-        });
+        await sendSystemAlert(
+          'Quote Cleanup Override',
+          `Approval code: ${approvalCode}\nContact: ${contactEmail}\nCompany: ${quoteData.companyName}\nReason: ${quoteData.customOverrideReason || quoteData.overrideReason}`,
+          'medium'
+        );
       } catch (slackError) {
         console.error('Failed to send Slack notification:', slackError);
       }
@@ -1308,6 +1308,38 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     } catch (error) {
       console.error('Queue metrics error:', error);
       res.status(500).json({ message: "Failed to get queue metrics" });
+    }
+  });
+
+  // Cache statistics endpoint
+  app.get("/api/cache/stats", requireAuth, async (req, res) => {
+    try {
+      const stats = await cache.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Cache stats error:', error);
+      res.status(500).json({ message: "Failed to get cache stats" });
+    }
+  });
+
+  // Cache management endpoints
+  app.post("/api/cache/clear", requireAuth, async (req, res) => {
+    try {
+      await cache.clearAll();
+      res.json({ message: "Cache cleared successfully" });
+    } catch (error) {
+      console.error('Cache clear error:', error);
+      res.status(500).json({ message: "Failed to clear cache" });
+    }
+  });
+
+  app.post("/api/cache/reset-stats", requireAuth, async (req, res) => {
+    try {
+      cache.resetStats();
+      res.json({ message: "Cache statistics reset" });
+    } catch (error) {
+      console.error('Cache reset stats error:', error);
+      res.status(500).json({ message: "Failed to reset cache statistics" });
     }
   });
 

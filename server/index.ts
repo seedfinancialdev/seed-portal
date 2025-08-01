@@ -154,7 +154,16 @@ app.use((req, res, next) => {
     
     const { startAIInsightsWorker } = await import('./workers/ai-insights-worker');
     const worker = await startAIInsightsWorker();
-    console.log('[Server] BullMQ workers started successfully');
+    
+    // Initialize cache pre-warming
+    console.log('[Server] Initializing cache pre-warming...');
+    const { initializePreWarmQueue, scheduleNightlyPreWarm } = await import('./cache-prewarming.js');
+    const { initializePreWarmWorker } = await import('./workers/cache-prewarming-worker.js');
+    await initializePreWarmQueue();
+    await initializePreWarmWorker();
+    await scheduleNightlyPreWarm();
+    
+    console.log('[Server] BullMQ workers and cache pre-warming started successfully');
     
     const server = await registerRoutes(app, sessionRedis);
     console.log('[Server] ✅ Routes registered successfully');

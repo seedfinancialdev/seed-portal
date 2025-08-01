@@ -11,12 +11,30 @@ export interface CacheOptions {
   skipCache?: boolean; // Skip cache for this request
 }
 
+export interface CacheStats {
+  hits: number;
+  misses: number;
+  hitRate: number;
+  totalKeys: number;
+  memoryUsage: string;
+  totalOperations: number;
+  lastReset: string;
+}
+
 export class CacheService {
   private getCacheRedis() {
     const redis = getRedis();
     return redis?.cacheRedis;
   }
   private defaultTTL = 300; // 5 minutes default
+  
+  // Cache metrics tracking
+  private stats = {
+    hits: 0,
+    misses: 0,
+    totalOperations: 0,
+    lastReset: new Date().toISOString()
+  };
 
   /**
    * Generate a cache key from function name and arguments
@@ -40,12 +58,18 @@ export class CacheService {
     try {
       const cached = await cacheRedis.getAsync(key);
       if (cached) {
+        this.stats.hits++;
+        this.stats.totalOperations++;
         cacheLogger.debug({ key }, 'Cache hit');
         return JSON.parse(cached);
       }
+      this.stats.misses++;
+      this.stats.totalOperations++;
       cacheLogger.debug({ key }, 'Cache miss');
       return null;
     } catch (error) {
+      this.stats.misses++;
+      this.stats.totalOperations++;
       cacheLogger.error({ error, key }, 'Cache get error');
       return null;
     }
@@ -119,6 +143,79 @@ export class CacheService {
     await this.set(key, result, options.ttl);
     
     return result;
+  }
+
+  /**
+   * Get cache statistics
+   */
+  async getStats(): Promise<CacheStats> {
+    const cacheRedis = this.getCacheRedis();
+    let totalKeys = 0;
+    let memoryUsage = '0MB';
+
+    if (cacheRedis) {
+      try {
+        // Get Redis INFO for memory usage
+        const info = await cacheRedis.info('memory');
+        const memoryMatch = info.match(/used_memory_human:(.*)/);
+        if (memoryMatch) {
+          memoryUsage = memoryMatch[1].trim();
+        }
+
+        // Count cache keys (with prefix)
+        const keys = await cacheRedis.keys('cache:*');
+        totalKeys = keys.length;
+      } catch (error) {
+        cacheLogger.error({ error }, 'Failed to get cache stats');
+      }
+    }
+
+    const hitRate = this.stats.totalOperations > 0 
+      ? (this.stats.hits / this.stats.totalOperations) * 100 
+      : 0;
+
+    return {
+      hits: this.stats.hits,
+      misses: this.stats.misses,
+      hitRate: Math.round(hitRate * 100) / 100,
+      totalKeys,
+      memoryUsage,
+      totalOperations: this.stats.totalOperations,
+      lastReset: this.stats.lastReset
+    };
+  }
+
+  /**
+   * Reset cache statistics
+   */
+  resetStats(): void {
+    this.stats = {
+      hits: 0,
+      misses: 0,
+      totalOperations: 0,
+      lastReset: new Date().toISOString()
+    };
+    cacheLogger.info('Cache statistics reset');
+  }
+
+  /**
+   * Clear all cache entries
+   */
+  async clearAll(): Promise<void> {
+    const cacheRedis = this.getCacheRedis();
+    if (!cacheRedis) {
+      return;
+    }
+
+    try {
+      const keys = await cacheRedis.keys('cache:*');
+      if (keys.length > 0) {
+        await cacheRedis.del(...keys);
+        cacheLogger.info({ count: keys.length }, 'Cache cleared');
+      }
+    } catch (error) {
+      cacheLogger.error({ error }, 'Failed to clear cache');
+    }
   }
 }
 
