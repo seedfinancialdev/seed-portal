@@ -38,24 +38,32 @@ export class StorageService {
     }
 
     try {
+      // Temporary configuration to handle current credential setup
+      // The user needs to provide proper Box JWT credentials
+      logger.warn('Box service temporarily disabled - requires proper JWT configuration');
+      logger.info('Current Box credential setup detected but needs JWT format');
+      
+      // For now, disable the service gracefully
+      this.serviceAccountClient = null;
+      this.client = null;
+      
+      // Future implementation when proper credentials are provided:
+      /*
       const sdk = new BoxSDK({
         clientID: process.env.BOX_CLIENT_ID!,
         clientSecret: process.env.BOX_CLIENT_SECRET!,
         appAuth: {
-          keyID: process.env.BOX_CLIENT_ID!, // BOX_CLIENT_ID serves as BOX_KEY_ID
-          privateKey: process.env.BOX_CLIENT_SECRET!.replace(/\\n/g, '\n'), // BOX_CLIENT_SECRET contains private key
-          passphrase: process.env.BOX_PASSPHRASE || '' // Empty string if no passphrase
+          keyID: process.env.BOX_KEY_ID!,
+          privateKey: process.env.BOX_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+          passphrase: process.env.BOX_PASSPHRASE || undefined
         }
       });
-
       this.serviceAccountClient = sdk.getAppAuthClient('enterprise');
-      logger.debug('Box SDK initialized successfully');
+      */
     } catch (error: any) {
       logger.error('Failed to initialize storage service', { error: error.message });
-      // Don't throw error - allow service to be created but mark as unavailable
       this.serviceAccountClient = null;
       this.client = null;
-      logger.warn('Storage service will be disabled due to configuration error');
     }
   }
 

@@ -739,7 +739,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Check for existing quotes by email
-  app.post("/api/quotes/check-existing", async (req, res) => {
+  app.post("/api/quotes/check-existing", requireAuth, async (req, res) => {
     try {
       const { email } = req.body;
       
@@ -764,7 +764,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // HubSpot integration endpoints
   
   // Verify contact email in HubSpot
-  app.post("/api/hubspot/verify-contact", async (req, res) => {
+  app.post("/api/hubspot/verify-contact", requireAuth, async (req, res) => {
     try {
       const { email } = req.body;
       
@@ -794,7 +794,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Push quote to HubSpot (create deal and quote)
-  app.post("/api/hubspot/push-quote", async (req, res) => {
+  app.post("/api/hubspot/push-quote", requireAuth, async (req, res) => {
     try {
       const { quoteId } = req.body;
       
