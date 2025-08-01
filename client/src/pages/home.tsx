@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
@@ -1965,34 +1965,22 @@ export default function Home() {
                         
                         {/* Request Approval / Enter Code Button */}
                         {form.watch("cleanupOverride") && !isApproved && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="ml-4">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={hasRequestedApproval ? () => setIsApprovalDialogOpen(true) : requestApproval}
-                                    disabled={isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval)}
-                                    className="relative"
-                                  >
-                                    {isRequestingApproval ? "Requesting..." : hasRequestedApproval ? "Enter Code" : "Request Approval"}
-                                    {isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval) && (
-                                      <HelpCircle className="h-3 w-3 ml-1 text-gray-400" />
-                                    )}
-                                  </Button>
-                                </div>
-                              </TooltipTrigger>
+                          <div className="ml-4">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={hasRequestedApproval ? () => setIsApprovalDialogOpen(true) : requestApproval}
+                              disabled={isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval)}
+                              className="relative"
+                              title={getApprovalButtonDisabledReason(form.getValues(), isRequestingApproval, hasRequestedApproval) || ""}
+                            >
+                              {isRequestingApproval ? "Requesting..." : hasRequestedApproval ? "Enter Code" : "Request Approval"}
                               {isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval) && (
-                                <TooltipContent>
-                                  <p className="text-xs max-w-xs">
-                                    {getApprovalButtonDisabledReason(form.getValues(), isRequestingApproval, hasRequestedApproval)}
-                                  </p>
-                                </TooltipContent>
+                                <HelpCircle className="h-3 w-3 ml-1 text-gray-400" />
                               )}
-                            </Tooltip>
-                          </TooltipProvider>
+                            </Button>
+                          </div>
                         )}
                         
                         {/* Approval Status */}
