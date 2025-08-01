@@ -87,6 +87,18 @@ Preferred communication style: Simple, everyday language.
 - **Admin Access**: Hardcoded admin role protection for jon@seedfinancial.io
 - **Session Establishment**: Simplified OAuth sync logic eliminates Redis session regeneration issues
 
+### AI-Powered Client Intelligence ✅ **FULLY OPERATIONAL** (August 1, 2025)
+- **AI Insights Generation**: Comprehensive pain points analysis, service gap detection, and risk scoring
+- **Queue-Based Processing**: BullMQ handles expensive AI operations with real-time progress tracking
+- **Enhanced AI Prompts**: Optimized to generate meaningful insights even with sparse client data
+- **Robust Error Handling**: Graceful fallbacks and detailed logging for AI operations
+- **Cache Integration**: AI results cached for 1 hour with proper TTL configuration
+- **Client Intelligence Features**:
+  - Pain points extraction from business context and industry patterns
+  - Service gap analysis with realistic upsell opportunities
+  - Risk score calculation (0-100) based on engagement and business factors
+  - Real-time job progress tracking with polling mechanism
+
 ### Performance Optimizations
 - **API Response Caching**: Comprehensive caching layer for external API calls:
   - Dashboard metrics cached for 5 minutes (10x faster loads)
