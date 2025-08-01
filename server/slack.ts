@@ -8,8 +8,8 @@ if (!process.env.SLACK_BOT_TOKEN) {
   throw new Error("SLACK_BOT_TOKEN environment variable must be set");
 }
 
-if (!process.env.SLACK_CHANNEL_ID) {
-  throw new Error("SLACK_CHANNEL_ID environment variable must be set");
+if (!process.env.SLACK_PA_CHANNEL_ID) {
+  throw new Error("SLACK_PA_CHANNEL_ID environment variable must be set");
 }
 
 const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
@@ -28,7 +28,7 @@ export async function sendSlackMessage(
   }
 ): Promise<string | undefined> {
   try {
-    const channel = message.channel || process.env.SLACK_CHANNEL_ID;
+    const channel = message.channel || process.env.SLACK_PA_CHANNEL_ID;
     
     // Send the message
     const response = await slack.chat.postMessage({
