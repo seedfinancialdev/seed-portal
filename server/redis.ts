@@ -44,6 +44,14 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
       },
     };
 
+    // BullMQ-specific options (no maxRetriesPerRequest)
+    const queueOptions = {
+      enableReadyCheck: true,
+      maxRetriesPerRequest: null, // Required for BullMQ
+      retryStrategy: baseOptions.retryStrategy,
+      reconnectOnError: baseOptions.reconnectOnError,
+    };
+
     // Session Redis - no key prefix
     const sessionRedis = new Redis(redisUrl, {
       ...baseOptions,
@@ -58,7 +66,7 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
 
     // Queue Redis - NO keyPrefix for BullMQ compatibility  
     const queueRedis = new Redis(redisUrl, {
-      ...baseOptions,
+      ...queueOptions,
       keyPrefix: '', // BullMQ doesn't support keyPrefix in ioredis instances
     });
     
