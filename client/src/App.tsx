@@ -9,7 +9,6 @@ import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { RoleBasedRedirect } from "@/components/RoleBasedRedirect";
-import { lazy } from "react";
 import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
 import AuthPage from "@/pages/auth-page-google";
@@ -26,6 +25,7 @@ import UserManagement from "@/pages/user-management";
 import RequestAccess from "@/pages/request-access";
 import CDNMonitoring from "@/pages/CDNMonitoring";
 import CDNTest from "@/pages/CDNTest";
+import StripeDashboard from "@/pages/stripe-dashboard";
 
 function Router() {
   // Automatically scroll to top when route changes
@@ -46,7 +46,7 @@ function Router() {
         <ProtectedRoute path="/kb-admin" component={KbAdmin} />
         <ProtectedRoute path="/user-management" component={UserManagement} />
         <ProtectedRoute path="/cdn-monitoring" component={CDNMonitoring} />
-        <ProtectedRoute path="/stripe-dashboard" component={lazy(() => import('./pages/stripe-dashboard'))} />
+        <ProtectedRoute path="/stripe-dashboard" component={StripeDashboard} />
         <ProtectedRoute path="/cdn-test" component={CDNTest} />
         <ProtectedRoute path="/profile" component={Profile} />
         <Route path="/auth" component={AuthPage} />
