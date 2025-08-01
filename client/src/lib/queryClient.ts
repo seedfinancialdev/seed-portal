@@ -34,9 +34,35 @@ export async function apiRequest(
     url = urlOrMethod;
     const options = optionsOrUrl || {};
     method = options.method || 'GET';
-    data = options.body ? JSON.parse(options.body) : undefined;
+    // Handle both raw data objects and pre-stringified JSON bodies
+    if (options.body) {
+      if (typeof options.body === 'string') {
+        data = options.body; // Already stringified
+      } else {
+        data = options.body; // Raw object, will be stringified later
+      }
+    }
+    
+    // Build request options with custom headers support
+    const requestOptions: RequestInit = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {}), // Merge custom headers (like Authorization)
+      },
+      credentials: 'include', // This sends session cookies for authentication
+    };
+
+    // Handle body based on whether it's already stringified or not
+    if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+      requestOptions.body = typeof data === 'string' ? data : JSON.stringify(data);
+    }
+
+    const response = await fetch(url, requestOptions);
+    return response;
   }
 
+  // For new signature calls, build standard request options
   const requestOptions: RequestInit = {
     method,
     headers: {

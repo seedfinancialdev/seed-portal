@@ -62,6 +62,9 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       if (!googleUser || !accessToken) return null;
       
       try {
+        console.log('[Frontend] 🔄 Calling OAuth sync endpoint with token:', accessToken?.substring(0, 20) + '...');
+        console.log('[Frontend] 🔄 User data:', { email: googleUser.email, googleId: googleUser.sub?.substring(0, 10) + '...' });
+        
         // Sync user with backend
         const response = await apiRequest("/api/auth/google/sync", {
           method: "POST",
@@ -77,8 +80,12 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           }),
         });
         
+        console.log('[Frontend] ✅ OAuth sync response received:', response);
         return response;
       } catch (error: any) {
+        console.error('[Frontend] ❌ OAuth sync failed:', error);
+        console.error('[Frontend] ❌ Error details:', { message: error.message, status: error.status });
+        
         // Handle access denied case
         if (error.message?.includes('ACCESS_NOT_GRANTED') || error.status === 403) {
           // User needs admin approval - this will be handled by the component
