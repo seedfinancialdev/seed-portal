@@ -1,0 +1,58 @@
+🔍 INFRASTRUCTURE TEST SUITE
+_app-5a82e40b58b47320.js:13 Testing all monitoring systems...
+
+_app-5a82e40b58b47320.js:13 
+⏱️ Running tests... check results above in ~2 seconds
+/api/test-slack:1  Failed to load resource: the server responded with a status of 403 ()
+_app-5a82e40b58b47320.js:13 ❌ Slack Test Failed: SyntaxError: Unexpected token 'E', "Expected X"... is not valid JSON
+(anonymous) @ _app-5a82e40b58b47320.js:13
+(anonymous) @ unknown
+/api/queue/metrics:1  Failed to load resource: the server responded with a status of 404 ()
+_app-5a82e40b58b47320.js:13 ❌ Queue Metrics Failed: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+(anonymous) @ _app-5a82e40b58b47320.js:13
+(anonymous) @ unknown
+/api/dashboard/metrics:1  Failed to load resource: the server responded with a status of 404 ()
+_app-5a82e40b58b47320.js:13 ❌ Dashboard Metrics Failed: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+(anonymous) @ _app-5a82e40b58b47320.js:13
+(anonymous) @ unknown
+/api/cache/stats:1  Failed to load resource: the server responded with a status of 404 ()
+_app-5a82e40b58b47320.js:13 ❌ Cache Stats Failed: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+(anonymous) @ _app-5a82e40b58b47320.js:13
+(anonymous) @ unknown
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-dcf16bcf65ad11b7becd6b335652ce17.js:1:218445
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-dcf16bcf65ad11b7becd6b335652ce17.js:1:218445
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-dcf16bcf65ad11b7becd6b335652ce17.js:1:218445
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Abeacon%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A7d8bc3ac&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=101acb43-6c4b-40a8-a692-91564e34261b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1  POST https://r.stripe.com/b net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+e @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+c @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+value @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+(anonymous) @ shared-dcf16bcf65ad11b7becd6b335652ce17.js:1
+shared-dcf16bcf65ad11b7becd6b335652ce17.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-dcf16bcf65ad11b7becd6b335652ce17.js:1:218445
