@@ -93,6 +93,14 @@ const formSchema = insertQuoteSchema.omit({
   clientCountry: z.string().default("US"),
   // Company name lock status
   companyNameLocked: z.boolean().default(true),
+  // Additional client detail fields with lock status
+  contactFirstName: z.string().optional(),
+  contactFirstNameLocked: z.boolean().default(true),
+  contactLastName: z.string().optional(),
+  contactLastNameLocked: z.boolean().default(true),
+  industryLocked: z.boolean().default(true),
+  companyAddressLocked: z.boolean().default(true),
+  monthlyRevenueRange: z.string().optional(),
   // TaaS fields
   numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
   customNumEntities: z.number().min(6, "Custom entities must be at least 6").optional(),
@@ -1104,14 +1112,14 @@ export default function Home() {
       clientCountry: "US",
       // Company name lock status
       companyNameLocked: true,
-      // Client address fields
-      clientStreetAddress: "",
-      clientCity: "",
-      clientState: "",
-      clientZipCode: "",
-      clientCountry: "US",
-      // Company name lock status
-      companyNameLocked: true,
+      // Additional client detail fields with lock status
+      contactFirstName: "",
+      contactFirstNameLocked: true,
+      contactLastName: "",
+      contactLastNameLocked: true,
+      industryLocked: true,
+      companyAddressLocked: true,
+      monthlyRevenueRange: "",
       quoteType: "bookkeeping",
       // Service flags for combined quotes
       includesBookkeeping: true,
@@ -1326,17 +1334,380 @@ export default function Home() {
           backButtonPath="/" 
         />
 
-        {/* New 5-Service Card System */}
-        <div className="max-w-5xl mx-auto mb-8">
-          <h2 className="text-xl font-semibold text-white mb-4 text-center">Select Services</h2>
-          <div className="grid grid-cols-5 gap-3">
+        {/* Client Details Section - Separate from quote form */}
+        <Card className="max-w-6xl mx-auto mb-8 bg-white/95 backdrop-blur-sm shadow-xl border-0">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
+                <User className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Client Details</h2>
+                <p className="text-sm text-gray-500">Enter client information to start the quote</p>
+              </div>
+            </div>
+            
+            <Form {...form}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Contact Email - Primary starter field */}
+                <FormField
+                  control={form.control}
+                  name="contactEmail"
+                  render={({ field }) => (
+                    <FormItem className="lg:col-span-1">
+                      <FormLabel className="text-gray-700 font-medium">Contact Email *</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type="email"
+                            placeholder="client@company.com"
+                            className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500 pr-10"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              const email = e.target.value;
+                              
+                              if (!email.trim()) {
+                                setExistingQuotesForEmail([]);
+                                setShowExistingQuotesNotification(false);
+                                setHubspotVerificationStatus('idle');
+                                setHubspotContact(null);
+                                setLastVerifiedEmail('');
+                                setSearchTerm("");
+                                form.setValue('companyName', '');
+                              }
+                              
+                              debouncedVerifyEmail(email);
+                            }}
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            {hubspotVerificationStatus === 'verifying' && (
+                              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                            )}
+                            {hubspotVerificationStatus === 'verified' && (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            )}
+                            {hubspotVerificationStatus === 'not-found' && (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            )}
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Company Name with lock/unlock */}
+                <FormField
+                  control={form.control}
+                  name="companyName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">Company Name</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input 
+                            placeholder="Acme Corporation"
+                            className={`${form.watch('companyNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                            readOnly={form.watch('companyNameLocked')}
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newValue = !form.watch('companyNameLocked');
+                              form.setValue('companyNameLocked', newValue);
+                              if (!newValue) {
+                                setTimeout(() => {
+                                  const input = document.querySelector('input[name="companyName"]') as HTMLInputElement;
+                                  input?.focus();
+                                }, 100);
+                              }
+                            }}
+                            className="px-3 border-gray-300 hover:bg-gray-50"
+                          >
+                            {form.watch('companyNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                      {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
+                        <p className="text-xs text-green-600 mt-1">
+                          ✓ Found in HubSpot: {hubspotContact.properties.company}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                {/* Contact First Name */}
+                <FormField
+                  control={form.control}
+                  name="contactFirstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">First Name</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input 
+                            placeholder="John"
+                            className={`${form.watch('contactFirstNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                            readOnly={form.watch('contactFirstNameLocked')}
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newValue = !form.watch('contactFirstNameLocked');
+                              form.setValue('contactFirstNameLocked', newValue);
+                            }}
+                            className="px-3 border-gray-300 hover:bg-gray-50"
+                          >
+                            {form.watch('contactFirstNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Contact Last Name */}
+                <FormField
+                  control={form.control}
+                  name="contactLastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">Last Name</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input 
+                            placeholder="Smith"
+                            className={`${form.watch('contactLastNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                            readOnly={form.watch('contactLastNameLocked')}
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newValue = !form.watch('contactLastNameLocked');
+                              form.setValue('contactLastNameLocked', newValue);
+                            }}
+                            className="px-3 border-gray-300 hover:bg-gray-50"
+                          >
+                            {form.watch('contactLastNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Industry */}
+                <FormField
+                  control={form.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">Industry</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Select onValueChange={field.onChange} value={field.value} disabled={form.watch('industryLocked')}>
+                            <SelectTrigger className={`${form.watch('industryLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}>
+                              <SelectValue placeholder="Select industry" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Technology">Technology</SelectItem>
+                              <SelectItem value="Healthcare">Healthcare</SelectItem>
+                              <SelectItem value="Finance">Finance</SelectItem>
+                              <SelectItem value="Retail">Retail</SelectItem>
+                              <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                              <SelectItem value="Real Estate">Real Estate</SelectItem>
+                              <SelectItem value="Professional Services">Professional Services</SelectItem>
+                              <SelectItem value="Construction">Construction</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newValue = !form.watch('industryLocked');
+                              form.setValue('industryLocked', newValue);
+                            }}
+                            className="px-3 border-gray-300 hover:bg-gray-50"
+                          >
+                            {form.watch('industryLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Monthly Revenue Range */}
+                <FormField
+                  control={form.control}
+                  name="monthlyRevenueRange"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">Monthly Revenue Range</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                            <SelectValue placeholder="Select revenue range" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="0-10k">$0 - $10,000</SelectItem>
+                          <SelectItem value="10k-25k">$10,000 - $25,000</SelectItem>
+                          <SelectItem value="25k-50k">$25,000 - $50,000</SelectItem>
+                          <SelectItem value="50k-100k">$50,000 - $100,000</SelectItem>
+                          <SelectItem value="100k-250k">$100,000 - $250,000</SelectItem>
+                          <SelectItem value="250k-500k">$250,000 - $500,000</SelectItem>
+                          <SelectItem value="500k-1m">$500,000 - $1,000,000</SelectItem>
+                          <SelectItem value="1m+">$1,000,000+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Entity Type */}
+                <FormField
+                  control={form.control}
+                  name="entityType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-gray-700 font-medium">Entity Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                            <SelectValue placeholder="Select entity type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="LLC">LLC</SelectItem>
+                          <SelectItem value="Corporation">Corporation</SelectItem>
+                          <SelectItem value="S-Corporation">S-Corporation</SelectItem>
+                          <SelectItem value="Partnership">Partnership</SelectItem>
+                          <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Company Address - Full width */}
+                <div className="lg:col-span-3">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Building className="h-5 w-5 text-gray-600" />
+                    <h3 className="text-md font-semibold text-gray-700">Company Address</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newValue = !form.watch('companyAddressLocked');
+                        form.setValue('companyAddressLocked', newValue);
+                      }}
+                      className="px-3 border-gray-300 hover:bg-gray-50 ml-auto"
+                    >
+                      {form.watch('companyAddressLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="clientStreetAddress"
+                      render={({ field }) => (
+                        <FormItem className="lg:col-span-2">
+                          <FormLabel className="text-sm text-gray-600">Street Address</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="123 Main Street"
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              readOnly={form.watch('companyAddressLocked')}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="clientCity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-gray-600">City</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Los Angeles"
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              readOnly={form.watch('companyAddressLocked')}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="clientState"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-gray-600">State</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="CA"
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              readOnly={form.watch('companyAddressLocked')}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Form>
+          </CardContent>
+        </Card>
+
+        {/* Enhanced 5-Service Card System */}
+        <div className="max-w-6xl mx-auto mb-8">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-white mb-2">Select Services</h2>
+            <p className="text-white/80">Choose the services you'd like to include in this quote</p>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Bookkeeping Service Card */}
-            <div 
+            <Card 
               className={`
-                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                cursor-pointer transition-all duration-300 hover:scale-105 border-2 shadow-lg
                 ${form.watch('serviceBookkeeping')
-                  ? 'bg-white border-green-500 shadow-green-200' 
-                  : 'bg-white/90 border-gray-300 hover:border-green-300 hover:shadow-md'
+                  ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-400 shadow-green-200' 
+                  : 'bg-white/95 backdrop-blur-sm border-gray-200 hover:border-green-300 hover:shadow-xl'
                 }
               `}
               onClick={() => {
@@ -1345,25 +1716,33 @@ export default function Home() {
                 form.trigger();
               }}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                form.watch('serviceBookkeeping') ? 'bg-green-500' : 'bg-gray-300'
-              }`}>
-                {form.watch('serviceBookkeeping') && <Check className="h-5 w-5 text-white" />}
-              </div>
-              <h4 className={`font-semibold text-sm ${
-                form.watch('serviceBookkeeping') ? 'text-green-800' : 'text-gray-600'
-              }`}>
-                Bookkeeping
-              </h4>
-            </div>
+              <CardContent className="p-6 text-center">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                  form.watch('serviceBookkeeping') ? 'bg-green-500 shadow-lg' : 'bg-gray-300'
+                }`}>
+                  {form.watch('serviceBookkeeping') ? 
+                    <Check className="h-8 w-8 text-white" /> : 
+                    <Calculator className="h-8 w-8 text-gray-500" />
+                  }
+                </div>
+                <h4 className={`font-bold text-lg mb-2 ${
+                  form.watch('serviceBookkeeping') ? 'text-green-800' : 'text-gray-700'
+                }`}>
+                  Bookkeeping
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Monthly books, cleanup & financial statements
+                </p>
+              </CardContent>
+            </Card>
 
             {/* TaaS Service Card */}
-            <div 
+            <Card 
               className={`
-                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                cursor-pointer transition-all duration-300 hover:scale-105 border-2 shadow-lg
                 ${form.watch('serviceTaas')
-                  ? 'bg-white border-blue-500 shadow-blue-200' 
-                  : 'bg-white/90 border-gray-300 hover:border-blue-300 hover:shadow-md'
+                  ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-400 shadow-blue-200' 
+                  : 'bg-white/95 backdrop-blur-sm border-gray-200 hover:border-blue-300 hover:shadow-xl'
                 }
               `}
               onClick={() => {
@@ -1372,25 +1751,33 @@ export default function Home() {
                 form.trigger();
               }}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                form.watch('serviceTaas') ? 'bg-blue-500' : 'bg-gray-300'
-              }`}>
-                {form.watch('serviceTaas') && <Check className="h-5 w-5 text-white" />}
-              </div>
-              <h4 className={`font-semibold text-sm ${
-                form.watch('serviceTaas') ? 'text-blue-800' : 'text-gray-600'
-              }`}>
-                TaaS
-              </h4>
-            </div>
+              <CardContent className="p-6 text-center">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                  form.watch('serviceTaas') ? 'bg-blue-500 shadow-lg' : 'bg-gray-300'
+                }`}>
+                  {form.watch('serviceTaas') ? 
+                    <Check className="h-8 w-8 text-white" /> : 
+                    <FileText className="h-8 w-8 text-gray-500" />
+                  }
+                </div>
+                <h4 className={`font-bold text-lg mb-2 ${
+                  form.watch('serviceTaas') ? 'text-blue-800' : 'text-gray-700'
+                }`}>
+                  TaaS
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Tax preparation, filing & planning services
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Payroll Service Card */}
-            <div 
+            <Card 
               className={`
-                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                cursor-pointer transition-all duration-300 hover:scale-105 border-2 shadow-lg
                 ${form.watch('servicePayroll')
-                  ? 'bg-white border-purple-500 shadow-purple-200' 
-                  : 'bg-white/90 border-gray-300 hover:border-purple-300 hover:shadow-md'
+                  ? 'bg-gradient-to-br from-purple-50 to-violet-50 border-purple-400 shadow-purple-200' 
+                  : 'bg-white/95 backdrop-blur-sm border-gray-200 hover:border-purple-300 hover:shadow-xl'
                 }
               `}
               onClick={() => {
@@ -1399,25 +1786,33 @@ export default function Home() {
                 form.trigger();
               }}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                form.watch('servicePayroll') ? 'bg-purple-500' : 'bg-gray-300'
-              }`}>
-                {form.watch('servicePayroll') && <Check className="h-5 w-5 text-white" />}
-              </div>
-              <h4 className={`font-semibold text-sm ${
-                form.watch('servicePayroll') ? 'text-purple-800' : 'text-gray-600'
-              }`}>
-                Payroll
-              </h4>
-            </div>
+              <CardContent className="p-6 text-center">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                  form.watch('servicePayroll') ? 'bg-purple-500 shadow-lg' : 'bg-gray-300'
+                }`}>
+                  {form.watch('servicePayroll') ? 
+                    <Check className="h-8 w-8 text-white" /> : 
+                    <User className="h-8 w-8 text-gray-500" />
+                  }
+                </div>
+                <h4 className={`font-bold text-lg mb-2 ${
+                  form.watch('servicePayroll') ? 'text-purple-800' : 'text-gray-700'
+                }`}>
+                  Payroll
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Employee payroll processing & tax filings
+                </p>
+              </CardContent>
+            </Card>
 
             {/* AP/AR Lite Service Card */}
-            <div 
+            <Card 
               className={`
-                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                cursor-pointer transition-all duration-300 hover:scale-105 border-2 shadow-lg
                 ${form.watch('serviceApArLite')
-                  ? 'bg-white border-orange-500 shadow-orange-200' 
-                  : 'bg-white/90 border-gray-300 hover:border-orange-300 hover:shadow-md'
+                  ? 'bg-gradient-to-br from-orange-50 to-amber-50 border-orange-400 shadow-orange-200' 
+                  : 'bg-white/95 backdrop-blur-sm border-gray-200 hover:border-orange-300 hover:shadow-xl'
                 }
               `}
               onClick={() => {
@@ -1426,25 +1821,33 @@ export default function Home() {
                 form.trigger();
               }}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                form.watch('serviceApArLite') ? 'bg-orange-500' : 'bg-gray-300'
-              }`}>
-                {form.watch('serviceApArLite') && <Check className="h-5 w-5 text-white" />}
-              </div>
-              <h4 className={`font-semibold text-sm ${
-                form.watch('serviceApArLite') ? 'text-orange-800' : 'text-gray-600'
-              }`}>
-                AP/AR Lite
-              </h4>
-            </div>
+              <CardContent className="p-6 text-center">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                  form.watch('serviceApArLite') ? 'bg-orange-500 shadow-lg' : 'bg-gray-300'
+                }`}>
+                  {form.watch('serviceApArLite') ? 
+                    <Check className="h-8 w-8 text-white" /> : 
+                    <ArrowUpDown className="h-8 w-8 text-gray-500" />
+                  }
+                </div>
+                <h4 className={`font-bold text-lg mb-2 ${
+                  form.watch('serviceApArLite') ? 'text-orange-800' : 'text-gray-700'
+                }`}>
+                  AP/AR Lite
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Accounts payable & receivable management
+                </p>
+              </CardContent>
+            </Card>
 
             {/* FP&A Lite Service Card */}
-            <div 
+            <Card 
               className={`
-                cursor-pointer transition-all duration-200 rounded-lg p-4 border-2 shadow-sm text-center
+                cursor-pointer transition-all duration-300 hover:scale-105 border-2 shadow-lg
                 ${form.watch('serviceFpaLite')
-                  ? 'bg-white border-teal-500 shadow-teal-200' 
-                  : 'bg-white/90 border-gray-300 hover:border-teal-300 hover:shadow-md'
+                  ? 'bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-400 shadow-teal-200' 
+                  : 'bg-white/95 backdrop-blur-sm border-gray-200 hover:border-teal-300 hover:shadow-xl'
                 }
               `}
               onClick={() => {
@@ -1453,17 +1856,25 @@ export default function Home() {
                 form.trigger();
               }}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 ${
-                form.watch('serviceFpaLite') ? 'bg-teal-500' : 'bg-gray-300'
-              }`}>
-                {form.watch('serviceFpaLite') && <Check className="h-5 w-5 text-white" />}
-              </div>
-              <h4 className={`font-semibold text-sm ${
-                form.watch('serviceFpaLite') ? 'text-teal-800' : 'text-gray-600'
-              }`}>
-                FP&A Lite
-              </h4>
-            </div>
+              <CardContent className="p-6 text-center">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${
+                  form.watch('serviceFpaLite') ? 'bg-teal-500 shadow-lg' : 'bg-gray-300'
+                }`}>
+                  {form.watch('serviceFpaLite') ? 
+                    <Check className="h-8 w-8 text-white" /> : 
+                    <Sparkles className="h-8 w-8 text-gray-500" />
+                  }
+                </div>
+                <h4 className={`font-bold text-lg mb-2 ${
+                  form.watch('serviceFpaLite') ? 'text-teal-800' : 'text-gray-700'
+                }`}>
+                  FP&A Lite
+                </h4>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Financial planning & analysis support
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
 

@@ -52,6 +52,14 @@ export const quotes = pgTable("quotes", {
   clientCountry: text("client_country").default("US"),
   // Company name unlock status
   companyNameLocked: boolean("company_name_locked").default(true),
+  // Additional client detail fields with lock status
+  contactFirstName: text("contact_first_name"),
+  contactFirstNameLocked: boolean("contact_first_name_locked").default(true),
+  contactLastName: text("contact_last_name"),
+  contactLastNameLocked: boolean("contact_last_name_locked").default(true),
+  industryLocked: boolean("industry_locked").default(true),
+  companyAddressLocked: boolean("company_address_locked").default(true),
+  monthlyRevenueRange: text("monthly_revenue_range"),
   // User ownership
   ownerId: integer("owner_id").notNull(),
   // HubSpot integration fields
