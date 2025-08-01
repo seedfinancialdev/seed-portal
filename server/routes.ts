@@ -1116,7 +1116,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // Generate AI insights for a client using real data
+  // Generate AI insights for a client using async queue processing
   app.post("/api/client-intel/generate-insights", requireAuth, async (req, res) => {
     try {
       const { clientId } = req.body;
@@ -1125,60 +1125,144 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(400).json({ message: "Client ID is required" });
       }
 
-      // Use cache for AI insights generation
+      // Check cache first for immediate response
       const cacheKey = cache.generateKey(CachePrefix.OPENAI_ANALYSIS, clientId);
-      const insights = await cache.wrap(
-        cacheKey,
-        async () => {
-          // Get client data from HubSpot first
-          let clientData: any = {};
-          
-          try {
-            if (hubSpotService) {
-              const contact = await hubSpotService.getContactById(clientId);
-              if (contact) {
-                clientData = {
-                  companyName: contact.properties.company || 'Unknown Company',
-                  industry: contact.properties.industry || null,
-                  revenue: contact.properties.annualrevenue,
-                  employees: parseInt(contact.properties.numemployees) || undefined,
-                  lifecycleStage: contact.properties.lifecyclestage || 'lead',
-                  services: await clientIntelEngine.getContactServices(clientId),
-                  hubspotProperties: contact.properties,
-                  lastActivity: contact.properties.lastmodifieddate,
-                  recentActivities: [] // Would fetch from activities API
-                };
-              }
-            }
-          } catch (hubspotError) {
-            console.error('HubSpot data fetch failed:', hubspotError);
-            // Continue with limited data for analysis
+      const cachedInsights = await cache.get(cacheKey);
+      
+      if (cachedInsights) {
+        console.log('Cache hit - returning cached insights for client:', clientId);
+        return res.json(cachedInsights);
+      }
+
+      // Check if job is already in progress
+      const jobStatusKey = `job:insights:${clientId}`;
+      const existingJobId = await cache.get(jobStatusKey);
+      
+      if (existingJobId) {
+        // Return job status if already processing
+        const { aiInsightsQueue } = await import('./queue.js');
+        const job = await aiInsightsQueue.getJob(existingJobId);
+        
+        if (job && (await job.getState()) === 'active') {
+          return res.json({
+            status: 'processing',
+            progress: job.progress,
+            jobId: existingJobId,
+            message: 'AI insights are being generated. Check back shortly.'
+          });
+        }
+      }
+
+      // Get client data from HubSpot first
+      let clientData: any = {};
+      
+      try {
+        if (hubSpotService) {
+          const contact = await hubSpotService.getContactById(clientId);
+          if (contact) {
+            clientData = {
+              companyName: contact.properties.company || 'Unknown Company',
+              industry: contact.properties.industry || null,
+              revenue: contact.properties.annualrevenue,
+              employees: parseInt(contact.properties.numemployees) || undefined,
+              lifecycleStage: contact.properties.lifecyclestage || 'lead',
+              services: await clientIntelEngine.getContactServices(clientId),
+              hubspotProperties: contact.properties,
+              lastActivity: contact.properties.lastmodifieddate,
+              recentActivities: [] // Would fetch from activities API
+            };
           }
+        }
+      } catch (hubspotError) {
+        console.error('HubSpot data fetch failed:', hubspotError);
+        // Continue with limited data for analysis
+      }
 
-          // Generate AI insights using the intelligence engine
-          const [painPoints, serviceGaps, riskScore] = await Promise.all([
-            clientIntelEngine.extractPainPoints(clientData),
-            clientIntelEngine.detectServiceGaps(clientData),
-            clientIntelEngine.calculateRiskScore(clientData)
-          ]);
+      // Queue the expensive AI analysis
+      const { aiInsightsQueue } = await import('./queue.js');
+      const job = await aiInsightsQueue.add('generate-insights', {
+        contactId: clientId,
+        clientData,
+        userId: req.user?.id || 0,
+        timestamp: Date.now()
+      }, {
+        priority: 1, // High priority
+        delay: 0,
+      });
 
-          return {
-            painPoints,
-            upsellOpportunities: serviceGaps.map(signal => 
-              `${signal.title} - ${signal.estimatedValue || 'Pricing TBD'}`
-            ),
-            riskScore,
-            lastAnalyzed: new Date().toISOString(),
-            signals: serviceGaps
-          };
-        },
-        { ttl: CacheTTL.OPENAI_ANALYSIS }
-      );
+      // Store job ID temporarily for status checks
+      await cache.set(jobStatusKey, job.id, { ttl: 300 }); // 5 minutes
 
-      res.json(insights);
+      console.log(`[Queue] 🔄 Queued AI insights job ${job.id} for client ${clientId}`);
+
+      // Return job status for polling
+      res.json({
+        status: 'queued',
+        jobId: job.id,
+        progress: 0,
+        message: 'AI insights queued for processing. Check back shortly.'
+      });
+
     } catch (error) {
       console.error('Insight generation error:', error);
       res.status(500).json({ message: "Failed to generate insights" });
+    }
+  });
+
+  // Job status endpoint for polling AI insights progress
+  app.get("/api/jobs/:jobId/status", requireAuth, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const { aiInsightsQueue } = await import('./queue.js');
+      
+      const job = await aiInsightsQueue.getJob(jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      const state = await job.getState();
+      const progress = job.progress || 0;
+
+      if (state === 'completed') {
+        const result = job.returnvalue;
+        // Cache the result for future requests
+        const { contactId } = job.data;
+        const cacheKey = cache.generateKey(CachePrefix.OPENAI_ANALYSIS, contactId);
+        await cache.set(cacheKey, result, { ttl: CacheTTL.OPENAI_ANALYSIS });
+        
+        res.json({
+          status: 'completed',
+          progress: 100,
+          result
+        });
+      } else if (state === 'failed') {
+        res.json({
+          status: 'failed',
+          progress: 100,
+          error: job.failedReason
+        });
+      } else {
+        res.json({
+          status: state,
+          progress,
+          message: state === 'active' ? 'Processing AI insights...' : 'Job in queue'
+        });
+      }
+    } catch (error) {
+      console.error('Job status error:', error);
+      res.status(500).json({ message: "Failed to get job status" });
+    }
+  });
+
+  // Queue metrics endpoint
+  app.get("/api/queue/metrics", requireAuth, async (req, res) => {
+    try {
+      const { getQueueMetrics } = await import('./queue.js');
+      const metrics = getQueueMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Queue metrics error:', error);
+      res.status(500).json({ message: "Failed to get queue metrics" });
     }
   });
 

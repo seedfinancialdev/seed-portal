@@ -170,24 +170,47 @@ export default function ClientIntel() {
     }
   }, [searchError, toast]);
 
-  // Generate AI insights for selected client
+  // State for job polling
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [jobProgress, setJobProgress] = useState(0);
+  const [jobStatus, setJobStatus] = useState<string>("");
+
+  // Generate AI insights for selected client (async with polling)
   const generateInsightsMutation = useMutation({
     mutationFn: async (clientId: string) => {
       const response = await apiRequest("POST", "/api/client-intel/generate-insights", { clientId });
       return response.json();
     },
     onSuccess: (data) => {
-      if (selectedClient) {
-        setSelectedClient({ ...selectedClient, ...data });
+      if (data.status === 'queued' || data.status === 'processing') {
+        // Start polling for job completion
+        setCurrentJobId(data.jobId);
+        setJobProgress(data.progress || 0);
+        setJobStatus(data.status);
+        setIsGeneratingInsights(true);
+        
+        toast({
+          title: "AI Analysis Started",
+          description: data.message || "Processing insights in the background..."
+        });
+        
+        // Start polling
+        pollJobStatus(data.jobId);
+      } else {
+        // Direct response (cached result)
+        if (selectedClient) {
+          setSelectedClient({ ...selectedClient, ...data });
+        }
+        setIsGeneratingInsights(false);
+        toast({
+          title: "Insights Generated",
+          description: "AI analysis complete with recommendations."
+        });
       }
-      setIsGeneratingInsights(false);
-      toast({
-        title: "Insights Generated",
-        description: "AI analysis complete with new recommendations."
-      });
     },
     onError: (error: any) => {
       setIsGeneratingInsights(false);
+      setCurrentJobId(null);
       toast({
         title: "Analysis Failed",
         description: error.message || "Failed to generate insights. Please try again.",
@@ -195,6 +218,64 @@ export default function ClientIntel() {
       });
     }
   });
+
+  // Poll job status until completion
+  const pollJobStatus = async (jobId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await apiRequest("GET", `/api/jobs/${jobId}/status`);
+        const statusData = await response.json();
+        
+        setJobProgress(statusData.progress || 0);
+        setJobStatus(statusData.status);
+        
+        if (statusData.status === 'completed') {
+          clearInterval(pollInterval);
+          setIsGeneratingInsights(false);
+          setCurrentJobId(null);
+          
+          // Update client with results
+          if (selectedClient && statusData.result) {
+            setSelectedClient({ ...selectedClient, ...statusData.result });
+          }
+          
+          toast({
+            title: "Insights Complete",
+            description: "AI analysis finished with new recommendations."
+          });
+        } else if (statusData.status === 'failed') {
+          clearInterval(pollInterval);
+          setIsGeneratingInsights(false);
+          setCurrentJobId(null);
+          
+          toast({
+            title: "Analysis Failed",
+            description: statusData.error || "Background processing failed. Please try again.",
+            variant: "destructive"
+          });
+        }
+      } catch (error) {
+        console.error('Polling error:', error);
+        clearInterval(pollInterval);
+        setIsGeneratingInsights(false);
+        setCurrentJobId(null);
+      }
+    }, 2000); // Poll every 2 seconds
+    
+    // Clean up after 5 minutes
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      if (currentJobId) {
+        setIsGeneratingInsights(false);
+        setCurrentJobId(null);
+        toast({
+          title: "Analysis Timeout",
+          description: "Processing is taking longer than expected. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }, 300000); // 5 minutes timeout
+  };
 
   const handleClientSelect = async (client: any) => {
     setSelectedClient(client);
@@ -398,13 +479,15 @@ export default function ClientIntel() {
                       </div>
                       <Button
                         onClick={handleGenerateInsights}
-                        disabled={generateInsightsMutation.isPending}
+                        disabled={generateInsightsMutation.isPending || isGeneratingInsights}
                         className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white"
                       >
-                        {generateInsightsMutation.isPending ? (
+                        {isGeneratingInsights ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Analyzing...
+                            {jobStatus === 'queued' ? 'Queued...' : 
+                             jobStatus === 'active' ? `Processing ${jobProgress}%` : 
+                             'Analyzing...'}
                           </>
                         ) : (
                           <>
