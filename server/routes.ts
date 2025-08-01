@@ -2087,15 +2087,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         .filter((c: any) => c.status === 'succeeded' && c.livemode === true)
         .sort((a: any, b: any) => b.created - a.created); // Sort by most recent first
       
-      // Simple currency conversion rates (in a production app, you'd use a real-time API)
-      const exchangeRates: Record<string, number> = {
-        'usd': 1.0,
-        'mxn': 0.059, // 1 MXN = ~0.059 USD (approximate)
-        'eur': 1.09,
-        'gbp': 1.27,
-        'cad': 0.73
-      };
-
       console.log(`Found ${succeededCharges.length} successful live charges:`);
       succeededCharges.forEach((charge: any, index: number) => {
         const chargeType = charge.id.startsWith('ch_') ? 'CHARGE' : 
@@ -2103,31 +2094,35 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                           charge.id.startsWith('pi_') ? 'INTENT' : 'OTHER';
         const originalAmount = charge.amount / 100;
         const currency = charge.currency.toLowerCase();
-        const exchangeRate = exchangeRates[currency] || 1.0;
-        const usdAmount = originalAmount * exchangeRate;
         
-        console.log(`${index + 1}. ${charge.id} (${chargeType}): ${originalAmount} ${currency.toUpperCase()} (~$${usdAmount.toFixed(2)} USD), ${new Date(charge.created * 1000).toLocaleDateString()}, ${charge.description || 'No description'}`);
+        // Use Stripe's balance_transaction for actual converted amounts
+        const balanceTransaction = charge.balance_transaction;
+        const convertedAmount = balanceTransaction ? 
+          (balanceTransaction.amount / 100) : // Use Stripe's converted amount
+          originalAmount; // Fallback to original if no balance transaction
+        
+        const displayAmount = currency === 'usd' ? 
+          `$${originalAmount.toFixed(2)} USD` :
+          `${originalAmount.toFixed(2)} ${currency.toUpperCase()} (Stripe converted: $${convertedAmount.toFixed(2)} USD)`;
+        
+        console.log(`${index + 1}. ${charge.id} (${chargeType}): ${displayAmount}, ${new Date(charge.created * 1000).toLocaleDateString()}, ${charge.description || 'No description'}`);
       });
       console.log('=== END CHARGES ===');
 
-      // Calculate totals from successful live mode charges only with currency conversion
+      // Calculate totals using Stripe's actual converted amounts from balance_transaction
       const calculateRevenue = (charges: any) => {
-        const exchangeRates: Record<string, number> = {
-          'usd': 1.0,
-          'mxn': 0.059, // 1 MXN = ~0.059 USD 
-          'eur': 1.09,
-          'gbp': 1.27,
-          'cad': 0.73
-        };
-
         return charges.data
           .filter((charge: any) => charge.status === 'succeeded' && charge.livemode === true)
           .reduce((sum: number, charge: any) => {
-            const originalAmount = charge.amount / 100; // Convert from cents
-            const currency = charge.currency.toLowerCase();
-            const exchangeRate = exchangeRates[currency] || 1.0;
-            const usdAmount = originalAmount * exchangeRate;
-            return sum + usdAmount;
+            // Use Stripe's balance_transaction for actual converted amount
+            const balanceTransaction = charge.balance_transaction;
+            if (balanceTransaction) {
+              // Stripe's balance_transaction.amount is in your account's default currency (USD)
+              return sum + (balanceTransaction.amount / 100);
+            } else {
+              // Fallback: assume it's already in USD if no balance transaction
+              return sum + (charge.amount / 100);
+            }
           }, 0);
       };
 
