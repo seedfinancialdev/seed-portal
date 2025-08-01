@@ -90,11 +90,22 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 interface SystemHealth {
-  database: 'healthy' | 'warning' | 'error';
-  hubspot: 'healthy' | 'warning' | 'error';
-  clickup: 'healthy' | 'warning' | 'error';
-  airtable: 'healthy' | 'warning' | 'error';
-  openai: 'healthy' | 'warning' | 'error';
+  crm: 'healthy' | 'unhealthy' | 'error';
+  storage: 'healthy' | 'unhealthy' | 'error';
+  ai: 'healthy' | 'unhealthy' | 'error';
+  weather: 'healthy' | 'unhealthy' | 'error';
+  geocoding: 'healthy' | 'unhealthy' | 'error';
+}
+
+interface HealthCheckResponse {
+  status: 'healthy' | 'unhealthy';
+  services: {
+    [key: string]: {
+      status: 'healthy' | 'unhealthy';
+      responseTime: number;
+      message?: string;
+    };
+  };
 }
 
 interface AdminMetrics {
@@ -214,14 +225,20 @@ export default function AdminDashboard() {
   // Check if user has admin permission
   const isAdmin = hasPermission(PERMISSIONS.VIEW_ADMIN_DASHBOARD);
 
-  // Mock data - in production these would come from real APIs
-  const [systemHealth] = useState<SystemHealth>({
-    database: 'healthy',
-    hubspot: 'healthy', 
-    clickup: 'warning',
-    airtable: 'healthy',
-    openai: 'healthy'
+  // Real-time system health monitoring
+  const { data: healthData, isLoading: healthLoading } = useQuery<HealthCheckResponse>({
+    queryKey: ['/api/health'],
+    refetchInterval: 60000, // Refresh every 60 seconds
+    refetchIntervalInBackground: true,
   });
+
+  const systemHealth: SystemHealth = {
+    crm: healthData?.services.crm?.status || 'error',
+    storage: healthData?.services.storage?.status || 'error',
+    ai: healthData?.services.ai?.status || 'error',
+    weather: healthData?.services.weather?.status || 'error',
+    geocoding: healthData?.services.geocoding?.status || 'error',
+  };
 
   const [adminMetrics] = useState<AdminMetrics>({
     totalUsers: 12,
@@ -334,13 +351,30 @@ export default function AdminDashboard() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'healthy':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'unhealthy':
+        return <XCircle className="h-5 w-5 text-red-500" />;
       case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <AlertTriangle className="h-5 w-5 text-gray-500" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
+        return <Clock className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getServiceDisplayName = (service: string) => {
+    switch (service) {
+      case 'crm':
+        return 'HubSpot CRM';
+      case 'storage':
+        return 'Box Storage';
+      case 'ai':
+        return 'OpenAI';
+      case 'weather':
+        return 'Weather Service';
+      case 'geocoding':
+        return 'Geocoding';
+      default:
+        return service.charAt(0).toUpperCase() + service.slice(1);
     }
   };
 
@@ -607,24 +641,47 @@ export default function AdminDashboard() {
             {/* System Status */}
             <Card className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-gray-900">
-                  <Monitor className="h-5 w-5" />
-                  System Status
+                <CardTitle className="flex items-center justify-between text-gray-900">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="h-5 w-5" />
+                    System Status
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">Updates every 60s</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.location.reload()}
+                      className="h-6 w-6 p-0"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(systemHealth).map(([service, status]) => (
-                    <div key={service} className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {getStatusIcon(status)}
-                        <span className="font-medium capitalize text-gray-900">{service}</span>
-                      </div>
-                      <Badge variant={status === 'healthy' ? 'default' : 'destructive'} className={status === 'healthy' ? 'bg-green-500' : ''}>
-                        {status}
-                      </Badge>
+                <div className="space-y-3">
+                  {healthLoading ? (
+                    <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg">
+                      <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
+                      <span className="font-medium text-gray-600">Loading system status...</span>
                     </div>
-                  ))}
+                  ) : (
+                    Object.entries(systemHealth).map(([service, status]) => (
+                      <div key={service} className="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {getStatusIcon(status)}
+                          <span className="font-medium text-gray-900">{getServiceDisplayName(service)}</span>
+                        </div>
+                        <Badge 
+                          variant={status === 'healthy' ? 'default' : 'destructive'} 
+                          className={status === 'healthy' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}
+                        >
+                          {status}
+                        </Badge>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
