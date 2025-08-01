@@ -2024,28 +2024,34 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-      // Fetch revenue data from Stripe
+      // Fetch all revenue data from Stripe (remove arbitrary limits)
       const [currentMonthCharges, yearToDateCharges, lastMonthCharges] = await Promise.all([
         stripe.charges.list({
           created: {
             gte: Math.floor(startOfMonth.getTime() / 1000),
           },
-          limit: 100,
+          expand: ['data.balance_transaction'],
         }),
         stripe.charges.list({
           created: {
             gte: Math.floor(startOfYear.getTime() / 1000),
           },
-          limit: 100,
+          expand: ['data.balance_transaction'],
         }),
         stripe.charges.list({
           created: {
             gte: Math.floor(lastMonth.getTime() / 1000),
             lt: Math.floor(endOfLastMonth.getTime() / 1000),
           },
-          limit: 100,
+          expand: ['data.balance_transaction'],
         }),
       ]);
+
+      console.log(`Stripe Revenue Debug:
+        Current Month Charges: ${currentMonthCharges.data.length} total, ${currentMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded
+        Year to Date Charges: ${yearToDateCharges.data.length} total, ${yearToDateCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded  
+        Last Month Charges: ${lastMonthCharges.data.length} total, ${lastMonthCharges.data.filter((c: any) => c.status === 'succeeded').length} succeeded
+      `);
 
       // Calculate totals from successful charges
       const calculateRevenue = (charges: any) => {
