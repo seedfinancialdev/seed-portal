@@ -10,8 +10,7 @@ import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { RedisStore } from "connect-redis";
-import { redis } from "./redis";
+import { getRedis } from "./redis";
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
 
@@ -74,13 +73,35 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // TEMPORARY: Force memory store until Redis issue is resolved
-    this.initMemoryStore();
-    console.log('Using memory store temporarily - Redis syntax error needs investigation');
+    console.log('[Storage] Initializing storage...');
+    console.log('[Storage] REDIS_URL:', process.env.REDIS_URL ? 'Set' : 'Not set');
     
-    // TODO: Fix Redis store - connect-redis v9 has compatibility issues with ioredis
-    // The issue is that it's passing an object as the third argument to SET command
-    // which causes "ERR syntax error" in Redis
+    const redis = getRedis();
+    console.log('[Storage] Redis module imported:', redis);
+    console.log('[Storage] Redis sessionRedis available:', redis?.sessionRedis ? 'Yes' : 'No');
+    
+    // Check if Redis is available from the redis module
+    if (redis?.sessionRedis) {
+      try {
+        console.log('[Storage] Using Redis session client from redis module');
+        const connectRedis = require('connect-redis');
+        const RedisStore = connectRedis(session);
+        
+        this.sessionStore = new RedisStore({
+          client: redis.sessionRedis,
+          prefix: 'sess:',
+          ttl: 86400, // 24 hours
+        });
+        
+        console.log('✓ Using Redis for session storage');
+      } catch (error) {
+        console.error('[Storage] Failed to initialize Redis session store:', error);
+        this.initMemoryStore();
+      }
+    } else {
+      console.log('[Storage] Redis not available, using memory store');
+      this.initMemoryStore();
+    }
   }
 
   private initMemoryStore() {
@@ -613,4 +634,11 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+// Export a function that creates the storage instance
+// This allows us to control when storage is initialized
+export function createStorage(): DatabaseStorage {
+  return new DatabaseStorage();
+}
+
+// Create and export the singleton instance
+export const storage = createStorage();

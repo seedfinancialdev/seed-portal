@@ -49,6 +49,11 @@ export function setupAuth(app: Express) {
     console.warn('Using insecure default session secret - DO NOT USE IN PRODUCTION');
   }
 
+  // Debug session store type
+  console.log('[Auth] Setting up sessions...');
+  console.log('[Auth] Session store type:', storage.sessionStore?.constructor?.name);
+  console.log('[Auth] Redis URL exists:', !!process.env.REDIS_URL);
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
     resave: false,

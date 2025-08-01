@@ -72,6 +72,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/csrf-token', (req, res) => {
     res.json({ csrfToken: req.csrfToken ? req.csrfToken() : null });
   });
+  
+  // Debug endpoint to check session store type
+  app.get("/api/debug/session-store", async (req, res) => {
+    const sessionStore = storage.sessionStore;
+    const storeType = sessionStore?.constructor?.name || 'Unknown';
+    const hasRedis = storeType.includes('Redis');
+    
+    // Test direct Redis connection
+    let redisTestResult = 'Not tested';
+    if (process.env.REDIS_URL) {
+      try {
+        const { createClient } = await import('redis');
+        const url = new URL(process.env.REDIS_URL);
+        const testClient = createClient({
+          host: url.hostname,
+          port: parseInt(url.port || '6379'),
+          password: url.password || undefined,
+        });
+        
+        await new Promise((resolve, reject) => {
+          testClient.on('error', reject);
+          testClient.on('connect', () => {
+            testClient.set('test:ping', 'pong', (err) => {
+              if (err) reject(err);
+              else {
+                testClient.get('test:ping', (err, value) => {
+                  if (err) reject(err);
+                  else {
+                    testClient.del('test:ping', () => {
+                      testClient.quit();
+                      resolve(value);
+                    });
+                  }
+                });
+              }
+            });
+          });
+        });
+        redisTestResult = 'Connected and working';
+      } catch (err: any) {
+        redisTestResult = `Error: ${err.message}`;
+      }
+    }
+    
+    // Check redis module status
+    const { redis: redisConfig } = await import('./redis');
+    
+    res.json({
+      storeType,
+      isRedisStore: hasRedis,
+      sessionId: req.sessionID,
+      sessionExists: !!req.session,
+      redisUrl: process.env.REDIS_URL ? 'Set' : 'Not set',
+      redisDirectTest: redisTestResult,
+      redisModuleStatus: {
+        redisConfigExists: !!redisConfig,
+        sessionRedis: !!redisConfig?.sessionRedis,
+        cacheRedis: !!redisConfig?.cacheRedis,
+        queueRedis: !!redisConfig?.queueRedis
+      }
+    });
+  });
 
   // Google OAuth user sync endpoint
   app.post("/api/auth/google/sync", async (req, res) => {
