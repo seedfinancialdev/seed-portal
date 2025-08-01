@@ -1,3 +1,6 @@
+// Disable Redis OpenTelemetry instrumentation before any imports
+import "./disable-redis-instrumentation";
+
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import * as Sentry from "@sentry/node";

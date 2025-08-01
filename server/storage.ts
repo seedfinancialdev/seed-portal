@@ -10,7 +10,7 @@ import { eq, like, desc, asc, sql, and } from "drizzle-orm";
 import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { getRedis } from "./redis";
+import { getRedis, getRedisAsync } from "./redis";
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
 
@@ -76,31 +76,41 @@ export class DatabaseStorage implements IStorage {
     console.log('[Storage] Initializing storage...');
     console.log('[Storage] REDIS_URL:', process.env.REDIS_URL ? 'Set' : 'Not set');
     
-    const redis = getRedis();
-    console.log('[Storage] Redis module imported:', redis);
-    console.log('[Storage] Redis sessionRedis available:', redis?.sessionRedis ? 'Yes' : 'No');
+    // Initialize with memory store first, will be replaced if Redis is available
+    this.initMemoryStore();
+  }
+
+  async init() {
+    console.log('[Storage] Checking for Redis availability...');
     
-    // Check if Redis is available from the redis module
-    if (redis?.sessionRedis) {
-      try {
-        console.log('[Storage] Using Redis session client from redis module');
-        const connectRedis = require('connect-redis');
-        const RedisStore = connectRedis(session);
-        
-        this.sessionStore = new RedisStore({
-          client: redis.sessionRedis,
-          prefix: 'sess:',
-          ttl: 86400, // 24 hours
-        });
-        
-        console.log('✓ Using Redis for session storage');
-      } catch (error) {
-        console.error('[Storage] Failed to initialize Redis session store:', error);
-        this.initMemoryStore();
+    try {
+      const redis = await getRedisAsync();
+      console.log('[Storage] Redis module imported:', redis);
+      console.log('[Storage] Redis sessionRedis available:', redis?.sessionRedis ? 'Yes' : 'No');
+      
+      // Check if Redis is available from the redis module
+      if (redis?.sessionRedis) {
+        try {
+          console.log('[Storage] Using Redis session client from redis module');
+          const RedisStore = require('connect-redis').default;
+          
+          this.sessionStore = new RedisStore({
+            client: redis.sessionRedis,
+            prefix: 'sess:',
+            ttl: 86400, // 24 hours
+          });
+          
+          console.log('✓ Using Redis for session storage');
+        } catch (error) {
+          console.error('[Storage] Failed to initialize Redis session store:', error);
+          // Keep using memory store
+        }
+      } else {
+        console.log('[Storage] Redis not available, continuing with memory store');
       }
-    } else {
-      console.log('[Storage] Redis not available, using memory store');
-      this.initMemoryStore();
+    } catch (error) {
+      console.error('[Storage] Error initializing Redis:', error);
+      // Keep using memory store
     }
   }
 
@@ -640,5 +650,13 @@ export function createStorage(): DatabaseStorage {
   return new DatabaseStorage();
 }
 
-// Create and export the singleton instance
-export const storage = createStorage();
+// Create the singleton instance
+const storageInstance = createStorage();
+
+// Initialize Redis asynchronously
+storageInstance.init().catch(err => {
+  console.error('[Storage] Failed to initialize Redis storage:', err);
+});
+
+// Export the singleton instance
+export const storage = storageInstance;

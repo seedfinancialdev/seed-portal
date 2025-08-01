@@ -28,6 +28,11 @@ export function initializeSentry(app: Express): boolean {
           levels: ['error', 'warn'],
         }),
       ],
+      // Disable Redis instrumentation to prevent session store conflicts
+      instrumenter: 'sentry',
+      registerEsmLoaderHooks: { 
+        exclude: [/redis/]
+      },
       // Performance Monitoring
       tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
       // Release tracking

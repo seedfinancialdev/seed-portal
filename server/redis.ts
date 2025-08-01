@@ -1,4 +1,4 @@
-import { promisify } from 'util';
+import Redis from 'ioredis';
 import { log } from './vite';
 
 console.log('[Redis] Module loading...');
@@ -25,58 +25,74 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
   try {
     console.log('[createRedisConnections] Creating Redis clients...');
     
-    // Use dynamic import to avoid ES module issues
-    const redis = await import('redis');
-    const redisModule = redis.default || redis;
-    
-    // Parse Redis URL to get connection details
-    const url = new URL(redisUrl);
-    const baseConfig = {
-      host: url.hostname,
-      port: parseInt(url.port || '6379'),
-      password: url.password || undefined,
-      retry_strategy: (options: any) => {
-        if (options.error && options.error.code === 'ECONNREFUSED') {
-          return new Error('The server refused the connection');
+    // Create ioredis instances with better compatibility
+    const baseOptions = {
+      enableReadyCheck: true,
+      maxRetriesPerRequest: 3,
+      retryStrategy: (times: number) => {
+        if (times > 10) {
+          return null; // Stop retrying
         }
-        if (options.total_retry_time > 1000 * 60 * 60) {
-          return new Error('Retry time exhausted');
-        }
-        if (options.attempt > 10) {
-          return undefined;
-        }
-        return Math.min(options.attempt * 100, 3000);
+        return Math.min(times * 100, 3000);
       },
-      enable_offline_queue: true,
-      db: 0,
+      reconnectOnError: (err: Error) => {
+        const targetError = 'READONLY';
+        if (err.message.includes(targetError)) {
+          return true;
+        }
+        return false;
+      },
     };
 
-    // Session Redis - no prefix, connect-redis will handle prefixing
-    const sessionRedis = redisModule.createClient(baseConfig);
+    // Session Redis - no key prefix
+    const sessionRedis = new Redis(redisUrl, {
+      ...baseOptions,
+      keyPrefix: '',
+    });
 
     // Cache Redis - using key prefix for isolation
-    const cacheRedis = redisModule.createClient({
-      ...baseConfig,
-      prefix: 'cache:',
+    const cacheRedis = new Redis(redisUrl, {
+      ...baseOptions,
+      keyPrefix: 'cache:',
     });
 
-    // Queue Redis - no prefix for BullMQ compatibility
-    const queueRedis = redisModule.createClient({
-      ...baseConfig,
-      prefix: 'queue:',
+    // Queue Redis - using key prefix for isolation
+    const queueRedis = new Redis(redisUrl, {
+      ...baseOptions,
+      keyPrefix: 'queue:',
     });
+    
+    console.log('[createRedisConnections] Waiting for Redis connections to be ready...');
+    
+    // Wait for all connections to be ready
+    await Promise.all([
+      new Promise((resolve, reject) => {
+        sessionRedis.once('ready', resolve);
+        sessionRedis.once('error', reject);
+      }),
+      new Promise((resolve, reject) => {
+        cacheRedis.once('ready', resolve);
+        cacheRedis.once('error', reject);
+      }),
+      new Promise((resolve, reject) => {
+        queueRedis.once('ready', resolve);
+        queueRedis.once('error', reject);
+      })
+    ]);
+    
+    console.log('[createRedisConnections] All Redis connections ready');
 
-    // Add promisified methods for cache operations
-    cacheRedis.getAsync = promisify(cacheRedis.get).bind(cacheRedis);
-    cacheRedis.setAsync = promisify(cacheRedis.set).bind(cacheRedis);
-    cacheRedis.delAsync = promisify(cacheRedis.del).bind(cacheRedis);
-    cacheRedis.existsAsync = promisify(cacheRedis.exists).bind(cacheRedis);
+    // ioredis already has promise-based methods
+    cacheRedis.getAsync = cacheRedis.get.bind(cacheRedis);
+    cacheRedis.setAsync = cacheRedis.set.bind(cacheRedis);
+    cacheRedis.delAsync = cacheRedis.del.bind(cacheRedis);
+    cacheRedis.existsAsync = cacheRedis.exists.bind(cacheRedis);
 
     // Monitor Redis memory usage
     const checkMemoryUsage = async () => {
       try {
-        const infoAsync = promisify(sessionRedis.info).bind(sessionRedis);
-        const info = await infoAsync('memory');
+        // ioredis info method returns a promise directly
+        const info = await sessionRedis.info('memory');
         const usedMemoryMatch = info.match(/used_memory_human:(.+)/);
         const maxMemoryMatch = info.match(/maxmemory_human:(.+)/);
         
@@ -183,15 +199,21 @@ export function getRedis(): RedisConfig | null {
   return redisConnections;
 }
 
+// Export async getter that waits for initialization
+export async function getRedisAsync(): Promise<RedisConfig | null> {
+  await initializeRedis();
+  return redisConnections;
+}
+
 // Also export as 'redis' for compatibility
 export const redis = redisConnections;
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  if (redis) {
+  if (redisConnections) {
     console.log('Closing Redis connections...');
-    redis.sessionRedis.quit();
-    redis.cacheRedis.quit();
-    redis.queueRedis.quit();
+    redisConnections.sessionRedis.quit();
+    redisConnections.cacheRedis.quit();
+    redisConnections.queueRedis.quit();
   }
 });

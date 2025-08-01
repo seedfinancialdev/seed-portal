@@ -83,33 +83,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let redisTestResult = 'Not tested';
     if (process.env.REDIS_URL) {
       try {
-        const { createClient } = await import('redis');
-        const url = new URL(process.env.REDIS_URL);
-        const testClient = createClient({
-          host: url.hostname,
-          port: parseInt(url.port || '6379'),
-          password: url.password || undefined,
-        });
+        const Redis = (await import('ioredis')).default;
+        const testClient = new Redis(process.env.REDIS_URL);
         
-        await new Promise((resolve, reject) => {
-          testClient.on('error', reject);
-          testClient.on('connect', () => {
-            testClient.set('test:ping', 'pong', (err) => {
-              if (err) reject(err);
-              else {
-                testClient.get('test:ping', (err, value) => {
-                  if (err) reject(err);
-                  else {
-                    testClient.del('test:ping', () => {
-                      testClient.quit();
-                      resolve(value);
-                    });
-                  }
-                });
-              }
-            });
-          });
-        });
+        // Test basic operations with ioredis
+        await testClient.set('test:ping', 'pong');
+        const value = await testClient.get('test:ping');
+        await testClient.del('test:ping');
+        await testClient.quit();
+        
         redisTestResult = 'Connected and working';
       } catch (err: any) {
         redisTestResult = `Error: ${err.message}`;
