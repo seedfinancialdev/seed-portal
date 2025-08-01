@@ -33,68 +33,43 @@ export class GoogleAdminService {
 
   private async initialize() {
     try {      
-      console.log('Initializing Google Admin API with service account impersonation...');
+      console.log('Initializing Google Admin API with user credentials...');
       
       // Check for required secrets
-      const { GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN, IMP_SA_EMAIL } = process.env;
+      const { GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN } = process.env;
       
-      if (!GOOGLE_CLIENT_ID_OS || !GOOGLE_CLIENT_SECRET_OS || !GOOGLE_REFRESH_TOKEN || !IMP_SA_EMAIL) {
-        throw new Error('Missing required secrets: GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN, IMP_SA_EMAIL');
+      if (!GOOGLE_CLIENT_ID_OS || !GOOGLE_CLIENT_SECRET_OS || !GOOGLE_REFRESH_TOKEN) {
+        throw new Error('Missing required secrets: GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN');
       }
 
-      // A. Authenticate as user using refresh token
-      console.log('Step 1: Authenticating as user with refresh token...');
-      const userAuth = new OAuth2Client(
-        GOOGLE_CLIENT_ID_OS,
-        GOOGLE_CLIENT_SECRET_OS
-      );
-      userAuth.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
-
-      // B. Ask Google to impersonate the service account for 1 hour
-      console.log('Step 2: Requesting 1-hour impersonation token for service account...');
-      const iam = google.iamcredentials({ version: 'v1', auth: userAuth });
-      const { data } = await iam.projects.serviceAccounts.generateAccessToken({
-        name: `projects/-/serviceAccounts/${IMP_SA_EMAIL}`,
-        requestBody: {
-          scope: [
-            'https://www.googleapis.com/auth/admin.directory.user.readonly',
-            'https://www.googleapis.com/auth/admin.directory.group.readonly',
-            'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
-          ],
-          lifetime: '3600s', // 1 hour
+      // Use GoogleAuth library with user credentials (much simpler approach)
+      console.log('Creating Google Auth client with user refresh token...');
+      const { GoogleAuth } = await import('google-auth-library');
+      const auth = new GoogleAuth({
+        credentials: {
+          type: 'authorized_user',
+          client_id: GOOGLE_CLIENT_ID_OS,
+          client_secret: GOOGLE_CLIENT_SECRET_OS,
+          refresh_token: GOOGLE_REFRESH_TOKEN
         },
+        scopes: [
+          'https://www.googleapis.com/auth/admin.directory.user.readonly',
+          'https://www.googleapis.com/auth/admin.directory.group.readonly',
+          'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+        ]
       });
-
-      if (!data.accessToken) {
-        throw new Error('Failed to obtain impersonation access token');
-      }
-
-      // C. Use that 1-hour token with the Admin SDK
-      console.log('Step 3: Creating Admin SDK client with impersonation token...');
-      const adminAuth = new OAuth2Client();
-      adminAuth.setCredentials({ access_token: data.accessToken });
       
-      // Set the subject for domain-wide delegation (impersonate as admin user)
-      adminAuth.subject = 'jon@seedfinancial.io';
-      
-      this.admin = google.admin({ version: 'directory_v1', auth: adminAuth });
+      this.admin = google.admin({ version: 'directory_v1', auth });
       this.initialized = true;
       
-      console.log('✅ Google Admin API initialized successfully with service account impersonation');
-      console.log(`✅ Impersonation token expires: ${data.expireTime}`);
+      console.log('✅ Google Admin API initialized successfully with user credentials');
       
     } catch (error) {
       // Log the actual error for debugging
       console.error('❌ Failed to initialize Google Admin API:', error);
       
       if ((error as any).message?.includes('invalid_grant')) {
-        console.log('🔧 Refresh token expired. Please regenerate credentials:');
-        console.log('1. Run: gcloud auth application-default login --scopes=https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly,https://www.googleapis.com/auth/cloud-platform');
-        console.log('2. Update GOOGLE_REFRESH_TOKEN secret with new refresh_token from ~/.config/gcloud/application_default_credentials.json');
-      } else if ((error as any).message?.includes('Permission denied')) {
-        console.log('🔧 Service account impersonation failed. Verify:');
-        console.log('1. You have "Service Account Token Creator" role on the service account');
-        console.log('2. Domain-wide delegation is configured for the service account');
+        console.log('🔧 Refresh token expired. Please regenerate credentials using OAuth 2.0 Playground');
       }
       
       this.admin = null;
