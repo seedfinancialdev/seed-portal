@@ -7,24 +7,49 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Overloaded function to support both old and new calling patterns
 export async function apiRequest(
-  method: string,
-  url: string,
-  data?: any
+  urlOrMethod: string,
+  optionsOrUrl?: any,
+  dataOrUndefined?: any
 ): Promise<Response> {
-  const options: RequestInit = {
+  let method: string;
+  let url: string;
+  let data: any;
+
+  // Check if called with new signature: apiRequest(method, url, data)
+  if (typeof optionsOrUrl === 'string' && dataOrUndefined !== undefined) {
+    method = urlOrMethod;
+    url = optionsOrUrl;
+    data = dataOrUndefined;
+  }
+  // Check if called with new signature: apiRequest(method, url)
+  else if (typeof optionsOrUrl === 'string' && dataOrUndefined === undefined) {
+    method = urlOrMethod;
+    url = optionsOrUrl;
+    data = undefined;
+  }
+  // Old signature: apiRequest(url, options)
+  else {
+    url = urlOrMethod;
+    const options = optionsOrUrl || {};
+    method = options.method || 'GET';
+    data = options.body ? JSON.parse(options.body) : undefined;
+  }
+
+  const requestOptions: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
     },
-    credentials: 'include', // This sends session cookies
+    credentials: 'include', // This sends session cookies for authentication
   };
 
   if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-    options.body = JSON.stringify(data);
+    requestOptions.body = JSON.stringify(data);
   }
 
-  const response = await fetch(url, options);
+  const response = await fetch(url, requestOptions);
   return response;
 }
 
