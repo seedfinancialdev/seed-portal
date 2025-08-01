@@ -74,6 +74,9 @@ export class GoogleAdminService {
       const adminAuth = new OAuth2Client();
       adminAuth.setCredentials({ access_token: data.accessToken });
       
+      // Set the subject for domain-wide delegation (impersonate as admin user)
+      adminAuth.subject = 'jon@seedfinancial.io';
+      
       this.admin = google.admin({ version: 'directory_v1', auth: adminAuth });
       this.initialized = true;
       

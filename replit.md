@@ -93,10 +93,16 @@ Preferred communication style: Simple, everyday language.
 - **Authorization Fix**: Resolved `apiRequest` function to properly handle Bearer tokens and custom headers
 - **Admin Access**: Hardcoded admin role protection for jon@seedfinancial.io
 - **Session Establishment**: Simplified OAuth sync logic eliminates Redis session regeneration issues
-- **Google Admin API Issue**: Service account impersonation failing due to insufficient refresh token scopes
-  - Current refresh token missing `https://www.googleapis.com/auth/cloud-platform` scope
-  - OAuth 2.0 Playground method needs scope update for IAM credentials API
-  - Error: "Request had insufficient authentication scopes" for impersonation
+- **Google Admin API Configuration**: Service account impersonation setup with domain-wide delegation
+  - ✅ Refresh token with `https://www.googleapis.com/auth/cloud-platform` scope - WORKING
+  - ✅ Service account impersonation tokens generating successfully
+  - ⚠️ Domain-wide delegation needs third scope added:
+    - Current scopes in Google Workspace Admin Console:
+      - `https://www.googleapis.com/auth/admin.directory.user.readonly` ✅
+      - `https://www.googleapis.com/auth/admin.directory.group.readonly` ✅  
+    - **Missing scope**: `https://www.googleapis.com/auth/admin.directory.group.member.readonly`
+  - Service Account: `seed-admin-api@seedportal.iam.gserviceaccount.com`
+  - Client ID for delegation: `101834662192388488784`
 
 ### AI-Powered Client Intelligence ✅ **FULLY OPERATIONAL** (August 1, 2025)
 - **AI Insights Generation**: Comprehensive pain points analysis, service gap detection, and risk scoring
