@@ -3,27 +3,30 @@ import { useGoogleAuth } from "@/hooks/use-google-auth";
 import { useLocation } from "wouter";
 import { ArrowLeft, Bell, User, Settings, LogOut, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { BackButton } from "@/components/BackButton";
+import { useBackNavigation } from "@/hooks/use-navigation-history";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 interface UniversalNavbarProps {
   showBackButton?: boolean;
-  backButtonText?: string;
-  backButtonPath?: string;
+  fallbackPath?: string;
 }
 
 export function UniversalNavbar({ 
-  showBackButton = false, 
-  backButtonText = "Back", 
-  backButtonPath = "/"
+  showBackButton = true,
+  fallbackPath = "/"
 }: UniversalNavbarProps) {
   const { dbUser, signOut } = useGoogleAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { canGoBack } = useBackNavigation();
 
   const handleLogout = async () => {
     await signOut();
   };
 
-  // Universal design based on dashboard-new.tsx
+  // Only show back button if there's history or if explicitly requested
+  const shouldShowBackButton = showBackButton && (canGoBack || location !== '/');
+
   return (
     <header className="bg-transparent z-50 py-4 relative">
       <div className="max-w-5xl mx-auto px-6">
@@ -31,18 +34,15 @@ export function UniversalNavbar({
           <img src={logoPath} alt="Seed Financial" className="h-16" />
         </div>
         
-        {/* Back Button - Positioned Absolutely (when needed) */}
-        {showBackButton && (
+        {/* Smart Back Button - Positioned Absolutely */}
+        {shouldShowBackButton && (
           <div className="absolute top-4 left-6">
-            <Button
+            <BackButton
               variant="ghost"
               size="sm"
               className="text-white hover:text-orange-200 hover:bg-white/10 backdrop-blur-sm border border-white/20"
-              onClick={() => setLocation(backButtonPath)}
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              {backButtonText}
-            </Button>
+              fallbackPath={fallbackPath}
+            />
           </div>
         )}
         

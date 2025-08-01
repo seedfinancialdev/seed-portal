@@ -9,11 +9,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useLocation } from "wouter";
+import { useNavigationHistory } from "@/hooks/use-navigation-history";
 
 export default function ServiceDashboard() {
   const { hasPermission, getAvailableDashboards } = usePermissions();
   const { dbUser: currentUser, signOut } = useGoogleAuth();
   const [, navigate] = useLocation();
+  const { navigateTo } = useNavigationHistory();
   const availableDashboards = getAvailableDashboards();
 
   if (!hasPermission(PERMISSIONS.VIEW_SERVICE_DASHBOARD)) {
@@ -58,7 +60,7 @@ export default function ServiceDashboard() {
               {availableDashboards.length > 1 && (
                 <>
                   {availableDashboards.map(dashboard => (
-                    <DropdownMenuItem key={dashboard.route} onClick={() => navigate(dashboard.route)}>
+                    <DropdownMenuItem key={dashboard.route} onClick={() => navigateTo(dashboard.route)}>
                       {dashboard.name}
                     </DropdownMenuItem>
                   ))}
@@ -84,7 +86,7 @@ export default function ServiceDashboard() {
               <Button
                 variant="ghost"
                 className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => navigate('/service-dashboard')}
+                onClick={() => navigateTo('/service-dashboard')}
               >
                 <Wrench className="mr-3 h-4 w-4" />
                 Dashboard
@@ -92,7 +94,7 @@ export default function ServiceDashboard() {
               <Button
                 variant="ghost"
                 className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => navigate('/calculator')}
+                onClick={() => navigateTo('/calculator')}
               >
                 <FileText className="mr-3 h-4 w-4" />
                 Quote Reference
@@ -100,7 +102,7 @@ export default function ServiceDashboard() {
               <Button
                 variant="ghost"
                 className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => navigate('/client-intel')}
+                onClick={() => navigateTo('/client-intel')}
               >
                 <Users className="mr-3 h-4 w-4" />
                 Client Profiles
@@ -114,7 +116,7 @@ export default function ServiceDashboard() {
               <Button
                 variant="ghost"
                 className="w-full justify-start text-white hover:bg-white/10"
-                onClick={() => navigate('/knowledge-base')}
+                onClick={() => navigateTo('/knowledge-base')}
               >
                 <FileText className="mr-3 h-4 w-4" />
                 Knowledge Base

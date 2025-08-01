@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
+import { useNavigationHistory } from "@/hooks/use-navigation-history";
 import { 
   BarChart3,
   TrendingUp,
@@ -206,6 +207,7 @@ export default function AdminDashboard() {
   const { dbUser: user, signOut } = useGoogleAuth();
   const { hasPermission, getAvailableDashboards } = usePermissions();
   const [, setLocation] = useLocation();
+  const { navigateTo } = useNavigationHistory();
   const [selectedSection, setSelectedSection] = useState('dashboard');
   const availableDashboards = getAvailableDashboards();
 
@@ -388,7 +390,7 @@ export default function AdminDashboard() {
               <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
               <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
               <p className="text-gray-600 mb-4">You need admin privileges to access SEEDOS.</p>
-              <Button onClick={() => setLocation('/')} className="bg-orange-500 hover:bg-orange-600">
+              <Button onClick={() => navigateTo('/')} className="bg-orange-500 hover:bg-orange-600">
                 Back to Portal
               </Button>
             </CardContent>
@@ -465,7 +467,7 @@ export default function AdminDashboard() {
                 {category.items.map((item) => (
                   <button
                     key={item.name}
-                    onClick={() => item.path.startsWith('/admin') ? setSelectedSection(item.name.toLowerCase()) : setLocation(item.path)}
+                    onClick={() => item.path.startsWith('/admin') ? setSelectedSection(item.name.toLowerCase()) : navigateTo(item.path)}
                     className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
                       (item.active || selectedSection === item.name.toLowerCase()) 
                         ? 'bg-orange-500/20 text-orange-300 border-r-2 border-orange-500' 

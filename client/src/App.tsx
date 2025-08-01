@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GoogleAuthProvider } from "@/hooks/use-google-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
+import { NavigationHistoryProvider } from "@/hooks/use-navigation-history";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { RoleBasedRedirect } from "@/components/RoleBasedRedirect";
@@ -64,8 +65,10 @@ function App() {
         <TooltipProvider>
           <GoogleAuthProvider>
             <AuthProvider>
-              <Toaster />
-              <Router />
+              <NavigationHistoryProvider>
+                <Toaster />
+                <Router />
+              </NavigationHistoryProvider>
             </AuthProvider>
           </GoogleAuthProvider>
         </TooltipProvider>
