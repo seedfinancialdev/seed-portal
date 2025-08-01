@@ -80,8 +80,14 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           }),
         });
         
-        console.log('[Frontend] ✅ OAuth sync response received:', response);
-        return response;
+        console.log('[Frontend] ✅ OAuth sync HTTP status:', response.status);
+        console.log('[Frontend] ✅ OAuth sync response headers:', response.headers);
+        
+        // Parse the actual response data
+        const responseData = await response.json();
+        console.log('[Frontend] ✅ OAuth sync response data:', responseData);
+        
+        return responseData;
       } catch (error: any) {
         console.error('[Frontend] ❌ OAuth sync failed:', error);
         console.error('[Frontend] ❌ Error details:', { message: error.message, status: error.status });
