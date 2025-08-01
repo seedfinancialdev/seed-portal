@@ -7,6 +7,9 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { HubSpotService } from "./hubspot";
+import type Redis from "ioredis";
+import RedisStore from "connect-redis";
+import MemoryStore from "memorystore";
 
 declare global {
   namespace Express {
@@ -29,7 +32,11 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
-export function setupAuth(app: Express) {
+export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
+  console.log('===========================================');
+  console.log('AUTH.TS FUNCTION CALLED - THIS SHOULD APPEAR');
+  console.log('===========================================');
+  console.log('[Auth] setupAuth called, sessionRedis provided:', !!sessionRedis);
   // Initialize HubSpot service for user verification
   let hubSpotService: HubSpotService | null = null;
   try {
@@ -49,26 +56,60 @@ export function setupAuth(app: Express) {
     console.warn('Using insecure default session secret - DO NOT USE IN PRODUCTION');
   }
 
-  // Debug session store type
-  console.log('[Auth] Setting up sessions...');
-  console.log('[Auth] Session store type:', storage.sessionStore?.constructor?.name);
-  console.log('[Auth] Redis URL exists:', !!process.env.REDIS_URL);
+  // Direct Redis session setup (proven working approach)
+  console.log('[Auth] Setting up Redis sessions directly...');
   
-  const sessionSettings: session.SessionOptions = {
+  let sessionStore: any;
+  let storeType: string;
+  
+  if (process.env.REDIS_URL) {
+    try {
+      console.log('[Auth] Creating Redis connection...');
+      const Redis = (await import('ioredis')).default;
+      const RedisStore = (await import('connect-redis')).default;
+      
+      const redisClient = new Redis(process.env.REDIS_URL);
+      await redisClient.ping();
+      console.log('[Auth] ✅ Redis ping successful');
+      
+      sessionStore = new RedisStore({
+        client: redisClient,
+        prefix: 'sess:',
+        ttl: 24 * 60 * 60, // 24 hours
+      });
+      storeType = 'RedisStore';
+      console.log('[Auth] ✅ Redis session store created:', sessionStore.constructor.name);
+      
+    } catch (error) {
+      console.warn('[Auth] ❌ Redis failed, using MemoryStore:', error.message);
+      const MemoryStore = (await import('memorystore')).default;
+      const MemoryStoreClass = MemoryStore(session);
+      sessionStore = new MemoryStoreClass({ checkPeriod: 86400000 });
+      storeType = 'MemoryStore';
+    }
+  } else {
+    console.log('[Auth] No REDIS_URL, using MemoryStore');
+    const MemoryStore = (await import('memorystore')).default;
+    const MemoryStoreClass = MemoryStore(session);
+    sessionStore = new MemoryStoreClass({ checkPeriod: 86400000 });
+    storeType = 'MemoryStore';
+  }
+  
+  console.log('[Auth] Final session store type:', storeType);
+
+  app.set("trust proxy", 1);
+  app.use(session({
     secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    store: sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-      httpOnly: true, // Prevent XSS attacks
-      sameSite: 'strict', // CSRF protection
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
-  };
-
-  app.set("trust proxy", 1);
-  app.use(session(sessionSettings));
+  }));
   app.use(passport.initialize());
   app.use(passport.session());
 

@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import type Redis from "ioredis";
 import { storage } from "./storage";
 import { 
   insertQuoteSchema, updateQuoteSchema, updateProfileSchema,
@@ -54,9 +55,67 @@ const upload = multer({
   }
 });
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication first
-  setupAuth(app);
+export async function registerRoutes(app: Express, sessionRedis?: Redis | null): Promise<Server> {
+  console.log('[Routes] ============= REGISTERROUTES CALLED =============');
+  console.log('[Routes] Function entry point reached');
+  console.log('[Routes] sessionRedis parameter:', !!sessionRedis);
+  console.log('[Routes] REDIS_URL available:', !!process.env.REDIS_URL);
+  console.log('[Routes] 🚀 Starting direct session setup...');
+  
+  // Apply Redis sessions directly here before any routes
+  console.log('[Routes] Setting up Redis sessions directly...');
+  let sessionStore: any;
+  let storeType: string;
+  
+  if (process.env.REDIS_URL) {
+    try {
+      console.log('[Routes] Creating Redis connection...');
+      const Redis = (await import('ioredis')).default;
+      const RedisStore = (await import('connect-redis')).default;
+      const session = (await import('express-session')).default;
+      
+      const redisClient = new Redis(process.env.REDIS_URL);
+      await redisClient.ping();
+      console.log('[Routes] ✅ Redis ping successful');
+      
+      sessionStore = new RedisStore({
+        client: redisClient,
+        prefix: 'sess:',
+        ttl: 24 * 60 * 60, // 24 hours
+      });
+      storeType = 'RedisStore';
+      console.log('[Routes] ✅ Redis session store created:', sessionStore.constructor.name);
+      
+      // Apply session middleware directly
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        store: sessionStore,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000
+        }
+      }));
+      
+      console.log('[Routes] ✅ Session middleware applied with RedisStore');
+      
+    } catch (error) {
+      console.warn('[Routes] ❌ Redis failed, skipping session setup:', error.message);
+      storeType = 'Failed';
+    }
+  } else {
+    console.log('[Routes] No REDIS_URL, skipping Redis session setup');
+    storeType = 'Skipped';
+  }
+  
+  console.log('[Routes] Final session store type:', storeType);
+  
+  // Setup authentication after sessions
+  await setupAuth(app, null);
+  console.log('[Routes] ✅ Auth setup completed');
 
   // Apply CSRF protection after sessions are initialized
   app.use(conditionalCsrf);
@@ -73,11 +132,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ csrfToken: req.csrfToken ? req.csrfToken() : null });
   });
   
+  // Simple test endpoint to verify API routing
+  app.get("/api/test/simple", (req, res) => {
+    console.log('[SimpleTest] API endpoint hit successfully');
+    res.json({ 
+      message: "API routing works", 
+      timestamp: new Date().toISOString(),
+      redisUrl: !!process.env.REDIS_URL 
+    });
+  });
+
+  // Apply Redis session configuration directly
+  app.get("/api/admin/apply-redis-sessions", async (req, res) => {
+    console.log('[ApplyRedis] Applying Redis session configuration...');
+    
+    if (!process.env.REDIS_URL) {
+      return res.json({ error: 'REDIS_URL not configured' });
+    }
+    
+    try {
+      const Redis = (await import('ioredis')).default;
+      const RedisStore = (await import('connect-redis')).default;
+      const session = (await import('express-session')).default;
+      
+      // Create Redis client
+      const redisClient = new Redis(process.env.REDIS_URL);
+      await redisClient.ping();
+      console.log('[ApplyRedis] ✅ Redis connection successful');
+      
+      // Create RedisStore
+      const redisStore = new RedisStore({
+        client: redisClient,
+        prefix: 'sess:',
+        ttl: 24 * 60 * 60, // 24 hours
+      });
+      
+      console.log('[ApplyRedis] ✅ RedisStore created:', redisStore.constructor.name);
+      
+      // Apply session middleware with Redis store
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        store: redisStore,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
+      }));
+      
+      console.log('[ApplyRedis] ✅ Redis session middleware applied');
+      
+      res.json({
+        status: 'success',
+        message: 'Redis sessions applied successfully',
+        storeType: redisStore.constructor.name,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('[ApplyRedis] Error:', error);
+      res.json({ error: error.message });
+    }
+  });
+
+  // Test Redis sessions directly
+  app.get("/api/test/redis-session", async (req, res) => {
+    try {
+      console.log('[TestRedis] Testing direct Redis session...');
+      
+      if (!process.env.REDIS_URL) {
+        return res.json({ error: 'REDIS_URL not set' });
+      }
+      
+      const Redis = (await import('ioredis')).default;
+      const RedisStore = (await import('connect-redis')).default;
+      
+      // Create a Redis connection
+      const redisClient = new Redis(process.env.REDIS_URL);
+      await redisClient.ping();
+      console.log('[TestRedis] Redis ping successful');
+      
+      // Create a Redis session store
+      const store = new RedisStore({
+        client: redisClient,
+        prefix: 'sess:',  // Use production prefix
+        ttl: 24 * 60 * 60, // 24 hours like production
+      });
+      
+      console.log('[TestRedis] RedisStore created:', store.constructor.name);
+      
+      // ALSO APPLY REDIS SESSION MIDDLEWARE DIRECTLY
+      console.log('[TestRedis] Applying Redis session middleware to Express app...');
+      const session = (await import('express-session')).default;
+      
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        store: store,  // Use the RedisStore we just created
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
+      }));
+      
+      console.log('[TestRedis] ✅ Redis session middleware applied to Express!');
+      
+      // Test storing a session
+      const sessionId = 'test-session-123';
+      const sessionData = { userId: 1, username: 'test', timestamp: Date.now() };
+      
+      await new Promise((resolve, reject) => {
+        store.set(sessionId, sessionData, (err) => {
+          if (err) reject(err);
+          else resolve(null);
+        });
+      });
+      
+      console.log('[TestRedis] Session stored successfully');
+      
+      // Test retrieving the session
+      const retrievedData = await new Promise((resolve, reject) => {
+        store.get(sessionId, (err, data) => {
+          if (err) reject(err);
+          else resolve(data);
+        });
+      });
+      
+      console.log('[TestRedis] Session retrieved:', retrievedData);
+      
+      await redisClient.quit();
+      
+      res.json({ 
+        success: true, 
+        storeType: store.constructor.name,
+        sessionData: retrievedData 
+      });
+      
+    } catch (error) {
+      console.error('[TestRedis] Error:', error);
+      res.json({ error: error.message });
+    }
+  });
+
+  // Comprehensive session diagnostic endpoint
+  app.get("/api/debug/session-comprehensive", async (req, res) => {
+    console.log('[SessionDiag] Comprehensive session diagnostic running...');
+    
+    // Check if we can create Redis sessions manually
+    let manualRedisTest = 'Not tested';
+    if (process.env.REDIS_URL) {
+      try {
+        console.log('[SessionDiag] Testing manual Redis session creation...');
+        const Redis = (await import('ioredis')).default;
+        const RedisStore = (await import('connect-redis')).default;
+        
+        const testRedis = new Redis(process.env.REDIS_URL);
+        await testRedis.ping();
+        
+        const testStore = new RedisStore({
+          client: testRedis,
+          prefix: 'test:diagnostic:',
+          ttl: 300, // 5 minutes
+        });
+        
+        manualRedisTest = `SUCCESS: ${testStore.constructor.name}`;
+        console.log('[SessionDiag] Manual Redis store creation successful:', testStore.constructor.name);
+        
+        await testRedis.quit();
+      } catch (error) {
+        manualRedisTest = `FAILED: ${error.message}`;
+        console.log('[SessionDiag] Manual Redis store creation failed:', error.message);
+      }
+    }
+    
+    // Get session information
+    const sessionStore = req.session?.store;
+    const storeType = sessionStore?.constructor?.name || 'Unknown';
+    const sessionData = {
+      sessionId: req.sessionID,
+      hasSession: !!req.session,
+      storeConstructor: sessionStore?.constructor?.name,
+      storeString: sessionStore?.toString(),
+      storeKeys: sessionStore ? Object.keys(sessionStore) : [],
+      sessionKeys: req.session ? Object.keys(req.session) : []
+    };
+    
+    console.log('[SessionDiag] Session store details:', sessionData);
+    
+    res.json({
+      storeType,
+      sessionData,
+      manualRedisTest,
+      redisUrl: !!process.env.REDIS_URL,
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Debug endpoint to check session store type
   app.get("/api/debug/session-store", async (req, res) => {
-    const sessionStore = storage.sessionStore;
+    // Get the actual session store from Express session middleware
+    const sessionStore = req.session?.store;
     const storeType = sessionStore?.constructor?.name || 'Unknown';
     const hasRedis = storeType.includes('Redis');
+    
+    console.log('[Debug] Session store type:', storeType);
+    console.log('[Debug] Session store constructor:', sessionStore?.constructor?.name);
+    console.log('[Debug] Has Redis:', hasRedis);
     
     // Test direct Redis connection
     let redisTestResult = 'Not tested';
