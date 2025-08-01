@@ -40,7 +40,11 @@ async function processAIInsights(job: Job<AIInsightsJobData>): Promise<JobResult
     await job.updateProgress(25);
     
     // Generate AI insights using the intelligence engine (expensive operations)
-    console.log(`[Worker] Starting pain points analysis for ${clientData.companyName}`);
+    console.log(`[Worker] Starting pain points analysis for ${clientData.companyName}:`, {
+      companyName: clientData.companyName,
+      industry: clientData.industry,
+      services: clientData.services
+    });
     const painPointsPromise = clientIntelEngine.extractPainPoints(clientData);
     await job.updateProgress(50);
     
@@ -59,7 +63,13 @@ async function processAIInsights(job: Job<AIInsightsJobData>): Promise<JobResult
       riskScorePromise
     ]);
     
-    console.log(`[Worker] AI operations completed: ${painPoints.length} pain points, ${serviceGaps.length} gaps, risk score: ${riskScore}`);
+    console.log(`[Worker] AI operations completed:`, {
+      painPointsCount: painPoints?.length || 0,
+      painPoints: painPoints,
+      serviceGapsCount: serviceGaps?.length || 0,
+      serviceGaps: serviceGaps,
+      riskScore: riskScore
+    });
     
     await job.updateProgress(100);
     

@@ -1231,7 +1231,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
 
       // Store job ID temporarily for status checks
-      await cache.set(jobStatusKey, job.id, { ttl: 300 }); // 5 minutes
+      await cache.set(jobStatusKey, job.id, 300); // 5 minutes
 
       console.log(`[Queue] 🔄 Queued AI insights job ${job.id} for client ${clientId}`);
 
@@ -1273,7 +1273,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         // Cache the result for future requests
         const { contactId } = job.data;
         const cacheKey = cache.generateKey(CachePrefix.OPENAI_ANALYSIS, contactId);
-        await cache.set(cacheKey, result, { ttl: CacheTTL.OPENAI_ANALYSIS });
+        await cache.set(cacheKey, result, CacheTTL.OPENAI_ANALYSIS);
         
         res.json({
           status: 'completed',

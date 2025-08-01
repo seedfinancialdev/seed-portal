@@ -126,32 +126,35 @@ Keep it punchy and actionable for the SDR.
   async detectServiceGaps(clientData: any): Promise<ClientSignal[]> {
     try {
       const prompt = `
-Analyze this client data to identify service gaps and upsell opportunities:
+Analyze this business for service gaps and opportunities:
 
-Company: ${clientData.companyName}
+Company: ${clientData.companyName || 'Unknown Company'}
 Current Services: ${JSON.stringify(clientData.services || [])}
-Industry: ${clientData.industry}
-Revenue: ${clientData.revenue}
-Employees: ${clientData.employees}
-HubSpot Properties: ${JSON.stringify(clientData.hubspotProperties, null, 2)}
+Industry: ${clientData.industry || 'Not specified'}
+Revenue: ${clientData.revenue || 'Not specified'}
+Employees: ${clientData.employees || 'Not specified'}
+Lifecycle Stage: ${clientData.lifecycleStage || 'Unknown'}
 
-Identify potential service gaps based on these rules:
-1. Payroll missing: If revenue suggests >$50k payroll expense but no Payroll service
-2. Multi-state complexity: If multi-location business without nexus compliance
-3. High cash/growth: If strong financials suggest need for CFO services
-4. Tax preparation: If bookkeeping client without tax services
-5. Compliance gaps: Industry-specific requirements not being met
+Generate 2-4 realistic service gap opportunities based on:
+1. Common needs for businesses of this type/size
+2. Services they DON'T currently have from: Bookkeeping, Tax Prep, Payroll, CFO Services, Compliance
+3. Logical progression based on their current services
+4. Industry-typical requirements
 
-Return JSON array of signals:
-[{
-  "type": "upsell" | "risk" | "opportunity",
-  "severity": "Low" | "Medium" | "High", 
-  "confidence": 0.0-1.0,
-  "title": "Brief signal title",
-  "description": "What we detected",
-  "recommendedAction": "Specific next step",
-  "estimatedValue": "$X/month additional revenue"
-}]
+Return JSON object with "signals" array:
+{
+  "signals": [{
+    "type": "upsell",
+    "severity": "Medium",
+    "confidence": 0.7,
+    "title": "Service gap title",
+    "description": "Why they likely need this",
+    "recommendedAction": "Specific next step",
+    "estimatedValue": "$200-500/month"
+  }]
+}
+
+Focus on realistic, actionable opportunities for Seed Financial services.
 `;
 
       const response = await openai.chat.completions.create({
@@ -161,8 +164,9 @@ Return JSON array of signals:
         temperature: 0.4
       });
 
-      const result = JSON.parse(response.choices[0].message.content || "[]");
-      return Array.isArray(result) ? result : result.signals || [];
+      const result = JSON.parse(response.choices[0].message.content || '{"signals":[]}');
+      console.log('[ClientIntel] Service gaps AI response:', result);
+      return result.signals || [];
     } catch (error) {
       console.error('Service gap detection failed:', error);
       return [];
@@ -173,17 +177,27 @@ Return JSON array of signals:
   async extractPainPoints(clientData: any): Promise<string[]> {
     try {
       const prompt = `
-Extract key pain points from this client data:
+Analyze this business and identify likely pain points:
 
-Company: ${clientData.companyName}
-Industry: ${clientData.industry}
-Recent Activities: ${JSON.stringify(clientData.recentActivities || [])}
-HubSpot Notes: ${JSON.stringify(clientData.hubspotProperties?.notes || [])}
+Company: ${clientData.companyName || 'Unknown Company'}
+Industry: ${clientData.industry || 'Not specified'}
+Revenue: ${clientData.revenue || 'Not specified'}
+Employees: ${clientData.employees || 'Not specified'}
+Lifecycle Stage: ${clientData.lifecycleStage || 'Unknown'}
+Current Services: ${JSON.stringify(clientData.services || [])}
 
-Based on industry patterns and any explicit mentions, identify 3-5 key pain points.
-Return as JSON array of strings: ["pain point 1", "pain point 2", ...]
+Even with limited data, infer 3-5 common business pain points based on:
+1. Company name context and likely business model
+2. Typical challenges for businesses of this type
+3. Common financial/operational pain points for small-medium businesses
+4. Service gaps if they're already using some services
 
-Focus on operational, financial, and compliance challenges common to their industry and size.
+Return as JSON object with "painPoints" array: 
+{
+  "painPoints": ["Specific pain point 1", "Specific pain point 2", "Specific pain point 3"]
+}
+
+Example pain points: "Manual bookkeeping consuming too much time", "Tax compliance uncertainties", "Payroll processing inefficiencies", "Cash flow management challenges"
 `;
 
       const response = await openai.chat.completions.create({
@@ -193,8 +207,9 @@ Focus on operational, financial, and compliance challenges common to their indus
         temperature: 0.5
       });
 
-      const result = JSON.parse(response.choices[0].message.content || "[]");
-      return Array.isArray(result) ? result : result.painPoints || [];
+      const result = JSON.parse(response.choices[0].message.content || '{"painPoints":[]}');
+      console.log('[ClientIntel] Pain points AI response:', result);
+      return result.painPoints || [];
     } catch (error) {
       console.error('Pain point extraction failed:', error);
       return ["Unable to analyze pain points"];
