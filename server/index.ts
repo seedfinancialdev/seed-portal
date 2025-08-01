@@ -140,8 +140,18 @@ app.use((req, res, next) => {
     await applyRedisSessionsAtStartup(app);
     console.log('[Server] Redis sessions startup configuration completed');
     
+    // Initialize Redis connections first
+    console.log('[Server] Initializing Redis connections...');
+    const { initRedis } = await import('./redis');
+    await initRedis();
+    console.log('[Server] Redis connections established');
+    
     // Initialize BullMQ queue and start workers
-    console.log('[Server] Starting BullMQ workers...');
+    console.log('[Server] Initializing BullMQ queue system...');
+    const { initializeQueue } = await import('./queue');
+    await initializeQueue();
+    console.log('[Server] Queue initialized, starting workers...');
+    
     const { startAIInsightsWorker } = await import('./workers/ai-insights-worker');
     const worker = await startAIInsightsWorker();
     console.log('[Server] BullMQ workers started successfully');

@@ -1235,7 +1235,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       }
 
       // Queue the expensive AI analysis
-      const { aiInsightsQueue } = await import('./queue.js');
+      const { getAIInsightsQueue } = await import('./queue.js');
+      const aiInsightsQueue = getAIInsightsQueue();
+      
+      if (!aiInsightsQueue) {
+        return res.status(503).json({ message: "Queue service unavailable" });
+      }
+      
       const job = await aiInsightsQueue.add('generate-insights', {
         contactId: clientId,
         clientData,
@@ -1269,7 +1275,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.get("/api/jobs/:jobId/status", requireAuth, async (req, res) => {
     try {
       const { jobId } = req.params;
-      const { aiInsightsQueue } = await import('./queue.js');
+      const { getAIInsightsQueue } = await import('./queue.js');
+      const aiInsightsQueue = getAIInsightsQueue();
+      
+      if (!aiInsightsQueue) {
+        return res.status(503).json({ message: "Queue service unavailable" });
+      }
       
       const job = await aiInsightsQueue.getJob(jobId);
       if (!job) {

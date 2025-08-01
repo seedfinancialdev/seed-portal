@@ -189,10 +189,7 @@ async function initializeRedis() {
   return initPromise;
 }
 
-// Initialize immediately
-initializeRedis().catch(err => {
-  console.error('[Redis] Failed to initialize:', err);
-});
+// Don't initialize immediately - wait for explicit call
 
 // Export getter for Redis connections
 export function getRedis(): RedisConfig | null {
@@ -205,7 +202,13 @@ export async function getRedisAsync(): Promise<RedisConfig | null> {
   return redisConnections;
 }
 
-// Also export as 'redis' for compatibility
+// Export function to manually initialize Redis
+export async function initRedis(): Promise<RedisConfig | null> {
+  await initializeRedis();
+  return redisConnections;
+}
+
+// Also export as 'redis' for compatibility (will be null until initialized)
 export const redis = redisConnections;
 
 // Graceful shutdown

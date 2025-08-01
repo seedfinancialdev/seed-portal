@@ -1,4 +1,4 @@
-import { redis } from './redis';
+import { getRedis } from './redis';
 import { createHash } from 'crypto';
 import { logger } from './logger';
 import { promisify } from 'util';
@@ -12,7 +12,10 @@ export interface CacheOptions {
 }
 
 export class CacheService {
-  private cacheRedis = redis?.cacheRedis;
+  private getCacheRedis() {
+    const redis = getRedis();
+    return redis?.cacheRedis;
+  }
   private defaultTTL = 300; // 5 minutes default
 
   /**
@@ -29,12 +32,13 @@ export class CacheService {
    * Get value from cache
    */
   async get<T>(key: string): Promise<T | null> {
-    if (!this.cacheRedis) {
+    const cacheRedis = this.getCacheRedis();
+    if (!cacheRedis) {
       return null;
     }
 
     try {
-      const cached = await this.cacheRedis.getAsync(key);
+      const cached = await cacheRedis.getAsync(key);
       if (cached) {
         cacheLogger.debug({ key }, 'Cache hit');
         return JSON.parse(cached);
@@ -51,7 +55,8 @@ export class CacheService {
    * Set value in cache
    */
   async set<T>(key: string, value: T, ttl?: number): Promise<void> {
-    if (!this.cacheRedis) {
+    const cacheRedis = this.getCacheRedis();
+    if (!cacheRedis) {
       return;
     }
 
@@ -59,7 +64,7 @@ export class CacheService {
       const serialized = JSON.stringify(value);
       const expiryTime = ttl || this.defaultTTL;
       
-      await this.cacheRedis.setAsync(key, serialized, 'EX', expiryTime);
+      await cacheRedis.setAsync(key, serialized, 'EX', expiryTime);
       cacheLogger.debug({ key, ttl: expiryTime }, 'Cache set');
     } catch (error) {
       cacheLogger.error({ error, key }, 'Cache set error');
@@ -70,17 +75,18 @@ export class CacheService {
    * Delete value from cache
    */
   async del(pattern: string): Promise<void> {
-    if (!this.cacheRedis) {
+    const cacheRedis = this.getCacheRedis();
+    if (!cacheRedis) {
       return;
     }
 
     try {
       // Find all keys matching the pattern
-      const keysAsync = promisify(this.cacheRedis.keys).bind(this.cacheRedis);
+      const keysAsync = promisify(cacheRedis.keys).bind(cacheRedis);
       const keys = await keysAsync(`cache:${pattern}*`);
       if (keys.length > 0) {
         // Delete the keys directly (with their full key names including prefix)
-        await this.cacheRedis.delAsync(...keys);
+        await cacheRedis.delAsync(...keys);
         cacheLogger.debug({ pattern, count: keys.length }, 'Cache invalidated');
       }
     } catch (error) {
@@ -96,8 +102,9 @@ export class CacheService {
     fn: () => Promise<T>,
     options: CacheOptions = {}
   ): Promise<T> {
+    const cacheRedis = this.getCacheRedis();
     // Skip cache if requested or Redis not available
-    if (options.skipCache || !this.cacheRedis) {
+    if (options.skipCache || !cacheRedis) {
       return await fn();
     }
 

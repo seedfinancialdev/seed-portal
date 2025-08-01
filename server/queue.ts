@@ -2,8 +2,10 @@
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import Redis from 'ioredis';
 
-// Redis connection for queues (with queue: prefix)
+// Redis connection for queues
 let queueRedis: Redis | null = null;
+let aiInsightsQueue: Queue | null = null;
+let aiInsightsQueueEvents: QueueEvents | null = null;
 
 export async function initializeQueue(): Promise<void> {
   if (!process.env.REDIS_URL) {
@@ -15,35 +17,47 @@ export async function initializeQueue(): Promise<void> {
     queueRedis = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null, // Required for BullMQ
       retryDelayOnFailover: 100,
-      db: 0, // Use same database as sessions/cache
     });
     
     await queueRedis.ping();
     console.log('[Queue] ✅ Redis connection established for queues');
+    
+    // Only create queues after Redis connection is established
+    aiInsightsQueue = new Queue('ai-insights', {
+      connection: queueRedis,
+      defaultJobOptions: {
+        removeOnComplete: 10, // Keep last 10 completed jobs
+        removeOnFail: 25,     // Keep last 25 failed jobs
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+      },
+    });
+
+    // Queue Events for monitoring
+    aiInsightsQueueEvents = new QueueEvents('ai-insights', {
+      connection: queueRedis,
+    });
+    
+    console.log('[Queue] ✅ BullMQ queues initialized');
   } catch (error) {
     console.error('[Queue] ❌ Failed to connect to Redis:', error);
     queueRedis = null;
+    aiInsightsQueue = null;
+    aiInsightsQueueEvents = null;
   }
 }
 
-// AI Insights Queue
-export const aiInsightsQueue = new Queue('ai-insights', {
-  connection: queueRedis || undefined,
-  defaultJobOptions: {
-    removeOnComplete: 10, // Keep last 10 completed jobs
-    removeOnFail: 25,     // Keep last 25 failed jobs
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000,
-    },
-  },
-});
+// Export function to get queue (only when ready)
+export function getAIInsightsQueue(): Queue | null {
+  return aiInsightsQueue;
+}
 
-// Queue Events for monitoring
-export const aiInsightsQueueEvents = new QueueEvents('ai-insights', {
-  connection: queueRedis || undefined,
-});
+export function getAIInsightsQueueEvents(): QueueEvents | null {
+  return aiInsightsQueueEvents;
+}
 
 // Job Types
 export interface AIInsightsJobData {
@@ -85,5 +99,4 @@ export function updateQueueMetrics(processingTime: number, failed = false) {
   queueMetrics.lastProcessedAt = new Date();
 }
 
-// Initialize queue on import
-initializeQueue().catch(console.error);
+// Don't initialize automatically on import - wait for explicit call
