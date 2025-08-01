@@ -483,33 +483,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(500).json({ message: "User creation failed" });
       }
       
+      // Simplified session establishment - avoid complex regeneration that can fail with Redis
       req.login(user, (err: any) => {
         if (err) {
           console.error('Session login failed:', err);
           return res.status(500).json({ message: "Failed to establish session" });
         }
         
-        // Regenerate session after successful login for security
-        req.session.regenerate((regenerateErr: any) => {
-          if (regenerateErr) {
-            console.error('Session regeneration failed:', regenerateErr);
-            return res.status(500).json({ message: "Failed to secure session" });
-          }
-          
-          // Re-establish user in the new session
-          req.login(user, (loginErr: any) => {
-            if (loginErr) {
-              console.error('Session re-login failed:', loginErr);
-              return res.status(500).json({ message: "Failed to establish secure session" });
-            }
-            
-            console.log('✅ Session regenerated after OAuth login for:', user.email);
-            
-            // Return user data (excluding password)
-            const { password, ...safeUser } = user!;
-            res.json(safeUser);
-          });
-        });
+        console.log('✅ Session established after OAuth login for:', user.email);
+        console.log('✅ User role:', user.role);
+        
+        // Return user data (excluding password)
+        const { password, ...safeUser } = user!;
+        res.json(safeUser);
       });
     } catch (error) {
       console.error('Error syncing Google user:', error);
