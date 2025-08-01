@@ -74,23 +74,13 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Use Redis for sessions if available, otherwise fall back to memory store
-    if (process.env.REDIS_URL && redis?.sessionRedis) {
-      try {
-        this.sessionStore = new RedisStore({
-          client: redis.sessionRedis as any,
-          prefix: 'sess:',
-          ttl: 24 * 60 * 60, // 24 hours
-          disableTouch: false,
-        });
-        console.log('Using Redis for session storage');
-      } catch (error) {
-        console.error('Failed to initialize Redis session store:', error);
-        this.initMemoryStore();
-      }
-    } else {
-      this.initMemoryStore();
-    }
+    // TEMPORARY: Force memory store until Redis issue is resolved
+    this.initMemoryStore();
+    console.log('Using memory store temporarily - Redis syntax error needs investigation');
+    
+    // TODO: Fix Redis store - connect-redis v9 has compatibility issues with ioredis
+    // The issue is that it's passing an object as the third argument to SET command
+    // which causes "ERR syntax error" in Redis
   }
 
   private initMemoryStore() {

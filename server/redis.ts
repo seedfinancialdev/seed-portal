@@ -38,6 +38,20 @@ function createRedisConnections(): RedisConfig | null {
     ...baseConfig,
     db: 0, // Use default database
     commandTimeout: 5000,
+    showFriendlyErrorStack: true,
+  });
+  
+  // Debug Redis commands to find syntax error
+  sessionRedis.monitor((err, monitor) => {
+    if (err) {
+      console.error('Could not enable Redis monitor:', err);
+      return;
+    }
+    monitor.on('monitor', (time, args, source) => {
+      if (args[0] === 'EXPIRE' || args[0] === 'SET' || args[0] === 'GET') {
+        console.log(`[REDIS CMD] ${args.join(' ')}`);
+      }
+    });
   });
 
   // Cache Redis - using key prefix for isolation
