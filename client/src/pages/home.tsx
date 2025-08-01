@@ -637,8 +637,19 @@ export default function Home() {
       if (sortField) params.append('sortField', sortField);
       if (sortOrder) params.append('sortOrder', sortOrder);
       
-      const response = await apiRequest(`/api/quotes?${params.toString()}`);
-      return response || [];
+      const response = await fetch(`/api/quotes?${params.toString()}`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch quotes');
+      }
+      
+      const data = await response.json();
+      return data || [];
     },
     retry: false, // Don't retry on auth failures
   });
@@ -663,17 +674,15 @@ export default function Home() {
       console.log('Final quote data:', quoteData);
       
       if (editingQuoteId) {
-        const response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
+        return await apiRequest(`/api/quotes/${editingQuoteId}`, {
           method: "PUT",
           body: JSON.stringify(quoteData)
         });
-        return response;
       } else {
-        const response = await apiRequest("/api/quotes", {
+        return await apiRequest("/api/quotes", {
           method: "POST",
           body: JSON.stringify(quoteData)
         });
-        return response;
       }
     },
     onSuccess: (data) => {
@@ -703,11 +712,10 @@ export default function Home() {
   // Archive quote mutation
   const archiveQuoteMutation = useMutation({
     mutationFn: async (quoteId: number) => {
-      const response = await apiRequest(`/api/quotes/${quoteId}/archive`, {
+      return await apiRequest(`/api/quotes/${quoteId}/archive`, {
         method: "PATCH",
         body: JSON.stringify({})
       });
-      return response;
     },
     onSuccess: () => {
       toast({
