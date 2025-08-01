@@ -205,7 +205,7 @@ const navigationItems = [
 export default function AdminDashboard() {
   const { dbUser: user, signOut } = useGoogleAuth();
   const { hasPermission, getAvailableDashboards } = usePermissions();
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const [selectedSection, setSelectedSection] = useState('dashboard');
   const availableDashboards = getAvailableDashboards();
 
