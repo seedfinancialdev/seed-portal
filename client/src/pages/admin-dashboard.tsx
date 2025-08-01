@@ -144,7 +144,7 @@ interface ClientHealthScore {
   revenue: number;
 }
 
-// Navigation items for SEEDOS
+// Navigation items for SEEDOS - Updated with CDN Monitoring
 const navigationItems = [
   {
     category: 'Core',
