@@ -24,7 +24,13 @@ import {
   Wrench,
   Shield,
   Heart,
-  Folder
+  Folder,
+  MessageSquare,
+  FileText,
+  BarChart3,
+  Calendar,
+  Phone,
+  Mail
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
@@ -32,11 +38,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { UniversalNavbar } from "@/components/UniversalNavbar";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { LazySalesInbox } from "@/components/LazyDashboard";
+import { NewsAggregator } from "@/components/NewsAggregator";
 import { useState, useEffect } from "react";
 import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
-import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
-import { useCounterAnimation } from "@/hooks/useCounterAnimation";
+
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from "@/lib/queryClient";
 
@@ -103,29 +108,6 @@ const getWeatherIcon = (condition: string) => {
 export default function Dashboard() {
   const { dbUser: user } = useGoogleAuth();
   const [, setLocation] = useLocation();
-  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useDashboardMetrics();
-  
-  // Counter animations for metrics cards - fast timing for responsive feel
-  const pipelineCounter = useCounterAnimation({ 
-    target: metrics?.pipelineValue || 0, 
-    duration: 800, 
-    delay: 100,
-    enabled: !metricsLoading && !metricsError 
-  });
-  
-  const mtdRevenueCounter = useCounterAnimation({ 
-    target: metrics?.mtdRevenue || 0, 
-    duration: 800, 
-    delay: 200,
-    enabled: !metricsLoading && !metricsError 
-  });
-  
-  const activeDealsCounter = useCounterAnimation({ 
-    target: metrics?.activeDeals || 0, 
-    duration: 600, 
-    delay: 300,
-    enabled: !metricsLoading && !metricsError 
-  });
 
   // Fetch knowledge base categories for the SEEDKB card
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<KbCategory[]>({
@@ -257,288 +239,285 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Key Metrics Cards */}
-        <div className="grid grid-cols-3 gap-6 mb-12">
-          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl card-bounce-in-1">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-3">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-              </div>
-              <p className="text-2xl font-light text-white mb-1">
-                {metricsLoading ? (
-                  <span className="animate-pulse">Loading...</span>
-                ) : metricsError ? (
-                  'Error'
-                ) : (
-                  `$${pipelineCounter.count.toLocaleString()}`
-                )}
-              </p>
-              <p className="text-xs text-white/80 uppercase tracking-wide">Pipeline Value</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl card-bounce-in-2">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-3">
-                <Activity className="h-6 w-6 text-purple-600" />
-              </div>
-              <p className="text-2xl font-light text-white mb-1">
-                {metricsLoading ? (
-                  <span className="animate-pulse">Loading...</span>
-                ) : metricsError ? (
-                  'Error'
-                ) : (
-                  `$${mtdRevenueCounter.count.toLocaleString()}`
-                )}
-              </p>
-              <p className="text-xs text-white/80 uppercase tracking-wide">MTD Revenue</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/20 backdrop-blur-md border border-white/30 shadow-xl card-bounce-in-3">
-            <CardContent className="p-6 text-center">
-              <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-3">
-                <Target className="h-6 w-6 text-blue-600" />
-              </div>
-              <p className="text-2xl font-light text-white mb-1">
-                {metricsLoading ? (
-                  <span className="animate-pulse">Loading...</span>
-                ) : metricsError ? (
-                  'Error'
-                ) : (
-                  activeDealsCounter.count.toString()
-                )}
-              </p>
-              <p className="text-xs text-white/80 uppercase tracking-wide">Active Deals</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
+        {/* Sales Enablement Tools - Moved Quick Actions Here */}
         <div className="mb-12">
-          <h2 className="text-xl font-light text-white mb-6 text-center">Quick Actions</h2>
-          <div className={`grid gap-8 justify-items-center ${(user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin') ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          <div className={`grid gap-8 justify-items-center ${(user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin') ? 'grid-cols-6' : 'grid-cols-5'}`}>
             <Link href="/calculator">
-              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 4} as React.CSSProperties}>
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 1} as React.CSSProperties}>
                 <div className="action-card-content">
-                  <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-4 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
-                    <Calculator className="h-5 w-5 text-white" />
+                  <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-3 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
+                    <Calculator className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Quote Calculator</h3>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Quote Calculator</h3>
                 </div>
               </div>
             </Link>
 
             <Link href="/commission-tracker">
-              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 5} as React.CSSProperties}>
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 2} as React.CSSProperties}>
                 <div className="action-card-content">
-                  <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-4 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
-                    <DollarSign className="h-5 w-5 text-white" />
+                  <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-3 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
+                    <DollarSign className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Commission Tracker</h3>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Commission Tracker</h3>
                 </div>
               </div>
             </Link>
 
             <Link href="/client-intel">
-              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 6} as React.CSSProperties}>
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 3} as React.CSSProperties}>
                 <div className="action-card-content">
-                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-4 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
-                    <UserCheck className="h-5 w-5 text-white" />
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-3 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
+                    <UserCheck className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Client<br/>Intel</h3>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Client Intel</h3>
                 </div>
               </div>
             </Link>
 
-            <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 7} as React.CSSProperties}>
+            <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 4} as React.CSSProperties}>
               <div className="action-card-content">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-4 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
-                  <Video className="h-5 w-5 text-white" />
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-3 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
+                  <Video className="h-4 w-4 text-white" />
                 </div>
-                <h3 className="text-base font-bold text-center text-white leading-tight px-1">Meeting<br/>Vault</h3>
+                <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Meeting Vault</h3>
+              </div>
+            </div>
+
+            <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 5} as React.CSSProperties}>
+              <div className="action-card-content">
+                <div className="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full mb-3 group-hover:from-teal-400 group-hover:to-teal-500 transition-all duration-300">
+                  <MessageSquare className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Sales Scripts</h3>
               </div>
             </div>
 
             {/* Sales Trainer - Only visible to admins */}
             {(user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin') && (
-              <div className="group w-40 h-40 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 8} as React.CSSProperties}>
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 6} as React.CSSProperties}>
                 <div className="action-card-content">
-                  <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-4 group-hover:from-red-400 group-hover:to-red-500 transition-all duration-300">
-                    <GraduationCap className="h-5 w-5 text-white" />
+                  <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-3 group-hover:from-red-400 group-hover:to-red-500 transition-all duration-300">
+                    <GraduationCap className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-base font-bold text-center text-white leading-tight px-1">Sales<br/>Trainer</h3>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Sales Trainer</h3>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Sales Dashboard */}
+        {/* Sales Enablement Dashboard */}
         <div className="grid grid-cols-3 gap-8 mb-16">
-          {/* Dynamic Sales Inbox */}
-          <div className="col-span-2">
-            <LazySalesInbox limit={8} />
-          </div>
-
-          {/* SEEDKB - Full Column with Category Grid */}
-          <div className="h-full relative z-10">
-            <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 backdrop-blur-xl border-2 rounded-2xl shadow-2xl h-full overflow-visible">
-              <CardHeader className="pb-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-600/30">
-                <CardTitle className="flex items-center gap-3 text-2xl font-bold" style={{ fontFamily: 'League Spartan, sans-serif' }}>
-                  <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
-                    <BookOpen className="h-6 w-6 text-white" />
+          {/* Left Column - Sales Resources */}
+          <div className="col-span-2 space-y-6">
+            {/* Sales Playbook */}
+            <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg">
+                    <FileText className="h-5 w-5 text-indigo-300" />
                   </div>
-                  <span className="text-white">SEED<span style={{ color: '#e24c00' }}>KB</span></span>
+                  Sales Playbook
                 </CardTitle>
-                <CardDescription className="text-slate-300 text-base">
-                  Your comprehensive knowledge hub
+                <CardDescription className="text-white/70">
+                  Your complete guide to sales success
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 overflow-visible">
-                <div className="space-y-6">
-                  <Button 
-                    onClick={() => setLocation('/knowledge-base')}
-                    className="w-full text-lg h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-200"
-                  >
-                    <BookOpen className="h-5 w-5 mr-3" />
-                    Open Knowledge Base
-                  </Button>
-                  
-                  {/* Mini Category Grid - 3x3 layout */}
-                  <div className="relative z-20">
-                    <h4 className="font-bold text-white mb-4 text-base">Knowledge Categories</h4>
-                    {categoriesLoading ? (
-                      <div className="text-slate-400 text-center py-8">Loading categories...</div>
-                    ) : (
-                      <TooltipProvider>
-                        <div className="grid grid-cols-3 gap-4 relative z-30">
-                          {categories.map((category: KbCategory) => {
-                            const IconComponent = getIconComponent(category.icon);
-                            
-                            return (
-                              <Tooltip key={category.id}>
-                                <TooltipTrigger asChild>
-                                  <Card
-                                    className="group h-20 w-20 cursor-pointer transition-all duration-300 hover:scale-110 hover:shadow-xl bg-gradient-to-br from-slate-700/80 to-slate-800/80 border-slate-600/40 hover:from-slate-600/80 hover:to-slate-700/80 hover:border-orange-400/70 backdrop-blur-md border rounded-2xl overflow-hidden relative mx-auto"
-                                    onClick={() => setLocation('/knowledge-base')}
-                                  >
-                                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                    
-                                    <div className="relative h-full flex items-center justify-center">
-                                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-125 transition-all duration-300 border border-white/30 group-hover:border-white/50`}>
-                                        <IconComponent className="h-6 w-6 text-white group-hover:scale-110 transition-transform duration-300" />
-                                      </div>
-                                    </div>
-                                  </Card>
-                                </TooltipTrigger>
-                                <TooltipContent 
-                                  side="bottom" 
-                                  className="bg-slate-800 border-slate-600 text-white font-medium z-50 max-w-none whitespace-nowrap"
-                                  sideOffset={8}
-                                  avoidCollisions={true}
-                                >
-                                  {category.name}
-                                </TooltipContent>
-                              </Tooltip>
-                            );
-                          })}
-                        </div>
-                      </TooltipProvider>
-                    )}
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Objection Handling</h4>
+                    <p className="text-xs text-white/70">Common objections and proven responses</p>
+                  </div>
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Discovery Questions</h4>
+                    <p className="text-xs text-white/70">Questions to uncover client needs</p>
+                  </div>
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Closing Techniques</h4>
+                    <p className="text-xs text-white/70">Proven methods to close deals</p>
+                  </div>
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Follow-up Templates</h4>
+                    <p className="text-xs text-white/70">Email templates for every scenario</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Competitive Intelligence */}
+            <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-amber-500/20 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-amber-300" />
+                  </div>
+                  Competitive Intelligence
+                </CardTitle>
+                <CardDescription className="text-white/70">
+                  Know your competition inside and out
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="p-3 bg-white/20 border border-white/20 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">TaxGuard Pro</h4>
+                      <p className="text-xs text-white/70">Main competitor analysis</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-3 bg-white/20 border border-white/20 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">BookKeeper Elite</h4>
+                      <p className="text-xs text-white/70">Pricing comparison available</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-3 bg-white/20 border border-white/20 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">AccuFinance</h4>
+                      <p className="text-xs text-white/70">Feature comparison matrix</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Right Column - News Aggregator */}
+          <div>
+            <NewsAggregator />
+          </div>
         </div>
 
-        {/* Full-Width Footer Section */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-8 mt-8 shadow-xl">
-          <div className="grid grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Activity className="h-5 w-5 text-orange-500" />
-                Today's Performance
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-700 font-medium">Quotes Generated</span>
-                  <span className="text-gray-900 font-bold">7</span>
+        {/* Additional Sales Tools */}
+        <div className="grid grid-cols-2 gap-8 mb-12">
+          {/* Quick Contact Templates */}
+          <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-white">
+                <div className="p-2 bg-pink-500/20 rounded-lg">
+                  <Mail className="h-5 w-5 text-pink-300" />
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-700 font-medium">Calls Made</span>
-                  <span className="text-gray-900 font-bold">12</span>
+                Quick Contact Templates
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Cold Outreach</h4>
+                <p className="text-xs text-white/70">Initial contact templates</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Meeting Follow-up</h4>
+                <p className="text-xs text-white/70">Post-meeting templates</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Proposal Delivery</h4>
+                <p className="text-xs text-white/70">Quote delivery templates</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Call Scheduling */}
+          <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-white">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <Calendar className="h-5 w-5 text-cyan-300" />
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-700 font-medium">Meetings Booked</span>
-                  <span className="text-gray-900 font-bold">3</span>
+                Smart Scheduling
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Discovery Call</h4>
+                <p className="text-xs text-white/70">30 min initial meeting</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Demo Session</h4>
+                <p className="text-xs text-white/70">45 min product demo</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Closing Call</h4>
+                <p className="text-xs text-white/70">Final decision meeting</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Knowledge Base Access */}
+        <div className="mb-12">
+          <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 backdrop-blur-xl border-2 rounded-2xl shadow-2xl">
+            <CardHeader className="pb-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-600/30">
+              <CardTitle className="flex items-center gap-3 text-2xl font-bold" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+                <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
+                  <BookOpen className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-white">SEED<span style={{ color: '#e24c00' }}>KB</span></span>
+              </CardTitle>
+              <CardDescription className="text-slate-300 text-base">
+                Your comprehensive knowledge hub for sales success
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button 
+                    onClick={() => setLocation('/knowledge-base')}
+                    className="text-lg h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <BookOpen className="h-5 w-5 mr-3" />
+                    Open Knowledge Base
+                  </Button>
+                  
+                  {categoriesLoading ? (
+                    <div className="text-slate-400">Loading categories...</div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/70 text-sm">{categories.length} categories available</span>
+                      <div className="flex gap-2">
+                        {categories.slice(0, 4).map((category: KbCategory) => {
+                          const IconComponent = getIconComponent(category.icon);
+                          return (
+                            <TooltipProvider key={category.id}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center`}>
+                                    <IconComponent className="h-4 w-4 text-white" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-slate-800 border-slate-600 text-white">
+                                  {category.name}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
+                        {categories.length > 4 && (
+                          <div className="w-8 h-8 rounded-lg bg-slate-600 flex items-center justify-center">
+                            <span className="text-white text-xs">+{categories.length - 4}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-            
-            <div>
-              <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Target className="h-5 w-5 text-orange-500" />
-                Goals Progress
-              </h3>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-700 font-medium">Monthly Target</span>
-                    <span className="text-gray-900 font-bold">68%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-orange-500 h-2.5 rounded-full" style={{width: '68%'}}></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-700 font-medium">Quarterly Goal</span>
-                    <span className="text-gray-900 font-bold">45%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div className="bg-orange-400 h-2.5 rounded-full" style={{width: '45%'}}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-orange-500" />
-                Recent Wins
-              </h3>
-              <div className="space-y-3">
-                <div className="text-sm">
-                  <p className="text-gray-900 font-bold">$15K Deal Closed</p>
-                  <p className="text-gray-600 font-medium">MarketPro Inc • Yesterday</p>
-                </div>
-                <div className="text-sm">
-                  <p className="text-gray-900 font-bold">Referral Received</p>
-                  <p className="text-gray-600 font-medium">From TechFlow • 2 days ago</p>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <ChevronRight className="h-5 w-5 text-orange-500" />
-                Quick Links
-              </h3>
-              <div className="space-y-2">
-                <Button variant="ghost" size="sm" className="w-full justify-start text-sm text-gray-700 font-medium hover:text-gray-900 hover:bg-gray-100 p-3">
-                  Weekly Reports
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start text-sm text-gray-700 font-medium hover:text-gray-900 hover:bg-gray-100 p-3">
-                  Team Calendar
-                </Button>
-                <Button variant="ghost" size="sm" className="w-full justify-start text-sm text-gray-700 font-medium hover:text-gray-900 hover:bg-gray-100 p-3">
-                  Training Materials
-                </Button>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
