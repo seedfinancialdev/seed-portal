@@ -2000,6 +2000,159 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     throw new Error("Test Sentry error - this is intentional!");
   });
 
+  // CDN and Asset Optimization endpoints
+  
+  // Get compression statistics
+  app.get("/api/cdn/compression-stats", requireAuth, async (req, res) => {
+    try {
+      const { assetOptimization } = await import('./middleware/asset-optimization.js');
+      const stats = assetOptimization.getStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Compression stats error:', error);
+      res.status(500).json({ message: "Failed to get compression stats" });
+    }
+  });
+
+  // Reset compression statistics
+  app.post("/api/cdn/reset-compression-stats", requireAuth, async (req, res) => {
+    try {
+      const { assetOptimization } = await import('./middleware/asset-optimization.js');
+      assetOptimization.resetStats();
+      res.json({ message: "Compression statistics reset successfully" });
+    } catch (error) {
+      console.error('Reset compression stats error:', error);
+      res.status(500).json({ message: "Failed to reset compression statistics" });
+    }
+  });
+
+  // Get CDN performance metrics
+  app.get("/api/cdn/performance", requireAuth, async (req, res) => {
+    try {
+      const { cdnService } = await import('./cdn.js');
+      const manifest = cdnService.getManifest();
+      
+      const totalAssets = Object.keys(manifest).length;
+      const totalSize = Object.values(manifest).reduce((sum, asset) => sum + asset.size, 0);
+      const averageSize = totalAssets > 0 ? totalSize / totalAssets : 0;
+      
+      res.json({
+        totalAssets,
+        totalSize,
+        averageSize,
+        lastUpdated: new Date().toISOString(),
+        cacheHeaders: 'enabled',
+        compression: 'enabled'
+      });
+    } catch (error) {
+      console.error('CDN performance error:', error);
+      res.status(500).json({ message: "Failed to get CDN performance metrics" });
+    }
+  });
+
+  // Rebuild asset manifest
+  app.post("/api/cdn/rebuild-manifest", requireAuth, async (req, res) => {
+    try {
+      const { cdnService } = await import('./cdn.js');
+      await cdnService.initialize();
+      res.json({ message: "Asset manifest rebuilt successfully" });
+    } catch (error) {
+      console.error('Rebuild manifest error:', error);
+      res.status(500).json({ message: "Failed to rebuild asset manifest" });
+    }
+  });
+
+  // HubSpot Background Jobs endpoints
+  
+  // Get HubSpot queue metrics
+  app.get("/api/hubspot/queue-metrics", requireAuth, async (req, res) => {
+    try {
+      const { getHubSpotQueueMetrics } = await import('./hubspot-background-jobs.js');
+      const metrics = await getHubSpotQueueMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error('HubSpot queue metrics error:', error);
+      res.status(500).json({ message: "Failed to get HubSpot queue metrics" });
+    }
+  });
+
+  // Schedule HubSpot sync jobs
+  app.post("/api/hubspot/schedule-sync", requireAuth, async (req, res) => {
+    try {
+      const { type, contactId, dealId } = req.body;
+      const { 
+        scheduleFullSync, 
+        scheduleIncrementalSync, 
+        scheduleContactEnrichment, 
+        scheduleDealSync 
+      } = await import('./hubspot-background-jobs.js');
+      
+      let jobId = null;
+      
+      switch (type) {
+        case 'full-sync':
+          jobId = await scheduleFullSync(req.user?.id);
+          break;
+        case 'incremental-sync':
+          jobId = await scheduleIncrementalSync();
+          break;
+        case 'contact-enrichment':
+          if (!contactId) {
+            return res.status(400).json({ message: "Contact ID required for contact enrichment" });
+          }
+          jobId = await scheduleContactEnrichment(contactId, req.user?.id);
+          break;
+        case 'deal-sync':
+          jobId = await scheduleDealSync(dealId);
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid sync type" });
+      }
+      
+      if (jobId) {
+        res.json({ message: `${type} scheduled successfully`, jobId });
+      } else {
+        res.status(500).json({ message: `Failed to schedule ${type}` });
+      }
+    } catch (error) {
+      console.error('Schedule HubSpot sync error:', error);
+      res.status(500).json({ message: "Failed to schedule HubSpot sync" });
+    }
+  });
+
+  // Check HubSpot API health
+  app.get("/api/hubspot/health", requireAuth, async (req, res) => {
+    try {
+      const { checkHubSpotApiHealth } = await import('./hubspot-background-jobs.js');
+      const isHealthy = await checkHubSpotApiHealth();
+      
+      res.json({
+        status: isHealthy ? 'healthy' : 'unhealthy',
+        timestamp: new Date().toISOString(),
+        hasApiAccess: isHealthy
+      });
+    } catch (error) {
+      console.error('HubSpot health check error:', error);
+      res.status(500).json({ 
+        status: 'error',
+        message: "Failed to check HubSpot health",
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Clean up HubSpot queue
+  app.post("/api/hubspot/cleanup-queue", requireAuth, async (req, res) => {
+    try {
+      const { cleanupHubSpotQueue } = await import('./hubspot-background-jobs.js');
+      await cleanupHubSpotQueue();
+      res.json({ message: "HubSpot queue cleanup completed successfully" });
+    } catch (error) {
+      console.error('HubSpot queue cleanup error:', error);
+      res.status(500).json({ message: "Failed to cleanup HubSpot queue" });
+    }
+  });
+
   // Register admin routes
   await registerAdminRoutes(app);
 

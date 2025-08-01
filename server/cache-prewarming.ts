@@ -16,7 +16,7 @@ export async function initializePreWarmQueue(): Promise<void> {
   }
 
   try {
-    const { getCacheRedis } = getRedis();
+    const { getCacheRedis } = await import('./redis.js');
     const queueRedis = getCacheRedis();
     
     if (!queueRedis) {

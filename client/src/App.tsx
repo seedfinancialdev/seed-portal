@@ -23,6 +23,7 @@ import KnowledgeBase from "@/pages/knowledge-base";
 import KbAdmin from "@/pages/kb-admin";
 import UserManagement from "@/pages/user-management";
 import RequestAccess from "@/pages/request-access";
+import CDNMonitoring from "@/pages/CDNMonitoring";
 
 function Router() {
   // Automatically scroll to top when route changes
@@ -42,6 +43,7 @@ function Router() {
         <ProtectedRoute path="/knowledge-base" component={KnowledgeBase} />
         <ProtectedRoute path="/kb-admin" component={KbAdmin} />
         <ProtectedRoute path="/user-management" component={UserManagement} />
+        <ProtectedRoute path="/cdn-monitoring" component={CDNMonitoring} />
         <ProtectedRoute path="/profile" component={Profile} />
         <Route path="/auth" component={AuthPage} />
         <Route path="/request-access" component={RequestAccess} />

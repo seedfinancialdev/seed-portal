@@ -155,6 +155,15 @@ app.use((req, res, next) => {
     const { startAIInsightsWorker } = await import('./workers/ai-insights-worker');
     const worker = await startAIInsightsWorker();
     
+    // Initialize HubSpot background jobs
+    console.log('[Server] Initializing HubSpot background jobs...');
+    const { initializeHubSpotQueue, scheduleRecurringSync } = await import('./hubspot-background-jobs.js');
+    const { startHubSpotSyncWorker } = await import('./workers/hubspot-sync-worker.js');
+    await initializeHubSpotQueue();
+    const hubspotWorker = await startHubSpotSyncWorker();
+    await scheduleRecurringSync();
+    console.log('[Server] HubSpot background jobs initialized successfully');
+    
     // Initialize cache pre-warming
     console.log('[Server] Initializing cache pre-warming...');
     const { initializePreWarmQueue, scheduleNightlyPreWarm } = await import('./cache-prewarming.js');
@@ -163,6 +172,22 @@ app.use((req, res, next) => {
     await initializePreWarmWorker();
     await scheduleNightlyPreWarm();
     
+    // Initialize CDN and asset optimization
+    console.log('[Server] Initializing CDN and asset optimization...');
+    const { assetOptimization, setCacheHeaders, servePrecompressed } = await import('./middleware/asset-optimization.js');
+    const { cdnService } = await import('./cdn.js');
+    
+    // Apply asset optimization middleware
+    app.use(assetOptimization.getCompressionMiddleware());
+    app.use(assetOptimization.trackCompressionStats());
+    app.use(setCacheHeaders);
+    app.use(servePrecompressed);
+    
+    // Initialize CDN service
+    await cdnService.initialize();
+    cdnService.setupCDNMiddleware(app);
+    
+    console.log('[Server] CDN and asset optimization initialized successfully');
     console.log('[Server] BullMQ workers and cache pre-warming started successfully');
     
     const server = await registerRoutes(app, sessionRedis);
