@@ -84,6 +84,14 @@ export default function KbAdmin() {
   // Fetch categories - only when authenticated
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/kb/categories"],
+    queryFn: async () => {
+      const response = await fetch('/api/kb/categories', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      return response.json();
+    },
     enabled: !!user,
   });
 
@@ -92,7 +100,12 @@ export default function KbAdmin() {
     queryKey: ["/api/kb/articles", selectedCategory],
     queryFn: async () => {
       const params = selectedCategory ? `?categoryId=${selectedCategory}` : '';
-      return apiRequest(`/api/kb/articles${params}`);
+      const response = await fetch(`/api/kb/articles${params}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to fetch articles');
+      return response.json();
     },
     enabled: !!user,
   });
@@ -120,7 +133,13 @@ export default function KbAdmin() {
         ...data,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
       };
-      return apiRequest("/api/kb/articles", { method: "POST", body: JSON.stringify(payload) });
+      const response = await fetch("/api/kb/articles", { 
+        method: "POST", 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload) 
+      });
+      if (!response.ok) throw new Error('Failed to create article');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
@@ -147,7 +166,13 @@ export default function KbAdmin() {
         ...data,
         tags: data.tags ? data.tags.split(',').map(tag => tag.trim()).filter(Boolean) : undefined,
       };
-      return apiRequest(`/api/kb/articles/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      const response = await fetch(`/api/kb/articles/${id}`, { 
+        method: "PATCH", 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload) 
+      });
+      if (!response.ok) throw new Error('Failed to update article');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
@@ -171,7 +196,9 @@ export default function KbAdmin() {
   // Delete article mutation (permanent deletion)
   const deleteArticleMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/kb/articles/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/kb/articles/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error('Failed to delete article');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
@@ -194,7 +221,9 @@ export default function KbAdmin() {
   // Archive article mutation
   const archiveArticleMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest(`/api/kb/articles/${id}/archive`, { method: "PATCH" });
+      const response = await fetch(`/api/kb/articles/${id}/archive`, { method: "PATCH" });
+      if (!response.ok) throw new Error('Failed to archive article');
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
@@ -218,11 +247,13 @@ export default function KbAdmin() {
   const togglePublishMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
       const newStatus = status === 'published' ? 'draft' : 'published';
-      return apiRequest(`/api/kb/articles/${id}`, { 
+      const response = await fetch(`/api/kb/articles/${id}`, { 
         method: "PATCH", 
         body: JSON.stringify({ status: newStatus }),
         headers: { 'Content-Type': 'application/json' }
       });
+      if (!response.ok) throw new Error('Failed to toggle publish status');
+      return response.json();
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/kb/articles"] });
