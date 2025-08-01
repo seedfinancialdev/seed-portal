@@ -62,9 +62,6 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       if (!googleUser || !accessToken) return null;
       
       try {
-        console.log('[Frontend] 🔄 Calling OAuth sync endpoint with token:', accessToken?.substring(0, 20) + '...');
-        console.log('[Frontend] 🔄 User data:', { email: googleUser.email, googleId: googleUser.sub?.substring(0, 10) + '...' });
-        
         // Sync user with backend
         const response = await apiRequest("/api/auth/google/sync", {
           method: "POST",
@@ -80,17 +77,10 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           }),
         });
         
-        console.log('[Frontend] ✅ OAuth sync HTTP status:', response.status);
-        console.log('[Frontend] ✅ OAuth sync response headers:', response.headers);
-        
         // Parse the actual response data
         const responseData = await response.json();
-        console.log('[Frontend] ✅ OAuth sync response data:', responseData);
-        
         return responseData;
       } catch (error: any) {
-        console.error('[Frontend] ❌ OAuth sync failed:', error);
-        console.error('[Frontend] ❌ Error details:', { message: error.message, status: error.status });
         
         // Handle access denied case
         if (error.message?.includes('ACCESS_NOT_GRANTED') || error.status === 403) {

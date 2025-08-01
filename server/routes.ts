@@ -432,19 +432,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Google OAuth user sync endpoint
   app.post("/api/auth/google/sync", async (req, res) => {
-    console.log('[OAuth Sync] 🔄 Starting Google OAuth sync process...');
-    console.log('[OAuth Sync] Request body:', { 
-      email: req.body?.email, 
-      googleId: req.body?.googleId?.substring(0, 10) + '...',
-      hd: req.body?.hd 
-    });
-    
     try {
       const authHeader = req.headers.authorization;
-      console.log('[OAuth Sync] Auth header present:', !!authHeader);
-      
       if (!authHeader?.startsWith('Bearer ')) {
-        console.log('[OAuth Sync] ❌ Missing or invalid authorization header');
         return res.status(401).json({ message: "Authorization header required" });
       }
 
@@ -494,30 +484,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       }
       
       // Simplified session establishment - avoid complex regeneration that can fail with Redis
-      console.log('[OAuth Sync] 🔐 Attempting to establish session for user:', user.email);
-      
       req.login(user, (err: any) => {
         if (err) {
-          console.error('[OAuth Sync] ❌ Session login failed:', err);
+          console.error('Session login failed:', err);
           return res.status(500).json({ message: "Failed to establish session" });
         }
         
-        console.log('[OAuth Sync] ✅ Session established after OAuth login for:', user.email);
-        console.log('[OAuth Sync] ✅ User role:', user.role);
-        console.log('[OAuth Sync] ✅ Session user ID:', req.user?.id);
-        
         // Return user data (excluding password)
         const { password, ...safeUser } = user!;
-        console.log('[OAuth Sync] ✅ Returning user data, sync complete');
         res.json(safeUser);
       });
     } catch (error) {
-      console.error('[OAuth Sync] ❌ Error syncing Google user:', error);
-      console.error('[OAuth Sync] ❌ Sync error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        error: error
-      });
+      console.error('Error syncing Google user:', error);
       res.status(500).json({ message: "Failed to sync user" });
     }
   });
