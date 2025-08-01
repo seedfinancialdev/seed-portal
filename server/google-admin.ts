@@ -36,17 +36,17 @@ export class GoogleAdminService {
       console.log('Initializing Google Admin API with service account impersonation...');
       
       // Check for required secrets
-      const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, IMP_SA_EMAIL } = process.env;
+      const { GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN, IMP_SA_EMAIL } = process.env;
       
-      if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN || !IMP_SA_EMAIL) {
-        throw new Error('Missing required secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, IMP_SA_EMAIL');
+      if (!GOOGLE_CLIENT_ID_OS || !GOOGLE_CLIENT_SECRET_OS || !GOOGLE_REFRESH_TOKEN || !IMP_SA_EMAIL) {
+        throw new Error('Missing required secrets: GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN, IMP_SA_EMAIL');
       }
 
       // A. Authenticate as user using refresh token
       console.log('Step 1: Authenticating as user with refresh token...');
       const userAuth = new OAuth2Client(
-        GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET
+        GOOGLE_CLIENT_ID_OS,
+        GOOGLE_CLIENT_SECRET_OS
       );
       userAuth.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
 
