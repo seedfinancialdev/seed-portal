@@ -33,10 +33,42 @@ export class GoogleAdminService {
 
   private async initialize() {
     try {      
-      console.log('Initializing Google Admin API with ADC discovery...');
+      console.log('Initializing Google Admin API with Service Account...');
       
-      // Use standard ADC discovery - no env vars, no explicit credentials
-      // Google libraries will look for ~/.config/gcloud/application_default_credentials.json
+      // First try to use GOOGLE_SERVICE_ACCOUNT_JSON secret
+      const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+      if (serviceAccountJson) {
+        console.log('Using GOOGLE_SERVICE_ACCOUNT_JSON secret for Google Admin API');
+        
+        const credentials = JSON.parse(serviceAccountJson);
+        const auth = new GoogleAuth({
+          credentials,
+          scopes: [
+            'https://www.googleapis.com/auth/admin.directory.user.readonly',
+            'https://www.googleapis.com/auth/admin.directory.group.readonly',
+            'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+          ],
+          // Subject impersonation for domain-wide delegation
+          subject: 'jon@seedfinancial.io' // Admin user for domain-wide delegation
+        });
+
+        const authClient = await auth.getClient();
+        
+        // Test the credentials
+        const accessTokenResponse = await authClient.getAccessToken();
+        if (!accessTokenResponse.token) {
+          throw new Error('No valid access token obtained from service account');
+        }
+
+        console.log('Google Admin API initialized successfully with service account');
+        
+        this.admin = google.admin({ version: 'directory_v1', auth: authClient as any });
+        this.initialized = true;
+        return;
+      }
+      
+      // Fallback to ADC discovery
+      console.log('No service account found, trying ADC discovery...');
       const auth = new GoogleAuth({
         scopes: [
           'https://www.googleapis.com/auth/admin.directory.user.readonly',
@@ -45,7 +77,6 @@ export class GoogleAdminService {
         ]
       });
 
-      // Get authenticated client using ADC discovery
       const authClient = await auth.getClient();
       
       // Test the credentials
