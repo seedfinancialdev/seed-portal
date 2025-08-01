@@ -2,6 +2,7 @@
 import { Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
 import { AIInsightsJobData, JobResult, updateQueueMetrics } from '../queue.js';
+import { clientIntelEngine } from '../client-intel';
 
 let workerRedis: Redis | null = null;
 
@@ -33,8 +34,7 @@ async function processAIInsights(job: Job<AIInsightsJobData>): Promise<JobResult
   try {
     const { clientData } = job.data;
     
-    // Import services dynamically to avoid circular dependencies
-    const { clientIntelEngine } = await import('../services/client-intel.js');
+    // Client intelligence engine is imported statically
     
     // Update job progress
     await job.updateProgress(25);
