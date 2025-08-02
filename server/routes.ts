@@ -130,93 +130,27 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   console.log('[Routes] Final session store type:', storeType);
   
   // DEBUGGING TAP - Track user.id through middleware pipeline
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/api/quotes')) {
-      console.log('🧭 reached', req.method, req.path, 'user:', req.user ? { id: req.user.id, email: req.user.email } : 'null');
-      if (req.method === 'POST' && req.body) {
-        console.log('🧭 req.body contains id?', 'id' in req.body ? req.body.id : 'NO ID IN BODY');
-      }
-    }
-    next();
-  });
+  // Cleaned up navigation debugging middleware
 
   // REMOVED DUPLICATE HANDLER - Only keep the main handler below
   
-  // VERY EARLY debugging middleware to catch ALL requests before any processing
-  app.use((req, res, next) => {
-    if (req.method === 'POST' && req.url === '/api/quotes') {
-      console.error('🚀🚀🚀 VERY EARLY MIDDLEWARE - POST /api/quotes detected 🚀🚀🚀');
-      console.error('🚀 Method:', req.method);
-      console.error('🚀 URL:', req.url);
-      console.error('🚀 Headers keys:', Object.keys(req.headers));
-      console.error('🚀 Session ID:', req.sessionID);
-      console.error('🚀 Session exists:', !!req.session);
-      console.error('🚀 Session authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
-      console.error('🚀 User exists:', !!req.user);
-      console.error('🚀 User ID:', req.user?.id);
-      console.error('🚀 Cookie header:', req.headers.cookie);
-      console.error('🚀 This should appear for EVERY POST to /api/quotes');
-    }
-    next();
-  });
+  // Removed excessive debug middleware
   
   // Setup authentication after sessions
   await setupAuth(app, null);
   console.log('[Routes] ✅ Auth setup completed');
 
   // Apply CSRF protection after sessions are initialized
-  app.use((req, res, next) => {
-    console.log('Before CSRF - Request:', {
-      method: req.method,
-      url: req.url,
-      headers: req.headers['x-csrf-token'] ? 'CSRF token present' : 'No CSRF token'
-    });
-    
-    // Special debugging for POST quotes
-    if (req.method === 'POST' && req.url === '/api/quotes') {
-      console.log('🚨 POST /api/quotes BEFORE CSRF - detailed debugging:');
-      console.log('🚨 CSRF token header value:', req.headers['x-csrf-token']);
-      console.log('🚨 Session ID:', req.sessionID);
-      console.log('🚨 Session exists:', !!req.session);
-      console.log('🚨 Authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
-    }
-    
-    next();
-  });
   app.use(conditionalCsrf);
   app.use(provideCsrfToken); // SINGLE application of CSRF token generation middleware
-  app.use((req, res, next) => {
-    console.log('After CSRF - Request passed CSRF check');
-    
-    // Special debugging for POST quotes
-    if (req.method === 'POST' && req.url === '/api/quotes') {
-      console.log('🎯 POST /api/quotes PASSED CSRF - proceeding to route handler');
-    }
-    
-    next();
-  });
+  // CSRF protection applied
   // REMOVED DUPLICATE: app.use(provideCsrfToken); - WAS APPLIED TWICE
 
-  // Debug middleware to track all API requests
+  // Simplified API request logging
   app.use('/api', (req, res, next) => {
-    console.log('API Debug - Request intercepted:', {
-      method: req.method,
-      url: req.url,
-      path: req.path,
-      originalUrl: req.originalUrl,
-      query: req.query,
-      timestamp: new Date().toISOString()
-    });
-    
-    // Special debugging for POST requests to quotes
     if (req.method === 'POST' && req.path === '/quotes') {
-      console.log('🚨🚨🚨 POST /api/quotes request detected in API middleware 🚨🚨🚨');
-      console.log('🚨 Headers:', JSON.stringify(req.headers, null, 2));
-      console.log('🚨 Body keys:', Object.keys(req.body || {}));
-      console.log('🚨 Content-Type:', req.headers['content-type']);
-      console.log('🚨 Request authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
+      console.log('POST /api/quotes - User authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
     }
-    
     next();
   });
 
@@ -520,16 +454,27 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(500).json({ message: "User creation failed" });
       }
       
-      // Simplified session establishment - avoid complex regeneration that can fail with Redis
+      // Establish session with explicit session save to ensure persistence
       req.login(user, (err: any) => {
         if (err) {
           console.error('Session login failed:', err);
           return res.status(500).json({ message: "Failed to establish session" });
         }
         
-        // Return user data (excluding password)
-        const { password, ...safeUser } = user!;
-        res.json(safeUser);
+        // Force session save to ensure persistence with Redis
+        req.session.save((saveErr: any) => {
+          if (saveErr) {
+            console.error('Session save failed:', saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          
+          console.log('✅ User logged in and session saved:', user.email);
+          console.log('✅ Session passport data:', req.session?.passport);
+          
+          // Return user data (excluding password)
+          const { password, ...safeUser } = user!;
+          res.json(safeUser);
+        });
       });
     } catch (error) {
       console.error('Error syncing Google user:', error);
@@ -571,16 +516,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // TEST ENDPOINT - Simple auth check
+  // Authentication test endpoint
   app.get("/api/test-auth", requireAuth, (req, res) => {
-    console.error('🎯 TEST AUTH ENDPOINT HIT');
-    console.error('🎯 req.user:', JSON.stringify(req.user, null, 2));
-    console.error('🎯 req.user.id:', req.user?.id);
     res.json({
       authenticated: true,
       user: req.user,
       userId: req.user?.id,
-      userIdType: typeof req.user?.id,
       sessionId: req.sessionID
     });
   });
@@ -626,53 +567,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.post("/api/quotes", 
     requireAuth, 
     async (req, res) => {
-    console.error('='.repeat(80));
-    console.error('🚨🚨🚨 POST /api/quotes ROUTE HANDLER CALLED 🚨🚨🚨');
-    console.error('='.repeat(80));
-    console.error('🔥 TIMESTAMP:', new Date().toISOString());
-    console.error('🔥 USER CHECK: req.user exists?', !!req.user);
-    console.error('🔥 USER EMAIL:', req.user?.email);
-    console.error('🔥 USER ID:', req.user?.id);
-    console.error('🔥 USER ID TYPE:', typeof req.user?.id);
-    console.error('🔥 SESSION ID:', req.sessionID);
-    console.error('🔥 FULL USER OBJECT KEYS:', Object.keys(req.user || {}));
-    console.error('🔥 FULL USER OBJECT:', JSON.stringify(req.user, null, 2));
-    
-    // CRITICAL DEBUG: Check passport session
-    console.error('🔥 SESSION.PASSPORT:', req.session?.passport);
-    console.error('🔥 SESSION.PASSPORT.USER:', req.session?.passport?.user);
-    console.error('🔥 IS AUTHENTICATED:', req.isAuthenticated ? req.isAuthenticated() : false);
-    
-    // Run session consistency check
-    const consistency = checkSessionConsistency(req);
-    console.error('🔥 SESSION CONSISTENCY CHECK:', consistency);
-    
-    if (!consistency.healthy) {
-      console.error('❌ SESSION ISSUES DETECTED:', consistency.issues.join(', '));
-    }
-    
-    // Deep inspection of user object
-    if (req.user) {
-      console.error('🔍 USER OBJECT INSPECTION:');
-      for (const [key, value] of Object.entries(req.user)) {
-        console.error(`🔍   ${key}: ${value} (type: ${typeof value})`);
-      }
-    }
-    console.error('='.repeat(80));
-    console.log('🎯🎯🎯 ====== CREATE QUOTE ENDPOINT HIT ====== 🎯🎯🎯');
-    console.log('🔄 Quote creation request received at:', new Date().toISOString());
-    console.log('📋 Request body keys:', Object.keys(req.body));
-    console.log('📋 Request method:', req.method);
-    console.log('📋 Request URL:', req.url);
-    console.log('👤 User:', req.user?.email);
-    console.log('🔐 Authenticated:', !!req.user);
-    console.log('📋 Body preview:', JSON.stringify({
-      contactEmail: req.body.contactEmail,
-      monthlyFee: req.body.monthlyFee,
-      setupFee: req.body.setupFee,
-      includesBookkeeping: req.body.includesBookkeeping,
-      includesTaas: req.body.includesTaas
-    }, null, 2));
+    console.log('Creating quote for user:', req.user?.email);
+    // Creating quote for contact: ${req.body.contactEmail}
     
     try {
       if (!req.user) {
@@ -690,29 +586,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         });
       }
       
-      console.log('👤 CRITICAL - User object during POST:', JSON.stringify(req.user, null, 2));
-      console.log('👤 CRITICAL - User ID during POST:', req.user.id);
-      console.log('👤 CRITICAL - User properties:', Object.keys(req.user || {}));
-      
       // Extract service flags with defaults
       const includesBookkeeping = req.body.includesBookkeeping !== false; // Default to true
       const includesTaas = req.body.includesTaas === true;
-      
-      console.log('🔧 Service flags:', { includesBookkeeping, includesTaas });
-      console.log('💰 Fees from frontend:', {
-        monthlyFee: req.body.monthlyFee,
-        setupFee: req.body.setupFee,
-        taasMonthlyFee: req.body.taasMonthlyFee,
-        taasPriorYearsFee: req.body.taasPriorYearsFee
-      });
-      console.log('👤 CRITICAL - About to set ownerId to:', req.user.id, 'type:', typeof req.user.id);
-      
-      // DEBUGGING: Check if id is in a different property
-      console.error('🔍 Checking for ID in different locations:');
-      console.error('🔍 req.user.id:', req.user.id);
-      console.error('🔍 req.user._id:', (req.user as any)._id);
-      console.error('🔍 req.user.userId:', (req.user as any).userId);
-      console.error('🔍 Full user keys again:', Object.keys(req.user));
       
       // Trust the frontend calculations - the frontend has the authoritative calculation logic
       // The frontend already calculated and sent the correct fees, so we should use them
