@@ -1324,6 +1324,28 @@ Generated: ${new Date().toLocaleDateString()}`;
     });
   }
 
+  // Update contact properties for 2-way sync
+  async updateContactProperties(contactId: string, properties: Record<string, string>): Promise<boolean> {
+    try {
+      console.log(`Updating contact ${contactId} with properties:`, properties);
+      
+      const updateBody = {
+        properties: properties
+      };
+
+      await this.makeRequest(`/crm/v3/objects/contacts/${contactId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updateBody)
+      });
+
+      console.log(`Successfully updated contact ${contactId}`);
+      return true;
+    } catch (error) {
+      console.error(`Error updating contact ${contactId}:`, error);
+      return false;
+    }
+  }
+
   async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number, dealId?: string): Promise<boolean> {
     try {
       // First check if the quote still exists and is in a valid state

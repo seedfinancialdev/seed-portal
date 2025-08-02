@@ -707,6 +707,29 @@ export default function Home() {
         taasMonthlyFee: feeCalculation.taas.monthlyFee.toString(),
         taasPriorYearsFee: feeCalculation.taas.setupFee.toString(),
         approvalRequired: data.cleanupOverride && isApproved,
+        // Ensure all client details are stored for future ClickUp integration
+        companyName: data.companyName || '',
+        contactFirstName: data.contactFirstName || '',
+        contactLastName: data.contactLastName || '',
+        industry: data.industry || '',
+        monthlyRevenueRange: data.monthlyRevenueRange || '',
+        entityType: data.entityType || '',
+        clientStreetAddress: data.clientStreetAddress || '',
+        clientCity: data.clientCity || '',
+        clientState: data.clientState || '',
+        clientZipCode: data.clientZipCode || '',
+        // Lock status for form state preservation
+        companyNameLocked: data.companyNameLocked || false,
+        contactFirstNameLocked: data.contactFirstNameLocked || false,
+        contactLastNameLocked: data.contactLastNameLocked || false,
+        industryLocked: data.industryLocked || false,
+        companyAddressLocked: data.companyAddressLocked || false,
+        // Service selections for ClickUp project creation
+        serviceBookkeeping: data.serviceBookkeeping || false,
+        serviceTaas: data.serviceTaas || false,
+        servicePayroll: data.servicePayroll || false,
+        serviceApArLite: data.serviceApArLite || false,
+        serviceFpaLite: data.serviceFpaLite || false,
       };
       
       console.log('Final quote data:', quoteData);
@@ -1017,9 +1040,21 @@ export default function Home() {
       form.setValue('contactLastNameLocked', true);
     }
     
-    if (contact.properties.industry) {
-      form.setValue('industry', contact.properties.industry);
+    // Map HubSpot industry_group to our industry field
+    if (contact.properties.hs_industry_group || contact.properties.industry) {
+      const industryValue = contact.properties.hs_industry_group || contact.properties.industry;
+      form.setValue('industry', industryValue);
       form.setValue('industryLocked', true);
+    }
+    
+    // Map HubSpot monthly_revenue_range
+    if (contact.properties.monthly_revenue_range) {
+      form.setValue('monthlyRevenueRange', contact.properties.monthly_revenue_range);
+    }
+    
+    // Map HubSpot entity_type
+    if (contact.properties.entity_type) {
+      form.setValue('entityType', contact.properties.entity_type);
     }
     
     // Address fields - lock if any address data is present

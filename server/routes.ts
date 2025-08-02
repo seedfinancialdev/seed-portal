@@ -964,6 +964,54 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return;
       }
 
+      // Update HubSpot contact properties with quote data for 2-way sync
+      try {
+        const contactUpdateProperties: any = {};
+        
+        // Map quote data to HubSpot contact properties
+        if (quote.industry) {
+          contactUpdateProperties.hs_industry_group = quote.industry;
+        }
+        if (quote.monthlyRevenueRange) {
+          contactUpdateProperties.monthly_revenue_range = quote.monthlyRevenueRange;
+        }
+        if (quote.entityType) {
+          contactUpdateProperties.entity_type = quote.entityType;
+        }
+        if (quote.companyName && quote.companyName !== contact.properties.company) {
+          contactUpdateProperties.company = quote.companyName;
+        }
+        if (quote.contactFirstName && quote.contactFirstName !== contact.properties.firstname) {
+          contactUpdateProperties.firstname = quote.contactFirstName;
+        }
+        if (quote.contactLastName && quote.contactLastName !== contact.properties.lastname) {
+          contactUpdateProperties.lastname = quote.contactLastName;
+        }
+        
+        // Update address information if available
+        if (quote.clientStreetAddress) {
+          contactUpdateProperties.address = quote.clientStreetAddress;
+        }
+        if (quote.clientCity) {
+          contactUpdateProperties.city = quote.clientCity;
+        }
+        if (quote.clientState) {
+          contactUpdateProperties.state = quote.clientState;
+        }
+        if (quote.clientZipCode) {
+          contactUpdateProperties.zip = quote.clientZipCode;
+        }
+        
+        // Only update if there are properties to change
+        if (Object.keys(contactUpdateProperties).length > 0) {
+          await hubSpotService.updateContactProperties(contact.id, contactUpdateProperties);
+          console.log('Updated HubSpot contact properties:', contactUpdateProperties);
+        }
+      } catch (contactUpdateError) {
+        console.error('Failed to update HubSpot contact properties:', contactUpdateError);
+        // Don't fail the entire operation if contact update fails
+      }
+
       // Update the quote in our database with HubSpot IDs
       const updatedQuote = await storage.updateQuote({
         id: quoteId,
@@ -1043,6 +1091,56 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         
         await storage.updateQuote(updateData);
         console.log(`Updated quote ${quoteId} in database with form data`);
+
+        // Update HubSpot contact properties with new quote data for 2-way sync
+        if (quote.hubspotContactId && hubSpotService) {
+          try {
+            const contactUpdateProperties: any = {};
+            
+            // Map updated quote data to HubSpot contact properties
+            if (currentFormData.industry && currentFormData.industry !== quote.industry) {
+              contactUpdateProperties.hs_industry_group = currentFormData.industry;
+            }
+            if (currentFormData.monthlyRevenueRange && currentFormData.monthlyRevenueRange !== quote.monthlyRevenueRange) {
+              contactUpdateProperties.monthly_revenue_range = currentFormData.monthlyRevenueRange;
+            }
+            if (currentFormData.entityType && currentFormData.entityType !== quote.entityType) {
+              contactUpdateProperties.entity_type = currentFormData.entityType;
+            }
+            if (currentFormData.companyName && currentFormData.companyName !== quote.companyName) {
+              contactUpdateProperties.company = currentFormData.companyName;
+            }
+            if (currentFormData.contactFirstName && currentFormData.contactFirstName !== quote.contactFirstName) {
+              contactUpdateProperties.firstname = currentFormData.contactFirstName;
+            }
+            if (currentFormData.contactLastName && currentFormData.contactLastName !== quote.contactLastName) {
+              contactUpdateProperties.lastname = currentFormData.contactLastName;
+            }
+            
+            // Update address information if changed
+            if (currentFormData.clientStreetAddress && currentFormData.clientStreetAddress !== quote.clientStreetAddress) {
+              contactUpdateProperties.address = currentFormData.clientStreetAddress;
+            }
+            if (currentFormData.clientCity && currentFormData.clientCity !== quote.clientCity) {
+              contactUpdateProperties.city = currentFormData.clientCity;
+            }
+            if (currentFormData.clientState && currentFormData.clientState !== quote.clientState) {
+              contactUpdateProperties.state = currentFormData.clientState;
+            }
+            if (currentFormData.clientZipCode && currentFormData.clientZipCode !== quote.clientZipCode) {
+              contactUpdateProperties.zip = currentFormData.clientZipCode;
+            }
+            
+            // Only update if there are properties to change
+            if (Object.keys(contactUpdateProperties).length > 0) {
+              await hubSpotService.updateContactProperties(quote.hubspotContactId, contactUpdateProperties);
+              console.log('Updated HubSpot contact properties during quote update:', contactUpdateProperties);
+            }
+          } catch (contactUpdateError) {
+            console.error('Failed to update HubSpot contact properties during quote update:', contactUpdateError);
+            // Don't fail the entire operation if contact update fails
+          }
+        }
       }
 
       // Use the form data fees directly instead of recalculating
