@@ -1924,242 +1924,6 @@ export default function Home() {
               
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  {/* Core Fields - Always Shown */}
-                  <div className="space-y-6">
-                    {/* Contact Email */}
-                  <FormField
-                    control={form.control}
-                    name="contactEmail"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Email</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <Input 
-                              type="email"
-                              placeholder="client@company.com"
-                              className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                const email = e.target.value;
-                                
-                                // If email is cleared, reset existing quotes state
-                                if (!email.trim()) {
-                                  setExistingQuotesForEmail([]);
-                                  setShowExistingQuotesNotification(false);
-                                  setHubspotVerificationStatus('idle');
-                                  setHubspotContact(null);
-                                  setLastVerifiedEmail('');
-                                  setSearchTerm(""); // Clear search filter when email is cleared
-                                  form.setValue('companyName', ''); // Clear company name when email is cleared
-                                }
-                                
-                                debouncedVerifyEmail(email);
-                              }}
-                            />
-                            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                              {hubspotVerificationStatus === 'verifying' && (
-                                <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                              )}
-                              {hubspotVerificationStatus === 'verified' && (
-                                <CheckCircle className="h-4 w-4 text-green-500" />
-                              )}
-                              {hubspotVerificationStatus === 'not-found' && (
-                                <XCircle className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Enhanced Client Details Section */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Building className="h-5 w-5 text-blue-600" />
-                      <h3 className="text-lg font-semibold text-blue-800">Client Details</h3>
-                    </div>
-
-                    {/* Company Name with Unlock */}
-                    <FormField
-                      control={form.control}
-                      name="companyName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Company Name</FormLabel>
-                          <FormControl>
-                            <div className="flex gap-2">
-                              <Input 
-                                placeholder="Company Name"
-                                className={`${form.watch('companyNameLocked') ? 'bg-gray-100' : 'bg-white'} border-gray-300 focus:ring-[#e24c00] focus:border-transparent flex-1`}
-                                readOnly={form.watch('companyNameLocked')}
-                                {...field}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  const newValue = !form.watch('companyNameLocked');
-                                  form.setValue('companyNameLocked', newValue);
-                                  if (!newValue) {
-                                    // Focus the input when unlocked
-                                    setTimeout(() => {
-                                      const input = document.querySelector('input[name="companyName"]') as HTMLInputElement;
-                                      input?.focus();
-                                    }, 100);
-                                  }
-                                }}
-                                className="px-3"
-                              >
-                                {form.watch('companyNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                              </Button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                          {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
-                            <p className="text-xs text-green-600 mt-1">
-                              ✓ Found in HubSpot: {hubspotContact.properties.company}
-                            </p>
-                          )}
-                          {hubspotVerificationStatus === 'not-found' && (
-                            <p className="text-xs text-amber-600 mt-1">
-                              ⚠ Contact not found in HubSpot - quote will be saved but cannot be pushed to HubSpot
-                            </p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Entity Type - Moved here from TaaS section */}
-                    <FormField
-                      control={form.control}
-                      name="entityType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Entity Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                                <SelectValue placeholder="Select entity type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="LLC">LLC</SelectItem>
-                              <SelectItem value="Corporation">Corporation</SelectItem>
-                              <SelectItem value="S-Corporation">S-Corporation</SelectItem>
-                              <SelectItem value="Partnership">Partnership</SelectItem>
-                              <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Client Address Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="clientStreetAddress"
-                        render={({ field }) => (
-                          <FormItem className="md:col-span-2">
-                            <FormLabel>Street Address</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="123 Main Street"
-                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="clientCity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Los Angeles"
-                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="clientState"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>State</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="CA"
-                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="clientZipCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>ZIP Code</FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="90210"
-                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="clientCountry"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || "US"}>
-                              <FormControl>
-                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                                  <SelectValue placeholder="Select country" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="US">United States</SelectItem>
-                                <SelectItem value="CA">Canada</SelectItem>
-                                <SelectItem value="GB">United Kingdom</SelectItem>
-                                <SelectItem value="AU">Australia</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-
                   {/* Existing Quotes Notification */}
                   {showExistingQuotesNotification && existingQuotesForEmail.length > 0 && (
                     <Alert className="border-blue-200 bg-blue-50">
@@ -2179,52 +1943,6 @@ export default function Home() {
                       </AlertDescription>
                     </Alert>
                   )}
-
-                  {/* Industry */}
-                  <FormField
-                    control={form.control}
-                    name="industry"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Industry</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                              <SelectValue placeholder="Select industry" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
-                            <SelectItem value="Professional Services">Professional Services</SelectItem>
-                            <SelectItem value="Consulting">Consulting</SelectItem>
-                            <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
-                            <SelectItem value="Real Estate">Real Estate</SelectItem>
-                            <SelectItem value="Property Management">Property Management</SelectItem>
-                            <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
-                            <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
-                            <SelectItem value="Hospitality">Hospitality</SelectItem>
-                            <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
-                            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
-                            <SelectItem value="Nonprofit">Nonprofit</SelectItem>
-                            <SelectItem value="Law Firm">Law Firm</SelectItem>
-                            <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
-                            <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
-                            <SelectItem value="Insurance">Insurance</SelectItem>
-                            <SelectItem value="Automotive">Automotive</SelectItem>
-                            <SelectItem value="Education">Education</SelectItem>
-                            <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
-                            <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
-                            <SelectItem value="Agriculture">Agriculture</SelectItem>
-                            <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
-                            <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   {/* Revenue Band */}
                   <FormField
@@ -2255,291 +1973,289 @@ export default function Home() {
 
                   {/* Bookkeeping Service Details Section */}
                   {currentFormView === 'bookkeeping' && (
-                  <div className="space-y-6 border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-800">Bookkeeping Service Details</h3>
+                    <div className="space-y-6 border-t pt-6">
+                      <h3 className="text-lg font-semibold text-gray-800">Bookkeeping Service Details</h3>
                     
-                    {/* Monthly Transactions */}
-                    <FormField
-                    control={form.control}
-                    name="monthlyTransactions"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly Transactions</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                              <SelectValue placeholder="Select transaction volume" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="<100">&lt;100</SelectItem>
-                            <SelectItem value="100-300">100 - 300</SelectItem>
-                            <SelectItem value="300-600">300 - 600</SelectItem>
-                            <SelectItem value="600-1000">600 - 1,000</SelectItem>
-                            <SelectItem value="1000-2000">1,000 - 2,000</SelectItem>
-                            <SelectItem value="2000+">2,000+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                    {/* Cleanup Complexity */}
-                    <FormField
-                    control={form.control}
-                    name="cleanupComplexity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cleanup Complexity</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                              <SelectValue placeholder="Select complexity" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="0.25">Clean and Current</SelectItem>
-                            <SelectItem value="0.5">Standard</SelectItem>
-                            <SelectItem value="1.0">Not Done / Years Behind</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Cleanup Months */}
-                  <FormField
-                    control={form.control}
-                    name="cleanupMonths"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Months of Cleanup Required</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number"
-                            min={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
-                            max="120"
-                            placeholder={currentMonth.toString()}
-                            className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
-                            disabled={fieldsLocked}
-                            {...field}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value);
-                              
-                              if (isNaN(value)) {
-                                field.onChange(form.watch("cleanupOverride") ? 0 : currentMonth);
-                              } else {
-                                const minValue = form.watch("cleanupOverride") ? 0 : currentMonth;
-                                const newValue = Math.max(minValue, value);
-                                field.onChange(newValue);
-                              }
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Cleanup Override Checkbox with Request Approval Button */}
-                  <FormField
-                    control={form.control}
-                    name="cleanupOverride"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between space-y-0">
-                        <div className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              disabled={isApproved} // Permanently lock checkbox after approval
-                              onCheckedChange={(checked) => {
-                                field.onChange(checked);
-                                if (!checked) {
-                                  // Reset when unchecking (only if not approved)
-                                  form.setValue("cleanupMonths", originalCleanupMonths);
-                                  form.setValue("overrideReason", "");
-                                  form.setValue("customOverrideReason", "");
-                                  form.setValue("customSetupFee", "");
-                                  setCustomSetupFee("");
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>
-                              Override Minimum Cleanup
-                            </FormLabel>
-                          </div>
-                        </div>
-                        
-                        {/* Request Approval / Enter Code Button */}
-                        {form.watch("cleanupOverride") && !isApproved && (
-                          <div className="ml-4">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={hasRequestedApproval ? () => setIsApprovalDialogOpen(true) : requestApproval}
-                              disabled={isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval)}
-                              className="relative"
-                              title={getApprovalButtonDisabledReason(form.getValues(), isRequestingApproval, hasRequestedApproval) || ""}
-                            >
-                              {isRequestingApproval ? "Requesting..." : hasRequestedApproval ? "Enter Code" : "Request Approval"}
-                              {isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval) && (
-                                <HelpCircle className="h-3 w-3 ml-1 text-gray-400" />
-                              )}
-                            </Button>
-                          </div>
-                        )}
-                        
-                        {/* Approval Status */}
-                        {form.watch("cleanupOverride") && isApproved && (
-                          <div className="text-sm text-green-600 font-medium ml-4">
-                            ✓ Approved
-                          </div>
-                        )}
-                        
-                        {/* Unlock Button */}
-                        {fieldsLocked && (
-                          <div className="ml-4">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={handleUnlockFields}
-                              className="text-amber-600 border-amber-600 hover:bg-amber-50"
-                            >
-                              🔓 Unlock Fields
-                            </Button>
-                          </div>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Override Reason */}
-                  {form.watch("cleanupOverride") && (
-                    <FormField
-                      control={form.control}
-                      name="overrideReason"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Reason</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} disabled={fieldsLocked}>
-                            <FormControl>
-                              <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                                <SelectValue placeholder="Select reason for override" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Brand New Business">Brand New Business</SelectItem>
-                              <SelectItem value="Books Confirmed Current">Books Confirmed Current</SelectItem>
-                              <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  {/* Custom reason text field when "Other" is selected */}
-                  {form.watch("cleanupOverride") && form.watch("overrideReason") === "Other" && (
-                    <>
+                      {/* Monthly Transactions */}
                       <FormField
                         control={form.control}
-                        name="customOverrideReason"
+                        name="monthlyTransactions"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Please explain the reason for override</FormLabel>
+                            <FormLabel>Monthly Transactions</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select transaction volume" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="<100">&lt;100</SelectItem>
+                                <SelectItem value="100-300">100 - 300</SelectItem>
+                                <SelectItem value="300-600">300 - 600</SelectItem>
+                                <SelectItem value="600-1000">600 - 1,000</SelectItem>
+                                <SelectItem value="1000-2000">1,000 - 2,000</SelectItem>
+                                <SelectItem value="2000+">2,000+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Cleanup Complexity */}
+                      <FormField
+                        control={form.control}
+                        name="cleanupComplexity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cleanup Complexity</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                  <SelectValue placeholder="Select complexity" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="0.25">Clean and Current</SelectItem>
+                                <SelectItem value="0.5">Standard</SelectItem>
+                                <SelectItem value="1.0">Not Done / Years Behind</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Cleanup Months */}
+                      <FormField
+                        control={form.control}
+                        name="cleanupMonths"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Months of Cleanup Required</FormLabel>
                             <FormControl>
-                              <Textarea
-                                placeholder="Enter detailed reason for cleanup months override..."
-                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent min-h-[80px]"
-                                {...field}
-                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                                  field.onChange(e);
-                                  setCustomOverrideReason(e.target.value);
-                                }}
+                              <Input 
+                                type="number"
+                                min={form.watch("cleanupOverride") ? "0" : currentMonth.toString()}
+                                max="120"
+                                placeholder={currentMonth.toString()}
+                                className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                                 disabled={fieldsLocked}
+                                {...field}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value);
+                                  
+                                  if (isNaN(value)) {
+                                    field.onChange(form.watch("cleanupOverride") ? 0 : currentMonth);
+                                  } else {
+                                    const minValue = form.watch("cleanupOverride") ? 0 : currentMonth;
+                                    const newValue = Math.max(minValue, value);
+                                    field.onChange(newValue);
+                                  }
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
-                      {/* Custom Setup Fee when "Other" is selected */}
+
+                      {/* Cleanup Override Checkbox with Request Approval Button */}
                       <FormField
                         control={form.control}
-                        name="customSetupFee"
+                        name="cleanupOverride"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Custom Setup Fee</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="1"
-                                  placeholder="2000"
-                                  className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pl-8"
-                                  {...field}
-                                  onChange={(e) => {
-                                    const inputValue = e.target.value;
-                                    
-                                    // Handle empty input
-                                    if (inputValue === "") {
-                                      field.onChange("");
+                          <FormItem className="flex flex-row items-center justify-between space-y-0">
+                            <div className="flex flex-row items-start space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  disabled={isApproved} // Permanently lock checkbox after approval
+                                  onCheckedChange={(checked) => {
+                                    field.onChange(checked);
+                                    if (!checked) {
+                                      // Reset when unchecking (only if not approved)
+                                      form.setValue("cleanupMonths", originalCleanupMonths);
+                                      form.setValue("overrideReason", "");
+                                      form.setValue("customOverrideReason", "");
+                                      form.setValue("customSetupFee", "");
                                       setCustomSetupFee("");
-                                      return;
                                     }
-                                    
-                                    // Ensure whole numbers only
-                                    const value = Math.floor(parseFloat(inputValue) || 0).toString();
-                                    field.onChange(value);
-                                    setCustomSetupFee(value);
                                   }}
-                                  disabled={fieldsLocked}
                                 />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                  Override Minimum Cleanup
+                                </FormLabel>
                               </div>
-                            </FormControl>
-                            <FormMessage />
+                            </div>
+                            
+                            {/* Request Approval / Enter Code Button */}
+                            {form.watch("cleanupOverride") && !isApproved && (
+                              <div className="ml-4">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={hasRequestedApproval ? () => setIsApprovalDialogOpen(true) : requestApproval}
+                                  disabled={isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval)}
+                                  className="relative"
+                                  title={getApprovalButtonDisabledReason(form.getValues(), isRequestingApproval, hasRequestedApproval) || ""}
+                                >
+                                  {isRequestingApproval ? "Requesting..." : hasRequestedApproval ? "Enter Code" : "Request Approval"}
+                                  {isApprovalButtonDisabled(form.getValues(), isRequestingApproval, hasRequestedApproval) && (
+                                    <HelpCircle className="h-3 w-3 ml-1 text-gray-400" />
+                                  )}
+                                </Button>
+                              </div>
+                            )}
+                            
+                            {/* Approval Status */}
+                            {form.watch("cleanupOverride") && isApproved && (
+                              <div className="text-sm text-green-600 font-medium ml-4">
+                                ✓ Approved
+                              </div>
+                            )}
+                            
+                            {/* Unlock Button */}
+                            {fieldsLocked && (
+                              <div className="ml-4">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleUnlockFields}
+                                  className="text-amber-600 border-amber-600 hover:bg-amber-50"
+                                >
+                                  🔓 Unlock Fields
+                                </Button>
+                              </div>
+                            )}
                           </FormItem>
                         )}
                       />
-                    </>
-                  )}
 
-                  {/* QBO Subscription Checkbox */}
-                  <FormField
-                    control={form.control}
-                    name="qboSubscription"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value || false}
-                            onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                      {/* Override Reason */}
+                      {form.watch("cleanupOverride") && (
+                        <FormField
+                          control={form.control}
+                          name="overrideReason"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Reason</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value} disabled={fieldsLocked}>
+                                <FormControl>
+                                  <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                                    <SelectValue placeholder="Select reason for override" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="Brand New Business">Brand New Business</SelectItem>
+                                  <SelectItem value="Books Confirmed Current">Books Confirmed Current</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {/* Custom reason text field when "Other" is selected */}
+                      {form.watch("cleanupOverride") && form.watch("overrideReason") === "Other" && (
+                        <>
+                          <FormField
+                            control={form.control}
+                            name="customOverrideReason"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Please explain the reason for override</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Enter detailed reason for cleanup months override..."
+                                    className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent min-h-[80px]"
+                                    {...field}
+                                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                                      field.onChange(e);
+                                      setCustomOverrideReason(e.target.value);
+                                    }}
+                                    disabled={fieldsLocked}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
                           />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Add QBO Subscription?</FormLabel>
-                          <p className="text-sm text-gray-500">
-                            Adds $80/month to the bookkeeping monthly fee
-                          </p>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  </div>
-                  )}
+                      
+                          {/* Custom Setup Fee when "Other" is selected */}
+                          <FormField
+                            control={form.control}
+                            name="customSetupFee"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Custom Setup Fee</FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      placeholder="2000"
+                                      className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pl-8"
+                                      {...field}
+                                      onChange={(e) => {
+                                        const inputValue = e.target.value;
+                                        
+                                        // Handle empty input
+                                        if (inputValue === "") {
+                                          field.onChange("");
+                                          setCustomSetupFee("");
+                                          return;
+                                        }
+                                        
+                                        // Ensure whole numbers only
+                                        const value = Math.floor(parseFloat(inputValue) || 0).toString();
+                                        field.onChange(value);
+                                        setCustomSetupFee(value);
+                                      }}
+                                      disabled={fieldsLocked}
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </>
+                      )}
 
-                  </div>
+                      {/* QBO Subscription Checkbox */}
+                      <FormField
+                        control={form.control}
+                        name="qboSubscription"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value || false}
+                                onCheckedChange={field.onChange}
+                                className="data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Add QBO Subscription?</FormLabel>
+                              <p className="text-sm text-gray-500">
+                                Adds $80/month to the bookkeeping monthly fee
+                              </p>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
 
                   {/* TaaS-specific Fields - Only show when currentFormView is 'taas' */}
                   {currentFormView === 'taas' && (
