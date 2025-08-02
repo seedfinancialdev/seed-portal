@@ -977,23 +977,20 @@ export default function Home() {
         console.log('Existing quotes found:', data);
         setExistingQuotesForEmail(data || []);
         
-        // Show existing quotes modal if there are any, otherwise go to client details
-        if (data && data.length > 0) {
-          console.log('Showing existing quotes modal');
-          setShowExistingQuotesModal(true);
-        } else {
-          console.log('No existing quotes, proceeding to client details');
-          proceedToClientDetails(contact);
-        }
+        // Always show existing quotes modal (even if empty) with "Create New Quote" option
+        console.log('Showing existing quotes modal');
+        setShowExistingQuotesModal(true);
       } else {
-        console.log('Quotes search failed, proceeding without existing quotes');
+        console.log('Quotes search failed, showing modal without existing quotes');
         setExistingQuotesForEmail([]);
-        proceedToClientDetails(contact);
+        // Still show the modal even if the API failed
+        setShowExistingQuotesModal(true);
       }
     } catch (error) {
       console.error('Error fetching existing quotes:', error);
       setExistingQuotesForEmail([]);
-      proceedToClientDetails(contact);
+      // Still show the modal even if there's an error
+      setShowExistingQuotesModal(true);
     }
   };
 
@@ -3765,9 +3762,16 @@ export default function Home() {
       <Dialog open={showExistingQuotesModal} onOpenChange={setShowExistingQuotesModal}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Existing Quotes Found</DialogTitle>
+            <DialogTitle>
+              {existingQuotesForEmail.length > 0 ? "Existing Quotes Found" : "Create New Quote"}
+            </DialogTitle>
             <DialogDescription>
-              {selectedContact && `Found ${existingQuotesForEmail.length} existing quotes for ${selectedContact.properties.firstname} ${selectedContact.properties.lastname} (${selectedContact.properties.email})`}
+              {selectedContact && existingQuotesForEmail.length > 0 
+                ? `Found ${existingQuotesForEmail.length} existing quotes for ${selectedContact.properties.firstname} ${selectedContact.properties.lastname} (${selectedContact.properties.email})`
+                : selectedContact 
+                  ? `Create a new quote for ${selectedContact.properties.firstname} ${selectedContact.properties.lastname} (${selectedContact.properties.email})`
+                  : "Create a new quote for this contact"
+              }
             </DialogDescription>
           </DialogHeader>
           
@@ -3817,7 +3821,7 @@ export default function Home() {
                 }}
                 className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
               >
-                Create New Quote Instead
+                {existingQuotesForEmail.length > 0 ? "Create New Quote Instead" : "Create New Quote"}
               </Button>
             </div>
           </div>

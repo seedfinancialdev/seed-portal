@@ -607,6 +607,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       }
     } catch (error: any) {
       console.error('Error fetching quotes:', error);
+      console.error('Error stack:', error.stack);
       res.status(500).json({ message: "Failed to fetch quotes", error: error.message });
     }
   });
