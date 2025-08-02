@@ -586,6 +586,14 @@ export default function Home() {
   const [triggerEmail, setTriggerEmail] = useState("");
   const [showClientDetails, setShowClientDetails] = useState(false);
   
+  // Live search for email input
+  const [showLiveResults, setShowLiveResults] = useState(false);
+  const [liveSearchResults, setLiveSearchResults] = useState<any[]>([]);
+  const [isLiveSearching, setIsLiveSearching] = useState(false);
+  
+  // Existing quotes modal
+  const [showExistingQuotesModal, setShowExistingQuotesModal] = useState(false);
+  
   // TaaS state
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   
@@ -873,7 +881,41 @@ export default function Home() {
     setVerificationTimeoutId(timeoutId);
   };
 
-  // New function to search HubSpot contacts
+  // Live search function for email input (after 3+ characters)
+  const liveSearchContacts = async (searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 3) {
+      setLiveSearchResults([]);
+      setShowLiveResults(false);
+      return;
+    }
+
+    setIsLiveSearching(true);
+    setShowLiveResults(true);
+    try {
+      const response = await fetch('/api/hubspot/search-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ searchTerm }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLiveSearchResults(data.contacts || []);
+      } else {
+        setLiveSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error in live search:', error);
+      setLiveSearchResults([]);
+    } finally {
+      setIsLiveSearching(false);
+    }
+  };
+
+  // Search HubSpot contacts for modal
   const searchHubSpotContacts = async (searchTerm: string) => {
     if (!searchTerm || searchTerm.length < 2) {
       setHubspotContacts([]);
@@ -914,9 +956,11 @@ export default function Home() {
     searchHubSpotContacts(email);
   };
 
-  // Handle contact selection from modal
+  // Handle contact selection - check for existing quotes first
   const handleContactSelection = async (contact: any) => {
     setSelectedContact(contact);
+    setShowContactSearch(false);
+    setShowLiveResults(false);
     
     // Search for existing quotes for this contact
     try {
@@ -927,12 +971,26 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json();
         setExistingQuotesForEmail(data || []);
+        
+        // Show existing quotes modal if there are any, otherwise go to client details
+        if (data && data.length > 0) {
+          setShowExistingQuotesModal(true);
+        } else {
+          proceedToClientDetails(contact);
+        }
+      } else {
+        setExistingQuotesForEmail([]);
+        proceedToClientDetails(contact);
       }
     } catch (error) {
       console.error('Error fetching existing quotes:', error);
       setExistingQuotesForEmail([]);
+      proceedToClientDetails(contact);
     }
+  };
 
+  // Function to populate form and proceed to client details
+  const proceedToClientDetails = (contact: any) => {
     // Pre-populate form with contact data
     form.setValue('contactEmail', contact.properties.email || '');
     form.setValue('companyName', contact.properties.company || '');
@@ -946,7 +1004,6 @@ export default function Home() {
     form.setValue('clientState', contact.properties.state || '');
     form.setValue('clientZipCode', contact.properties.zip || '');
 
-    setShowContactSearch(false);
     setShowClientDetails(true);
   };
 
@@ -1435,14 +1492,71 @@ export default function Home() {
                     type="email"
                     placeholder="client@company.com"
                     value={triggerEmail}
-                    onChange={(e) => setTriggerEmail(e.target.value)}
+                    onChange={(e) => {
+                      const email = e.target.value;
+                      setTriggerEmail(email);
+                      // Trigger live search after 3+ characters
+                      if (email.length >= 3) {
+                        liveSearchContacts(email);
+                      } else {
+                        setShowLiveResults(false);
+                        setLiveSearchResults([]);
+                      }
+                    }}
                     className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-center text-lg py-3"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' && triggerEmail.includes('@')) {
-                        handleEmailTrigger(triggerEmail);
+                        if (liveSearchResults.length > 0) {
+                          handleContactSelection(liveSearchResults[0]);
+                        } else {
+                          handleEmailTrigger(triggerEmail);
+                        }
                       }
                     }}
+                    onFocus={() => {
+                      if (triggerEmail.length >= 3) {
+                        setShowLiveResults(true);
+                      }
+                    }}
+                    onBlur={() => {
+                      // Delay hiding results to allow for click
+                      setTimeout(() => setShowLiveResults(false), 150);
+                    }}
                   />
+                  
+                  {/* Live search results dropdown */}
+                  {showLiveResults && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-60 overflow-y-auto">
+                      {isLiveSearching ? (
+                        <div className="flex items-center justify-center py-4">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                          <span className="ml-2 text-sm text-gray-600">Searching...</span>
+                        </div>
+                      ) : liveSearchResults.length > 0 ? (
+                        <div className="py-1">
+                          {liveSearchResults.slice(0, 5).map((contact) => (
+                            <div
+                              key={contact.id}
+                              className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-left"
+                              onClick={() => handleContactSelection(contact)}
+                            >
+                              <div className="font-medium text-gray-900">
+                                {contact.properties.firstname} {contact.properties.lastname}
+                              </div>
+                              <div className="text-sm text-blue-600">{contact.properties.email}</div>
+                              {contact.properties.company && (
+                                <div className="text-sm text-gray-500">{contact.properties.company}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : triggerEmail.length >= 3 ? (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                          No matching contacts found
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
                 </div>
                 
                 <Button 
@@ -3628,6 +3742,69 @@ export default function Home() {
                 className="flex-1"
               >
                 {isValidatingCode ? "Validating..." : "Validate Code"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing Quotes Modal */}
+      <Dialog open={showExistingQuotesModal} onOpenChange={setShowExistingQuotesModal}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Existing Quotes Found</DialogTitle>
+            <DialogDescription>
+              {selectedContact && `Found ${existingQuotesForEmail.length} existing quotes for ${selectedContact.properties.firstname} ${selectedContact.properties.lastname} (${selectedContact.properties.email})`}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {existingQuotesForEmail.length > 0 && (
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Select an existing quote to edit:</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {existingQuotesForEmail.map((quote) => (
+                    <Card key={quote.id} className="cursor-pointer hover:bg-blue-50 transition-colors"
+                          onClick={() => {
+                            loadQuoteIntoForm(quote);
+                            setShowExistingQuotesModal(false);
+                            setShowClientDetails(true);
+                          }}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">${parseFloat(quote.monthlyFee).toLocaleString()}/month</p>
+                            <p className="text-sm text-gray-600">
+                              Services: {[
+                                quote.includesBookkeeping && "Bookkeeping",
+                                quote.includesTaas && "TaaS", 
+                                quote.includesPayroll && "Payroll",
+                                quote.includesApArLite && "AP/AR Lite",
+                                quote.includesFpaLite && "FP&A Lite"
+                              ].filter(Boolean).join(", ")}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Updated: {new Date(quote.updatedAt || quote.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button size="sm" variant="ghost">Edit Quote</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div className="border-t pt-4">
+              <Button 
+                onClick={() => {
+                  setShowExistingQuotesModal(false);
+                  proceedToClientDetails(selectedContact);
+                }}
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+              >
+                Create New Quote Instead
               </Button>
             </div>
           </div>

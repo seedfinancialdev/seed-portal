@@ -2362,7 +2362,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
       const { HubSpotService } = await import('./hubspot.js');
       const hubspotService = new HubSpotService();
-      const contacts = await hubspotService.searchContacts(searchTerm);
+      
+      // Get the current user's email from session
+      const userEmail = req.user?.email;
+      
+      // Search contacts and filter by user assignment
+      const contacts = await hubspotService.searchContacts(searchTerm, userEmail);
       
       res.json({ contacts });
     } catch (error) {
