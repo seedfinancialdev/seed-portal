@@ -1031,6 +1031,11 @@ export default function Home() {
     // Pre-populate form with contact data
     form.setValue('contactEmail', contact.properties.email || '');
     
+    // IMPORTANT: Set HubSpot verification status to verified since this contact came from HubSpot
+    setHubspotVerificationStatus('verified');
+    setHubspotContact(contact);
+    console.log('HubSpot verification status set to verified for selected contact');
+    
     // Auto-lock fields that have data and set values
     if (contact.properties.company) {
       form.setValue('companyName', contact.properties.company);
@@ -3370,6 +3375,19 @@ export default function Home() {
                         )}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Debug info for development */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="bg-gray-100 p-3 rounded text-xs space-y-1 mb-4">
+                    <div className="font-semibold">Debug - Button Conditions:</div>
+                    <div>• isCalculated: {isCalculated ? '✅' : '❌'}</div>
+                    <div>• hubspotVerificationStatus: {hubspotVerificationStatus}</div>
+                    <div>• showClientDetails: {showClientDetails ? '✅' : '❌'}</div>
+                    <div>• cleanupOverride: {form.watch("cleanupOverride") ? '✅' : '❌'}</div>
+                    <div>• isApproved: {isApproved ? '✅' : '❌'}</div>
+                    <div>• Mutations pending: {(pushToHubSpotMutation.isPending || updateHubSpotMutation.isPending || createQuoteMutation.isPending) ? '❌' : '✅'}</div>
                   </div>
                 )}
 
