@@ -565,8 +565,17 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Create a new quote (protected) - MAIN HANDLER  
   app.post("/api/quotes", 
+    (req, res, next) => {
+      console.log('🚀 POST /api/quotes - RAW REQUEST RECEIVED');
+      console.log('🚀 Session ID:', req.sessionID);
+      console.log('🚀 Has session:', !!req.session);
+      console.log('🚀 Session passport:', req.session?.passport);
+      console.log('🚀 req.user before requireAuth:', req.user?.email || 'NO USER');
+      next();
+    },
     requireAuth, 
     async (req, res) => {
+    console.log('✅ POST /api/quotes - AFTER requireAuth');
     console.log('✅ Creating quote for authenticated user:', req.user?.email);
     console.log('✅ User ID available:', req.user?.id);
     
