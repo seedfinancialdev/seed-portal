@@ -10,6 +10,7 @@ import { z } from "zod";
 import { sendSystemAlert } from "./slack";
 import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
+import { debugSession, checkSessionConsistency } from "./debug-session";
 import { registerAdminRoutes } from "./admin-routes";
 import { calculateCombinedFees } from "@shared/pricing";
 import { clientIntelEngine } from "./client-intel";
@@ -522,7 +523,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Google OAuth user sync endpoint
-  app.post("/api/auth/google/sync", async (req, res) => {
+  app.post("/api/auth/google/sync", debugSession('GOOGLE_SYNC'), async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
@@ -638,9 +639,50 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       sessionId: req.sessionID
     });
   });
+  
+  // COMPREHENSIVE SESSION DIAGNOSTIC ENDPOINT
+  app.get("/api/debug/session-full", (req, res) => {
+    const sessionDetails = {
+      // Basic session info
+      sessionExists: !!req.session,
+      sessionID: req.sessionID,
+      sessionStore: req.session?.store?.constructor?.name || 'Unknown',
+      
+      // Cookie info
+      cookieHeader: req.headers.cookie || 'None',
+      sessionCookiePresent: !!req.headers.cookie?.includes('connect.sid'),
+      
+      // Passport info
+      passportInSession: !!req.session?.passport,
+      passportUser: req.session?.passport?.user,
+      
+      // User info
+      userExists: !!req.user,
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      isAuthenticated: req.isAuthenticated(),
+      
+      // Session data
+      sessionKeys: req.session ? Object.keys(req.session) : [],
+      sessionCookie: req.session?.cookie,
+      
+      // Store check
+      storeType: req.sessionStore?.constructor?.name || 'Unknown',
+      
+      // Consistency check
+      consistency: checkSessionConsistency(req)
+    };
+    
+    console.log('🔍 Full session diagnostic:', JSON.stringify(sessionDetails, null, 2));
+    res.json(sessionDetails);
+  });
 
   // Create a new quote (protected) - MAIN HANDLER  
-  app.post("/api/quotes", requireAuth, async (req, res) => {
+  app.post("/api/quotes", 
+    debugSession('BEFORE_AUTH'), 
+    requireAuth, 
+    debugSession('AFTER_AUTH'),
+    async (req, res) => {
     console.error('='.repeat(80));
     console.error('🚨🚨🚨 POST /api/quotes ROUTE HANDLER CALLED 🚨🚨🚨');
     console.error('='.repeat(80));
@@ -657,6 +699,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.error('🔥 SESSION.PASSPORT:', req.session?.passport);
     console.error('🔥 SESSION.PASSPORT.USER:', req.session?.passport?.user);
     console.error('🔥 IS AUTHENTICATED:', req.isAuthenticated());
+    
+    // Run session consistency check
+    const consistency = checkSessionConsistency(req);
+    console.error('🔥 SESSION CONSISTENCY CHECK:', consistency);
+    
+    if (!consistency.healthy) {
+      console.error('❌ SESSION ISSUES DETECTED:', consistency.issues.join(', '));
+    }
     
     // Deep inspection of user object
     if (req.user) {
