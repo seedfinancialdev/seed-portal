@@ -193,6 +193,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       query: req.query,
       timestamp: new Date().toISOString()
     });
+    
+    // Special debugging for POST requests to quotes
+    if (req.method === 'POST' && req.path === '/quotes') {
+      console.log('🚨 POST /api/quotes request detected in API middleware');
+      console.log('🚨 Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('🚨 Body keys:', Object.keys(req.body || {}));
+    }
+    
     next();
   });
 
@@ -567,10 +575,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
     console.log('====== CREATE QUOTE ENDPOINT HIT ======');
-    console.log('🔄 Quote creation request received');
+    console.log('🔄 Quote creation request received at:', new Date().toISOString());
     console.log('📋 Request body keys:', Object.keys(req.body));
-    console.log('📋 Full request body:', JSON.stringify(req.body, null, 2));
+    console.log('📋 Request method:', req.method);
+    console.log('📋 Request URL:', req.url);
     console.log('👤 User:', req.user?.email);
+    console.log('🔐 Authenticated:', !!req.user);
+    console.log('📋 Body preview:', JSON.stringify({
+      contactEmail: req.body.contactEmail,
+      monthlyFee: req.body.monthlyFee,
+      setupFee: req.body.setupFee,
+      includesBookkeeping: req.body.includesBookkeeping,
+      includesTaas: req.body.includesTaas
+    }, null, 2));
     
     try {
       if (!req.user) {
