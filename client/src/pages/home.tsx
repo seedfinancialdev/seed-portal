@@ -1411,7 +1411,6 @@ export default function Home() {
   // Remove the old breakdown function since it's now handled in the calculation logic above
 
   return (
-    <>
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <UniversalNavbar 
@@ -3569,6 +3568,8 @@ export default function Home() {
             )}
           </CardContent>
         </Card>
+        </>
+        )}
 
         {/* Footer */}
         <div className="text-center mt-8">
@@ -3576,9 +3577,8 @@ export default function Home() {
             Internal Tool • Seed Financial Sales Team
           </p>
         </div>
-      </div>
-      
-      {/* Approval Code Dialog */}
+        
+        {/* Approval Code Dialog */}
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -3755,7 +3755,6 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
-    </>
+      </div>
   );
 }
