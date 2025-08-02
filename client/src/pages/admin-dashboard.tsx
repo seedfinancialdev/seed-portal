@@ -15,13 +15,8 @@ import {
   Brain,
   FileText,
   Cloud,
-  Sun,
-  CloudRain,
-  Snowflake,
-  Wind,
   Zap,
   Shield,
-  Target,
   Award,
   ChevronRight
 } from "lucide-react";
@@ -33,12 +28,6 @@ interface DashboardMetrics {
   pendingApprovals: number;
 }
 
-interface WeatherData {
-  temperature: number;
-  condition: string;
-  location: string;
-}
-
 export default function AdminDashboard() {
   const { user } = useAuth();
   
@@ -47,40 +36,17 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
-  const { data: weather } = useQuery<WeatherData>({
-    queryKey: ["/api/weather"],
-    enabled: !!user,
-  });
-
-  const getWeatherIcon = (condition: string) => {
-    const cond = condition?.toLowerCase() || '';
-    if (cond.includes('rain')) return CloudRain;
-    if (cond.includes('snow')) return Snowflake;
-    if (cond.includes('wind')) return Wind;
-    if (cond.includes('cloud')) return Cloud;
-    return Sun;
-  };
-
-  const WeatherIcon = weather ? getWeatherIcon(weather.condition) : Sun;
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-  };
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] p-6">
+      <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-8 bg-white/20 rounded w-1/3 mb-6"></div>
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-                  <div className="h-4 bg-white/20 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-white/20 rounded w-3/4"></div>
+                <div key={i} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
                 </div>
               ))}
             </div>
@@ -91,222 +57,246 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
+    <div className="min-h-screen bg-gray-50">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header with Weather Integration */}
-          <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2">
-                {getGreeting()}, {user?.firstName || user?.email?.split('@')[0]}
-              </h1>
-              <p className="text-white/80 text-lg">
-                Your Seed Financial command center
-              </p>
-            </div>
-            
-            {/* Weather Widget */}
-            <div className="mt-4 md:mt-0">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
-                <div className="flex items-center space-x-3">
-                  <WeatherIcon className="h-8 w-8 text-white" />
-                  <div>
-                    <div className="text-white font-semibold text-xl">
-                      {weather?.temperature || '--'}°F
-                    </div>
-                    <div className="text-white/70 text-sm">
-                      {weather?.condition || 'Loading weather...'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-600">
+              Welcome back, {user?.firstName || user?.email?.split('@')[0] || 'Jon'}
+            </p>
           </div>
 
           {/* Executive Summary Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">Total Quotes</p>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-gray-600 text-sm font-medium">Total Quotes</p>
+                  <p className="text-3xl font-bold text-gray-900">
                     {metrics?.totalQuotes?.toLocaleString() || '0'}
                   </p>
-                  <p className="text-white/60 text-xs mt-1">+12% this month</p>
                 </div>
-                <div className="h-12 w-12 bg-[#F97316]/20 rounded-lg flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-[#F97316]" />
+                <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-blue-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">Total Revenue</p>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-gray-600 text-sm font-medium">Total Revenue</p>
+                  <p className="text-3xl font-bold text-gray-900">
                     ${metrics?.totalRevenue?.toLocaleString() || '0'}
                   </p>
-                  <p className="text-white/60 text-xs mt-1">+18% this quarter</p>
                 </div>
-                <div className="h-12 w-12 bg-green-400/20 rounded-lg flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-green-400" />
+                <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-green-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">Active Users</p>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-gray-600 text-sm font-medium">Active Users</p>
+                  <p className="text-3xl font-bold text-gray-900">
                     {metrics?.activeUsers || '0'}
                   </p>
-                  <p className="text-white/60 text-xs mt-1">Online now</p>
                 </div>
-                <div className="h-12 w-12 bg-blue-400/20 rounded-lg flex items-center justify-center">
-                  <Users className="h-6 w-6 text-blue-400" />
+                <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-purple-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
+            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-white/70 text-sm font-medium">Pending</p>
-                  <p className="text-3xl font-bold text-white">
+                  <p className="text-gray-600 text-sm font-medium">Pending Approvals</p>
+                  <p className="text-3xl font-bold text-gray-900">
                     {metrics?.pendingApprovals || '0'}
                   </p>
-                  <p className="text-white/60 text-xs mt-1">Need attention</p>
                 </div>
-                <div className="h-12 w-12 bg-yellow-400/20 rounded-lg flex items-center justify-center">
-                  <Zap className="h-6 w-6 text-yellow-400" />
+                <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Zap className="h-6 w-6 text-orange-600" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Quick Action Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Link href="/sales-dashboard">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                    <BarChart3 className="h-6 w-6 text-blue-400" />
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">Sales Dashboard</h3>
-                <p className="text-white/70 text-sm">Pipeline metrics, lead management, and performance analytics</p>
-              </div>
-            </Link>
-
-            <Link href="/service-dashboard">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                    <Shield className="h-6 w-6 text-green-400" />
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">Service Dashboard</h3>
-                <p className="text-white/70 text-sm">Client management, tickets, and satisfaction tracking</p>
-              </div>
-            </Link>
-
-            <Link href="/commission-tracker">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Award className="h-6 w-6 text-purple-400" />
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">Commission Tracker</h3>
-                <p className="text-white/70 text-sm">Sales commissions, payments, and performance bonuses</p>
-              </div>
-            </Link>
-
-            <Link href="/calculator">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-[#F97316]/20 rounded-lg flex items-center justify-center">
-                    <Calculator className="h-6 w-6 text-[#F97316]" />
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">Quote Calculator</h3>
-                <p className="text-white/70 text-sm">Create comprehensive quotes for all services</p>
-              </div>
-            </Link>
-
-            <Link href="/client-intel">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-pink-500/20 rounded-lg flex items-center justify-center">
-                    <Brain className="h-6 w-6 text-pink-400" />
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">Client Intelligence</h3>
-                <p className="text-white/70 text-sm">AI-powered insights and client analytics</p>
-              </div>
-            </Link>
-
-            <Link href="/knowledge-base">
-              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-indigo-400" />
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-2">Knowledge Base</h3>
-                <p className="text-white/70 text-sm">Company resources, SOPs, and documentation</p>
-              </div>
-            </Link>
-          </div>
-
-          {/* Administrative Tools */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
-            <h3 className="text-white font-semibold text-xl mb-4">Administrative Tools</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Dashboard Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {/* Admin Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Admin</h3>
+              
               <Link href="/user-management">
-                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
-                  <div className="h-8 w-8 bg-blue-500/20 rounded-lg flex items-center justify-center mr-3">
-                    <User className="h-4 w-4 text-blue-400" />
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                      <User className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">User Management</h4>
                   </div>
-                  <span className="text-white font-medium">User Management</span>
-                </div>
-              </Link>
-
-              <Link href="/cdn-monitoring">
-                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
-                  <div className="h-8 w-8 bg-green-500/20 rounded-lg flex items-center justify-center mr-3">
-                    <Monitor className="h-4 w-4 text-green-400" />
-                  </div>
-                  <span className="text-white font-medium">System Health</span>
-                </div>
-              </Link>
-
-              <Link href="/stripe-dashboard">
-                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
-                  <div className="h-8 w-8 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3">
-                    <DollarSign className="h-4 w-4 text-purple-400" />
-                  </div>
-                  <span className="text-white font-medium">Stripe Analytics</span>
-                </div>
-              </Link>
-
-              <Link href="/profile">
-                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
-                  <div className="h-8 w-8 bg-yellow-500/20 rounded-lg flex items-center justify-center mr-3">
-                    <Settings className="h-4 w-4 text-yellow-400" />
-                  </div>
-                  <span className="text-white font-medium">Profile Settings</span>
+                  <p className="text-gray-600 text-sm">Manage user roles, permissions, and workspace users</p>
                 </div>
               </Link>
             </div>
+
+            {/* System Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">System</h3>
+              
+              <Link href="/cdn-monitoring">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                      <Monitor className="h-5 w-5 text-green-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">CDN Monitoring</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Real-time system health and performance monitoring</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Finance Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Finance</h3>
+              
+              <Link href="/stripe-dashboard">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                      <DollarSign className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Stripe Dashboard</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Revenue analytics and payment processing insights</p>
+                </div>
+              </Link>
+
+              <Link href="/commission-tracker">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                      <Award className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Commission Tracker</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Track sales performance and commission calculations</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Sales Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Sales</h3>
+              
+              <Link href="/sales-dashboard">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                      <BarChart3 className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Sales Dashboard</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Pipeline metrics, lead management, and analytics</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* AI Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">AI</h3>
+              
+              <Link href="/client-intel">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-pink-100 rounded-lg flex items-center justify-center mr-3">
+                      <Brain className="h-5 w-5 text-pink-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Client Intelligence</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">AI-powered client insights and prospect scoring</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Content Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Content</h3>
+              
+              <Link href="/knowledge-base">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+                      <FileText className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Knowledge Base</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Manage articles, documentation, and team knowledge</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Primary Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Primary</h3>
+              
+              <Link href="/calculator">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                      <Calculator className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Quote Calculator</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Generate quotes for all 5 services with Box integration and HubSpot sync</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Profile Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Profile</h3>
+              
+              <Link href="/profile">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-gray-100 rounded-lg flex items-center justify-center mr-3">
+                      <Settings className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Profile Management</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Update personal information and preferences</p>
+                </div>
+              </Link>
+            </div>
+
+            {/* Service Dashboard */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Service</h3>
+              
+              <Link href="/service-dashboard">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center mb-3">
+                    <div className="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                      <Shield className="h-5 w-5 text-green-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-900">Service Dashboard</h4>
+                  </div>
+                  <p className="text-gray-600 text-sm">Client management, tickets, and satisfaction tracking</p>
+                </div>
+              </Link>
+            </div>
+
           </div>
         </div>
       </div>
