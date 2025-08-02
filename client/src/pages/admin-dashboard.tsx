@@ -1,12 +1,42 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { 
+  User, 
+  TrendingUp, 
+  DollarSign, 
+  Users, 
+  Building, 
+  BarChart3,
+  Settings,
+  Monitor,
+  Database,
+  Calculator,
+  Brain,
+  FileText,
+  Cloud,
+  Sun,
+  CloudRain,
+  Snowflake,
+  Wind,
+  Zap,
+  Shield,
+  Target,
+  Award,
+  ChevronRight
+} from "lucide-react";
 
 interface DashboardMetrics {
   totalQuotes: number;
   totalRevenue: number;
   activeUsers: number;
   pendingApprovals: number;
+}
+
+interface WeatherData {
+  temperature: number;
+  condition: string;
+  location: string;
 }
 
 export default function AdminDashboard() {
@@ -17,23 +47,40 @@ export default function AdminDashboard() {
     enabled: !!user,
   });
 
-  console.log("Admin Dashboard Debug:", {
-    currentUser: user?.email,
-    currentUserRole: user?.role,
-    isAdmin: user?.role === "admin"
+  const { data: weather } = useQuery<WeatherData>({
+    queryKey: ["/api/weather"],
+    enabled: !!user,
   });
+
+  const getWeatherIcon = (condition: string) => {
+    const cond = condition?.toLowerCase() || '';
+    if (cond.includes('rain')) return CloudRain;
+    if (cond.includes('snow')) return Snowflake;
+    if (cond.includes('wind')) return Wind;
+    if (cond.includes('cloud')) return Cloud;
+    return Sun;
+  };
+
+  const WeatherIcon = weather ? getWeatherIcon(weather.condition) : Sun;
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] p-6">
         <div className="max-w-7xl mx-auto">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="h-8 bg-white/20 rounded w-1/3 mb-6"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white rounded-lg p-6 shadow-sm">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+                <div key={i} className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                  <div className="h-4 bg-white/20 rounded w-1/2 mb-2"></div>
+                  <div className="h-8 bg-white/20 rounded w-3/4"></div>
                 </div>
               ))}
             </div>
@@ -44,211 +91,222 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Admin Dashboard
-            </h1>
-            <p className="text-gray-600">
-              Welcome back, {user?.firstName || user?.email}
-            </p>
+          {/* Header with Weather Integration */}
+          <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">
+                {getGreeting()}, {user?.firstName || user?.email?.split('@')[0]}
+              </h1>
+              <p className="text-white/80 text-lg">
+                Your Seed Financial command center
+              </p>
+            </div>
+            
+            {/* Weather Widget */}
+            <div className="mt-4 md:mt-0">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                <div className="flex items-center space-x-3">
+                  <WeatherIcon className="h-8 w-8 text-white" />
+                  <div>
+                    <div className="text-white font-semibold text-xl">
+                      {weather?.temperature || '--'}°F
+                    </div>
+                    <div className="text-white/70 text-sm">
+                      {weather?.condition || 'Loading weather...'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Metrics Cards */}
+          {/* Executive Summary Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Quotes</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {metrics?.totalQuotes || 0}
+                  <p className="text-white/70 text-sm font-medium">Total Quotes</p>
+                  <p className="text-3xl font-bold text-white">
+                    {metrics?.totalQuotes?.toLocaleString() || '0'}
                   </p>
+                  <p className="text-white/60 text-xs mt-1">+12% this month</p>
                 </div>
-                <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                <div className="h-12 w-12 bg-[#F97316]/20 rounded-lg flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-[#F97316]" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    ${metrics?.totalRevenue?.toLocaleString() || 0}
+                  <p className="text-white/70 text-sm font-medium">Total Revenue</p>
+                  <p className="text-3xl font-bold text-white">
+                    ${metrics?.totalRevenue?.toLocaleString() || '0'}
                   </p>
+                  <p className="text-white/60 text-xs mt-1">+18% this quarter</p>
                 </div>
-                <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
+                <div className="h-12 w-12 bg-green-400/20 rounded-lg flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-green-400" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {metrics?.activeUsers || 0}
+                  <p className="text-white/70 text-sm font-medium">Active Users</p>
+                  <p className="text-3xl font-bold text-white">
+                    {metrics?.activeUsers || '0'}
                   </p>
+                  <p className="text-white/60 text-xs mt-1">Online now</p>
                 </div>
-                <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
+                <div className="h-12 w-12 bg-blue-400/20 rounded-lg flex items-center justify-center">
+                  <Users className="h-6 w-6 text-blue-400" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {metrics?.pendingApprovals || 0}
+                  <p className="text-white/70 text-sm font-medium">Pending</p>
+                  <p className="text-3xl font-bold text-white">
+                    {metrics?.pendingApprovals || '0'}
                   </p>
+                  <p className="text-white/60 text-xs mt-1">Need attention</p>
                 </div>
-                <div className="h-8 w-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                <div className="h-12 w-12 bg-yellow-400/20 rounded-lg flex items-center justify-center">
+                  <Zap className="h-6 w-6 text-yellow-400" />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Navigation Grid */}
+          {/* Quick Action Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Management Tools */}
-            <Link href="/user-management">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+            <Link href="/sales-dashboard">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
+                  <div className="h-12 w-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="h-6 w-6 text-blue-400" />
                   </div>
-                  <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">Admin</span>
+                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">User Management</h3>
-                <p className="text-sm text-gray-500">Manage user roles, permissions, and workspace users</p>
+                <h3 className="text-white font-semibold text-lg mb-2">Sales Dashboard</h3>
+                <p className="text-white/70 text-sm">Pipeline metrics, lead management, and performance analytics</p>
               </div>
             </Link>
 
-            <Link href="/cdn-monitoring">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+            <Link href="/service-dashboard">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
+                  <div className="h-12 w-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <Shield className="h-6 w-6 text-green-400" />
                   </div>
-                  <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">System</span>
+                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">CDN Monitoring</h3>
-                <p className="text-sm text-gray-500">Real-time system health and performance monitoring</p>
-              </div>
-            </Link>
-
-            <Link href="/stripe-dashboard">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                    </svg>
-                  </div>
-                  <span className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded">Finance</span>
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Stripe Dashboard</h3>
-                <p className="text-sm text-gray-500">Revenue analytics and payment processing insights</p>
+                <h3 className="text-white font-semibold text-lg mb-2">Service Dashboard</h3>
+                <p className="text-white/70 text-sm">Client management, tickets, and satisfaction tracking</p>
               </div>
             </Link>
 
             <Link href="/commission-tracker">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
+                  <div className="h-12 w-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <Award className="h-6 w-6 text-purple-400" />
                   </div>
-                  <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">Sales</span>
+                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Commission Tracker</h3>
-                <p className="text-sm text-gray-500">Track sales performance and commission calculations</p>
+                <h3 className="text-white font-semibold text-lg mb-2">Commission Tracker</h3>
+                <p className="text-white/70 text-sm">Sales commissions, payments, and performance bonuses</p>
+              </div>
+            </Link>
+
+            <Link href="/calculator">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-12 w-12 bg-[#F97316]/20 rounded-lg flex items-center justify-center">
+                    <Calculator className="h-6 w-6 text-[#F97316]" />
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
+                </div>
+                <h3 className="text-white font-semibold text-lg mb-2">Quote Calculator</h3>
+                <p className="text-white/70 text-sm">Create comprehensive quotes for all services</p>
               </div>
             </Link>
 
             <Link href="/client-intel">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
+                  <div className="h-12 w-12 bg-pink-500/20 rounded-lg flex items-center justify-center">
+                    <Brain className="h-6 w-6 text-pink-400" />
                   </div>
-                  <span className="text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded">AI</span>
+                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Client Intelligence</h3>
-                <p className="text-sm text-gray-500">AI-powered client insights and prospect scoring</p>
+                <h3 className="text-white font-semibold text-lg mb-2">Client Intelligence</h3>
+                <p className="text-white/70 text-sm">AI-powered insights and client analytics</p>
               </div>
             </Link>
 
             <Link href="/knowledge-base">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20 hover:bg-white/15 transition-all cursor-pointer group">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
+                  <div className="h-12 w-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+                    <FileText className="h-6 w-6 text-indigo-400" />
                   </div>
-                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">Content</span>
+                  <ChevronRight className="h-5 w-5 text-white/50 group-hover:text-white transition-colors" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Knowledge Base</h3>
-                <p className="text-sm text-gray-500">Manage articles, documentation, and team knowledge</p>
+                <h3 className="text-white font-semibold text-lg mb-2">Knowledge Base</h3>
+                <p className="text-white/70 text-sm">Company resources, SOPs, and documentation</p>
               </div>
             </Link>
           </div>
 
-          {/* Core Business Tools */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link href="/calculator">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+          {/* Administrative Tools */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+            <h3 className="text-white font-semibold text-xl mb-4">Administrative Tools</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Link href="/user-management">
+                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="h-8 w-8 bg-blue-500/20 rounded-lg flex items-center justify-center mr-3">
+                    <User className="h-4 w-4 text-blue-400" />
                   </div>
-                  <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Primary</span>
+                  <span className="text-white font-medium">User Management</span>
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Quote Calculator</h3>
-                <p className="text-sm text-gray-500">Generate quotes for all 5 services with Box integration and HubSpot sync</p>
-              </div>
-            </Link>
+              </Link>
 
-            <Link href="/profile">
-              <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <svg className="h-6 w-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+              <Link href="/cdn-monitoring">
+                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="h-8 w-8 bg-green-500/20 rounded-lg flex items-center justify-center mr-3">
+                    <Monitor className="h-4 w-4 text-green-400" />
                   </div>
-                  <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">Profile</span>
+                  <span className="text-white font-medium">System Health</span>
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Profile Management</h3>
-                <p className="text-sm text-gray-500">Update personal information and preferences</p>
-              </div>
-            </Link>
+              </Link>
+
+              <Link href="/stripe-dashboard">
+                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="h-8 w-8 bg-purple-500/20 rounded-lg flex items-center justify-center mr-3">
+                    <DollarSign className="h-4 w-4 text-purple-400" />
+                  </div>
+                  <span className="text-white font-medium">Stripe Analytics</span>
+                </div>
+              </Link>
+
+              <Link href="/profile">
+                <div className="flex items-center p-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="h-8 w-8 bg-yellow-500/20 rounded-lg flex items-center justify-center mr-3">
+                    <Settings className="h-4 w-4 text-yellow-400" />
+                  </div>
+                  <span className="text-white font-medium">Profile Settings</span>
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
       </div>
