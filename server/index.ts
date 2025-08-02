@@ -95,6 +95,8 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Allow embedding resources
 }));
 
+// CSRF will be configured after session middleware is set up
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

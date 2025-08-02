@@ -9,9 +9,20 @@ export const csrfProtection = csrf({
 
 // Conditional CSRF middleware - bypasses CSRF for specific endpoints
 export function conditionalCsrf(req: Request, res: Response, next: NextFunction) {
-  // Bypass CSRF for quote creation endpoint until properly integrated
-  if (req.path === '/quotes' && req.method === 'POST') {
-    console.log('🔒 Bypassing CSRF for quote creation endpoint');
+  // Bypass CSRF for authentication and specific API endpoints
+  const exemptPaths = [
+    '/api/auth/google/sync',
+    '/api/auth/logout',
+    '/api/quotes', // Allow quote creation
+    '/api/test-post' // Temporary for testing
+  ];
+  
+  const shouldBypass = exemptPaths.some(path => 
+    req.path === path || req.path.startsWith(`${path}/`)
+  );
+  
+  if (shouldBypass) {
+    console.log(`🔒 Bypassing CSRF for ${req.path}`);
     return next();
   }
   
