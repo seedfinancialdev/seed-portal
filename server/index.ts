@@ -220,10 +220,17 @@ app.use((req, res, next) => {
     }
     listRoutes(app);
     
-    // SIMPLE TEST ROUTE to confirm this Express app is handling requests
+    // SIMPLE TEST ROUTES to confirm this Express app is handling requests
     app.get('/api/test-server-identity', (req, res) => {
       console.log('🆔 SERVER IDENTITY TEST ROUTE HIT - This confirms the right Express app');
-      res.json({ message: 'This is the correct Express server instance', timestamp: new Date().toISOString() });
+      res.json({ message: 'Server identity confirmed', method: 'GET' });
+    });
+    
+    app.post('/api/test-post', (req, res) => {
+      console.log('🆔 POST TEST ROUTE HIT - POST requests are working');
+      console.log('🆔 POST Test - Session ID:', req.sessionID);
+      console.log('🆔 POST Test - User:', req.user?.email || 'NO USER');
+      res.json({ message: 'POST test successful', method: 'POST', user: req.user?.email || 'NO USER' });
     });
 
     // The Sentry error handler must be before any other error middleware (only if initialized)
