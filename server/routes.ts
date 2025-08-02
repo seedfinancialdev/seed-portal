@@ -167,8 +167,33 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   console.log('[Routes] ✅ Auth setup completed');
 
   // Apply CSRF protection after sessions are initialized
+  app.use((req, res, next) => {
+    console.log('Before CSRF - Request:', {
+      method: req.method,
+      url: req.url,
+      headers: req.headers['x-csrf-token'] ? 'CSRF token present' : 'No CSRF token'
+    });
+    next();
+  });
   app.use(conditionalCsrf);
+  app.use((req, res, next) => {
+    console.log('After CSRF - Request passed CSRF check');
+    next();
+  });
   app.use(provideCsrfToken);
+
+  // Debug middleware to track all API requests
+  app.use('/api', (req, res, next) => {
+    console.log('API Debug - Request intercepted:', {
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl,
+      query: req.query,
+      timestamp: new Date().toISOString()
+    });
+    next();
+  });
 
   // Apply rate limiting to all API routes
   app.use('/api', apiRateLimit);
