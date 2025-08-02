@@ -2495,7 +2495,7 @@ export default function Home() {
                         name="cleanupMonths"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Months of Cleanup Required <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel>Months of Cleanup Required</FormLabel>
                             <FormControl>
                               <Input 
                                 type="number"
@@ -2783,7 +2783,7 @@ export default function Home() {
                         name="numEntities"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Number of Entities <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel>Number of Entities</FormLabel>
                             <Select onValueChange={(value) => {
                               const numValue = parseInt(value);
                               field.onChange(numValue);
@@ -2844,7 +2844,7 @@ export default function Home() {
                         name="statesFiled"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>States Filed <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel>States Filed</FormLabel>
                             <Select onValueChange={(value) => {
                               const numValue = parseInt(value);
                               field.onChange(numValue);
@@ -2928,7 +2928,7 @@ export default function Home() {
                         name="numBusinessOwners"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Number of Business Owners <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel>Number of Business Owners</FormLabel>
                             <Select onValueChange={(value) => {
                               const numValue = parseInt(value);
                               field.onChange(numValue);
@@ -3010,7 +3010,7 @@ export default function Home() {
                         name="priorYearsUnfiled"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Prior Years Unfiled <span className="text-red-500">*</span></FormLabel>
+                            <FormLabel>Prior Years Unfiled</FormLabel>
                             <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
