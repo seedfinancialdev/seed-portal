@@ -173,16 +173,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     next();
   });
 
-  // FIRST POST HANDLER - This should trigger for ALL POST /api/quotes requests
-  app.post('/api/quotes', (req, res, next) => {
-    console.log('🎯🎯🎯 FIRST POST HANDLER HIT - POST /api/quotes 🎯🎯🎯');
-    console.log('🎯 Timestamp:', new Date().toISOString());
-    console.log('🎯 User exists:', !!req.user);
-    console.log('🎯 User ID:', req.user?.id);
-    console.log('🎯 Request body keys:', Object.keys(req.body || {}));
-    console.log('🎯 About to call next()...');
-    next();
-  });
+  // REMOVED DUPLICATE HANDLER - Only keep the main handler below
   
   // VERY EARLY debugging middleware to catch ALL requests before any processing
   app.use((req, res, next) => {
@@ -693,11 +684,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
       console.log('👤 CRITICAL - About to set ownerId to:', req.user.id, 'type:', typeof req.user.id);
       
+      // DEBUGGING: Check if id is in a different property
+      console.error('🔍 Checking for ID in different locations:');
+      console.error('🔍 req.user.id:', req.user.id);
+      console.error('🔍 req.user._id:', (req.user as any)._id);
+      console.error('🔍 req.user.userId:', (req.user as any).userId);
+      console.error('🔍 Full user keys again:', Object.keys(req.user));
+      
       // Trust the frontend calculations - the frontend has the authoritative calculation logic
       // The frontend already calculated and sent the correct fees, so we should use them
       const requestDataWithFees = {
         ...req.body,
-        ownerId: req.user.id,
+        ownerId: req.user.id || (req.user as any)._id || (req.user as any).userId,
         // Map monthlyRevenueRange to revenueBand for schema compatibility
         revenueBand: req.body.monthlyRevenueRange || req.body.revenueBand || "",
         // Use the frontend-calculated values directly
