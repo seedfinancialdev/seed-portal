@@ -565,14 +565,27 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
+    console.log('🔄 Quote creation request received');
+    console.log('📋 Request body keys:', Object.keys(req.body));
+    console.log('👤 User:', req.user?.email);
+    
     try {
       if (!req.user) {
+        console.log('❌ No authenticated user found');
         return res.status(401).json({ message: "Authentication required" });
       }
       
       // Extract service flags with defaults
       const includesBookkeeping = req.body.includesBookkeeping !== false; // Default to true
       const includesTaas = req.body.includesTaas === true;
+      
+      console.log('🔧 Service flags:', { includesBookkeeping, includesTaas });
+      console.log('💰 Fees from frontend:', {
+        monthlyFee: req.body.monthlyFee,
+        setupFee: req.body.setupFee,
+        taasMonthlyFee: req.body.taasMonthlyFee,
+        taasPriorYearsFee: req.body.taasPriorYearsFee
+      });
       
       // Trust the frontend calculations - the frontend has the authoritative calculation logic
       // The frontend already calculated and sent the correct fees, so we should use them
@@ -590,17 +603,25 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         cleanupMonths: req.body.cleanupMonths || 0,
       };
       
+      console.log('🔍 About to parse quote data with schema...');
       const quoteData = insertQuoteSchema.parse(requestDataWithFees);
+      console.log('✅ Schema validation passed');
+      
+      console.log('💾 About to create quote in storage...');
       const quote = await storage.createQuote(quoteData);
+      console.log('✅ Quote created successfully with ID:', quote.id);
       
       // Note: Slack notifications now only sent during approval request, not quote creation
       
       res.json(quote);
     } catch (error) {
+      console.error('❌ Quote creation error:', error);
       if (error instanceof z.ZodError) {
+        console.error('📝 Zod validation errors:', error.errors);
         res.status(400).json({ message: "Invalid quote data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to create quote" });
+        console.error('💥 Storage/Database error:', error);
+        res.status(500).json({ message: "Failed to create quote", error: error.message });
       }
     }
   });
