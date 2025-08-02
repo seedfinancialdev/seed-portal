@@ -1,4 +1,4 @@
-import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 
@@ -9,7 +9,9 @@ export function ProtectedRoute({
   path: string;
   component: () => React.JSX.Element;
 }) {
-  const { dbUser, isLoading, needsApproval, googleUser } = useGoogleAuth();
+  const { user: dbUser, isLoading } = useAuth();
+  const needsApproval = false; // Backend handles approval
+  const googleUser = dbUser; // Simplified since backend manages auth
 
   if (isLoading) {
     return (

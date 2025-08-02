@@ -63,14 +63,12 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <GoogleAuthProvider>
-            <AuthProvider>
-              <NavigationHistoryProvider>
-                <Toaster />
-                <Router />
-              </NavigationHistoryProvider>
-            </AuthProvider>
-          </GoogleAuthProvider>
+          <AuthProvider>
+            <NavigationHistoryProvider>
+              <Toaster />
+              <Router />
+            </NavigationHistoryProvider>
+          </AuthProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

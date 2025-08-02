@@ -13,7 +13,7 @@ interface GoogleUser {
   sub: string; // Google user ID
 }
 
-interface AuthContextType {
+interface GoogleAuthContextType {
   googleUser: GoogleUser | null;
   dbUser: DBUser | null;
   isLoading: boolean;
@@ -24,7 +24,7 @@ interface AuthContextType {
   isAdmin: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const GoogleAuthContext = createContext<GoogleAuthContextType | null>(null);
 
 function AuthProviderContent({ children }: { children: ReactNode }) {
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
@@ -223,7 +223,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const needsApproval = error?.message === 'ACCESS_NOT_GRANTED';
 
   return (
-    <AuthContext.Provider
+    <GoogleAuthContext.Provider
       value={{
         googleUser,
         dbUser: dbUser ?? null,
@@ -236,40 +236,29 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </AuthContext.Provider>
+    </GoogleAuthContext.Provider>
   );
 }
 
 export function GoogleAuthProvider({ children }: { children: ReactNode }) {
-  // Minimal provider that bypasses GoogleOAuthProvider hook issues
-  const mockAuthValue = {
-    googleUser: null,
-    dbUser: null,
-    isLoading: false,
-    error: null,
-    needsApproval: false,
-    signIn: () => console.log('Sign in disabled - minimal provider'),
-    signOut: () => Promise.resolve(),
-    isAdmin: false,
-  };
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  
+  if (!clientId) {
+    console.error('Google Client ID not configured');
+    return <div>Google authentication not configured. Please add VITE_GOOGLE_CLIENT_ID to your environment variables.</div>;
+  }
   
   return (
-    <AuthContext.Provider value={mockAuthValue}>
-      {children}
-    </AuthContext.Provider>
+    <GoogleOAuthProvider clientId={clientId}>
+      <AuthProviderContent>{children}</AuthProviderContent>
+    </GoogleOAuthProvider>
   );
 }
 
 export function useGoogleAuth() {
-  // Return minimal auth context to prevent hook errors
-  return {
-    googleUser: null,
-    dbUser: null,
-    isLoading: false,
-    error: null,
-    needsApproval: false,
-    signIn: () => console.log('Sign in disabled - minimal hook'),
-    signOut: () => Promise.resolve(),
-    isAdmin: false,
-  };
+  const context = useContext(GoogleAuthContext);
+  if (!context) {
+    throw new Error("useGoogleAuth must be used within a GoogleAuthProvider");
+  }
+  return context;
 }
