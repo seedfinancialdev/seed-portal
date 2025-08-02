@@ -155,13 +155,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     next();
   });
 
+  // CSRF protection disabled - was causing configuration issues
+  // All API routes now rely on session authentication only
+
   // Apply rate limiting to all API routes
   app.use('/api', apiRateLimit);
 
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-  // CSRF token endpoint removed - CSRF protection disabled
+  // CSRF token endpoint disabled - CSRF protection removed
+  app.get('/api/csrf-token', (req, res) => {
+    res.json({ csrfToken: null, message: 'CSRF protection disabled' });
+  });
   
 
   

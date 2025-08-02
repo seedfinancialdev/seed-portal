@@ -8,7 +8,35 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// CSRF functionality removed - authentication now handled purely through sessions
+// Global CSRF token cache
+let csrfToken: string | null = null;
+
+// Get CSRF token - fetch from dedicated endpoint
+async function getCSRFToken(): Promise<string | null> {
+  if (csrfToken) return csrfToken;
+  
+  try {
+    // Fetch CSRF token from the dedicated endpoint - also needs base URL in dev
+    const csrfUrl = '/api/csrf-token';
+    const fullCsrfUrl = csrfUrl.startsWith('http') ? csrfUrl : `${getBaseUrl()}${csrfUrl}`;
+    const response = await fetch(fullCsrfUrl, {
+      method: 'GET',
+      credentials: 'include', // Include session cookies
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.csrfToken) {
+        csrfToken = data.csrfToken;
+        return data.csrfToken;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to fetch CSRF token:', error);
+  }
+  
+  return null;
+}
 
 // Use relative URLs for all API calls - PRODUCTION ONLY
 function getBaseUrl(): string {
@@ -52,11 +80,15 @@ export async function apiRequest(
       }
     }
     
-    // Build request options with custom headers support - CSRF removed
+    // CSRF protection disabled - authentication handled by sessions only
+    const csrfTokenValue = null;
+    
+    // Build request options with custom headers support
     const requestOptions: RequestInit = {
       method,
       headers: {
         'Content-Type': 'application/json',
+        ...(csrfTokenValue && { 'X-CSRF-Token': csrfTokenValue }), // Add CSRF token except for bypassed endpoints
         ...(options.headers || {}), // Merge custom headers (like Authorization)
       },
       credentials: 'include', // This sends session cookies for authentication
@@ -101,11 +133,15 @@ export async function apiRequest(
     return response;
   }
 
-  // For new signature calls, build standard request options - CSRF removed
+  // CSRF protection disabled - authentication handled by sessions only
+  const csrfTokenValue = null;
+  
+  // For new signature calls, build standard request options
   const requestOptions: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfTokenValue && { 'X-CSRF-Token': csrfTokenValue }), // Add CSRF token except for bypassed endpoints
     },
     credentials: 'include', // This sends session cookies for authentication
   };
