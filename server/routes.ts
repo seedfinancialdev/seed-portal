@@ -565,8 +565,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
+    console.log('====== CREATE QUOTE ENDPOINT HIT ======');
     console.log('🔄 Quote creation request received');
     console.log('📋 Request body keys:', Object.keys(req.body));
+    console.log('📋 Full request body:', JSON.stringify(req.body, null, 2));
     console.log('👤 User:', req.user?.email);
     
     try {

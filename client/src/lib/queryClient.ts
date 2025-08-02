@@ -8,6 +8,34 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+// Global CSRF token cache
+let csrfToken: string | null = null;
+
+// Get CSRF token - fetch from server if not cached
+async function getCSRFToken(): Promise<string | null> {
+  if (csrfToken) return csrfToken;
+  
+  try {
+    // Fetch CSRF token from the server
+    const response = await fetch('/api/health', {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (response.ok) {
+      const token = response.headers.get('X-CSRF-Token');
+      if (token) {
+        csrfToken = token;
+        return token;
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to fetch CSRF token:', error);
+  }
+  
+  return null;
+}
+
 // Overloaded function to support both old and new calling patterns
 export async function apiRequest(
   urlOrMethod: string,
@@ -44,11 +72,16 @@ export async function apiRequest(
       }
     }
     
+    // Get CSRF token for state-changing requests
+    const csrfTokenValue = (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') 
+      ? await getCSRFToken() : null;
+    
     // Build request options with custom headers support
     const requestOptions: RequestInit = {
       method,
       headers: {
         'Content-Type': 'application/json',
+        ...(csrfTokenValue && { 'X-CSRF-Token': csrfTokenValue }), // Add CSRF token for state-changing requests
         ...(options.headers || {}), // Merge custom headers (like Authorization)
       },
       credentials: 'include', // This sends session cookies for authentication
@@ -63,11 +96,16 @@ export async function apiRequest(
     return response;
   }
 
+  // Get CSRF token for state-changing requests
+  const csrfTokenValue = (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') 
+    ? await getCSRFToken() : null;
+  
   // For new signature calls, build standard request options
   const requestOptions: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...(csrfTokenValue && { 'X-CSRF-Token': csrfTokenValue }), // Add CSRF token for state-changing requests
     },
     credentials: 'include', // This sends session cookies for authentication
   };
