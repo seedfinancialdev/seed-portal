@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         cookie: {
           secure: process.env.NODE_ENV === 'production',
           httpOnly: true,
-          sameSite: 'strict',
+          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
           maxAge: 24 * 60 * 60 * 1000
         }
       }));
@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         cookie: {
           secure: process.env.NODE_ENV === 'production',
           httpOnly: true,
-          sameSite: 'strict',
+          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
           maxAge: 24 * 60 * 60 * 1000
         }
       }));
@@ -153,7 +153,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
         maxAge: 24 * 60 * 60 * 1000
       }
     }));
