@@ -354,13 +354,15 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
 
 // Middleware to require authentication (supports both session and Google OAuth)
 export async function requireAuth(req: any, res: any, next: any) {
-  console.log('requireAuth: Checking authentication for', req.url);
-  console.log('requireAuth: Session authenticated:', req.isAuthenticated());
-  console.log('requireAuth: Auth header present:', !!req.headers.authorization);
+  console.log('🔐 requireAuth: Checking authentication for', req.url);
+  console.log('🔐 requireAuth: Session authenticated:', req.isAuthenticated());
+  console.log('🔐 requireAuth: Auth header present:', !!req.headers.authorization);
+  console.log('🔐 requireAuth: Session exists:', !!req.session);
+  console.log('🔐 requireAuth: User in req:', req.user?.email || 'NO USER');
   
   // First check session-based auth
   if (req.isAuthenticated()) {
-    console.log('requireAuth: Session auth successful for', req.user?.email);
+    console.log('✅ requireAuth: Session auth successful for', req.user?.email);
     return next();
   }
   
@@ -402,6 +404,7 @@ export async function requireAuth(req: any, res: any, next: any) {
     }
   }
   
-  console.log('requireAuth: Authentication failed');
+  console.log('❌ requireAuth: Authentication failed - returning 401');
+  console.log('❌ requireAuth: About to send 401 response');
   return res.status(401).json({ message: "Authentication required" });
 }
