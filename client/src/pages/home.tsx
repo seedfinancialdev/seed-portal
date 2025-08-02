@@ -926,11 +926,11 @@ export default function Home() {
       
       if (response.ok) {
         const data = await response.json();
-        setExistingQuotes(data || []);
+        setExistingQuotesForEmail(data || []);
       }
     } catch (error) {
       console.error('Error fetching existing quotes:', error);
-      setExistingQuotes([]);
+      setExistingQuotesForEmail([]);
     }
 
     // Pre-populate form with contact data
@@ -1530,11 +1530,11 @@ export default function Home() {
               )}
 
               {/* Show existing quotes for selected contact */}
-              {selectedContact && existingQuotes.length > 0 && (
+              {selectedContact && existingQuotesForEmail.length > 0 && (
                 <div className="border-t pt-4 mt-4">
                   <h4 className="font-medium text-gray-900 mb-3">Existing Quotes for {selectedContact.properties.email}</h4>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {existingQuotes.map((quote) => (
+                    {existingQuotesForEmail.map((quote) => (
                       <Card key={quote.id} className="cursor-pointer hover:bg-blue-50 transition-colors"
                             onClick={() => {
                               loadQuoteIntoForm(quote);
