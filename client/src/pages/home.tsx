@@ -1793,7 +1793,7 @@ export default function Home() {
                           <div className="flex gap-2">
                             <Input 
                               placeholder="Acme Corporation"
-                              className={`${form.watch('companyNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                              className={`${form.watch('companyNameLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
                               readOnly={form.watch('companyNameLocked')}
                               {...field}
                             />
@@ -1838,7 +1838,7 @@ export default function Home() {
                           <div className="flex gap-2">
                             <Input 
                               placeholder="John"
-                              className={`${form.watch('contactFirstNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                              className={`${form.watch('contactFirstNameLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
                               readOnly={form.watch('contactFirstNameLocked')}
                               {...field}
                             />
@@ -1872,7 +1872,7 @@ export default function Home() {
                           <div className="flex gap-2">
                             <Input 
                               placeholder="Smith"
-                              className={`${form.watch('contactLastNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                              className={`${form.watch('contactLastNameLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
                               readOnly={form.watch('contactLastNameLocked')}
                               {...field}
                             />
@@ -1908,7 +1908,7 @@ export default function Home() {
                         <FormControl>
                           <div className="flex gap-2">
                             <Select onValueChange={field.onChange} value={field.value} disabled={form.watch('industryLocked')}>
-                              <SelectTrigger className={`${form.watch('industryLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}>
+                              <SelectTrigger className={`${form.watch('industryLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}>
                                 <SelectValue placeholder="Select industry" />
                               </SelectTrigger>
                               <SelectContent>
@@ -2041,7 +2041,7 @@ export default function Home() {
                           <FormControl>
                             <Input 
                               placeholder="123 Main Street"
-                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
                               readOnly={form.watch('companyAddressLocked')}
                               {...field}
                             />
@@ -2060,7 +2060,7 @@ export default function Home() {
                           <FormControl>
                             <Input 
                               placeholder="Los Angeles"
-                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
                               readOnly={form.watch('companyAddressLocked')}
                               {...field}
                             />
@@ -2079,7 +2079,7 @@ export default function Home() {
                           <FormControl>
                             <Input 
                               placeholder="CA"
-                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
                               readOnly={form.watch('companyAddressLocked')}
                               {...field}
                             />
@@ -2098,7 +2098,7 @@ export default function Home() {
                           <FormControl>
                             <Input 
                               placeholder="90210"
-                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-100 text-gray-600 cursor-not-allowed' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
                               readOnly={form.watch('companyAddressLocked')}
                               {...field}
                             />
