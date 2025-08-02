@@ -178,11 +178,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // VERY EARLY debugging middleware to catch ALL requests before any processing
   app.use((req, res, next) => {
     if (req.method === 'POST' && req.url === '/api/quotes') {
-      console.log('🚀🚀🚀 VERY EARLY MIDDLEWARE - POST /api/quotes detected 🚀🚀🚀');
-      console.log('🚀 Method:', req.method);
-      console.log('🚀 URL:', req.url);
-      console.log('🚀 Headers keys:', Object.keys(req.headers));
-      console.log('🚀 This should appear for EVERY POST to /api/quotes');
+      console.error('🚀🚀🚀 VERY EARLY MIDDLEWARE - POST /api/quotes detected 🚀🚀🚀');
+      console.error('🚀 Method:', req.method);
+      console.error('🚀 URL:', req.url);
+      console.error('🚀 Headers keys:', Object.keys(req.headers));
+      console.error('🚀 User exists:', !!req.user);
+      console.error('🚀 User ID:', req.user?.id);
+      console.error('🚀 This should appear for EVERY POST to /api/quotes');
     }
     next();
   });
