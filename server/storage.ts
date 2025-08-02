@@ -360,11 +360,11 @@ export class DatabaseStorage implements IStorage {
                            quotes.updatedAt;
         
         return await db.select().from(quotes)
-          .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
+          .where(and(like(quotes.contactEmail, `%${search}%`), baseFilter))
           .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
       } else if (search) {
         return await db.select().from(quotes)
-          .where(and(sql`${quotes.contactEmail} ILIKE ${`%${search}%`}`, baseFilter))
+          .where(and(like(quotes.contactEmail, `%${search}%`), baseFilter))
           .orderBy(desc(quotes.updatedAt));
       } else if (sortField && sortOrder) {
         const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
