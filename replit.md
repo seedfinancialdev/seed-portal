@@ -11,6 +11,13 @@ This project is a comprehensive Internal Employee Portal for Seed Financial, bui
 - ✅ All required database tables created (client_activities, document_templates, box_folders)
 - ✅ Quote data integrity maintained - 58 quotes across 16 contacts preserved
 
+**TaaS SERVICE ENHANCEMENTS**: Enhanced TaaS pricing structure with new base setup fee and improved service toggle logic.
+- ✅ Added $2,100 base setup fee for TaaS service (equal to 1 year of Prior Years Unfiled fee)
+- ✅ Base setup fee is automatically waived when Seed Bookkeeping Package checkbox is selected
+- ✅ Fixed service card toggle logic - Seed Bookkeeping Package checkbox now automatically unchecks when bookkeeping service is turned off
+- ✅ Enhanced breakdown display shows base fee, waiver status, and prior years fee separately with green text for discounts
+- ✅ "Push to HubSpot" button activation issue resolved - properly activates after contact selection flow
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 

@@ -2165,6 +2165,11 @@ export default function Home() {
                 form.setValue('serviceBookkeeping', newValue);
                 form.setValue('includesBookkeeping', newValue); // Sync with fee calculation
                 
+                // If turning off bookkeeping service, also turn off the Seed Bookkeeping Package checkbox
+                if (!newValue && form.watch('alreadyOnSeedBookkeeping')) {
+                  form.setValue('alreadyOnSeedBookkeeping', false);
+                }
+                
                 // Update current form view to Bookkeeping if selected and no other service is selected
                 if (newValue && !form.watch('serviceTaas')) {
                   setCurrentFormView('bookkeeping');
