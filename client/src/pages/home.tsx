@@ -1717,260 +1717,268 @@ export default function Home() {
         {showClientDetails && (
           <Card className="max-w-6xl mx-auto mb-8 bg-white/95 backdrop-blur-sm shadow-xl border-0">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
-                <User className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Client Details</h2>
+                  <p className="text-sm text-gray-500">Enter client information to start the quote</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">Client Details</h2>
-                <p className="text-sm text-gray-500">Enter client information to start the quote</p>
+              {/* Contact Email - Top Right Display */}
+              <div className="text-right">
+                <FormLabel className="text-gray-700 font-medium text-sm">Contact Email</FormLabel>
+                <div className="flex items-center gap-2 mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md">
+                  <span className="text-gray-900 font-medium text-sm">{form.watch('contactEmail')}</span>
+                  {hubspotVerificationStatus === 'verified' && (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  )}
+                </div>
+                {hubspotVerificationStatus === 'verified' && (
+                  <p className="text-xs text-green-600 mt-1">✓ Verified in HubSpot</p>
+                )}
               </div>
             </div>
             
             <Form {...form}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Contact Email - Display Only */}
-                <div className="lg:col-span-1">
-                  <FormLabel className="text-gray-700 font-medium">Contact Email</FormLabel>
-                  <div className="flex items-center gap-2 mt-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
-                    <span className="text-gray-900 font-medium">{form.watch('contactEmail')}</span>
-                    {hubspotVerificationStatus === 'verified' && (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+              <div className="space-y-6">
+                {/* Row 1: Company Name, First Name, Last Name */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                  {/* Company Name with lock/unlock */}
+                  <FormField
+                    control={form.control}
+                    name="companyName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 font-medium">Company Name</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="Acme Corporation"
+                              className={`${form.watch('companyNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                              readOnly={form.watch('companyNameLocked')}
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newValue = !form.watch('companyNameLocked');
+                                form.setValue('companyNameLocked', newValue);
+                                if (!newValue) {
+                                  setTimeout(() => {
+                                    const input = document.querySelector('input[name="companyName"]') as HTMLInputElement;
+                                    input?.focus();
+                                  }, 100);
+                                }
+                              }}
+                              className="px-3 border-gray-300 hover:bg-gray-50"
+                            >
+                              {form.watch('companyNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                        {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
+                          <p className="text-xs text-green-600 mt-1">
+                            ✓ Found in HubSpot: {hubspotContact.properties.company}
+                          </p>
+                        )}
+                      </FormItem>
                     )}
-                  </div>
-                  {hubspotVerificationStatus === 'verified' && (
-                    <p className="text-xs text-green-600 mt-1">✓ Verified in HubSpot</p>
-                  )}
+                  />
+
+                  {/* Contact First Name */}
+                  <FormField
+                    control={form.control}
+                    name="contactFirstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 font-medium">First Name</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="John"
+                              className={`${form.watch('contactFirstNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                              readOnly={form.watch('contactFirstNameLocked')}
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newValue = !form.watch('contactFirstNameLocked');
+                                form.setValue('contactFirstNameLocked', newValue);
+                              }}
+                              className="px-3 border-gray-300 hover:bg-gray-50"
+                            >
+                              {form.watch('contactFirstNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Contact Last Name */}
+                  <FormField
+                    control={form.control}
+                    name="contactLastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 font-medium">Last Name</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="Smith"
+                              className={`${form.watch('contactLastNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
+                              readOnly={form.watch('contactLastNameLocked')}
+                              {...field}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newValue = !form.watch('contactLastNameLocked');
+                                form.setValue('contactLastNameLocked', newValue);
+                              }}
+                              className="px-3 border-gray-300 hover:bg-gray-50"
+                            >
+                              {form.watch('contactLastNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                {/* Company Name with lock/unlock */}
-                <FormField
-                  control={form.control}
-                  name="companyName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Company Name</FormLabel>
-                      <FormControl>
-                        <div className="flex gap-2">
-                          <Input 
-                            placeholder="Acme Corporation"
-                            className={`${form.watch('companyNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
-                            readOnly={form.watch('companyNameLocked')}
-                            {...field}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newValue = !form.watch('companyNameLocked');
-                              form.setValue('companyNameLocked', newValue);
-                              if (!newValue) {
-                                setTimeout(() => {
-                                  const input = document.querySelector('input[name="companyName"]') as HTMLInputElement;
-                                  input?.focus();
-                                }, 100);
-                              }
-                            }}
-                            className="px-3 border-gray-300 hover:bg-gray-50"
-                          >
-                            {form.watch('companyNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                      {hubspotVerificationStatus === 'verified' && hubspotContact?.properties.company && (
-                        <p className="text-xs text-green-600 mt-1">
-                          ✓ Found in HubSpot: {hubspotContact.properties.company}
-                        </p>
-                      )}
-                    </FormItem>
-                  )}
-                />
+                {/* Row 2: Industry, Monthly Revenue Range, Entity Type */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Industry */}
+                  <FormField
+                    control={form.control}
+                    name="industry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 font-medium">Industry</FormLabel>
+                        <FormControl>
+                          <div className="flex gap-2">
+                            <Select onValueChange={field.onChange} value={field.value} disabled={form.watch('industryLocked')}>
+                              <SelectTrigger className={`${form.watch('industryLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}>
+                                <SelectValue placeholder="Select industry" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
+                                <SelectItem value="Professional Services">Professional Services</SelectItem>
+                                <SelectItem value="Consulting">Consulting</SelectItem>
+                                <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
+                                <SelectItem value="Real Estate">Real Estate</SelectItem>
+                                <SelectItem value="Property Management">Property Management</SelectItem>
+                                <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
+                                <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
+                                <SelectItem value="Hospitality">Hospitality</SelectItem>
+                                <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
+                                <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                                <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
+                                <SelectItem value="Nonprofit">Nonprofit</SelectItem>
+                                <SelectItem value="Law Firm">Law Firm</SelectItem>
+                                <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
+                                <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
+                                <SelectItem value="Insurance">Insurance</SelectItem>
+                                <SelectItem value="Automotive">Automotive</SelectItem>
+                                <SelectItem value="Education">Education</SelectItem>
+                                <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
+                                <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
+                                <SelectItem value="Agriculture">Agriculture</SelectItem>
+                                <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
+                                <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
+                                <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newValue = !form.watch('industryLocked');
+                                form.setValue('industryLocked', newValue);
+                              }}
+                              className="px-3 border-gray-300 hover:bg-gray-50"
+                            >
+                              {form.watch('industryLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Contact First Name */}
-                <FormField
-                  control={form.control}
-                  name="contactFirstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">First Name</FormLabel>
-                      <FormControl>
-                        <div className="flex gap-2">
-                          <Input 
-                            placeholder="John"
-                            className={`${form.watch('contactFirstNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
-                            readOnly={form.watch('contactFirstNameLocked')}
-                            {...field}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newValue = !form.watch('contactFirstNameLocked');
-                              form.setValue('contactFirstNameLocked', newValue);
-                            }}
-                            className="px-3 border-gray-300 hover:bg-gray-50"
-                          >
-                            {form.watch('contactFirstNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Contact Last Name */}
-                <FormField
-                  control={form.control}
-                  name="contactLastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Last Name</FormLabel>
-                      <FormControl>
-                        <div className="flex gap-2">
-                          <Input 
-                            placeholder="Smith"
-                            className={`${form.watch('contactLastNameLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}
-                            readOnly={form.watch('contactLastNameLocked')}
-                            {...field}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newValue = !form.watch('contactLastNameLocked');
-                              form.setValue('contactLastNameLocked', newValue);
-                            }}
-                            className="px-3 border-gray-300 hover:bg-gray-50"
-                          >
-                            {form.watch('contactLastNameLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Industry */}
-                <FormField
-                  control={form.control}
-                  name="industry"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Industry</FormLabel>
-                      <FormControl>
-                        <div className="flex gap-2">
-                          <Select onValueChange={field.onChange} value={field.value} disabled={form.watch('industryLocked')}>
-                            <SelectTrigger className={`${form.watch('industryLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500 flex-1`}>
-                              <SelectValue placeholder="Select industry" />
+                  {/* Monthly Revenue Range */}
+                  <FormField
+                    control={form.control}
+                    name="monthlyRevenueRange"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 font-medium">Monthly Revenue Range</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                              <SelectValue placeholder="Select revenue range" />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
-                              <SelectItem value="Professional Services">Professional Services</SelectItem>
-                              <SelectItem value="Consulting">Consulting</SelectItem>
-                              <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
-                              <SelectItem value="Real Estate">Real Estate</SelectItem>
-                              <SelectItem value="Property Management">Property Management</SelectItem>
-                              <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
-                              <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
-                              <SelectItem value="Hospitality">Hospitality</SelectItem>
-                              <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
-                              <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                              <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
-                              <SelectItem value="Nonprofit">Nonprofit</SelectItem>
-                              <SelectItem value="Law Firm">Law Firm</SelectItem>
-                              <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
-                              <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
-                              <SelectItem value="Insurance">Insurance</SelectItem>
-                              <SelectItem value="Automotive">Automotive</SelectItem>
-                              <SelectItem value="Education">Education</SelectItem>
-                              <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
-                              <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
-                              <SelectItem value="Agriculture">Agriculture</SelectItem>
-                              <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
-                              <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
-                              <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newValue = !form.watch('industryLocked');
-                              form.setValue('industryLocked', newValue);
-                            }}
-                            className="px-3 border-gray-300 hover:bg-gray-50"
-                          >
-                            {form.watch('industryLocked') ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="<$10K">&lt;$10K</SelectItem>
+                            <SelectItem value="10K-25K">$10K - $25K</SelectItem>
+                            <SelectItem value="25K-75K">$25K - $75K</SelectItem>
+                            <SelectItem value="75K-250K">$75K - $250K</SelectItem>
+                            <SelectItem value="250K-1M">$250K - $1M</SelectItem>
+                            <SelectItem value="1M+">$1M+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                {/* Monthly Revenue Range */}
-                <FormField
-                  control={form.control}
-                  name="monthlyRevenueRange"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Monthly Revenue Range</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                            <SelectValue placeholder="Select revenue range" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="<$10K">&lt;$10K</SelectItem>
-                          <SelectItem value="10K-25K">$10K - $25K</SelectItem>
-                          <SelectItem value="25K-75K">$25K - $75K</SelectItem>
-                          <SelectItem value="75K-250K">$75K - $250K</SelectItem>
-                          <SelectItem value="250K-1M">$250K - $1M</SelectItem>
-                          <SelectItem value="1M+">$1M+</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  {/* Entity Type */}
+                  <FormField
+                    control={form.control}
+                    name="entityType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 font-medium">Entity Type</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                              <SelectValue placeholder="Select entity type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="LLC">LLC</SelectItem>
+                            <SelectItem value="Corporation">Corporation</SelectItem>
+                            <SelectItem value="S-Corporation">S-Corporation</SelectItem>
+                            <SelectItem value="Partnership">Partnership</SelectItem>
+                            <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
-                {/* Entity Type */}
-                <FormField
-                  control={form.control}
-                  name="entityType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 font-medium">Entity Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                            <SelectValue placeholder="Select entity type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="LLC">LLC</SelectItem>
-                          <SelectItem value="Corporation">Corporation</SelectItem>
-                          <SelectItem value="S-Corporation">S-Corporation</SelectItem>
-                          <SelectItem value="Partnership">Partnership</SelectItem>
-                          <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Company Address - Full width */}
-                <div className="lg:col-span-3">
+                {/* Row 3: Company Address - All fields on one line */}
+                <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Building className="h-5 w-5 text-gray-600" />
                     <h3 className="text-md font-semibold text-gray-700">Company Address</h3>
@@ -1993,7 +2001,7 @@ export default function Home() {
                       control={form.control}
                       name="clientStreetAddress"
                       render={({ field }) => (
-                        <FormItem className="lg:col-span-2">
+                        <FormItem>
                           <FormLabel className="text-sm text-gray-600">Street Address</FormLabel>
                           <FormControl>
                             <Input 
