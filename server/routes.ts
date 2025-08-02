@@ -663,8 +663,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         taasMonthlyFee: req.body.taasMonthlyFee,
         taasPriorYearsFee: req.body.taasPriorYearsFee
       });
-      console.log('👤 CRITICAL - User ID for owner:', req.user.id);
-      console.log('👤 CRITICAL - User object:', JSON.stringify(req.user, null, 2));
+      console.log('👤 CRITICAL - About to set ownerId to:', req.user.id, 'type:', typeof req.user.id);
       
       // Trust the frontend calculations - the frontend has the authoritative calculation logic
       // The frontend already calculated and sent the correct fees, so we should use them
@@ -698,8 +697,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       };
       
       console.log('🔍 About to parse quote data with schema...');
+      console.log('🔍 requestDataWithFees.ownerId before parsing:', requestDataWithFees.ownerId, 'type:', typeof requestDataWithFees.ownerId);
       const quoteData = insertQuoteSchema.parse(requestDataWithFees);
       console.log('✅ Schema validation passed');
+      console.log('✅ quoteData.ownerId after parsing:', quoteData.ownerId, 'type:', typeof quoteData.ownerId);
       
       console.log('💾 About to create quote in storage...');
       const quote = await storage.createQuote(quoteData);
