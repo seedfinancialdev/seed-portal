@@ -610,7 +610,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // Create a new quote (protected)
+  // Create a new quote (protected) - MAIN HANDLER
   app.post("/api/quotes", (req, res, next) => {
     console.log('🚨🚨🚨 POST /api/quotes INTERCEPTED BEFORE AUTH 🚨🚨🚨');
     console.log('🚨 Method:', req.method);

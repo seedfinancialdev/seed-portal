@@ -288,6 +288,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
+    console.log('🔥🔥🔥 CRITICAL - createQuote called with:', JSON.stringify({
+      ownerId: insertQuote.ownerId,
+      contactEmail: insertQuote.contactEmail,
+      hasOwnerId: insertQuote.ownerId !== null && insertQuote.ownerId !== undefined,
+      ownerIdType: typeof insertQuote.ownerId,
+      allKeys: Object.keys(insertQuote)
+    }, null, 2));
+    
+    if (!insertQuote.ownerId) {
+      console.error('🚨🚨🚨 FATAL: ownerId is null/undefined in createQuote!');
+      console.error('🚨 Full insertQuote object:', JSON.stringify(insertQuote, null, 2));
+      throw new Error('Cannot create quote: ownerId is required but was null/undefined');
+    }
+    
     return await safeDbQuery(async () => {
       const [quote] = await db
         .insert(quotes)
