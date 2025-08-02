@@ -1816,7 +1816,7 @@ export default function Home() {
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">Company Name</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Company Name <span className="text-red-500">*</span></label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Input 
@@ -1861,7 +1861,7 @@ export default function Home() {
                     name="contactFirstName"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">First Name</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">First Name <span className="text-red-500">*</span></label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Input 
@@ -1895,7 +1895,7 @@ export default function Home() {
                     name="contactLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">Last Name</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Last Name <span className="text-red-500">*</span></label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Input 
@@ -2066,7 +2066,7 @@ export default function Home() {
                       name="clientStreetAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <label className="text-sm text-gray-600 block mb-2">Street Address</label>
+                          <label className="text-sm text-gray-600 block mb-2">Street Address <span className="text-red-500">*</span></label>
                           <FormControl>
                             <Input 
                               placeholder="123 Main Street"
@@ -2085,7 +2085,7 @@ export default function Home() {
                       name="clientCity"
                       render={({ field }) => (
                         <FormItem>
-                          <label className="text-sm text-gray-600 block mb-2">City</label>
+                          <label className="text-sm text-gray-600 block mb-2">City <span className="text-red-500">*</span></label>
                           <FormControl>
                             <Input 
                               placeholder="Los Angeles"
@@ -2104,7 +2104,7 @@ export default function Home() {
                       name="clientState"
                       render={({ field }) => (
                         <FormItem>
-                          <label className="text-sm text-gray-600 block mb-2">State</label>
+                          <label className="text-sm text-gray-600 block mb-2">State <span className="text-red-500">*</span></label>
                           <FormControl>
                             <Input 
                               placeholder="CA"
@@ -2123,7 +2123,7 @@ export default function Home() {
                       name="clientZipCode"
                       render={({ field }) => (
                         <FormItem>
-                          <label className="text-sm text-gray-600 block mb-2">Zip Code</label>
+                          <label className="text-sm text-gray-600 block mb-2">Zip Code <span className="text-red-500">*</span></label>
                           <FormControl>
                             <Input 
                               placeholder="90210"
