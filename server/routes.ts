@@ -610,15 +610,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // Create a new quote (protected) - MAIN HANDLER
-  app.post("/api/quotes", (req, res, next) => {
-    console.log('🚨🚨🚨 POST /api/quotes INTERCEPTED BEFORE AUTH 🚨🚨🚨');
-    console.log('🚨 Method:', req.method);
-    console.log('🚨 URL:', req.url);
-    console.log('🚨 Headers present:', Object.keys(req.headers));
-    console.log('🚨 Body keys:', Object.keys(req.body || {}));
-    next();
-  }, requireAuth, async (req, res) => {
+  // Create a new quote (protected) - MAIN HANDLER  
+  app.post("/api/quotes", requireAuth, async (req, res) => {
+    console.error('🔥🔥🔥 ROUTE HIT! POST /api/quotes at', new Date().toISOString());
+    console.error('🔥 USER CHECK: req.user exists?', !!req.user);
+    console.error('🔥 USER EMAIL:', req.user?.email);
+    console.error('🔥 USER ID:', req.user?.id);
+    console.error('🔥 USER ID TYPE:', typeof req.user?.id);
     console.log('🎯🎯🎯 ====== CREATE QUOTE ENDPOINT HIT ====== 🎯🎯🎯');
     console.log('🔄 Quote creation request received at:', new Date().toISOString());
     console.log('📋 Request body keys:', Object.keys(req.body));
