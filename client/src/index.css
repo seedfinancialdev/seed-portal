@@ -131,53 +131,67 @@
   
   /* Enhanced card hover effects */
   .quote-card {
-    @apply transition-shadow duration-300 ease-in-out;
+    transition: box-shadow 0.3s ease-in-out;
   }
   
   .quote-card:hover {
-    @apply shadow-2xl;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
   
   /* Enhanced table row hover */
   .quote-table-row {
-    @apply transition-all duration-200 ease-in-out;
+    transition: all 0.2s ease-in-out;
   }
   
   .quote-table-row:hover {
-    @apply bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm;
+    background: linear-gradient(to right, #eff6ff, #e0e7ff);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   }
   
   /* Gradient text effects */
   .gradient-text {
-    @apply bg-gradient-to-r from-[#253e31] to-[#75c29a] bg-clip-text text-transparent;
+    background: linear-gradient(to right, #253e31, #75c29a);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   
   /* Enhanced button styles */
   .button-shimmer {
-    @apply relative overflow-hidden;
+    position: relative;
+    overflow: hidden;
   }
   
   .button-shimmer::before {
-    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-[-100%] transition-transform duration-700;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transform: skewX(-12deg) translateX(-100%);
+    transition: transform 0.7s;
     content: '';
   }
   
   .button-shimmer:hover::before {
-    @apply translate-x-[200%];
+    transform: skewX(-12deg) translateX(200%);
   }
   
   /* Pulse animation for status indicators */
   .status-pulse {
-    @apply animate-pulse;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
   /* Enhanced form inputs */
   .enhanced-input {
-    @apply transition-all duration-200 ease-in-out;
+    transition: all 0.2s ease-in-out;
   }
   
   .enhanced-input:focus {
-    @apply shadow-lg ring-2 ring-[#e24c00]/20;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    outline: 2px solid rgba(226, 76, 0, 0.2);
+    outline-offset: 2px;
   }
 
   /* Enhanced Client-Facing Article Styles */
