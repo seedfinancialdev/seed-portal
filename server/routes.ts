@@ -211,6 +211,43 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.log('====== TEST ROUTE HIT ======');
     res.json({ message: 'Test route working', query: req.query });
   });
+
+  // Sync route test
+  app.get('/api/sync-test', (req, res) => {
+    console.log('====== SYNC TEST ROUTE HIT ======');
+    console.log('Sync test - query:', req.query);
+    res.json({ success: true, message: 'Sync route working', query: req.query });
+    console.log('====== SYNC TEST ROUTE COMPLETE ======');
+  });
+
+  // Test route to isolate the issue
+  app.get('/api/working-test', (req, res) => {
+    console.log('====== WORKING TEST ROUTE HIT ======');
+    res.json({ success: true, message: 'This route works', query: req.query });
+  });
+
+  // Direct quotes test bypassing auth
+  app.get('/api/quotes-test', async (req, res) => {
+    console.log('====== QUOTES TEST ROUTE HIT ======');
+    try {
+      const search = req.query.search as string;
+      console.log('Test route - search param:', search);
+      console.log('Test route - storage object:', !!storage);
+      console.log('Test route - storage.getAllQuotes:', typeof storage.getAllQuotes);
+      
+      // Test direct database query
+      console.log('Test route - About to call getAllQuotes...');
+      const quotes = await storage.getAllQuotes(3, search); // Use user ID 3 (jon)
+      console.log('Test route - getAllQuotes completed, found quotes:', quotes.length);
+      
+      res.json({ success: true, count: quotes.length, quotes: quotes.slice(0, 3) });
+      console.log('Test route - Response sent successfully');
+    } catch (error: any) {
+      console.error('Test route error:', error);
+      console.error('Test route error stack:', error.stack);
+      res.status(500).json({ error: error.message, success: false });
+    }
+  });
   
   // Simple test endpoint to verify API routing
   app.get("/api/test/simple", (req, res) => {
