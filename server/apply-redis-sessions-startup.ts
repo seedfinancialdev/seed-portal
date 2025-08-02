@@ -27,20 +27,8 @@ export async function applyRedisSessionsAtStartup(app: Express): Promise<void> {
     
     console.log('[RedisStartup] ✅ RedisStore created:', redisStore.constructor.name);
     
-    // Apply session middleware with Redis store
-    app.use(session({
-      secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-      resave: false,
-      saveUninitialized: false,
-      rolling: true, // Extend session on each request
-      store: redisStore,
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      }
-    }));
+    // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
+    // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
     
     console.log('[RedisStartup] ✅ Redis session middleware applied successfully');
     

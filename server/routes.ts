@@ -87,20 +87,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       storeType = 'RedisStore';
       console.log('[Routes] ✅ Redis session store created:', sessionStore.constructor.name);
       
-      // Apply session middleware directly
-      app.use(session({
-        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-        resave: false,
-        saveUninitialized: false,
-        rolling: true, // Extend session on each request
-        store: sessionStore,
-        cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-          maxAge: 24 * 60 * 60 * 1000
-        }
-      }));
+      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
+      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
       
       console.log('[Routes] ✅ Session middleware applied with RedisStore');
       
@@ -116,19 +104,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
       storeType = 'MemoryStore (Redis fallback)';
       
-      app.use(session({
-        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-        resave: false,
-        saveUninitialized: false,
-        rolling: true,
-        store: sessionStore,
-        cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-          maxAge: 24 * 60 * 60 * 1000
-        }
-      }));
+      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
+      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
       
       console.log('[Routes] ✅ Memory session fallback applied');
     }
@@ -144,19 +121,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     });
     storeType = 'MemoryStore (no Redis)';
     
-    app.use(session({
-      secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-      resave: false,
-      saveUninitialized: false,
-      rolling: true,
-      store: sessionStore,
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        maxAge: 24 * 60 * 60 * 1000
-      }
-    }));
+    // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
+    // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
     
     console.log('[Routes] ✅ Memory session middleware applied');
   }
