@@ -80,6 +80,8 @@ export const insertQuoteSchema = createInsertSchema(quotes).omit({
   createdAt: true,
   updatedAt: true,
   ownerId: true, // Will be set by backend from authenticated user
+}).extend({
+  revenueBand: z.string().optional(), // Make revenueBand optional for inserts since backend maps from monthlyRevenueRange
 });
 
 export const updateQuoteSchema = createInsertSchema(quotes).omit({
