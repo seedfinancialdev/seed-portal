@@ -3415,19 +3415,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Debug info for development */}
-                {process.env.NODE_ENV === 'development' && (
-                  <div className="bg-gray-100 p-3 rounded text-xs space-y-1 mb-4">
-                    <div className="font-semibold">Debug - Button Conditions:</div>
-                    <div>• isCalculated: {isCalculated ? '✅' : '❌'}</div>
-                    <div>• hubspotVerificationStatus: {hubspotVerificationStatus}</div>
-                    <div>• showClientDetails: {showClientDetails ? '✅' : '❌'}</div>
-                    <div>• cleanupOverride: {form.watch("cleanupOverride") ? '✅' : '❌'}</div>
-                    <div>• isApproved: {isApproved ? '✅' : '❌'}</div>
-                    <div>• Mutations pending: {(pushToHubSpotMutation.isPending || updateHubSpotMutation.isPending || createQuoteMutation.isPending) ? '❌' : '✅'}</div>
-                  </div>
-                )}
-
                 {/* Action Buttons */}
                 <div className="pt-6 space-y-3">
                   <div className="flex gap-3">
