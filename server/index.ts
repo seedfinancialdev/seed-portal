@@ -67,6 +67,16 @@ async function redisHandshake(): Promise<Redis | null> {
 
 const app = express();
 
+// SUPER EARLY DEBUG - Before ANY other middleware
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.url === '/api/quotes') {
+    console.error('🚨🚨🚨 SUPER EARLY: POST /api/quotes detected in index.ts 🚨🚨🚨');
+    console.error('🚨 Time:', new Date().toISOString());
+    console.error('🚨 Headers:', JSON.stringify(req.headers, null, 2));
+  }
+  next();
+});
+
 // Initialize Sentry before other middleware
 const sentryInitialized = initializeSentry(app);
 
