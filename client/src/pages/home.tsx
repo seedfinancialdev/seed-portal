@@ -1932,7 +1932,7 @@ export default function Home() {
                     name="industry"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">Industry</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Industry <span className="text-red-500">*</span></label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Select onValueChange={field.onChange} value={field.value} disabled={form.watch('industryLocked')}>
@@ -1992,7 +1992,7 @@ export default function Home() {
                     name="monthlyRevenueRange"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">MONTHLY Revenue Range</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">MONTHLY Revenue Range <span className="text-red-500">*</span></label>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
@@ -2019,7 +2019,7 @@ export default function Home() {
                     name="entityType"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">Entity Type</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Entity Type <span className="text-red-500">*</span></label>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
@@ -2444,7 +2444,7 @@ export default function Home() {
                         name="monthlyTransactions"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Monthly Transactions</FormLabel>
+                            <FormLabel>Monthly Transactions <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
@@ -2471,7 +2471,7 @@ export default function Home() {
                         name="cleanupComplexity"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Cleanup Complexity</FormLabel>
+                            <FormLabel>Cleanup Complexity <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
@@ -2495,7 +2495,7 @@ export default function Home() {
                         name="cleanupMonths"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Months of Cleanup Required</FormLabel>
+                            <FormLabel>Months of Cleanup Required <span className="text-red-500">*</span></FormLabel>
                             <FormControl>
                               <Input 
                                 type="number"
@@ -2727,7 +2727,7 @@ export default function Home() {
                           name="accountingBasis"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Accounting Basis</FormLabel>
+                              <FormLabel>Accounting Basis <span className="text-red-500">*</span></FormLabel>
                               <Select onValueChange={field.onChange} value={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
@@ -2783,7 +2783,7 @@ export default function Home() {
                         name="numEntities"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Number of Entities</FormLabel>
+                            <FormLabel>Number of Entities <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={(value) => {
                               const numValue = parseInt(value);
                               field.onChange(numValue);
@@ -2844,7 +2844,7 @@ export default function Home() {
                         name="statesFiled"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>States Filed</FormLabel>
+                            <FormLabel>States Filed <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={(value) => {
                               const numValue = parseInt(value);
                               field.onChange(numValue);
@@ -2928,7 +2928,7 @@ export default function Home() {
                         name="numBusinessOwners"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Number of Business Owners</FormLabel>
+                            <FormLabel>Number of Business Owners <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={(value) => {
                               const numValue = parseInt(value);
                               field.onChange(numValue);
@@ -3010,7 +3010,7 @@ export default function Home() {
                         name="priorYearsUnfiled"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Prior Years Unfiled</FormLabel>
+                            <FormLabel>Prior Years Unfiled <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString() || ""}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
@@ -3037,7 +3037,7 @@ export default function Home() {
                         name="bookkeepingQuality"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Bookkeeping Quality</FormLabel>
+                            <FormLabel>Bookkeeping Quality <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || ""}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
