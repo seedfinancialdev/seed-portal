@@ -29,6 +29,9 @@ export const formSchema = insertQuoteSchema.omit({
   include1040s: z.boolean().optional(),
   priorYearsUnfiled: z.number().min(0, "Cannot be negative").max(5, "Maximum 5 years").optional(),
   alreadyOnSeedBookkeeping: z.boolean().optional(),
+  // Bookkeeping information fields
+  accountingBasis: z.string().optional(),
+  businessLoans: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   // If cleanup override is checked, require a reason
   if (data.cleanupOverride && !data.overrideReason) {

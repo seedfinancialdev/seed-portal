@@ -1,6 +1,7 @@
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Control } from "react-hook-form";
 import { FormData } from "./QuoteFormSchema";
 
@@ -89,6 +90,59 @@ export function BookkeepingSection({ control, currentFormView }: BookkeepingSect
           </FormItem>
         )}
       />
+
+      {/* Additional Information Section */}
+      <div className="border-t pt-6 space-y-6">
+        <h4 className="text-md font-medium text-gray-700">Additional Information</h4>
+        
+        {/* Accounting Basis */}
+        <FormField
+          control={control}
+          name="accountingBasis"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Accounting Basis</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
+                    <SelectValue placeholder="Select accounting basis" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Accrual">Accrual</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Business Loans */}
+        <FormField
+          control={control}
+          name="businessLoans"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  className="border-gray-300 data-[state=checked]:bg-[#e24c00] data-[state=checked]:border-[#e24c00]"
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel className="text-sm font-normal">
+                  Business Loans?
+                </FormLabel>
+                <p className="text-xs text-muted-foreground">
+                  Check if the business has any loans
+                </p>
+              </div>
+            </FormItem>
+          )}
+        />
+      </div>
     </div>
   );
 }

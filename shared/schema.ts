@@ -38,6 +38,9 @@ export const quotes = pgTable("quotes", {
   priorYearsUnfiled: integer("prior_years_unfiled"),
   alreadyOnSeedBookkeeping: boolean("already_on_seed_bookkeeping"),
   qboSubscription: boolean("qbo_subscription").default(false),
+  // Bookkeeping-specific information fields (do not impact pricing)
+  accountingBasis: text("accounting_basis"), // Cash, Accrual
+  businessLoans: boolean("business_loans"),
   // Service selections - new 5-card system
   serviceBookkeeping: boolean("service_bookkeeping").default(false),
   serviceTaas: boolean("service_taas").default(false), 
