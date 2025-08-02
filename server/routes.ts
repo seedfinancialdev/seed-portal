@@ -625,6 +625,20 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // TEST ENDPOINT - Simple auth check
+  app.get("/api/test-auth", requireAuth, (req, res) => {
+    console.error('🎯 TEST AUTH ENDPOINT HIT');
+    console.error('🎯 req.user:', JSON.stringify(req.user, null, 2));
+    console.error('🎯 req.user.id:', req.user?.id);
+    res.json({
+      authenticated: true,
+      user: req.user,
+      userId: req.user?.id,
+      userIdType: typeof req.user?.id,
+      sessionId: req.sessionID
+    });
+  });
+
   // Create a new quote (protected) - MAIN HANDLER  
   app.post("/api/quotes", requireAuth, async (req, res) => {
     console.error('='.repeat(80));
