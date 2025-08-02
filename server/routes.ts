@@ -829,6 +829,101 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // HubSpot integration endpoints
   
+  // Test HubSpot integration (DEBUG ROUTE - BYPASS AUTH FOR TESTING)
+  app.post("/api/hubspot/test-integration", async (req, res) => {
+    try {
+      console.log('🧪 Starting HubSpot Integration Test...');
+      
+      if (!hubSpotService) {
+        res.status(400).json({ message: "HubSpot integration not configured" });
+        return;
+      }
+
+      const testResults = {
+        connection: false,
+        contactVerification: false,
+        dealCreation: false,
+        quoteCreation: false,
+        errors: []
+      };
+
+      // Test 1: Connection
+      try {
+        const pipelines = await hubSpotService.getPipelines();
+        testResults.connection = !!pipelines;
+        console.log('✅ HubSpot connection test:', testResults.connection);
+      } catch (error) {
+        testResults.errors.push(`Connection failed: ${error.message}`);
+        console.error('❌ HubSpot connection failed:', error);
+      }
+
+      // Test 2: Contact verification
+      try {
+        const contactResult = await hubSpotService.verifyContactByEmail('jonwalls.ins@gmail.com');
+        testResults.contactVerification = contactResult.verified;
+        console.log('✅ Contact verification test:', testResults.contactVerification);
+        
+        if (contactResult.verified && contactResult.contact) {
+          // Test 3: Deal creation
+          try {
+            const deal = await hubSpotService.createDeal(
+              contactResult.contact.id,
+              'Test Company',
+              500,
+              1000,
+              undefined,
+              true,
+              true
+            );
+            testResults.dealCreation = !!deal;
+            console.log('✅ Deal creation test:', testResults.dealCreation, deal?.id);
+            
+            if (deal) {
+              // Test 4: Quote creation
+              try {
+                const quote = await hubSpotService.createQuote(
+                  deal.id,
+                  'Test Company',
+                  500,
+                  1000,
+                  req.user!.email,
+                  req.user!.firstName || 'Test',
+                  req.user!.lastName || 'User',
+                  true,
+                  true,
+                  300,
+                  2100,
+                  250,
+                  500
+                );
+                testResults.quoteCreation = !!quote;
+                console.log('✅ Quote creation test:', testResults.quoteCreation, quote?.id);
+              } catch (error) {
+                testResults.errors.push(`Quote creation failed: ${error.message}`);
+                console.error('❌ Quote creation failed:', error);
+              }
+            }
+          } catch (error) {
+            testResults.errors.push(`Deal creation failed: ${error.message}`);
+            console.error('❌ Deal creation failed:', error);
+          }
+        }
+      } catch (error) {
+        testResults.errors.push(`Contact verification failed: ${error.message}`);
+        console.error('❌ Contact verification failed:', error);
+      }
+
+      res.json({
+        success: testResults.connection && testResults.contactVerification && testResults.dealCreation && testResults.quoteCreation,
+        results: testResults,
+        message: testResults.errors.length > 0 ? testResults.errors.join('; ') : 'All tests passed'
+      });
+    } catch (error) {
+      console.error('HubSpot integration test failed:', error);
+      res.status(500).json({ message: "Integration test failed", error: error.message });
+    }
+  });
+  
   // Verify contact email in HubSpot
   app.post("/api/hubspot/verify-contact", requireAuth, async (req, res) => {
     try {
@@ -900,6 +995,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const ownerId = await hubSpotService.getOwnerByEmail(req.user!.email);
 
       // Create deal in HubSpot
+      console.log('🔧 Creating HubSpot deal with params:', {
+        contactId: contact.id,
+        companyName,
+        monthlyFee: parseFloat(quote.monthlyFee),
+        setupFee: parseFloat(quote.setupFee),
+        ownerId: ownerId || 'none',
+        includesBookkeeping: quote.includesBookkeeping,
+        includesTaas: quote.includesTaas
+      });
+
       const deal = await hubSpotService.createDeal(
         contact.id,
         companyName,
@@ -911,9 +1016,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       );
 
       if (!deal) {
+        console.error('❌ Deal creation returned null - check HubSpot logs above');
         res.status(500).json({ message: "Failed to create deal in HubSpot" });
         return;
       }
+
+      console.log('✅ Deal created successfully:', deal.id);
 
       // For combined quotes, calculate individual service fees for separate line items
       // For single service quotes, use the saved quote values to preserve custom overrides
@@ -943,6 +1051,20 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // For single service quotes, keep the saved values to preserve custom setup fees
       
       // Create quote/note in HubSpot
+      console.log('🔧 Creating HubSpot quote with params:', {
+        dealId: deal.id,
+        companyName,
+        monthlyFee: parseFloat(quote.monthlyFee),
+        setupFee: parseFloat(quote.setupFee),
+        userEmail: req.user!.email,
+        includesBookkeeping: quote.includesBookkeeping,
+        includesTaas: quote.includesTaas,
+        taasMonthlyFee: quote.taasMonthlyFee ? parseFloat(quote.taasMonthlyFee) : undefined,
+        taasPriorYearsFee: quote.taasPriorYearsFee ? parseFloat(quote.taasPriorYearsFee) : undefined,
+        bookkeepingMonthlyFee,
+        bookkeepingSetupFee
+      });
+
       const hubspotQuote = await hubSpotService.createQuote(
         deal.id,
         companyName,
@@ -960,9 +1082,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       );
 
       if (!hubspotQuote) {
+        console.error('❌ Quote creation returned null - check HubSpot logs above');
         res.status(500).json({ message: "Failed to create quote in HubSpot" });
         return;
       }
+
+      console.log('✅ Quote created successfully:', hubspotQuote.id);
 
       // Update HubSpot contact properties with quote data for 2-way sync
       try {
@@ -1022,6 +1147,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         companyName: companyName
       });
 
+      console.log('🎉 Successfully pushed quote to HubSpot:', {
+        dealId: deal.id,
+        quoteId: hubspotQuote.id,
+        dealName: deal.properties.dealname
+      });
+
       // Invalidate cache after creating new deal/quote
       await cache.del(`${CachePrefix.HUBSPOT_METRICS}*`);
       await cache.del(`${CachePrefix.HUBSPOT_DEALS_LIST}*`);
@@ -1035,7 +1166,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
     } catch (error) {
       console.error('Error pushing to HubSpot:', error);
-      res.status(500).json({ message: "Failed to push quote to HubSpot" });
+      if (error instanceof Error) {
+        console.error('HubSpot push error details:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      res.status(500).json({ 
+        message: "Failed to push quote to HubSpot", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
