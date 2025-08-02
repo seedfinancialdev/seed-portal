@@ -22,6 +22,8 @@ export function conditionalCsrf(req: Request, res: Response, next: NextFunction)
     '/api/health', // Health check
     '/api/auth/login', // Login endpoint needs to work without CSRF
     '/api/auth/logout', // Logout is safe without CSRF
+    '/api/quotes', // Quote operations protected by session auth
+    '/api/debug', // Debug endpoints
   ];
   
   // Special handling for CSRF token endpoint - it MUST have CSRF middleware applied
