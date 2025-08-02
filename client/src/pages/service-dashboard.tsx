@@ -236,7 +236,7 @@ export default function ServiceDashboard() {
                 </Link>
               </div>
               <div className="space-y-3">
-                {tickets?.slice(0, 5).map((ticket) => (
+                {Array.isArray(tickets) ? tickets.slice(0, 5).map((ticket) => (
                   <div key={ticket.id} className="border border-gray-200 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
@@ -255,7 +255,9 @@ export default function ServiceDashboard() {
                     <p className="text-sm text-gray-600">{ticket.client}</p>
                     <p className="text-xs text-gray-500">Assigned to: {ticket.assignee}</p>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-sm text-gray-500 text-center py-4">No tickets available</div>
+                )}
               </div>
             </div>
           </div>

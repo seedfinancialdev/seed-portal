@@ -124,7 +124,7 @@ export default function UserManagement() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {workspaceUsers?.map((workspaceUser) => (
+                  {Array.isArray(workspaceUsers) ? workspaceUsers.map((workspaceUser) => (
                     <tr key={workspaceUser.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -174,7 +174,13 @@ export default function UserManagement() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                        No users available
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

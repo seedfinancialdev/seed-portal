@@ -248,7 +248,7 @@ export default function StripeDashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {transactions?.map((transaction) => (
+                  {Array.isArray(transactions) ? transactions.map((transaction) => (
                     <tr key={transaction.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {transaction.customer}
@@ -273,7 +273,13 @@ export default function StripeDashboard() {
                         {new Date(transaction.date).toLocaleDateString()}
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                        No transaction data available
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

@@ -217,7 +217,7 @@ export default function CommissionTracker() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {commissions?.map((commission) => (
+                  {Array.isArray(commissions) ? commissions.map((commission) => (
                     <tr key={commission.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {commission.salesperson}
@@ -240,7 +240,13 @@ export default function CommissionTracker() {
                         {new Date(commission.dealCloseDate).toLocaleDateString()}
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                        No commission data available
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

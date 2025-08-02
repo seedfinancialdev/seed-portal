@@ -216,7 +216,7 @@ export default function SalesDashboard() {
                 </Link>
               </div>
               <div className="space-y-3">
-                {leads?.slice(0, 5).map((lead) => (
+                {Array.isArray(leads) ? leads.slice(0, 5).map((lead) => (
                   <div key={lead.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
                     <div>
                       <p className="font-medium text-gray-900">{lead.name}</p>
@@ -228,7 +228,9 @@ export default function SalesDashboard() {
                       <p className="text-xs text-gray-500">{new Date(lead.lastActivity).toLocaleDateString()}</p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-sm text-gray-500 text-center py-4">No leads available</div>
+                )}
               </div>
             </div>
           </div>
