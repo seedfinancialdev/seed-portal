@@ -34,23 +34,22 @@ export function conditionalCsrf(req: Request, res: Response, next: NextFunction)
     return next();
   }
 
-  // For authenticated API requests, use lenient CSRF handling
+  // COMPLETELY SKIP CSRF FOR ALL API ROUTES - session auth is sufficient
   if (req.path.startsWith('/api/')) {
     // Special debug for quotes endpoint
     if (req.path === '/api/quotes' && req.method === 'POST') {
-      console.log('🚨🚨 POST /api/quotes detected in CSRF middleware 🚨🚨');
+      console.log('🚨🚨 POST /api/quotes BYPASSING CSRF COMPLETELY 🚨🚨');
       console.log('🚨 Session exists:', !!req.session);
       console.log('🚨 IsAuthenticated function exists:', typeof req.isAuthenticated);
-      console.log('🚨 Request will bypass CSRF and proceed to route handler');
+      console.log('🚨 CSRF FULLY BYPASSED - proceeding to route handler');
     }
     
-    // For API routes, allow requests to continue with session authentication
-    // CSRF is less critical for authenticated API requests due to SameSite cookies
-    console.log(`Allowing API request to ${req.path} - session-based auth sufficient`);
+    // For ALL API routes, completely bypass CSRF - session auth provides security
+    console.log(`BYPASSING CSRF for API request to ${req.path} - session auth sufficient`);
     return next();
   }
 
-  // Apply CSRF protection to all other routes
+  // Apply CSRF protection to all NON-API routes only
   csrfProtection(req, res, next);
 }
 
