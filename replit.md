@@ -3,6 +3,14 @@
 ## Overview
 This project is a comprehensive Internal Employee Portal for Seed Financial, built with React, TypeScript, Express.js, and PostgreSQL. It aims to be a centralized command center, enhancing internal efficiency and client engagement. Key capabilities include a centralized dashboard, a sophisticated quote calculator (supporting 5 services: Bookkeeping, TaaS, Payroll, AP/AR Lite, FP&A Lite), a commission tracker, a client intelligence engine, and profile management. It integrates with HubSpot, provides real-time weather, address autocomplete, advanced sales analytics, and automates MSA document generation with Box integration for client folder management.
 
+## Recent Changes (August 2, 2025)
+**CRITICAL ISSUE RESOLVED**: Fixed persistent 500 API errors caused by database schema mismatches after recent feature additions.
+- ✅ Database schema migration completed - added missing service columns and client address fields
+- ✅ API routing functionality fully restored - all endpoints responding correctly
+- ✅ Email-triggered UX flow operational - contact search and existing quotes modal working
+- ✅ All required database tables created (client_activities, document_templates, box_folders)
+- ✅ Quote data integrity maintained - 58 quotes across 16 contacts preserved
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
