@@ -173,10 +173,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     next();
   });
 
-  // CATCH-ALL ROUTE - Confirm we reach Express for POST /api/quotes
+  // FIRST POST HANDLER - This should trigger for ALL POST /api/quotes requests
   app.post('/api/quotes', (req, res, next) => {
-    console.log('🎯 REACHED CATCH-ALL in Express for POST /api/quotes');
-    console.log('🎯 User in catch-all:', req.user ? { id: req.user.id, email: req.user.email } : 'null');
+    console.log('🎯🎯🎯 FIRST POST HANDLER HIT - POST /api/quotes 🎯🎯🎯');
+    console.log('🎯 Timestamp:', new Date().toISOString());
+    console.log('🎯 User exists:', !!req.user);
+    console.log('🎯 User ID:', req.user?.id);
+    console.log('🎯 Request body keys:', Object.keys(req.body || {}));
+    console.log('🎯 About to call next()...');
     next();
   });
   
