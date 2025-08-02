@@ -17,6 +17,7 @@ This project is a comprehensive Internal Employee Portal for Seed Financial, bui
 - ✅ Fixed service card toggle logic - Seed Bookkeeping Package checkbox now automatically unchecks when bookkeeping service is turned off
 - ✅ Enhanced breakdown display shows base fee, waiver status, and prior years fee separately with green text for discounts
 - ✅ "Push to HubSpot" button activation issue resolved - properly activates after contact selection flow
+- ✅ Removed entity type dropdown from TaaS quote card - Non-Profit uses same modifiers as C-Corp
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

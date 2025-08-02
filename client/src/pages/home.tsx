@@ -2774,33 +2774,6 @@ export default function Home() {
                     <div className="space-y-6 border-t pt-6">
                       <h3 className="text-lg font-semibold text-gray-800">Tax Service Details</h3>
                       
-                      {/* Entity Type */}
-                      <FormField
-                        control={form.control}
-                        name="entityType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Entity Type</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
-                              <FormControl>
-                                <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                                  <SelectValue placeholder="Select entity type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="LLC">LLC</SelectItem>
-                                <SelectItem value="C-Corp">C-Corp</SelectItem>
-                                <SelectItem value="S-Corp">S-Corp</SelectItem>
-                                <SelectItem value="Partnership">Partnership</SelectItem>
-                                <SelectItem value="Non-Profit">Non-Profit</SelectItem>
-                                <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
                       {/* Number of Entities */}
                       <FormField
                         control={form.control}
