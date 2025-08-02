@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.error('🚀 Headers keys:', Object.keys(req.headers));
       console.error('🚀 Session ID:', req.sessionID);
       console.error('🚀 Session exists:', !!req.session);
-      console.error('🚀 Session authenticated:', req.isAuthenticated());
+      console.error('🚀 Session authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
       console.error('🚀 User exists:', !!req.user);
       console.error('🚀 User ID:', req.user?.id);
       console.error('🚀 Cookie header:', req.headers.cookie);
@@ -212,7 +212,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.log('🚨 CSRF token header value:', req.headers['x-csrf-token']);
       console.log('🚨 Session ID:', req.sessionID);
       console.log('🚨 Session exists:', !!req.session);
-      console.log('🚨 Authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
+      console.log('🚨 Authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
     }
     
     next();
@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.log('🚨 Headers:', JSON.stringify(req.headers, null, 2));
       console.log('🚨 Body keys:', Object.keys(req.body || {}));
       console.log('🚨 Content-Type:', req.headers['content-type']);
-      console.log('🚨 Request authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
+      console.log('🚨 Request authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
     }
     
     next();
@@ -664,7 +664,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       userExists: !!req.user,
       userId: req.user?.id,
       userEmail: req.user?.email,
-      isAuthenticated: req.isAuthenticated(),
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
       
       // Session data
       sessionKeys: req.session ? Object.keys(req.session) : [],
@@ -702,7 +702,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     // CRITICAL DEBUG: Check passport session
     console.error('🔥 SESSION.PASSPORT:', req.session?.passport);
     console.error('🔥 SESSION.PASSPORT.USER:', req.session?.passport?.user);
-    console.error('🔥 IS AUTHENTICATED:', req.isAuthenticated());
+    console.error('🔥 IS AUTHENTICATED:', req.isAuthenticated ? req.isAuthenticated() : false);
     
     // Run session consistency check
     const consistency = checkSessionConsistency(req);

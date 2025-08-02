@@ -44,7 +44,7 @@ export function conditionalCsrf(req: Request, res: Response, next: NextFunction)
 
   // For authenticated API requests, we still apply CSRF but with more lenient handling
   // This maintains security while ensuring functionality
-  if (req.path.startsWith('/api/') && req.isAuthenticated && req.isAuthenticated()) {
+  if (req.path.startsWith('/api/') && req.isAuthenticated && typeof req.isAuthenticated === 'function' && req.isAuthenticated()) {
     console.log(`🔐 CSRF: Applying lenient CSRF for authenticated API request: ${req.path}`);
     // Apply CSRF but continue even if token is missing for authenticated requests
     // The session authentication provides primary security

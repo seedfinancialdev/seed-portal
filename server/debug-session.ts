@@ -12,7 +12,7 @@ export function debugSession(label: string) {
     console.log(`📍 Session Cookie: ${req.headers.cookie?.includes('connect.sid') ? 'Present' : 'Missing'}`);
     console.log(`📍 Session Exists: ${!!req.session}`);
     console.log(`📍 Session Store Type: ${req.session?.store?.constructor?.name || 'Unknown'}`);
-    console.log(`📍 Is Authenticated: ${req.isAuthenticated()}`);
+    console.log(`📍 Is Authenticated: ${req.isAuthenticated ? req.isAuthenticated() : false}`);
     console.log(`📍 Passport Session: ${JSON.stringify(req.session?.passport)}`);
     console.log(`📍 User Exists: ${!!req.user}`);
     console.log(`📍 User ID: ${req.user?.id}`);
@@ -43,7 +43,7 @@ export function checkSessionConsistency(req: Request) {
     userInPassport: !!req.session?.passport?.user,
     userInReq: !!req.user,
     userIdInReq: !!req.user?.id,
-    isAuthenticated: req.isAuthenticated(),
+    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
     cookiePresent: !!req.headers.cookie?.includes('connect.sid'),
   };
   

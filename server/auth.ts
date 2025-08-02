@@ -107,7 +107,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   }));
@@ -325,7 +325,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.isAuthenticated || !req.isAuthenticated()) return res.sendStatus(401);
     res.json({
       id: req.user.id,
       email: req.user.email,
@@ -370,7 +370,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
 export async function requireAuth(req: any, res: any, next: any) {
   console.log('🔐 requireAuth: Checking authentication for', req.url);
   console.log('🔐 requireAuth: Method:', req.method);
-  console.log('🔐 requireAuth: Session authenticated:', req.isAuthenticated());
+  console.log('🔐 requireAuth: Session authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
   console.log('🔐 requireAuth: Auth header present:', !!req.headers.authorization);
   console.log('🔐 requireAuth: Session exists:', !!req.session);
   console.log('🔐 requireAuth: User in req:', req.user?.email || 'NO USER');
@@ -392,7 +392,7 @@ export async function requireAuth(req: any, res: any, next: any) {
   }
   
   // First check session-based auth
-  if (req.isAuthenticated()) {
+  if (req.isAuthenticated && req.isAuthenticated()) {
     console.log('✅ requireAuth: Session auth successful for', req.user?.email);
     return next();
   }
