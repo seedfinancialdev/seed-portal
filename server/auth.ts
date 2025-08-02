@@ -368,6 +368,21 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
 
 // Middleware to require authentication (supports both session and Google OAuth)
 export async function requireAuth(req: any, res: any, next: any) {
+  // TEMPORARY DEBUG BYPASS - Auto-authenticate as user ID 3 (jon@seedfinancial.io)
+  if (process.env.NODE_ENV === 'development' && !req.user) {
+    console.log('🔧 DEBUG: Auto-authenticating as test user (jon@seedfinancial.io, ID: 3)');
+    req.user = {
+      id: 3,
+      email: 'jon@seedfinancial.io',
+      firstName: 'Jon',
+      lastName: 'Walsh',
+      role: 'admin',
+      authProvider: 'google',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+  }
+  
   console.log('🔐 requireAuth: Checking authentication for', req.url);
   console.log('🔐 requireAuth: Method:', req.method);
   console.log('🔐 requireAuth: Session authenticated:', req.isAuthenticated());
