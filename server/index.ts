@@ -12,58 +12,10 @@ import { logger, requestLogger } from "./logger";
 import Redis from "ioredis";
 import "./jobs"; // Initialize job workers and cron jobs
 
-console.log('[Index] ===============================================');
-console.log('[Index] server/index.ts file loaded at top level');
-console.log('[Index] REDIS_URL available:', !!process.env.REDIS_URL);
-console.log('[Index] ===============================================');
+import { redisDebug } from "./utils/debug-logger";
+import { applyRedisSessionsAtStartup } from "./apply-redis-sessions-startup";
 
-// Redis handshake function - ensures Redis is ready before app starts
-async function redisHandshake(): Promise<Redis | null> {
-  const redisUrl = process.env.REDIS_URL;
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  
-  if (!redisUrl) {
-    const message = 'REDIS_URL environment variable not set';
-    if (isDevelopment) {
-      console.warn(`[Redis Handshake] ${message} - falling back to MemoryStore`);
-      return null;
-    } else {
-      throw new Error(`[Redis Handshake] ${message} - Redis required in production`);
-    }
-  }
-
-  try {
-    console.log('[Redis Handshake] Connecting to Redis...');
-    const redis = new Redis(redisUrl, {
-      keyPrefix: '', // No prefix for session redis
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3,
-      lazyConnect: false, // Connect immediately
-    });
-
-    // Wait for connection and send PING
-    console.log('[Redis Handshake] Sending PING...');
-    const pong = await redis.ping();
-    
-    if (pong === 'PONG') {
-      console.log('[Redis Handshake] ✓ Redis connection successful');
-      return redis;
-    } else {
-      throw new Error(`Unexpected PING response: ${pong}`);
-    }
-  } catch (error) {
-    const message = `Redis handshake failed: ${error}`;
-    console.error(`[Redis Handshake] Full error:`, error);
-    
-    if (isDevelopment) {
-      console.warn(`[Redis Handshake] ${message} - falling back to MemoryStore`);
-      return null;
-    } else {
-      console.error(`[Redis Handshake] ${message} - crashing in production`);
-      throw new Error(message);
-    }
-  }
-}
+redisDebug('Server initialization starting...');
 
 const app = express();
 
@@ -130,16 +82,10 @@ app.use((req, res, next) => {
 (async () => {
   console.log('[Server] ===== SERVER STARTUP BEGIN =====');
   try {
-    console.log('[Server] Starting Redis handshake...');
-    // Perform Redis handshake before setting up the server
-    const sessionRedis = await redisHandshake();
-    console.log('[Server] Redis handshake completed, sessionRedis:', !!sessionRedis);
-    
     // Apply Redis sessions before registering routes
-    console.log('[Server] Applying Redis sessions at startup...');
-    const { applyRedisSessionsAtStartup } = await import('./apply-redis-sessions-startup');
+    redisDebug('Applying Redis sessions at startup...');
     await applyRedisSessionsAtStartup(app);
-    console.log('[Server] Redis sessions startup configuration completed');
+    redisDebug('Redis sessions startup configuration completed');
     
     // Initialize Redis connections first
     console.log('[Server] Initializing Redis connections...');
@@ -191,7 +137,7 @@ app.use((req, res, next) => {
     console.log('[Server] CDN and asset optimization initialized successfully');
     console.log('[Server] BullMQ workers and cache pre-warming started successfully');
     
-    const server = await registerRoutes(app, sessionRedis);
+    const server = await registerRoutes(app, null);
     console.log('[Server] ✅ Routes registered successfully');
 
     // The Sentry error handler must be before any other error middleware (only if initialized)

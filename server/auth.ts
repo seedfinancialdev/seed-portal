@@ -33,10 +33,7 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
-  console.log('===========================================');
-  console.log('AUTH.TS FUNCTION CALLED - THIS SHOULD APPEAR');
-  console.log('===========================================');
-  console.log('[Auth] setupAuth called, sessionRedis provided:', !!sessionRedis);
+  // Auth setup simplified with centralized session handling
   // Initialize HubSpot service for user verification
   let hubSpotService: HubSpotService | null = null;
   try {
@@ -56,61 +53,9 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     console.warn('Using insecure default session secret - DO NOT USE IN PRODUCTION');
   }
 
-  // Direct Redis session setup (proven working approach)
-  console.log('[Auth] Setting up Redis sessions directly...');
-  
-  let sessionStore: any;
-  let storeType: string;
-  
-  if (process.env.REDIS_URL) {
-    try {
-      console.log('[Auth] Creating Redis connection...');
-      const Redis = (await import('ioredis')).default;
-      const RedisStore = (await import('connect-redis')).default;
-      
-      const redisClient = new Redis(process.env.REDIS_URL);
-      await redisClient.ping();
-      console.log('[Auth] ✅ Redis ping successful');
-      
-      sessionStore = new RedisStore({
-        client: redisClient,
-        prefix: 'sess:',
-        ttl: 24 * 60 * 60, // 24 hours
-      });
-      storeType = 'RedisStore';
-      console.log('[Auth] ✅ Redis session store created:', sessionStore.constructor.name);
-      
-    } catch (error) {
-      console.warn('[Auth] ❌ Redis failed, using MemoryStore:', error.message);
-      const MemoryStore = (await import('memorystore')).default;
-      const MemoryStoreClass = MemoryStore(session);
-      sessionStore = new MemoryStoreClass({ checkPeriod: 86400000 });
-      storeType = 'MemoryStore';
-    }
-  } else {
-    console.log('[Auth] No REDIS_URL, using MemoryStore');
-    const MemoryStore = (await import('memorystore')).default;
-    const MemoryStoreClass = MemoryStore(session);
-    sessionStore = new MemoryStoreClass({ checkPeriod: 86400000 });
-    storeType = 'MemoryStore';
-  }
-  
-  console.log('[Auth] Final session store type:', storeType);
+  // Session setup is centralized, now configuring passport strategies
 
-  app.set("trust proxy", 1);
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-    resave: false,
-    saveUninitialized: false,
-    rolling: true, // Extend session on each request
-    store: sessionStore,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-  }));
+  // Session middleware is applied centrally at startup
   app.use(passport.initialize());
   app.use(passport.session());
 
