@@ -2,7 +2,7 @@ import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+// import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { GoogleAuthProvider } from "@/hooks/use-google-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
@@ -62,16 +62,14 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <GoogleAuthProvider>
-            <AuthProvider>
-              <NavigationHistoryProvider>
-                <Toaster />
-                <Router />
-              </NavigationHistoryProvider>
-            </AuthProvider>
-          </GoogleAuthProvider>
-        </TooltipProvider>
+        <GoogleAuthProvider>
+          <AuthProvider>
+            <NavigationHistoryProvider>
+              <Toaster />
+              <Router />
+            </NavigationHistoryProvider>
+          </AuthProvider>
+        </GoogleAuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
