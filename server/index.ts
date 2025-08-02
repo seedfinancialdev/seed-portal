@@ -70,12 +70,19 @@ const app = express();
 // SUPER EARLY DEBUG - Before ANY other middleware
 app.use((req, res, next) => {
   if (req.method === 'POST' && req.url === '/api/quotes') {
+    console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
     console.error('🚨🚨🚨 SUPER EARLY: POST /api/quotes detected in index.ts 🚨🚨🚨');
+    console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
     console.error('🚨 Time:', new Date().toISOString());
-    console.error('🚨 Headers:', JSON.stringify(req.headers, null, 2));
+    console.error('🚨 Method:', req.method);
+    console.error('🚨 URL:', req.url);
     console.error('🚨 Process ID:', process.pid);
     console.error('🚨 Port:', process.env.PORT || 5000);
-    console.error('🚨 TRACE: Request reaching index.ts middleware');
+    console.error('🚨 Host header:', req.headers.host);
+    console.error('🚨 Content-Type:', req.headers['content-type']);
+    console.error('🚨 User-Agent:', req.headers['user-agent']);
+    console.error('🚨 THIS SHOULD ABSOLUTELY APPEAR FOR EVERY POST REQUEST');
+    console.error('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
   }
   next();
 });
