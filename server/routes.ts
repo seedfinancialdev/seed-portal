@@ -206,6 +206,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     res.json({ csrfToken: req.csrfToken ? req.csrfToken() : null });
   });
   
+  // Debug route to test routing
+  app.get('/api/test-route', (req, res) => {
+    console.log('====== TEST ROUTE HIT ======');
+    res.json({ message: 'Test route working', query: req.query });
+  });
+  
   // Simple test endpoint to verify API routing
   app.get("/api/test/simple", (req, res) => {
     console.log('[SimpleTest] API endpoint hit successfully');
@@ -605,12 +611,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Get all quotes with optional search and sort (protected)
   app.get("/api/quotes", (req, res, next) => {
+    console.log('====== QUOTES ENDPOINT HIT ======');
     console.log('Quotes API - Request received:', {
       method: req.method,
       url: req.url,
       query: req.query,
       user: req.user?.email || 'no user'
     });
+    console.log('====== QUOTES ENDPOINT PROCESSING ======');
     next();
   }, requireAuth, async (req, res) => {
     try {
@@ -636,10 +644,23 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         res.json(userQuotes);
       } else if (search) {
         console.log('Quotes API - Searching quotes by email:', search);
-        // Search quotes by email (using search parameter for email filtering)
-        const quotes = await storage.getAllQuotes(req.user.id, search, sortField, sortOrder);
-        console.log('Quotes API - Found', quotes.length, 'quotes matching search');
-        res.json(quotes);
+        console.log('Quotes API - User ID for search:', req.user.id);
+        try {
+          // Search quotes by email (using search parameter for email filtering)
+          const quotes = await storage.getAllQuotes(req.user.id, search, sortField, sortOrder);
+          console.log('Quotes API - Found', quotes.length, 'quotes matching search');
+          console.log('Quotes API - Sending response...');
+          res.json(quotes);
+          console.log('Quotes API - Response sent successfully');
+        } catch (dbError: any) {
+          console.error('Quotes API - Database error during search:', dbError);
+          console.error('Quotes API - Error details:', {
+            message: dbError.message,
+            code: dbError.code,
+            stack: dbError.stack?.split('\n')[0]
+          });
+          throw dbError; // Re-throw to be caught by outer catch
+        }
       } else {
         console.log('Quotes API - Getting all quotes for user');
         // Get all quotes for the authenticated user
