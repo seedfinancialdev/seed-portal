@@ -603,6 +603,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         monthlyTransactions: req.body.monthlyTransactions || "N/A",
         cleanupComplexity: req.body.cleanupComplexity || "0",
         cleanupMonths: req.body.cleanupMonths || 0,
+        // Provide defaults for optional fields to prevent validation errors
+        numEntities: req.body.numEntities || null,
+        statesFiled: req.body.statesFiled || null,
+        internationalFiling: req.body.internationalFiling || false,
+        numBusinessOwners: req.body.numBusinessOwners || null,
+        include1040s: req.body.include1040s || false,
+        priorYearsUnfiled: req.body.priorYearsUnfiled || null,
+        alreadyOnSeedBookkeeping: req.body.alreadyOnSeedBookkeeping || false,
+        contactFirstName: req.body.contactFirstName || null,
+        contactLastName: req.body.contactLastName || null,
+        entityType: req.body.entityType || null,
+        accountingBasis: req.body.accountingBasis || null,
+        businessLoans: req.body.businessLoans || false,
       };
       
       console.log('🔍 About to parse quote data with schema...');

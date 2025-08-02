@@ -10,8 +10,6 @@ export const formSchema = insertQuoteSchema.omit({
   setupFee: true,
   taasMonthlyFee: true,
   taasPriorYearsFee: true,
-  ownerId: true, // Removed from form validation - backend sets this
-  revenueBand: true, // Removed from form validation - mapped from monthlyRevenueRange
   hubspotContactId: true,
   hubspotDealId: true,
   hubspotQuoteId: true,
