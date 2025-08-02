@@ -225,9 +225,15 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
+      console.log('🔍 Deserializing user with ID:', id, 'type:', typeof id);
       const user = await storage.getUser(id);
+      console.log('🔍 Deserialized user:', user ? `${user.email} (ID: ${user.id})` : 'null');
+      if (user && !user.id) {
+        console.error('❌ CRITICAL: User found but missing ID property!', JSON.stringify(user, null, 2));
+      }
       done(null, user);
     } catch (error) {
+      console.error('❌ Deserialize user error:', error);
       done(error);
     }
   });

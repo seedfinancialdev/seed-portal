@@ -638,6 +638,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(401).json({ message: "Authentication required" });
       }
       
+      if (!req.user.id) {
+        console.error('❌ CRITICAL: User exists but ID is missing!');
+        console.error('❌ User object:', JSON.stringify(req.user, null, 2));
+        console.error('❌ User properties:', Object.keys(req.user || {}));
+        return res.status(500).json({ 
+          message: "Cannot create quote: ownerId is required but was null/undefined",
+          error: "User ID missing from session"
+        });
+      }
+      
       console.log('👤 CRITICAL - User object during POST:', JSON.stringify(req.user, null, 2));
       console.log('👤 CRITICAL - User ID during POST:', req.user.id);
       console.log('👤 CRITICAL - User properties:', Object.keys(req.user || {}));
