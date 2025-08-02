@@ -161,18 +161,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-  // CSRF token endpoint for SPAs
-  app.get('/api/csrf-token', (req, res) => {
-    console.log('🔑 CSRF token endpoint hit - req.csrfToken exists:', !!req.csrfToken);
-    try {
-      const token = req.csrfToken ? req.csrfToken() : null;
-      console.log('🔑 Generated CSRF token:', token ? 'SUCCESS' : 'FAILED');
-      res.json({ csrfToken: token });
-    } catch (error) {
-      console.error('🔑 CSRF token generation error:', error);
-      res.json({ csrfToken: null, error: error.message });
-    }
-  });
+  // CSRF token endpoint removed - CSRF protection disabled
   
 
   

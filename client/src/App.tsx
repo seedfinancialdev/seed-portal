@@ -62,7 +62,8 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
+        {/* TooltipProvider temporarily disabled due to React hook errors */}
+        {/* <TooltipProvider> */}
           <GoogleAuthProvider>
             <AuthProvider>
               <NavigationHistoryProvider>
@@ -71,7 +72,7 @@ function App() {
               </NavigationHistoryProvider>
             </AuthProvider>
           </GoogleAuthProvider>
-        </TooltipProvider>
+        {/* </TooltipProvider> */}
       </QueryClientProvider>
     </ErrorBoundary>
   );
