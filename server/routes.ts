@@ -586,28 +586,39 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const sortField = req.query.sortField as string;
       const sortOrder = req.query.sortOrder as 'asc' | 'desc';
       
+      console.log('Quotes API - Query params:', { email, search, sortField, sortOrder });
+      console.log('Quotes API - User ID:', req.user?.id);
+      
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
       if (email) {
+        console.log('Quotes API - Getting quotes by email:', email);
         // Get quotes by specific email (filtered by owner)
         const quotes = await storage.getQuotesByEmail(email);
         // Filter by owner
         const userQuotes = quotes.filter(quote => quote.ownerId === req.user!.id);
+        console.log('Quotes API - Found', userQuotes.length, 'quotes for email');
         res.json(userQuotes);
       } else if (search) {
+        console.log('Quotes API - Searching quotes by email:', search);
         // Search quotes by email (using search parameter for email filtering)
         const quotes = await storage.getAllQuotes(req.user.id, search, sortField, sortOrder);
+        console.log('Quotes API - Found', quotes.length, 'quotes matching search');
         res.json(quotes);
       } else {
+        console.log('Quotes API - Getting all quotes for user');
         // Get all quotes for the authenticated user
         const quotes = await storage.getAllQuotes(req.user.id, undefined, sortField, sortOrder);
+        console.log('Quotes API - Found', quotes.length, 'total quotes');
         res.json(quotes);
       }
     } catch (error: any) {
       console.error('Error fetching quotes:', error);
       console.error('Error stack:', error.stack);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
       res.status(500).json({ message: "Failed to fetch quotes", error: error.message });
     }
   });

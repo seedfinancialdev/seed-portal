@@ -348,38 +348,52 @@ export class DatabaseStorage implements IStorage {
 
   async getAllQuotes(ownerId: number, search?: string, sortField?: string, sortOrder?: 'asc' | 'desc'): Promise<Quote[]> {
     return await safeDbQuery(async () => {
+      console.log('getAllQuotes - Parameters:', { ownerId, search, sortField, sortOrder });
+      
       const ownerFilter = eq(quotes.ownerId, ownerId);
       const archivedFilter = eq(quotes.archived, false);
       const baseFilter = and(ownerFilter, archivedFilter);
       
       if (search && sortField && sortOrder) {
+        console.log('getAllQuotes - Search with sort');
         const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
                            sortField === 'updatedAt' ? quotes.updatedAt :
                            sortField === 'monthlyFee' ? quotes.monthlyFee :
                            sortField === 'setupFee' ? quotes.setupFee :
                            quotes.updatedAt;
         
-        return await db.select().from(quotes)
+        const result = await db.select().from(quotes)
           .where(and(like(quotes.contactEmail, `%${search}%`), baseFilter))
           .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
+        console.log('getAllQuotes - Search with sort result count:', result.length);
+        return result;
       } else if (search) {
-        return await db.select().from(quotes)
+        console.log('getAllQuotes - Search only for:', search);
+        const result = await db.select().from(quotes)
           .where(and(like(quotes.contactEmail, `%${search}%`), baseFilter))
           .orderBy(desc(quotes.updatedAt));
+        console.log('getAllQuotes - Search result count:', result.length);
+        return result;
       } else if (sortField && sortOrder) {
+        console.log('getAllQuotes - Sort only');
         const orderColumn = sortField === 'contactEmail' ? quotes.contactEmail :
                            sortField === 'updatedAt' ? quotes.updatedAt :
                            sortField === 'monthlyFee' ? quotes.monthlyFee :
                            sortField === 'setupFee' ? quotes.setupFee :
                            quotes.updatedAt;
         
-        return await db.select().from(quotes)
+        const result = await db.select().from(quotes)
           .where(baseFilter)
           .orderBy(sortOrder === 'asc' ? asc(orderColumn) : desc(orderColumn));
+        console.log('getAllQuotes - Sort result count:', result.length);
+        return result;
       } else {
-        return await db.select().from(quotes)
+        console.log('getAllQuotes - All quotes for owner');
+        const result = await db.select().from(quotes)
           .where(baseFilter)
           .orderBy(desc(quotes.updatedAt));
+        console.log('getAllQuotes - All quotes result count:', result.length);
+        return result;
       }
     }, 'getAllQuotes');
   }
