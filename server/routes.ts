@@ -644,6 +644,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         taasMonthlyFee: req.body.taasMonthlyFee,
         taasPriorYearsFee: req.body.taasPriorYearsFee
       });
+      console.log('👤 CRITICAL - User ID for owner:', req.user.id);
+      console.log('👤 CRITICAL - User object:', JSON.stringify(req.user, null, 2));
       
       // Trust the frontend calculations - the frontend has the authoritative calculation logic
       // The frontend already calculated and sent the correct fees, so we should use them
