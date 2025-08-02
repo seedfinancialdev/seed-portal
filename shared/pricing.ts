@@ -212,8 +212,20 @@ export function calculateTaaSFees(data: PricingData): FeeResult {
   const isBookkeepingClient = data.alreadyOnSeedBookkeeping;
   const monthlyFee = roundToNearest25(isBookkeepingClient ? rawFee * 0.85 : rawFee);
 
-  // Setup fee: prior years unfiled * $2100 per year
-  const setupFee = (data.priorYearsUnfiled || 0) * 2100;
+  // Setup fee calculation:
+  // 1. Base setup fee: equivalent to 1 year of Prior Years Unfiled fee ($2,100)
+  // 2. Prior years unfiled fee: actual unfiled years * $2,100 per year
+  // 3. If Seed Bookkeeping Package is selected, the base setup fee is waived
+  
+  const baseSetupFee = 2100; // Base setup fee (1 year equivalent)
+  const priorYearsFee = (data.priorYearsUnfiled || 0) * 2100;
+  
+  let setupFee = baseSetupFee + priorYearsFee;
+  
+  // Waive base setup fee if already on Seed Bookkeeping
+  if (isBookkeepingClient) {
+    setupFee = priorYearsFee; // Only charge for actual prior years, waive base fee
+  }
 
   return { monthlyFee, setupFee };
 }

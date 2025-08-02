@@ -460,9 +460,19 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   const discountedFee = afterMultipliers - seedDiscount;
   const monthlyFee = Math.max(150, Math.round(discountedFee / 5) * 5);
 
-  // Setup fee calculation - 0.5 × monthly × 12 with $1000 minimum per year
-  const perYearFee = Math.max(1000, monthlyFee * 0.5 * 12);
-  const setupFee = data.priorYearsUnfiled > 0 ? Math.max(monthlyFee, perYearFee * data.priorYearsUnfiled) : 0;
+  // Setup fee calculation with base fee and waiver logic
+  const baseSetupFee = 2100; // Base setup fee (1 year equivalent)
+  const perYearFee = 2100; // Per year fee for unfiled years
+  const priorYearsFee = data.priorYearsUnfiled * perYearFee;
+  
+  let setupFee = baseSetupFee + priorYearsFee;
+  let baseSetupWaived = false;
+  
+  // Waive base setup fee if already on Seed Bookkeeping
+  if (isBookkeepingClient) {
+    setupFee = priorYearsFee; // Only charge for actual prior years, waive base fee
+    baseSetupWaived = true;
+  }
 
   // Add intermediate calculation for better breakdown display
   const afterIndustryMult = beforeMultipliers * industryMult;
@@ -484,6 +494,9 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
     finalMonthly: monthlyFee,
     priorYearsUnfiled: data.priorYearsUnfiled,
     perYearFee: Math.round(perYearFee),
+    baseSetupFee,
+    baseSetupWaived,
+    priorYearsFee,
     setupFee
   };
 
@@ -3350,22 +3363,41 @@ export default function Home() {
                                   </>
                                 )}
                               </div>
-                              {feeCalculation.taas.setupFee > 0 && (
+                              {(feeCalculation.taas.setupFee > 0 || (feeCalculation.taas.breakdown && feeCalculation.taas.breakdown.baseSetupWaived)) && (
                                 <div className="border-t border-blue-200 pt-2">
                                   <div className="flex justify-between font-medium">
-                                    <span className="text-blue-700">Prior Years Fee:</span>
+                                    <span className="text-blue-700">TaaS Setup Fee:</span>
                                     <span className="text-blue-800">${feeCalculation.taas.setupFee.toLocaleString()}</span>
                                   </div>
                                   {feeCalculation.taas.breakdown && (
                                     <>
                                       <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                        <span>Unfiled Years: {feeCalculation.taas.breakdown.priorYearsUnfiled}</span>
-                                        <span>✓</span>
+                                        <span>Base Setup Fee:</span>
+                                        <span className={feeCalculation.taas.breakdown.baseSetupWaived ? "text-green-600" : ""}>
+                                          {feeCalculation.taas.breakdown.baseSetupWaived ? 
+                                            `$${feeCalculation.taas.breakdown.baseSetupFee.toLocaleString()} (Waived)` : 
+                                            `$${feeCalculation.taas.breakdown.baseSetupFee.toLocaleString()}`
+                                          }
+                                        </span>
                                       </div>
-                                      <div className="flex justify-between pl-4 text-xs text-blue-600">
-                                        <span>Per Year Fee:</span>
-                                        <span>${feeCalculation.taas.breakdown.perYearFee.toLocaleString()}</span>
-                                      </div>
+                                      {feeCalculation.taas.breakdown.priorYearsUnfiled > 0 && (
+                                        <>
+                                          <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                            <span>Unfiled Years: {feeCalculation.taas.breakdown.priorYearsUnfiled}</span>
+                                            <span>✓</span>
+                                          </div>
+                                          <div className="flex justify-between pl-4 text-xs text-blue-600">
+                                            <span>Prior Years Fee:</span>
+                                            <span>${feeCalculation.taas.breakdown.priorYearsFee.toLocaleString()}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                      {feeCalculation.taas.breakdown.baseSetupWaived && (
+                                        <div className="flex justify-between pl-4 text-xs text-green-600">
+                                          <span>Seed Bookkeeping Package Discount:</span>
+                                          <span>Base fee waived</span>
+                                        </div>
+                                      )}
                                     </>
                                   )}
                                 </div>
