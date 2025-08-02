@@ -579,7 +579,15 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Get all quotes with optional search and sort (protected)
-  app.get("/api/quotes", requireAuth, async (req, res) => {
+  app.get("/api/quotes", (req, res, next) => {
+    console.log('Quotes API - Request received:', {
+      method: req.method,
+      url: req.url,
+      query: req.query,
+      user: req.user?.email || 'no user'
+    });
+    next();
+  }, requireAuth, async (req, res) => {
     try {
       const email = req.query.email as string;
       const search = req.query.search as string;
