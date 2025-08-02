@@ -162,6 +162,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   
   console.log('[Routes] Final session store type:', storeType);
   
+  // VERY EARLY REQUEST INTERCEPTOR - CATCHES EVERYTHING
+  app.use((req, res, next) => {
+    if (req.method === 'POST' && req.url === '/api/quotes') {
+      console.log('##################################################');
+      console.log('### POST /api/quotes REQUEST INTERCEPTED ###');
+      console.log('### TIME:', new Date().toISOString());
+      console.log('### METHOD:', req.method);
+      console.log('### URL:', req.url);
+      console.log('##################################################');
+    }
+    next();
+  });
+  
   // VERY EARLY debugging middleware to catch ALL requests before any processing
   app.use((req, res, next) => {
     if (req.method === 'POST' && req.url === '/api/quotes') {
