@@ -75,6 +75,7 @@ app.use((req, res, next) => {
     console.error('🚨 Headers:', JSON.stringify(req.headers, null, 2));
     console.error('🚨 Process ID:', process.pid);
     console.error('🚨 Port:', process.env.PORT || 5000);
+    console.error('🚨 TRACE: Request reaching index.ts middleware');
   }
   next();
 });

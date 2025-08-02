@@ -291,6 +291,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
+    console.error('🔥🔥🔥🔥🔥 STORAGE.createQuote() CALLED 🔥🔥🔥🔥🔥');
+    console.error('🔥 TIMESTAMP:', new Date().toISOString());
+    console.error('🔥 CALL STACK TO FIND WHERE THIS WAS CALLED FROM:');
+    console.error(new Error().stack);
     console.log('🔥🔥🔥 CRITICAL - createQuote called with:', JSON.stringify({
       ownerId: insertQuote.ownerId,
       contactEmail: insertQuote.contactEmail,
@@ -302,6 +306,8 @@ export class DatabaseStorage implements IStorage {
     if (!insertQuote.ownerId) {
       console.error('🚨🚨🚨 FATAL: ownerId is null/undefined in createQuote!');
       console.error('🚨 Full insertQuote object:', JSON.stringify(insertQuote, null, 2));
+      console.error('🚨 CALL STACK THAT LED TO THIS ERROR:');
+      console.error(new Error().stack);
       throw new Error('Cannot create quote: ownerId is required but was null/undefined');
     }
     
