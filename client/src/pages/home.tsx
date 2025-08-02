@@ -3755,8 +3755,6 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </Card>
-      )}
     </div>
     </>
   );
