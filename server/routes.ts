@@ -683,7 +683,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         contactFirstName: req.body.contactFirstName || null,
         contactLastName: req.body.contactLastName || null,
         entityType: req.body.entityType || null,
-        accountingBasis: req.body.accountingBasis || null,
+        accountingBasis: req.body.accountingBasis || "Cash",
         businessLoans: req.body.businessLoans || false,
       };
       
