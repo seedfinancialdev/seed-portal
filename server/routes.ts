@@ -176,6 +176,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     next();
   });
   app.use(conditionalCsrf);
+  app.use(provideCsrfToken); // Add token generation middleware
   app.use((req, res, next) => {
     console.log('After CSRF - Request passed CSRF check');
     next();

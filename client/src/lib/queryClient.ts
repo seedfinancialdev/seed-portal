@@ -11,22 +11,22 @@ async function throwIfResNotOk(res: Response) {
 // Global CSRF token cache
 let csrfToken: string | null = null;
 
-// Get CSRF token - fetch from server if not cached
+// Get CSRF token - fetch from dedicated endpoint
 async function getCSRFToken(): Promise<string | null> {
   if (csrfToken) return csrfToken;
   
   try {
-    // Fetch CSRF token from the server
-    const response = await fetch('/api/health', {
+    // Fetch CSRF token from the dedicated endpoint
+    const response = await fetch('/api/csrf-token', {
       method: 'GET',
-      credentials: 'include',
+      credentials: 'include', // Include session cookies
     });
     
     if (response.ok) {
-      const token = response.headers.get('X-CSRF-Token');
-      if (token) {
-        csrfToken = token;
-        return token;
+      const data = await response.json();
+      if (data.csrfToken) {
+        csrfToken = data.csrfToken;
+        return data.csrfToken;
       }
     }
   } catch (error) {
