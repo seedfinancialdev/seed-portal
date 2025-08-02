@@ -196,9 +196,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     
     // Special debugging for POST requests to quotes
     if (req.method === 'POST' && req.path === '/quotes') {
-      console.log('🚨 POST /api/quotes request detected in API middleware');
+      console.log('🚨🚨🚨 POST /api/quotes request detected in API middleware 🚨🚨🚨');
       console.log('🚨 Headers:', JSON.stringify(req.headers, null, 2));
       console.log('🚨 Body keys:', Object.keys(req.body || {}));
+      console.log('🚨 Content-Type:', req.headers['content-type']);
+      console.log('🚨 Request authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
     }
     
     next();

@@ -38,9 +38,10 @@ export function conditionalCsrf(req: Request, res: Response, next: NextFunction)
   if (req.path.startsWith('/api/')) {
     // Special debug for quotes endpoint
     if (req.path === '/api/quotes' && req.method === 'POST') {
-      console.log('🚨 POST /api/quotes detected in CSRF middleware');
+      console.log('🚨🚨 POST /api/quotes detected in CSRF middleware 🚨🚨');
       console.log('🚨 Session exists:', !!req.session);
       console.log('🚨 IsAuthenticated function exists:', typeof req.isAuthenticated);
+      console.log('🚨 Request will bypass CSRF and proceed to route handler');
     }
     
     // For API routes, allow requests to continue with session authentication
