@@ -596,9 +596,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         // Filter by owner
         const userQuotes = quotes.filter(quote => quote.ownerId === req.user!.id);
         res.json(userQuotes);
+      } else if (search) {
+        // Search quotes by email (using search parameter for email filtering)
+        const quotes = await storage.getAllQuotes(req.user.id, search, sortField, sortOrder);
+        res.json(quotes);
       } else {
         // Get all quotes for the authenticated user
-        const quotes = await storage.getAllQuotes(req.user.id, search, sortField, sortOrder);
+        const quotes = await storage.getAllQuotes(req.user.id, undefined, sortField, sortOrder);
         res.json(quotes);
       }
     } catch (error: any) {

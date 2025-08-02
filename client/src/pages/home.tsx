@@ -958,27 +958,35 @@ export default function Home() {
 
   // Handle contact selection - check for existing quotes first
   const handleContactSelection = async (contact: any) => {
+    console.log('Contact selected:', contact);
     setSelectedContact(contact);
     setShowContactSearch(false);
     setShowLiveResults(false);
     
     // Search for existing quotes for this contact
     try {
+      console.log('Searching for existing quotes for:', contact.properties.email);
       const response = await fetch(`/api/quotes?search=${encodeURIComponent(contact.properties.email)}`, {
         credentials: 'include',
       });
       
+      console.log('Quotes search response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Existing quotes found:', data);
         setExistingQuotesForEmail(data || []);
         
         // Show existing quotes modal if there are any, otherwise go to client details
         if (data && data.length > 0) {
+          console.log('Showing existing quotes modal');
           setShowExistingQuotesModal(true);
         } else {
+          console.log('No existing quotes, proceeding to client details');
           proceedToClientDetails(contact);
         }
       } else {
+        console.log('Quotes search failed, proceeding without existing quotes');
         setExistingQuotesForEmail([]);
         proceedToClientDetails(contact);
       }
@@ -1520,7 +1528,7 @@ export default function Home() {
                     }}
                     onBlur={() => {
                       // Delay hiding results to allow for click
-                      setTimeout(() => setShowLiveResults(false), 150);
+                      setTimeout(() => setShowLiveResults(false), 300);
                     }}
                   />
                   
@@ -1539,6 +1547,7 @@ export default function Home() {
                               key={contact.id}
                               className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-left"
                               onClick={() => handleContactSelection(contact)}
+                              onMouseDown={(e) => e.preventDefault()}
                             >
                               <div className="font-medium text-gray-900">
                                 {contact.properties.firstname} {contact.properties.lastname}
