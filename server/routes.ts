@@ -184,7 +184,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     next();
   });
   app.use(conditionalCsrf);
-  app.use(provideCsrfToken); // Add token generation middleware
+  app.use(provideCsrfToken); // SINGLE application of CSRF token generation middleware
   app.use((req, res, next) => {
     console.log('After CSRF - Request passed CSRF check');
     
@@ -195,7 +195,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     
     next();
   });
-  app.use(provideCsrfToken);
+  // REMOVED DUPLICATE: app.use(provideCsrfToken); - WAS APPLIED TWICE
 
   // Debug middleware to track all API requests
   app.use('/api', (req, res, next) => {
@@ -278,19 +278,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       console.log('[ApplyRedis] ✅ RedisStore created:', redisStore.constructor.name);
       
-      // Apply session middleware with Redis store
-      app.use(session({
-        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-        resave: false,
-        saveUninitialized: false,
-        store: redisStore,
-        cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-          maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
-      }));
+      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
+      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
       
       console.log('[ApplyRedis] ✅ Redis session middleware applied');
       
@@ -333,22 +322,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       console.log('[TestRedis] RedisStore created:', store.constructor.name);
       
-      // ALSO APPLY REDIS SESSION MIDDLEWARE DIRECTLY
-      console.log('[TestRedis] Applying Redis session middleware to Express app...');
-      const session = (await import('express-session')).default;
-      
-      app.use(session({
-        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-        resave: false,
-        saveUninitialized: false,
-        store: store,  // Use the RedisStore we just created
-        cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-          maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
-      }));
+      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
+      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
       
       console.log('[TestRedis] ✅ Redis session middleware applied to Express!');
       
@@ -649,9 +624,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Create a new quote (protected) - MAIN HANDLER  
   app.post("/api/quotes", 
-    debugSession('BEFORE_AUTH'), 
     requireAuth, 
-    debugSession('AFTER_AUTH'),
     async (req, res) => {
     console.error('='.repeat(80));
     console.error('🚨🚨🚨 POST /api/quotes ROUTE HANDLER CALLED 🚨🚨🚨');

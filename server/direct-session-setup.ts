@@ -41,19 +41,8 @@ export async function setupDirectSessions(app: Express): Promise<void> {
   
   console.log('[DirectSession] Final store type:', storeType);
   
-  // Apply session middleware directly
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-    resave: false,
-    saveUninitialized: false,
-    store: sessionStore,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
-  }));
+  // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
+  // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
   
   console.log('[DirectSession] Session middleware applied successfully');
 }
