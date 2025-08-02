@@ -999,6 +999,8 @@ export default function Home() {
 
   // Function to populate form and proceed to client details
   const proceedToClientDetails = (contact: any) => {
+    console.log('proceedToClientDetails called with contact:', contact);
+    
     // Pre-populate form with contact data
     form.setValue('contactEmail', contact.properties.email || '');
     form.setValue('companyName', contact.properties.company || '');
@@ -1012,7 +1014,9 @@ export default function Home() {
     form.setValue('clientState', contact.properties.state || '');
     form.setValue('clientZipCode', contact.properties.zip || '');
 
+    console.log('Setting showClientDetails to true');
     setShowClientDetails(true);
+    console.log('proceedToClientDetails completed');
   };
 
   // Push to HubSpot mutation
