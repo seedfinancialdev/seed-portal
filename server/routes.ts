@@ -642,6 +642,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.error('🔥 USER EMAIL:', req.user?.email);
     console.error('🔥 USER ID:', req.user?.id);
     console.error('🔥 USER ID TYPE:', typeof req.user?.id);
+    console.error('🔥 FULL USER OBJECT KEYS:', Object.keys(req.user || {}));
+    console.error('🔥 FULL USER OBJECT:', JSON.stringify(req.user, null, 2));
     console.log('🎯🎯🎯 ====== CREATE QUOTE ENDPOINT HIT ====== 🎯🎯🎯');
     console.log('🔄 Quote creation request received at:', new Date().toISOString());
     console.log('📋 Request body keys:', Object.keys(req.body));

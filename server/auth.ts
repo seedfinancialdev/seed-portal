@@ -231,6 +231,10 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
       if (user && !user.id) {
         console.error('❌ CRITICAL: User found but missing ID property!', JSON.stringify(user, null, 2));
       }
+      if (user) {
+        console.log('🔍 DETAILED USER OBJECT:', JSON.stringify(user, null, 2));
+        console.log('🔍 User ID specifically:', user.id, 'type:', typeof user.id);
+      }
       done(null, user);
     } catch (error) {
       console.error('❌ Deserialize user error:', error);
