@@ -722,6 +722,9 @@ export default function Home() {
       
       const quoteData = {
         ...data,
+        // Fix schema compatibility: map monthlyRevenueRange to revenueBand and ensure ownerId is set
+        revenueBand: data.monthlyRevenueRange || '',
+        ownerId: undefined, // Will be set by backend from req.user.id
         monthlyFee: feeCalculation.combined.monthlyFee.toString(),
         setupFee: feeCalculation.combined.setupFee.toString(),
         taasMonthlyFee: feeCalculation.taas.monthlyFee.toString(),

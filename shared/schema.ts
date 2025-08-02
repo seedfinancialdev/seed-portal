@@ -79,6 +79,7 @@ export const insertQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  ownerId: true, // Will be set by backend from authenticated user
 });
 
 export const updateQuoteSchema = createInsertSchema(quotes).omit({
