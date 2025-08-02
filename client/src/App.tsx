@@ -5,6 +5,8 @@ import { GoogleAuthProvider } from "./hooks/use-google-auth";
 import { RoleBasedRedirect } from "./components/RoleBasedRedirect";
 import { ProtectedRoute } from "./lib/protected-route";
 import { Switch, Route } from "wouter";
+import AdminDashboard from "./pages/admin-dashboard";
+import "./index.css";
 
 // Temporary placeholder components
 function Dashboard() {
@@ -23,7 +25,7 @@ function App() {
           <RoleBasedRedirect />
           <Switch>
             <ProtectedRoute path="/" component={Dashboard} />
-            <ProtectedRoute path="/admin" component={Dashboard} />
+            <ProtectedRoute path="/admin" component={AdminDashboard} />
             <ProtectedRoute path="/sales-dashboard" component={Dashboard} />
             <ProtectedRoute path="/service-dashboard" component={Dashboard} />
             <Route path="/auth" component={AuthPage} />
