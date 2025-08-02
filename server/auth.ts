@@ -379,6 +379,7 @@ export async function requireAuth(req: any, res: any, next: any) {
     if (!req.user?.id) {
       console.error('❌❌❌ FATAL: req.user.id is missing during POST /quotes');
       console.error('❌ This will cause ownerId constraint violation');
+      console.error('❌ THIS IS THE ROOT CAUSE OF THE ISSUE!');
     }
   }
   
