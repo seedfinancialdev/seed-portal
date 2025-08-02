@@ -653,6 +653,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.error('🔥 FULL USER OBJECT KEYS:', Object.keys(req.user || {}));
     console.error('🔥 FULL USER OBJECT:', JSON.stringify(req.user, null, 2));
     
+    // CRITICAL DEBUG: Check passport session
+    console.error('🔥 SESSION.PASSPORT:', req.session?.passport);
+    console.error('🔥 SESSION.PASSPORT.USER:', req.session?.passport?.user);
+    console.error('🔥 IS AUTHENTICATED:', req.isAuthenticated());
+    
     // Deep inspection of user object
     if (req.user) {
       console.error('🔍 USER OBJECT INSPECTION:');
