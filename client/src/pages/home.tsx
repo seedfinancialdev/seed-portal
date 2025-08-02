@@ -1716,33 +1716,32 @@ export default function Home() {
         {/* Client Details Section - Show after contact selection or email trigger */}
         {showClientDetails && (
           <Card className="max-w-6xl mx-auto mb-8 bg-white/95 backdrop-blur-sm shadow-xl border-0">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Client Details</h2>
-                  <p className="text-sm text-gray-500">Enter client information to start the quote</p>
-                </div>
-              </div>
-              {/* Contact Email - Top Right Display */}
-              <div className="text-right">
-                <label className="text-gray-700 font-medium text-sm">Contact Email</label>
-                <div className="flex items-center gap-2 mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md">
-                  <span className="text-gray-900 font-medium text-sm">{form.watch('contactEmail')}</span>
-                  {hubspotVerificationStatus === 'verified' && (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  )}
-                </div>
-                {hubspotVerificationStatus === 'verified' && (
-                  <p className="text-xs text-green-600 mt-1">✓ Verified in HubSpot</p>
-                )}
-              </div>
-            </div>
-            
             <Form {...form}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-800">Client Details</h2>
+                      <p className="text-sm text-gray-500">Enter client information to start the quote</p>
+                    </div>
+                  </div>
+                  {/* Contact Email - Top Right Display */}
+                  <div className="text-right">
+                    <label className="text-gray-700 font-medium text-sm">Contact Email</label>
+                    <div className="flex items-center gap-2 mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md">
+                      <span className="text-gray-900 font-medium text-sm">{form.watch('contactEmail')}</span>
+                      {hubspotVerificationStatus === 'verified' && (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                    {hubspotVerificationStatus === 'verified' && (
+                      <p className="text-xs text-green-600 mt-1">✓ Verified in HubSpot</p>
+                    )}
+                  </div>
+                </div>
               <div className="space-y-6">
                 {/* Row 1: Company Name, First Name, Last Name */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2074,10 +2073,9 @@ export default function Home() {
                     />
                   </div>
                 </div>
-              </div>
+              </CardContent>
             </Form>
-          </CardContent>
-        </Card>
+          </Card>
         )}
 
         {/* Enhanced 5-Service Card System */}
