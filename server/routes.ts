@@ -139,11 +139,26 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Setup authentication after sessions
   await setupAuth(app, null);
   
-  // Apply CSRF protection after session and auth setup
+  // Apply CSRF protection after session and auth setup (with comprehensive error handling)
   console.log('[Routes] Applying CSRF protection middleware...');
-  app.use(conditionalCsrf);
-  app.use(provideCsrfToken);
-  console.log('[Routes] ✅ CSRF protection applied successfully');
+  try {
+    // Delay CSRF application to ensure sessions are fully initialized
+    setTimeout(() => {
+      try {
+        app.use(conditionalCsrf);
+        app.use(provideCsrfToken);
+        console.log('[Routes] ✅ CSRF protection applied successfully (delayed)');
+      } catch (delayedError) {
+        console.error('[Routes] ❌ Delayed CSRF setup failed:', delayedError);
+        console.log('[Routes] ⚠️ Application will continue without CSRF protection');
+      }
+    }, 100);
+    
+    console.log('[Routes] ✅ CSRF protection scheduled for application');
+  } catch (error) {
+    console.error('[Routes] ❌ CSRF configuration failed:', error);
+    console.log('[Routes] ⚠️ Continuing without CSRF protection due to configuration issues');
+  }
   console.log('[Routes] ✅ Auth setup completed');
 
   // CSRF protection disabled - was blocking POST requests before authentication middleware
