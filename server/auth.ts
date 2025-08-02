@@ -362,10 +362,18 @@ export async function requireAuth(req: any, res: any, next: any) {
   console.log('🔐 requireAuth: User in req:', req.user?.email || 'NO USER');
   
   if (req.method === 'POST' && req.url?.includes('/quotes')) {
-    console.log('🔥🔥🔥 CRITICAL POST QUOTES AUTH CHECK 🔥🔥🔥');
-    console.log('🔥 User object:', JSON.stringify(req.user, null, 2));
-    console.log('🔥 User ID:', req.user?.id);
-    console.log('🔥 Session ID:', req.sessionID);
+    console.error('🔥🔥🔥 CRITICAL POST QUOTES AUTH CHECK 🔥🔥🔥');
+    console.error('🔥 User object exists:', !!req.user);
+    console.error('🔥 User ID exists:', !!req.user?.id);
+    console.error('🔥 User ID value:', req.user?.id);
+    console.error('🔥 User ID type:', typeof req.user?.id);
+    console.error('🔥 Session ID:', req.sessionID);
+    console.error('🔥 Full user object:', JSON.stringify(req.user, null, 2));
+    
+    if (!req.user?.id) {
+      console.error('❌❌❌ FATAL: req.user.id is missing during POST /quotes');
+      console.error('❌ This will cause ownerId constraint violation');
+    }
   }
   
   // First check session-based auth
