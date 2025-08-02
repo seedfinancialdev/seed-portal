@@ -2365,9 +2365,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       // Get the current user's email from session
       const userEmail = req.user?.email;
+      console.log(`Searching HubSpot contacts for term: "${searchTerm}", user: ${userEmail}`);
       
-      // Search contacts and filter by user assignment
-      const contacts = await hubspotService.searchContacts(searchTerm, userEmail);
+      // Search contacts using the advanced method with optional user filtering
+      // First try without user filtering to ensure basic search works
+      const contacts = await hubspotService.searchContacts(searchTerm);
+      console.log(`Found ${contacts.length} contacts for search term: "${searchTerm}"`);
       
       res.json({ contacts });
     } catch (error) {

@@ -675,9 +675,11 @@ Services Include:
     }
   }
 
-  // Search contacts in HubSpot
-  async searchContacts(searchTerm: string): Promise<HubSpotContact[]> {
+  // Search contacts in HubSpot (basic search)
+  async searchContactsBasic(searchTerm: string): Promise<HubSpotContact[]> {
     try {
+      console.log(`HubSpot searchContacts called with term: "${searchTerm}"`);
+      
       const searchBody = {
         filterGroups: [
           {
@@ -732,11 +734,18 @@ Services Include:
         limit: 20
       };
 
+      console.log('HubSpot search body:', JSON.stringify(searchBody, null, 2));
+      
       const result = await this.makeRequest('/crm/v3/objects/contacts/search', {
         method: 'POST',
         body: JSON.stringify(searchBody)
       });
 
+      console.log(`HubSpot search result: ${result.results?.length || 0} contacts found`);
+      if (result.results?.length > 0) {
+        console.log('First contact sample:', JSON.stringify(result.results[0], null, 2));
+      }
+      
       return result.results || [];
     } catch (error) {
       console.error('Error searching HubSpot contacts:', error);
@@ -1075,6 +1084,7 @@ Services Include:
   // Search contacts for Client Intelligence with owner filtering
   async searchContacts(query: string, ownerEmail?: string): Promise<any[]> {
     try {
+      console.log(`Advanced searchContacts called with query: "${query}", ownerEmail: ${ownerEmail}`);
       let searchBody: any;
       
       if (ownerEmail) {
@@ -1192,11 +1202,18 @@ Services Include:
         };
       }
 
+      console.log('Advanced search body:', JSON.stringify(searchBody, null, 2));
+      
       const searchResult = await this.makeRequest('/crm/v3/objects/contacts/search', {
         method: 'POST',
         body: JSON.stringify(searchBody)
       });
 
+      console.log(`Advanced search result: ${searchResult.results?.length || 0} contacts found`);
+      if (searchResult.results?.length > 0) {
+        console.log('First contact sample:', JSON.stringify(searchResult.results[0], null, 2));
+      }
+      
       return searchResult.results || [];
     } catch (error) {
       console.error('Error searching HubSpot contacts:', error);
