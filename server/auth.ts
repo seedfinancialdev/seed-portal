@@ -382,6 +382,8 @@ export async function requireAuth(req: any, res: any, next: any) {
     console.error('🔥 User ID value:', req.user?.id);
     console.error('🔥 User ID type:', typeof req.user?.id);
     console.error('🔥 Session ID:', req.sessionID);
+    console.error('🔥 Session passport:', req.session?.passport);
+    console.error('🔥 isAuthenticated():', req.isAuthenticated ? req.isAuthenticated() : 'undefined');
     console.error('🔥 Full user object:', JSON.stringify(req.user, null, 2));
     
     if (!req.user?.id) {
