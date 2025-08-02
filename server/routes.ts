@@ -633,8 +633,17 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.error('🔥 USER EMAIL:', req.user?.email);
     console.error('🔥 USER ID:', req.user?.id);
     console.error('🔥 USER ID TYPE:', typeof req.user?.id);
+    console.error('🔥 SESSION ID:', req.sessionID);
     console.error('🔥 FULL USER OBJECT KEYS:', Object.keys(req.user || {}));
     console.error('🔥 FULL USER OBJECT:', JSON.stringify(req.user, null, 2));
+    
+    // Deep inspection of user object
+    if (req.user) {
+      console.error('🔍 USER OBJECT INSPECTION:');
+      for (const [key, value] of Object.entries(req.user)) {
+        console.error(`🔍   ${key}: ${value} (type: ${typeof value})`);
+      }
+    }
     console.error('='.repeat(80));
     console.log('🎯🎯🎯 ====== CREATE QUOTE ENDPOINT HIT ====== 🎯🎯🎯');
     console.log('🔄 Quote creation request received at:', new Date().toISOString());
@@ -1842,8 +1851,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
       const updatedUser = await storage.updateUserProfile(req.user.id, updateData);
       
+      console.log('🔍 BEFORE reassigning req.user - ID:', req.user.id);
+      console.log('🔍 updatedUser from storage:', JSON.stringify(updatedUser, null, 2));
+      console.log('🔍 updatedUser.id:', updatedUser.id, 'type:', typeof updatedUser.id);
+      
       // Update the session with the new user data
       req.user = updatedUser;
+      
+      console.log('🔍 AFTER reassigning req.user - ID:', req.user.id);
       
       res.json({
         success: true,

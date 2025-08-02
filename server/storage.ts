@@ -235,6 +235,9 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`User with ID ${userId} not found or could not be updated`);
       }
       
+      console.log('🔍 updateUserProfile returning user:', JSON.stringify(user, null, 2));
+      console.log('🔍 updateUserProfile user.id:', user.id, 'type:', typeof user.id);
+      
       return user;
     }, 'updateUserProfile');
   }
