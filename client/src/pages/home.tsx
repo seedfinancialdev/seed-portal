@@ -1742,7 +1742,8 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-              <div className="space-y-6">
+                
+                <div className="space-y-6">
                 {/* Row 1: Company Name, First Name, Last Name */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
@@ -1752,7 +1753,7 @@ export default function Home() {
                     name="companyName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">Company Name</FormLabel>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Company Name</label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Input 
@@ -1797,7 +1798,7 @@ export default function Home() {
                     name="contactFirstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">First Name</FormLabel>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">First Name</label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Input 
@@ -1831,7 +1832,7 @@ export default function Home() {
                     name="contactLastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">Last Name</FormLabel>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Last Name</label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Input 
@@ -1868,7 +1869,7 @@ export default function Home() {
                     name="industry"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">Industry</FormLabel>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Industry</label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Select onValueChange={field.onChange} value={field.value} disabled={form.watch('industryLocked')}>
@@ -1928,7 +1929,7 @@ export default function Home() {
                     name="monthlyRevenueRange"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">Monthly Revenue Range</FormLabel>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Monthly Revenue Range</label>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
@@ -1955,7 +1956,7 @@ export default function Home() {
                     name="entityType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-700 font-medium">Entity Type</FormLabel>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Entity Type</label>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
@@ -2001,7 +2002,7 @@ export default function Home() {
                       name="clientStreetAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-gray-600">Street Address</FormLabel>
+                          <label className="text-sm text-gray-600 block mb-2">Street Address</label>
                           <FormControl>
                             <Input 
                               placeholder="123 Main Street"
@@ -2020,7 +2021,7 @@ export default function Home() {
                       name="clientCity"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-gray-600">City</FormLabel>
+                          <label className="text-sm text-gray-600 block mb-2">City</label>
                           <FormControl>
                             <Input 
                               placeholder="Los Angeles"
@@ -2039,7 +2040,7 @@ export default function Home() {
                       name="clientState"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-gray-600">State</FormLabel>
+                          <label className="text-sm text-gray-600 block mb-2">State</label>
                           <FormControl>
                             <Input 
                               placeholder="CA"
@@ -2058,7 +2059,7 @@ export default function Home() {
                       name="clientZipCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm text-gray-600">Zip Code</FormLabel>
+                          <label className="text-sm text-gray-600 block mb-2">Zip Code</label>
                           <FormControl>
                             <Input 
                               placeholder="90210"
@@ -2072,6 +2073,7 @@ export default function Home() {
                       )}
                     />
                   </div>
+                </div>
                 </div>
               </CardContent>
             </Form>
