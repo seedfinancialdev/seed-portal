@@ -612,6 +612,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Create a new quote (protected) - MAIN HANDLER  
   app.post("/api/quotes", requireAuth, async (req, res) => {
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.log('!!! POST /api/quotes ROUTE HANDLER CALLED !!!');
+    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
     console.error('🔥🔥🔥 ROUTE HIT! POST /api/quotes at', new Date().toISOString());
     console.error('🔥 USER CHECK: req.user exists?', !!req.user);
     console.error('🔥 USER EMAIL:', req.user?.email);
