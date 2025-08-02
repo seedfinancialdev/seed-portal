@@ -214,7 +214,15 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // CSRF token endpoint for SPAs
   app.get('/api/csrf-token', (req, res) => {
-    res.json({ csrfToken: req.csrfToken ? req.csrfToken() : null });
+    console.log('🔑 CSRF token endpoint hit - req.csrfToken exists:', !!req.csrfToken);
+    try {
+      const token = req.csrfToken ? req.csrfToken() : null;
+      console.log('🔑 Generated CSRF token:', token ? 'SUCCESS' : 'FAILED');
+      res.json({ csrfToken: token });
+    } catch (error) {
+      console.error('🔑 CSRF token generation error:', error);
+      res.json({ csrfToken: null, error: error.message });
+    }
   });
   
 
