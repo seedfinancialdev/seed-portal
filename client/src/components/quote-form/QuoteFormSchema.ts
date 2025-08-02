@@ -10,10 +10,14 @@ export const formSchema = insertQuoteSchema.omit({
   setupFee: true,
   taasMonthlyFee: true,
   taasPriorYearsFee: true,
+  ownerId: true, // Removed from form validation - backend sets this
+  revenueBand: true, // Removed from form validation - mapped from monthlyRevenueRange
   hubspotContactId: true,
   hubspotDealId: true,
   hubspotQuoteId: true,
   hubspotContactVerified: true,
+  ownerId: true, // Removed from form validation - backend sets this
+  revenueBand: true, // Removed from form validation - mapped from monthlyRevenueRange
 }).extend({
   contactEmail: z.string().min(1, "Email is required").email("Please enter a valid email address"),
   cleanupMonths: z.number().min(0, "Cannot be negative"),
