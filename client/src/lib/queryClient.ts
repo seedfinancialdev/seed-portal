@@ -16,8 +16,10 @@ async function getCSRFToken(): Promise<string | null> {
   if (csrfToken) return csrfToken;
   
   try {
-    // Fetch CSRF token from the dedicated endpoint
-    const response = await fetch('/api/csrf-token', {
+    // Fetch CSRF token from the dedicated endpoint - also needs base URL in dev
+    const csrfUrl = '/api/csrf-token';
+    const fullCsrfUrl = csrfUrl.startsWith('http') ? csrfUrl : `${getBaseUrl()}${csrfUrl}`;
+    const response = await fetch(fullCsrfUrl, {
       method: 'GET',
       credentials: 'include', // Include session cookies
     });
@@ -34,6 +36,15 @@ async function getCSRFToken(): Promise<string | null> {
   }
   
   return null;
+}
+
+// Development mode base URL configuration
+function getBaseUrl(): string {
+  // In development, if we're running on a .replit.dev domain, redirect to localhost:5000
+  if (import.meta.env.DEV && window.location.hostname.includes('replit.dev')) {
+    return 'http://127.0.0.1:5000';
+  }
+  return ''; // Use relative URLs in production or when running on localhost
 }
 
 // Overloaded function to support both old and new calling patterns
@@ -92,9 +103,12 @@ export async function apiRequest(
       requestOptions.body = typeof data === 'string' ? data : JSON.stringify(data);
     }
 
-    console.log('🌐 About to send request (old signature):', { method, url, headers: requestOptions.headers });
+    // Apply base URL in development mode
+    const fullUrl = url.startsWith('http') ? url : `${getBaseUrl()}${url}`;
     
-    const response = await fetch(url, requestOptions);
+    console.log('🌐 About to send request (old signature):', { method, url: fullUrl, headers: requestOptions.headers });
+    
+    const response = await fetch(fullUrl, requestOptions);
     
     console.log('🌐 Response received (old signature):', { 
       status: response.status, 
@@ -134,9 +148,12 @@ export async function apiRequest(
     requestOptions.body = JSON.stringify(data);
   }
 
-  console.log('🌐 About to send request:', { method, url, headers: requestOptions.headers });
+  // Apply base URL in development mode
+  const fullUrl = url.startsWith('http') ? url : `${getBaseUrl()}${url}`;
   
-  const response = await fetch(url, requestOptions);
+  console.log('🌐 About to send request:', { method, url: fullUrl, headers: requestOptions.headers });
+  
+  const response = await fetch(fullUrl, requestOptions);
   
   console.log('🌐 Response received:', { 
     status: response.status, 
