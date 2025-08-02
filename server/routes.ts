@@ -183,8 +183,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.error('🚀 Method:', req.method);
       console.error('🚀 URL:', req.url);
       console.error('🚀 Headers keys:', Object.keys(req.headers));
+      console.error('🚀 Session ID:', req.sessionID);
+      console.error('🚀 Session exists:', !!req.session);
+      console.error('🚀 Session authenticated:', req.isAuthenticated());
       console.error('🚀 User exists:', !!req.user);
       console.error('🚀 User ID:', req.user?.id);
+      console.error('🚀 Cookie header:', req.headers.cookie);
       console.error('🚀 This should appear for EVERY POST to /api/quotes');
     }
     next();
