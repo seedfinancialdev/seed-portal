@@ -634,16 +634,17 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Create a new quote (protected) - MAIN HANDLER  
   app.post("/api/quotes", requireAuth, async (req, res) => {
-    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-    console.log('!!! POST /api/quotes ROUTE HANDLER CALLED !!!');
-    console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-    console.error('🔥🔥🔥 ROUTE HIT! POST /api/quotes at', new Date().toISOString());
+    console.error('='.repeat(80));
+    console.error('🚨🚨🚨 POST /api/quotes ROUTE HANDLER CALLED 🚨🚨🚨');
+    console.error('='.repeat(80));
+    console.error('🔥 TIMESTAMP:', new Date().toISOString());
     console.error('🔥 USER CHECK: req.user exists?', !!req.user);
     console.error('🔥 USER EMAIL:', req.user?.email);
     console.error('🔥 USER ID:', req.user?.id);
     console.error('🔥 USER ID TYPE:', typeof req.user?.id);
     console.error('🔥 FULL USER OBJECT KEYS:', Object.keys(req.user || {}));
     console.error('🔥 FULL USER OBJECT:', JSON.stringify(req.user, null, 2));
+    console.error('='.repeat(80));
     console.log('🎯🎯🎯 ====== CREATE QUOTE ENDPOINT HIT ====== 🎯🎯🎯');
     console.log('🔄 Quote creation request received at:', new Date().toISOString());
     console.log('📋 Request body keys:', Object.keys(req.body));
