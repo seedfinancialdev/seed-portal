@@ -2351,6 +2351,29 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Search HubSpot contacts
+  app.post("/api/hubspot/search-contacts", requireAuth, async (req, res) => {
+    try {
+      const { searchTerm } = req.body;
+      
+      if (!searchTerm || searchTerm.length < 2) {
+        return res.json({ contacts: [] });
+      }
+
+      const { HubSpotService } = await import('./hubspot.js');
+      const hubspotService = new HubSpotService();
+      const contacts = await hubspotService.searchContacts(searchTerm);
+      
+      res.json({ contacts });
+    } catch (error) {
+      console.error('HubSpot search contacts error:', error);
+      res.status(500).json({ 
+        message: "Failed to search HubSpot contacts",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Clean up HubSpot queue
   app.post("/api/hubspot/cleanup-queue", requireAuth, async (req, res) => {
     try {

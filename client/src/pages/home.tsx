@@ -577,8 +577,16 @@ export default function Home() {
   // Debounce state for HubSpot verification
   const [verificationTimeoutId, setVerificationTimeoutId] = useState<NodeJS.Timeout | null>(null);
   
+  // New UX flow state
+  const [showContactSearch, setShowContactSearch] = useState(false);
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [isContactSearching, setIsContactSearching] = useState(false);
+  const [hubspotContacts, setHubspotContacts] = useState<any[]>([]);
+  const [triggerEmail, setTriggerEmail] = useState("");
+  const [showClientDetails, setShowClientDetails] = useState(false);
+  
   // TaaS state
-
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   
   // Form navigation state
@@ -863,6 +871,83 @@ export default function Home() {
     }, 750); // Increased debounce delay to 750ms for better UX
     
     setVerificationTimeoutId(timeoutId);
+  };
+
+  // New function to search HubSpot contacts
+  const searchHubSpotContacts = async (searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      setHubspotContacts([]);
+      return;
+    }
+
+    setIsContactSearching(true);
+    try {
+      const response = await fetch('/api/hubspot/search-contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ searchTerm }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHubspotContacts(data.contacts || []);
+      } else {
+        setHubspotContacts([]);
+      }
+    } catch (error) {
+      console.error('Error searching HubSpot contacts:', error);
+      setHubspotContacts([]);
+    } finally {
+      setIsContactSearching(false);
+    }
+  };
+
+  // Handle email trigger and open contact search modal
+  const handleEmailTrigger = (email: string) => {
+    setTriggerEmail(email);
+    setContactSearchTerm(email);
+    setShowContactSearch(true);
+    // Search for the contact immediately
+    searchHubSpotContacts(email);
+  };
+
+  // Handle contact selection from modal
+  const handleContactSelection = async (contact: any) => {
+    setSelectedContact(contact);
+    
+    // Search for existing quotes for this contact
+    try {
+      const response = await fetch(`/api/quotes?search=${encodeURIComponent(contact.properties.email)}`, {
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setExistingQuotes(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching existing quotes:', error);
+      setExistingQuotes([]);
+    }
+
+    // Pre-populate form with contact data
+    form.setValue('contactEmail', contact.properties.email || '');
+    form.setValue('companyName', contact.properties.company || '');
+    form.setValue('contactFirstName', contact.properties.firstname || '');
+    form.setValue('contactLastName', contact.properties.lastname || '');
+    form.setValue('industry', contact.properties.industry || '');
+    
+    // Address fields
+    form.setValue('clientStreetAddress', contact.properties.address || '');
+    form.setValue('clientCity', contact.properties.city || '');
+    form.setValue('clientState', contact.properties.state || '');
+    form.setValue('clientZipCode', contact.properties.zip || '');
+
+    setShowContactSearch(false);
+    setShowClientDetails(true);
   };
 
   // Push to HubSpot mutation
@@ -1326,6 +1411,7 @@ export default function Home() {
   // Remove the old breakdown function since it's now handled in the calculation logic above
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <UniversalNavbar 
@@ -1334,8 +1420,151 @@ export default function Home() {
           backButtonPath="/" 
         />
 
-        {/* Client Details Section - Separate from quote form */}
-        <Card className="max-w-6xl mx-auto mb-8 bg-white/95 backdrop-blur-sm shadow-xl border-0">
+        {/* Email Trigger Section - Standalone starter */}
+        {!showClientDetails && (
+          <Card className="max-w-lg mx-auto mb-8 bg-white/95 backdrop-blur-sm shadow-xl border-0">
+            <CardContent className="p-8 text-center">
+              <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-full mx-auto mb-6">
+                <User className="h-8 w-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Start New Quote</h2>
+              <p className="text-gray-600 mb-6">Enter a client email to begin the quoting process</p>
+              
+              <div className="space-y-4">
+                <div className="relative">
+                  <Input 
+                    type="email"
+                    placeholder="client@company.com"
+                    value={triggerEmail}
+                    onChange={(e) => setTriggerEmail(e.target.value)}
+                    className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-center text-lg py-3"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && triggerEmail.includes('@')) {
+                        handleEmailTrigger(triggerEmail);
+                      }
+                    }}
+                  />
+                </div>
+                
+                <Button 
+                  onClick={() => handleEmailTrigger(triggerEmail)}
+                  disabled={!triggerEmail.includes('@')}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white py-3"
+                >
+                  Search Contacts
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* HubSpot Contact Search Modal */}
+        <Dialog open={showContactSearch} onOpenChange={setShowContactSearch}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Search HubSpot Contacts</DialogTitle>
+              <DialogDescription>
+                Find an existing contact or create a new quote for "{triggerEmail}"
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search by name, email, or company..."
+                  value={contactSearchTerm}
+                  onChange={(e) => {
+                    setContactSearchTerm(e.target.value);
+                    searchHubSpotContacts(e.target.value);
+                  }}
+                  className="pl-10"
+                />
+              </div>
+
+              {isContactSearching && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  <span className="ml-2 text-gray-600">Searching contacts...</span>
+                </div>
+              )}
+
+              {!isContactSearching && hubspotContacts.length > 0 && (
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {hubspotContacts.map((contact) => (
+                    <Card key={contact.id} className="cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => handleContactSelection(contact)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">
+                              {contact.properties.firstname} {contact.properties.lastname}
+                            </p>
+                            <p className="text-sm text-blue-600">{contact.properties.email}</p>
+                            {contact.properties.company && (
+                              <p className="text-sm text-gray-600">{contact.properties.company}</p>
+                            )}
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {!isContactSearching && contactSearchTerm && hubspotContacts.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 mb-4">No contacts found matching "{contactSearchTerm}"</p>
+                  <Button 
+                    onClick={() => {
+                      // Create new contact flow
+                      form.setValue('contactEmail', triggerEmail);
+                      setShowContactSearch(false);
+                      setShowClientDetails(true);
+                    }}
+                    variant="outline"
+                  >
+                    Create New Quote for "{triggerEmail}"
+                  </Button>
+                </div>
+              )}
+
+              {/* Show existing quotes for selected contact */}
+              {selectedContact && existingQuotes.length > 0 && (
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Existing Quotes for {selectedContact.properties.email}</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {existingQuotes.map((quote) => (
+                      <Card key={quote.id} className="cursor-pointer hover:bg-blue-50 transition-colors"
+                            onClick={() => {
+                              loadQuoteIntoForm(quote);
+                              setShowContactSearch(false);
+                              setShowClientDetails(true);
+                            }}>
+                        <CardContent className="p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">${parseFloat(quote.monthlyFee).toLocaleString()}/mo</p>
+                              <p className="text-xs text-gray-600">
+                                {new Date(quote.updatedAt || quote.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button size="sm" variant="ghost">Load Quote</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Client Details Section - Show after contact selection or email trigger */}
+        {showClientDetails && (
+          <Card className="max-w-6xl mx-auto mb-8 bg-white/95 backdrop-blur-sm shadow-xl border-0">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg">
@@ -1706,8 +1935,11 @@ export default function Home() {
             </Form>
           </CardContent>
         </Card>
+        )}
 
         {/* Enhanced 5-Service Card System */}
+        {showClientDetails && (
+        <>
         <div className="max-w-6xl mx-auto mb-8">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-white mb-2">Select Services</h2>
@@ -1892,6 +2124,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Quote builder section */}
         <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
           <style>{`.quote-layout { display: flex; flex-direction: column; } @media (min-width: 1024px) { .quote-layout { flex-direction: row; } }`}</style>
           {/* Quote Builder Form Card */}
@@ -3522,6 +3755,9 @@ export default function Home() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </Card>
+      )}
     </div>
+    </>
   );
 }

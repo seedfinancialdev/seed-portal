@@ -675,6 +675,75 @@ Services Include:
     }
   }
 
+  // Search contacts in HubSpot
+  async searchContacts(searchTerm: string): Promise<HubSpotContact[]> {
+    try {
+      const searchBody = {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: 'email',
+                operator: 'CONTAINS_TOKEN',
+                value: searchTerm
+              }
+            ]
+          },
+          {
+            filters: [
+              {
+                propertyName: 'firstname',
+                operator: 'CONTAINS_TOKEN',
+                value: searchTerm
+              }
+            ]
+          },
+          {
+            filters: [
+              {
+                propertyName: 'lastname',
+                operator: 'CONTAINS_TOKEN',
+                value: searchTerm
+              }
+            ]
+          },
+          {
+            filters: [
+              {
+                propertyName: 'company',
+                operator: 'CONTAINS_TOKEN',
+                value: searchTerm
+              }
+            ]
+          }
+        ],
+        properties: [
+          'email',
+          'firstname', 
+          'lastname',
+          'company',
+          'phone',
+          'industry',
+          'address',
+          'city',
+          'state',
+          'zip'
+        ],
+        limit: 20
+      };
+
+      const result = await this.makeRequest('/crm/v3/objects/contacts/search', {
+        method: 'POST',
+        body: JSON.stringify(searchBody)
+      });
+
+      return result.results || [];
+    } catch (error) {
+      console.error('Error searching HubSpot contacts:', error);
+      return [];
+    }
+  }
+
   // Get all custom objects to find the Leads object
   async getCustomObjects(): Promise<any[]> {
     try {
