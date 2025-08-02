@@ -981,6 +981,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return;
       }
 
+      console.log('📋 Retrieved quote from database:', {
+        id: quote.id,
+        contactEmail: quote.contactEmail,
+        companyName: quote.companyName,
+        includesBookkeeping: quote.includesBookkeeping,
+        includesTaas: quote.includesTaas,
+        monthlyFee: quote.monthlyFee,
+        setupFee: quote.setupFee,
+        taasMonthlyFee: quote.taasMonthlyFee,
+        taasPriorYearsFee: quote.taasPriorYearsFee
+      });
+
       // First verify the contact exists
       const contactResult = await hubSpotService.verifyContactByEmail(quote.contactEmail);
       if (!contactResult.verified || !contactResult.contact) {

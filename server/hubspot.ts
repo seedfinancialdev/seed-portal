@@ -387,6 +387,11 @@ export class HubSpotService {
           pipeline: '761069086', // Seed Sales Pipeline ID
           dealtype: 'newbusiness', // Deal Type: New Business
           ...(ownerId && { hubspot_owner_id: ownerId }), // Set deal owner
+          // Add custom properties to track services (NOTE: these might not exist in HubSpot - for logging only)
+          // monthly_fee: monthlyFee?.toString() || '0',
+          // setup_fee: setupFee?.toString() || '0',
+          // includes_bookkeeping: includesBookkeeping ? 'true' : 'false',
+          // includes_taas: includesTaas ? 'true' : 'false'
         },
         associations: [
           {
@@ -396,6 +401,16 @@ export class HubSpotService {
         ]
       };
 
+      console.log('🔧 Creating deal with data:', {
+        dealName,
+        contactId,
+        companyName,
+        monthlyFee,
+        setupFee,
+        includesBookkeeping,
+        includesTaas,
+        ownerId
+      });
       console.log('Creating deal with body:', JSON.stringify(dealBody, null, 2));
 
       const result = await this.makeRequest('/crm/v3/objects/deals', {
@@ -430,6 +445,21 @@ export class HubSpotService {
   async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<{ id: string; title: string } | null> {
     try {
       // Create a proper HubSpot quote using the quotes API
+      console.log('🔧 Creating HubSpot quote with parameters:', {
+        dealId,
+        companyName,
+        monthlyFee,
+        setupFee,
+        userEmail,
+        firstName,
+        lastName,
+        includesBookkeeping,
+        includesTaas,
+        taasMonthlyFee,
+        taasPriorYearsFee,
+        bookkeepingMonthlyFee,
+        bookkeepingSetupFee
+      });
       console.log('Creating HubSpot quote...');
       
       // Get the user's profile information from HubSpot
