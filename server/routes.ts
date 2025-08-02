@@ -162,15 +162,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   
   console.log('[Routes] Final session store type:', storeType);
   
-  // VERY EARLY REQUEST INTERCEPTOR - CATCHES EVERYTHING
+  // DEBUGGING TAP - Track user.id through middleware pipeline
   app.use((req, res, next) => {
-    if (req.method === 'POST' && req.url === '/api/quotes') {
-      console.log('##################################################');
-      console.log('### POST /api/quotes REQUEST INTERCEPTED ###');
-      console.log('### TIME:', new Date().toISOString());
-      console.log('### METHOD:', req.method);
-      console.log('### URL:', req.url);
-      console.log('##################################################');
+    if (req.path.startsWith('/api/quotes')) {
+      console.log('🧭 reached', req.method, req.path, 'user:', req.user ? { id: req.user.id, email: req.user.email } : 'null');
+      if (req.method === 'POST' && req.body) {
+        console.log('🧭 req.body contains id?', 'id' in req.body ? req.body.id : 'NO ID IN BODY');
+      }
     }
     next();
   });
