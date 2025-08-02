@@ -38,8 +38,15 @@ export function useQuoteManagement() {
       
       const feeCalculation = calculateCombinedFees(cleanData);
       
+      // Ensure all numeric fields are properly converted to numbers, never null
       const quoteData = {
         ...data,
+        // Convert numeric fields to ensure they're never null
+        priorYearsUnfiled: Number(data.priorYearsUnfiled) || 0,
+        numEntities: Number(data.numEntities) || 1,
+        statesFiled: Number(data.statesFiled) || 1,
+        numBusinessOwners: Number(data.numBusinessOwners) || 1,
+        cleanupMonths: Number(data.cleanupMonths) || 0,
         monthlyFee: feeCalculation.combined.monthlyFee.toString(),
         setupFee: feeCalculation.combined.setupFee.toString(),
         taasMonthlyFee: feeCalculation.taas.monthlyFee.toString(),
@@ -47,16 +54,35 @@ export function useQuoteManagement() {
         approvalRequired: data.cleanupOverride,
       };
       
+      console.log('Sending quote data with sanitized numbers:', {
+        priorYearsUnfiled: quoteData.priorYearsUnfiled,
+        numEntities: quoteData.numEntities,
+        statesFiled: quoteData.statesFiled,
+        numBusinessOwners: quoteData.numBusinessOwners,
+        cleanupMonths: quoteData.cleanupMonths,
+      });
+      
       if (editingQuoteId) {
-        return await apiRequest(`/api/quotes/${editingQuoteId}`, {
+        const response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
           method: "PUT",
           body: JSON.stringify(quoteData)
         });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update quote');
+        }
+        return response;
       } else {
-        return await apiRequest("/api/quotes", {
+        const response = await apiRequest("/api/quotes", {
           method: "POST",
           body: JSON.stringify(quoteData)
         });
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Server validation error:', errorData);
+          throw new Error(errorData.message || 'Failed to save quote');
+        }
+        return response;
       }
     },
     onSuccess: (data) => {
@@ -69,11 +95,11 @@ export function useQuoteManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       refetchQuotes();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Quote save error:', error);
       toast({
         title: "Error",
-        description: "Failed to save quote. Please try again.",
+        description: error.message || "Failed to save quote. Please try again.",
         variant: "destructive",
       });
     },
