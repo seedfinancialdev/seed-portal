@@ -10,7 +10,6 @@ import { z } from "zod";
 import { sendSystemAlert } from "./slack";
 import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
-import { debugSession, checkSessionConsistency } from "./debug-session";
 import { registerAdminRoutes } from "./admin-routes";
 import { calculateCombinedFees } from "@shared/pricing";
 import { clientIntelEngine } from "./client-intel";
@@ -87,8 +86,20 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       storeType = 'RedisStore';
       console.log('[Routes] ✅ Redis session store created:', sessionStore.constructor.name);
       
-      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
-      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
+      // Apply session middleware directly
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        rolling: true, // Extend session on each request
+        store: sessionStore,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000
+        }
+      }));
       
       console.log('[Routes] ✅ Session middleware applied with RedisStore');
       
@@ -104,8 +115,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
       storeType = 'MemoryStore (Redis fallback)';
       
-      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
-      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        rolling: true,
+        store: sessionStore,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000
+        }
+      }));
       
       console.log('[Routes] ✅ Memory session fallback applied');
     }
@@ -121,63 +143,57 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     });
     storeType = 'MemoryStore (no Redis)';
     
-    // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
-    // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
+    app.use(session({
+      secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      store: sessionStore,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000
+      }
+    }));
     
     console.log('[Routes] ✅ Memory session middleware applied');
   }
   
   console.log('[Routes] Final session store type:', storeType);
   
-  // DEBUGGING TAP - Track user.id through middleware pipeline
-  // Cleaned up navigation debugging middleware
-
-  // REMOVED DUPLICATE HANDLER - Only keep the main handler below
-  
-  // Removed excessive debug middleware
-  
   // Setup authentication after sessions
   await setupAuth(app, null);
-  
-  // Apply CSRF protection after session and auth setup (with comprehensive error handling)
-  console.log('[Routes] Applying CSRF protection middleware...');
-  try {
-    // Delay CSRF application to ensure sessions are fully initialized
-    setTimeout(() => {
-      try {
-        app.use(conditionalCsrf);
-        app.use(provideCsrfToken);
-        console.log('[Routes] ✅ CSRF protection applied successfully (delayed)');
-      } catch (delayedError) {
-        console.error('[Routes] ❌ Delayed CSRF setup failed:', delayedError);
-        console.log('[Routes] ⚠️ Application will continue without CSRF protection');
-      }
-    }, 100);
-    
-    console.log('[Routes] ✅ CSRF protection scheduled for application');
-  } catch (error) {
-    console.error('[Routes] ❌ CSRF configuration failed:', error);
-    console.log('[Routes] ⚠️ Continuing without CSRF protection due to configuration issues');
-  }
   console.log('[Routes] ✅ Auth setup completed');
 
-  // CSRF protection disabled - was blocking POST requests before authentication middleware
-  // All API routes now rely on session authentication only
-  // app.use(conditionalCsrf); // DISABLED - was causing authentication issues
-  // app.use(provideCsrfToken); // DISABLED - no longer needed
-  // CSRF protection applied
-  // REMOVED DUPLICATE: app.use(provideCsrfToken); - WAS APPLIED TWICE
-
-  // Simplified API request logging
-  app.use('/api', (req, res, next) => {
-    if (req.method === 'POST' && req.path === '/quotes') {
-      console.log('POST /api/quotes - User authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
-    }
+  // Apply CSRF protection after sessions are initialized
+  app.use((req, res, next) => {
+    console.log('Before CSRF - Request:', {
+      method: req.method,
+      url: req.url,
+      headers: req.headers['x-csrf-token'] ? 'CSRF token present' : 'No CSRF token'
+    });
     next();
   });
+  app.use(conditionalCsrf);
+  app.use((req, res, next) => {
+    console.log('After CSRF - Request passed CSRF check');
+    next();
+  });
+  app.use(provideCsrfToken);
 
-  // CSRF protection disabled - was causing configuration issues
-  // All API routes now rely on session authentication only
+  // Debug middleware to track all API requests
+  app.use('/api', (req, res, next) => {
+    console.log('API Debug - Request intercepted:', {
+      method: req.method,
+      url: req.url,
+      path: req.path,
+      originalUrl: req.originalUrl,
+      query: req.query,
+      timestamp: new Date().toISOString()
+    });
+    next();
+  });
 
   // Apply rate limiting to all API routes
   app.use('/api', apiRateLimit);
@@ -185,9 +201,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-  // CSRF token endpoint disabled - CSRF protection removed
+  // CSRF token endpoint for SPAs
   app.get('/api/csrf-token', (req, res) => {
-    res.json({ csrfToken: null, message: 'CSRF protection disabled' });
+    res.json({ csrfToken: req.csrfToken ? req.csrfToken() : null });
   });
   
 
@@ -229,8 +245,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       console.log('[ApplyRedis] ✅ RedisStore created:', redisStore.constructor.name);
       
-      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
-      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
+      // Apply session middleware with Redis store
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        store: redisStore,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
+      }));
       
       console.log('[ApplyRedis] ✅ Redis session middleware applied');
       
@@ -273,8 +300,22 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       console.log('[TestRedis] RedisStore created:', store.constructor.name);
       
-      // DISABLED: Session middleware moved to auth.ts to prevent multiple session conflicts
-      // app.use(session({...})) - REMOVED TO PREVENT CONFLICTS
+      // ALSO APPLY REDIS SESSION MIDDLEWARE DIRECTLY
+      console.log('[TestRedis] Applying Redis session middleware to Express app...');
+      const session = (await import('express-session')).default;
+      
+      app.use(session({
+        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+        resave: false,
+        saveUninitialized: false,
+        store: store,  // Use the RedisStore we just created
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
+      }));
       
       console.log('[TestRedis] ✅ Redis session middleware applied to Express!');
       
@@ -419,7 +460,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Google OAuth user sync endpoint
-  app.post("/api/auth/google/sync", debugSession('GOOGLE_SYNC'), async (req, res) => {
+  app.post("/api/auth/google/sync", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
@@ -471,27 +512,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(500).json({ message: "User creation failed" });
       }
       
-      // Establish session with explicit session save to ensure persistence
+      // Simplified session establishment - avoid complex regeneration that can fail with Redis
       req.login(user, (err: any) => {
         if (err) {
           console.error('Session login failed:', err);
           return res.status(500).json({ message: "Failed to establish session" });
         }
         
-        // Force session save to ensure persistence with Redis
-        req.session.save((saveErr: any) => {
-          if (saveErr) {
-            console.error('Session save failed:', saveErr);
-            return res.status(500).json({ message: "Failed to save session" });
-          }
-          
-          console.log('✅ User logged in and session saved:', user.email);
-          console.log('✅ Session passport data:', req.session?.passport);
-          
-          // Return user data (excluding password)
-          const { password, ...safeUser } = user!;
-          res.json(safeUser);
-        });
+        // Return user data (excluding password)
+        const { password, ...safeUser } = user!;
+        res.json(safeUser);
       });
     } catch (error) {
       console.error('Error syncing Google user:', error);
@@ -533,83 +563,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // Authentication test endpoint
-  app.get("/api/test-auth", requireAuth, (req, res) => {
-    res.json({
-      authenticated: true,
-      user: req.user,
-      userId: req.user?.id,
-      sessionId: req.sessionID
-    });
-  });
-  
-  // COMPREHENSIVE SESSION DIAGNOSTIC ENDPOINT
-  app.get("/api/debug/session-full", (req, res) => {
-    const sessionDetails = {
-      // Basic session info
-      sessionExists: !!req.session,
-      sessionID: req.sessionID,
-      sessionStore: req.session?.store?.constructor?.name || 'Unknown',
-      
-      // Cookie info
-      cookieHeader: req.headers.cookie || 'None',
-      sessionCookiePresent: !!req.headers.cookie?.includes('connect.sid'),
-      
-      // Passport info
-      passportInSession: !!req.session?.passport,
-      passportUser: req.session?.passport?.user,
-      
-      // User info
-      userExists: !!req.user,
-      userId: req.user?.id,
-      userEmail: req.user?.email,
-      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-      
-      // Session data
-      sessionKeys: req.session ? Object.keys(req.session) : [],
-      sessionCookie: req.session?.cookie,
-      
-      // Store check
-      storeType: req.sessionStore?.constructor?.name || 'Unknown',
-      
-      // Consistency check
-      consistency: checkSessionConsistency(req)
-    };
-    
-    console.log('🔍 Full session diagnostic:', JSON.stringify(sessionDetails, null, 2));
-    res.json(sessionDetails);
-  });
-
-  // Create a new quote (protected) - MAIN HANDLER  
-  app.post("/api/quotes", 
-    (req, res, next) => {
-      console.log('🚀 POST /api/quotes - RAW REQUEST RECEIVED');
-      console.log('🚀 Session ID:', req.sessionID);
-      console.log('🚀 Has session:', !!req.session);
-      console.log('🚀 Session passport:', req.session?.passport);
-      console.log('🚀 req.user before requireAuth:', req.user?.email || 'NO USER');
-      next();
-    },
-    requireAuth, 
-    async (req, res) => {
-    console.log('✅ POST /api/quotes - AFTER requireAuth');
-    console.log('✅ Creating quote for authenticated user:', req.user?.email);
-    console.log('✅ User ID available:', req.user?.id);
-    
+  // Create a new quote (protected)
+  app.post("/api/quotes", requireAuth, async (req, res) => {
     try {
       if (!req.user) {
-        console.log('❌ No authenticated user found');
         return res.status(401).json({ message: "Authentication required" });
-      }
-      
-      if (!req.user.id) {
-        console.error('❌ CRITICAL: User exists but ID is missing!');
-        console.error('❌ User object during POST:', JSON.stringify(req.user, null, 2));
-        
-        return res.status(500).json({ 
-          message: "Cannot create quote: ownerId is required but was null/undefined",
-          error: "User ID missing from session"
-        });
       }
       
       // Extract service flags with defaults
@@ -620,9 +578,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // The frontend already calculated and sent the correct fees, so we should use them
       const requestDataWithFees = {
         ...req.body,
-        ownerId: req.user.id || (req.user as any)._id || (req.user as any).userId,
-        // Map monthlyRevenueRange to revenueBand for schema compatibility
-        revenueBand: req.body.monthlyRevenueRange || req.body.revenueBand || "",
+        ownerId: req.user.id,
         // Use the frontend-calculated values directly
         monthlyFee: req.body.monthlyFee || "0",
         setupFee: req.body.setupFee || "0", 
@@ -632,42 +588,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         monthlyTransactions: req.body.monthlyTransactions || "N/A",
         cleanupComplexity: req.body.cleanupComplexity || "0",
         cleanupMonths: req.body.cleanupMonths || 0,
-        // Provide defaults for optional fields to prevent validation errors
-        numEntities: req.body.numEntities ?? null,
-        statesFiled: req.body.statesFiled ?? null,
-        internationalFiling: req.body.internationalFiling || false,
-        numBusinessOwners: req.body.numBusinessOwners ?? null,
-        include1040s: req.body.include1040s || false,
-        priorYearsUnfiled: req.body.priorYearsUnfiled ?? null,
-        alreadyOnSeedBookkeeping: req.body.alreadyOnSeedBookkeeping || false,
-        contactFirstName: req.body.contactFirstName || null,
-        contactLastName: req.body.contactLastName || null,
-        entityType: req.body.entityType || null,
-        accountingBasis: req.body.accountingBasis,
-        businessLoans: req.body.businessLoans || false,
       };
       
-      console.log('🔍 About to parse quote data with schema...');
-      console.log('🔍 requestDataWithFees.ownerId before parsing:', requestDataWithFees.ownerId, 'type:', typeof requestDataWithFees.ownerId);
       const quoteData = insertQuoteSchema.parse(requestDataWithFees);
-      console.log('✅ Schema validation passed');
-      console.log('✅ quoteData.ownerId after parsing:', quoteData.ownerId, 'type:', typeof quoteData.ownerId);
-      
-      console.log('💾 About to create quote in storage...');
       const quote = await storage.createQuote(quoteData);
-      console.log('✅ Quote created successfully with ID:', quote.id);
       
       // Note: Slack notifications now only sent during approval request, not quote creation
       
       res.json(quote);
     } catch (error) {
-      console.error('❌ Quote creation error:', error);
       if (error instanceof z.ZodError) {
-        console.error('📝 Zod validation errors:', error.errors);
         res.status(400).json({ message: "Invalid quote data", errors: error.errors });
       } else {
-        console.error('💥 Storage/Database error:', error);
-        res.status(500).json({ message: "Failed to create quote", error: error.message });
+        res.status(500).json({ message: "Failed to create quote" });
       }
     }
   });
@@ -896,101 +829,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // HubSpot integration endpoints
   
-  // Test HubSpot integration (DEBUG ROUTE - BYPASS AUTH FOR TESTING)
-  app.post("/api/hubspot/test-integration", async (req, res) => {
-    try {
-      console.log('🧪 Starting HubSpot Integration Test...');
-      
-      if (!hubSpotService) {
-        res.status(400).json({ message: "HubSpot integration not configured" });
-        return;
-      }
-
-      const testResults = {
-        connection: false,
-        contactVerification: false,
-        dealCreation: false,
-        quoteCreation: false,
-        errors: []
-      };
-
-      // Test 1: Connection
-      try {
-        const pipelines = await hubSpotService.getPipelines();
-        testResults.connection = !!pipelines;
-        console.log('✅ HubSpot connection test:', testResults.connection);
-      } catch (error) {
-        testResults.errors.push(`Connection failed: ${error.message}`);
-        console.error('❌ HubSpot connection failed:', error);
-      }
-
-      // Test 2: Contact verification
-      try {
-        const contactResult = await hubSpotService.verifyContactByEmail('jonwalls.ins@gmail.com');
-        testResults.contactVerification = contactResult.verified;
-        console.log('✅ Contact verification test:', testResults.contactVerification);
-        
-        if (contactResult.verified && contactResult.contact) {
-          // Test 3: Deal creation
-          try {
-            const deal = await hubSpotService.createDeal(
-              contactResult.contact.id,
-              'Test Company',
-              500,
-              1000,
-              undefined,
-              true,
-              true
-            );
-            testResults.dealCreation = !!deal;
-            console.log('✅ Deal creation test:', testResults.dealCreation, deal?.id);
-            
-            if (deal) {
-              // Test 4: Quote creation
-              try {
-                const quote = await hubSpotService.createQuote(
-                  deal.id,
-                  'Test Company',
-                  500,
-                  1000,
-                  req.user!.email,
-                  req.user!.firstName || 'Test',
-                  req.user!.lastName || 'User',
-                  true,
-                  true,
-                  300,
-                  2100,
-                  250,
-                  500
-                );
-                testResults.quoteCreation = !!quote;
-                console.log('✅ Quote creation test:', testResults.quoteCreation, quote?.id);
-              } catch (error) {
-                testResults.errors.push(`Quote creation failed: ${error.message}`);
-                console.error('❌ Quote creation failed:', error);
-              }
-            }
-          } catch (error) {
-            testResults.errors.push(`Deal creation failed: ${error.message}`);
-            console.error('❌ Deal creation failed:', error);
-          }
-        }
-      } catch (error) {
-        testResults.errors.push(`Contact verification failed: ${error.message}`);
-        console.error('❌ Contact verification failed:', error);
-      }
-
-      res.json({
-        success: testResults.connection && testResults.contactVerification && testResults.dealCreation && testResults.quoteCreation,
-        results: testResults,
-        message: testResults.errors.length > 0 ? testResults.errors.join('; ') : 'All tests passed'
-      });
-    } catch (error) {
-      console.error('HubSpot integration test failed:', error);
-      res.status(500).json({ message: "Integration test failed", error: error.message });
-    }
-  });
-  
   // Verify contact email in HubSpot
   app.post("/api/hubspot/verify-contact", requireAuth, async (req, res) => {
     try {
@@ -1048,18 +886,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return;
       }
 
-      console.log('📋 Retrieved quote from database:', {
-        id: quote.id,
-        contactEmail: quote.contactEmail,
-        companyName: quote.companyName,
-        includesBookkeeping: quote.includesBookkeeping,
-        includesTaas: quote.includesTaas,
-        monthlyFee: quote.monthlyFee,
-        setupFee: quote.setupFee,
-        taasMonthlyFee: quote.taasMonthlyFee,
-        taasPriorYearsFee: quote.taasPriorYearsFee
-      });
-
       // First verify the contact exists
       const contactResult = await hubSpotService.verifyContactByEmail(quote.contactEmail);
       if (!contactResult.verified || !contactResult.contact) {
@@ -1074,16 +900,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const ownerId = await hubSpotService.getOwnerByEmail(req.user!.email);
 
       // Create deal in HubSpot
-      console.log('🔧 Creating HubSpot deal with params:', {
-        contactId: contact.id,
-        companyName,
-        monthlyFee: parseFloat(quote.monthlyFee),
-        setupFee: parseFloat(quote.setupFee),
-        ownerId: ownerId || 'none',
-        includesBookkeeping: quote.includesBookkeeping,
-        includesTaas: quote.includesTaas
-      });
-
       const deal = await hubSpotService.createDeal(
         contact.id,
         companyName,
@@ -1095,12 +911,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       );
 
       if (!deal) {
-        console.error('❌ Deal creation returned null - check HubSpot logs above');
         res.status(500).json({ message: "Failed to create deal in HubSpot" });
         return;
       }
-
-      console.log('✅ Deal created successfully:', deal.id);
 
       // For combined quotes, calculate individual service fees for separate line items
       // For single service quotes, use the saved quote values to preserve custom overrides
@@ -1130,20 +943,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // For single service quotes, keep the saved values to preserve custom setup fees
       
       // Create quote/note in HubSpot
-      console.log('🔧 Creating HubSpot quote with params:', {
-        dealId: deal.id,
-        companyName,
-        monthlyFee: parseFloat(quote.monthlyFee),
-        setupFee: parseFloat(quote.setupFee),
-        userEmail: req.user!.email,
-        includesBookkeeping: quote.includesBookkeeping,
-        includesTaas: quote.includesTaas,
-        taasMonthlyFee: quote.taasMonthlyFee ? parseFloat(quote.taasMonthlyFee) : undefined,
-        taasPriorYearsFee: quote.taasPriorYearsFee ? parseFloat(quote.taasPriorYearsFee) : undefined,
-        bookkeepingMonthlyFee,
-        bookkeepingSetupFee
-      });
-
       const hubspotQuote = await hubSpotService.createQuote(
         deal.id,
         companyName,
@@ -1161,12 +960,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       );
 
       if (!hubspotQuote) {
-        console.error('❌ Quote creation returned null - check HubSpot logs above');
         res.status(500).json({ message: "Failed to create quote in HubSpot" });
         return;
       }
-
-      console.log('✅ Quote created successfully:', hubspotQuote.id);
 
       // Update HubSpot contact properties with quote data for 2-way sync
       try {
@@ -1226,12 +1022,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         companyName: companyName
       });
 
-      console.log('🎉 Successfully pushed quote to HubSpot:', {
-        dealId: deal.id,
-        quoteId: hubspotQuote.id,
-        dealName: deal.properties.dealname
-      });
-
       // Invalidate cache after creating new deal/quote
       await cache.del(`${CachePrefix.HUBSPOT_METRICS}*`);
       await cache.del(`${CachePrefix.HUBSPOT_DEALS_LIST}*`);
@@ -1245,14 +1035,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
     } catch (error) {
       console.error('Error pushing to HubSpot:', error);
-      if (error instanceof Error) {
-        console.error('HubSpot push error details:', error.message);
-        console.error('Error stack:', error.stack);
-      }
-      res.status(500).json({ 
-        message: "Failed to push quote to HubSpot", 
-        error: error instanceof Error ? error.message : String(error)
-      });
+      res.status(500).json({ message: "Failed to push quote to HubSpot" });
     }
   });
 
@@ -1767,14 +1550,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
       const updatedUser = await storage.updateUserProfile(req.user.id, updateData);
       
-      console.log('🔍 BEFORE reassigning req.user - ID:', req.user.id);
-      console.log('🔍 updatedUser from storage:', JSON.stringify(updatedUser, null, 2));
-      console.log('🔍 updatedUser.id:', updatedUser.id, 'type:', typeof updatedUser.id);
-      
       // Update the session with the new user data
       req.user = updatedUser;
-      
-      console.log('🔍 AFTER reassigning req.user - ID:', req.user.id);
       
       res.json({
         success: true,

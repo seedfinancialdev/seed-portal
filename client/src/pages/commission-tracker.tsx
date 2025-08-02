@@ -1,258 +1,917 @@
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { Link, useLocation } from "wouter";
+import { UniversalNavbar } from "@/components/UniversalNavbar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { 
+  ArrowLeft, 
+  DollarSign, 
+  TrendingUp, 
+  Calendar,
+  Target,
+  Users,
+  Award,
+  Zap,
+  Trophy,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  BarChart3,
+  Star,
+  Gift,
+  PlusCircle,
+  Eye,
+  Bell,
+  User,
+  Settings,
+  LogOut
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { calculateMonthlyBonus, calculateMilestoneBonus, getNextMilestone, calculateTotalEarnings } from "@shared/commission-calculator";
+import { queryClient } from "@/lib/queryClient";
 
-interface CommissionData {
+interface Commission {
   id: string;
-  salesperson: string;
-  client: string;
-  setupFee: number;
-  residualAmount: number;
-  month: number;
-  status: 'pending' | 'approved' | 'paid';
-  dealCloseDate: string;
-  totalEarned: number;
+  dealName: string;
+  serviceType: 'bookkeeping' | 'taas' | 'combined';
+  type: 'month_1' | 'residual';
+  amount: number;
+  monthNumber: number;
+  status: 'pending' | 'processing' | 'paid';
+  dateEarned: string;
+  datePaid?: string;
+  companyName: string;
 }
 
-interface CommissionSummary {
-  totalPending: number;
-  totalApproved: number;
-  totalPaid: number;
-  thisMonth: number;
-  ytdTotal: number;
+interface Deal {
+  id: string;
+  dealName: string;
+  companyName: string;
+  amount: number;
+  setupFee: number;
+  monthlyFee: number;
+  status: 'open' | 'closed_won' | 'closed_lost';
+  closedDate?: string;
+  serviceType: 'bookkeeping' | 'taas' | 'combined';
+}
+
+interface MonthlyBonus {
+  id: string;
+  month: string;
+  clientsClosedCount: number;
+  bonusAmount: number;
+  bonusType: 'cash' | 'airpods' | 'apple_watch' | 'macbook_air';
+  status: 'pending' | 'processing' | 'paid';
+  dateEarned: string;
+  datePaid?: string;
+}
+
+interface MilestoneBonus {
+  id: string;
+  milestone: number;
+  bonusAmount: number;
+  includesEquity: boolean;
+  status: 'pending' | 'processing' | 'paid';
+  dateEarned: string;
+  datePaid?: string;
+}
+
+interface SalesRepStats {
+  totalClientsClosedMonthly: number;
+  totalClientsClosedAllTime: number;
+  currentMonthDeals: number;
 }
 
 export default function CommissionTracker() {
-  const { user } = useAuth();
+  const { dbUser: user } = useGoogleAuth();
+  const [location, setLocation] = useLocation();
+  const [commissions, setCommissions] = useState<Commission[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [monthlyBonuses, setMonthlyBonuses] = useState<MonthlyBonus[]>([]);
+  const [milestoneBonuses, setMilestoneBonuses] = useState<MilestoneBonus[]>([]);
+  const [salesRepStats, setSalesRepStats] = useState<SalesRepStats>({
+    totalClientsClosedMonthly: 8,
+    totalClientsClosedAllTime: 42,
+    currentMonthDeals: 3
+  });
+
+  // Adjustment request dialog state
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
+  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [adjustmentAmount, setAdjustmentAmount] = useState('');
+
+  // Commission history modal state
+  const [commissionHistoryModalOpen, setCommissionHistoryModalOpen] = useState(false);
+
+  // Sample data matching the specifications
+  useEffect(() => {
+    const sampleCommissions: Commission[] = [
+      {
+        id: '1',
+        dealName: 'TechFlow Solutions - Bookkeeping + TaaS',
+        companyName: 'TechFlow Solutions',
+        serviceType: 'combined',
+        type: 'month_1',
+        amount: 840, // 20% of $2500 setup + 40% of $850 monthly
+        monthNumber: 1,
+        status: 'paid',
+        dateEarned: '2025-01-15',
+        datePaid: '2025-01-30'
+      },
+      {
+        id: '2',
+        dealName: 'Wellness Hub Inc - Bookkeeping',
+        companyName: 'Wellness Hub Inc',
+        serviceType: 'bookkeeping',
+        type: 'month_1',
+        amount: 420, // 20% of $1200 setup + 40% of $450 monthly
+        monthNumber: 1,
+        status: 'processing',
+        dateEarned: '2025-01-20'
+      },
+      {
+        id: '3',
+        dealName: 'TechFlow Solutions - Bookkeeping + TaaS',
+        companyName: 'TechFlow Solutions',
+        serviceType: 'combined',
+        type: 'residual',
+        amount: 85, // 10% of $850 monthly
+        monthNumber: 2,
+        status: 'pending',
+        dateEarned: '2025-02-15'
+      },
+      {
+        id: '4',
+        dealName: 'Creative Agency LLC - Bookkeeping',
+        companyName: 'Creative Agency LLC',
+        serviceType: 'bookkeeping',
+        type: 'month_1',
+        amount: 320, // 20% of $800 setup + 40% of $600 monthly
+        monthNumber: 1,
+        status: 'pending',
+        dateEarned: '2025-01-25'
+      }
+    ];
+
+    const sampleDeals: Deal[] = [
+      {
+        id: '1',
+        dealName: 'TechFlow Solutions - Bookkeeping + TaaS',
+        companyName: 'TechFlow Solutions',
+        amount: 2500 + 850, // Setup + Monthly
+        setupFee: 2500,
+        monthlyFee: 850,
+        status: 'closed_won',
+        closedDate: '2025-01-15',
+        serviceType: 'combined'
+      },
+      {
+        id: '2',
+        dealName: 'Wellness Hub Inc - Bookkeeping',
+        companyName: 'Wellness Hub Inc',
+        amount: 1200 + 450,
+        setupFee: 1200,
+        monthlyFee: 450,
+        status: 'closed_won',
+        closedDate: '2025-01-20',
+        serviceType: 'bookkeeping'
+      },
+      {
+        id: '3',
+        dealName: 'Creative Agency LLC - Bookkeeping',
+        companyName: 'Creative Agency LLC',
+        amount: 800 + 600,
+        setupFee: 800,
+        monthlyFee: 600,
+        status: 'closed_won',
+        closedDate: '2025-01-25',
+        serviceType: 'bookkeeping'
+      }
+    ];
+
+    // Sample monthly bonus (8 clients closed this month - eligible for Apple Watch or $1000)
+    const sampleMonthlyBonuses: MonthlyBonus[] = [
+      {
+        id: '1',
+        month: '2025-01',
+        clientsClosedCount: 8,
+        bonusAmount: 1000,
+        bonusType: 'cash',
+        status: 'processing',
+        dateEarned: '2025-01-31'
+      }
+    ];
+
+    // Sample milestone bonus (42 total clients - eligible for $5000 at 40 clients)
+    const sampleMilestoneBonuses: MilestoneBonus[] = [
+      {
+        id: '1',
+        milestone: 40,
+        bonusAmount: 5000,
+        includesEquity: false,
+        status: 'paid',
+        dateEarned: '2025-01-10',
+        datePaid: '2025-01-25'
+      }
+    ];
+
+    setCommissions(sampleCommissions);
+    setDeals(sampleDeals);
+    setMonthlyBonuses(sampleMonthlyBonuses);
+    setMilestoneBonuses(sampleMilestoneBonuses);
+  }, []);
+
+  // Calculate earnings using the shared calculator
+  const totalEarnings = calculateTotalEarnings(commissions, monthlyBonuses, milestoneBonuses);
   
-  const { data: commissions, isLoading: commissionsLoading } = useQuery<CommissionData[]>({
-    queryKey: ["/api/commissions"],
-    enabled: !!user,
-  });
+  // Calculate bonus eligibility
+  const monthlyBonusEligibility = calculateMonthlyBonus(salesRepStats.totalClientsClosedMonthly);
+  const milestoneBonusEligibility = calculateMilestoneBonus(salesRepStats.totalClientsClosedAllTime);
+  const nextMilestone = getNextMilestone(salesRepStats.totalClientsClosedAllTime);
 
-  const { data: summary, isLoading: summaryLoading } = useQuery<CommissionSummary>({
-    queryKey: ["/api/commissions/summary"],
-    enabled: !!user,
-  });
+  // Calculate payroll periods and cycle amounts
+  const getNextPayrollDate = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const currentDay = now.getDate();
+    
+    let nextPayrollDate;
+    if (currentDay <= 1) {
+      nextPayrollDate = new Date(currentYear, currentMonth, 1);
+    } else if (currentDay <= 15) {
+      nextPayrollDate = new Date(currentYear, currentMonth, 15);
+    } else {
+      // Next month, 1st
+      nextPayrollDate = new Date(currentYear, currentMonth + 1, 1);
+    }
+    
+    return nextPayrollDate;
+  };
 
-  const getStatusColor = (status: string) => {
+  const nextPayrollDate = getNextPayrollDate();
+  
+  // Calculate current cycle commissions (since last payroll date)
+  const getCurrentCycleCommissions = () => {
+    const now = new Date();
+    const currentDay = now.getDate();
+    let cycleStartDate;
+    
+    if (currentDay >= 16) {
+      // Current cycle started on 15th
+      cycleStartDate = new Date(now.getFullYear(), now.getMonth(), 15);
+    } else {
+      // Current cycle started on 1st
+      cycleStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    
+    return commissions
+      .filter(c => new Date(c.dateEarned) >= cycleStartDate && c.status !== 'paid')
+      .reduce((sum, c) => sum + Number(c.amount), 0);
+  };
+
+  const currentCycleAmount = getCurrentCycleCommissions();
+  
+  // Last cycle paid (mock data - would come from last payroll)
+  const lastCyclePaid = 2840.00;
+
+  const getStatusBadge = (status: Commission['status'] | MonthlyBonus['status'] | MilestoneBonus['status']) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'approved': return 'bg-blue-100 text-blue-800';
-      case 'paid': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-200">Paid</Badge>;
+      case 'processing':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900 dark:text-yellow-200">Processing</Badge>;
+      case 'pending':
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200">Pending</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200">Unknown</Badge>;
     }
   };
 
-  if (commissionsLoading || summaryLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="bg-white rounded-lg p-6 shadow-sm">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const getServiceTypeIcon = (serviceType: string) => {
+    switch (serviceType) {
+      case 'bookkeeping':
+        return <BarChart3 className="w-4 h-4" />;
+      case 'taas':
+        return <Calendar className="w-4 h-4" />;
+      case 'combined':
+        return <Star className="w-4 h-4" />;
+      default:
+        return <Target className="w-4 h-4" />;
+    }
+  };
+
+  const handleRequestAdjustment = (commission: Commission) => {
+    setSelectedCommission(commission);
+    setAdjustmentReason('');
+    setAdjustmentAmount('');
+    setAdjustmentDialogOpen(true);
+  };
+
+  const handleSubmitAdjustment = () => {
+    if (!selectedCommission || !adjustmentReason) return;
+    
+    // Here you would typically send the adjustment request to the backend
+    console.log('Adjustment request submitted:', {
+      commissionId: selectedCommission.id,
+      originalAmount: selectedCommission.amount,
+      requestedAmount: adjustmentAmount || selectedCommission.amount,
+      reason: adjustmentReason,
+      salesRep: user?.email
+    });
+    
+    // Close dialog and reset form
+    setAdjustmentDialogOpen(false);
+    setSelectedCommission(null);
+    setAdjustmentReason('');
+    setAdjustmentAmount('');
+    
+    // Show success message (would typically be handled by a toast/notification system)
+    alert('Adjustment request submitted successfully!');
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Commission Tracker
-            </h1>
-            <p className="text-gray-600">
-              Track sales performance and commission calculations
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
+      <div className="max-w-7xl mx-auto p-6">
+        <UniversalNavbar 
+          showBackButton={true} 
+          backButtonText="Back to Portal" 
+          backButtonPath="/" 
+        />
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-600">
-                    ${summary?.totalPending?.toLocaleString() || 0}
+                  <p className="text-sm font-medium text-gray-600">Lifetime Commissions</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${totalEarnings.totalEarned.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-8 w-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
+                <DollarSign className="h-8 w-8 text-green-600" />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Approved</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ${summary?.totalApproved?.toLocaleString() || 0}
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Paid</p>
+                  <p className="text-sm font-medium text-gray-600">Last Cycle Paid</p>
                   <p className="text-2xl font-bold text-green-600">
-                    ${summary?.totalPaid?.toLocaleString() || 0}
+                    ${lastCyclePaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
+                <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">This Month</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    ${summary?.thisMonth?.toLocaleString() || 0}
+                  <p className="text-sm font-medium text-gray-600">Current Cycle</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${currentCycleAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
+                <TrendingUp className="h-8 w-8 text-blue-600" />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">YTD Total</p>
-                  <p className="text-2xl font-bold text-indigo-600">
-                    ${summary?.ytdTotal?.toLocaleString() || 0}
+                  <p className="text-sm font-medium text-gray-600">Next Payroll Date</p>
+                  <p className="text-lg font-bold text-purple-600">
+                    {nextPayrollDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {Math.ceil((nextPayrollDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
                   </p>
                 </div>
-                <div className="h-8 w-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
+                <Calendar className="h-8 w-8 text-purple-600" />
               </div>
-            </div>
-          </div>
-
-          {/* Commission Structure Info */}
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 mb-8">
-            <h3 className="font-semibold text-gray-900 mb-4">Commission Structure</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h4 className="font-medium text-gray-700 mb-2">Setup Fees</h4>
-                <p className="text-sm text-gray-600">100% of setup fee in Month 1</p>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-700 mb-2">Residuals</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>Months 2-3: 10%</li>
-                  <li>Months 4-6: 3%</li>
-                  <li>Months 7-9: 2%</li>
-                  <li>Months 10-12: 1%</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-700 mb-2">Bonuses</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>10+ clients: $2,500</li>
-                  <li>15+ clients: $5,000</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          {/* Commissions Table */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Commission Details</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salesperson
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Month
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {Array.isArray(commissions) ? commissions.map((commission) => (
-                    <tr key={commission.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {commission.salesperson}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {commission.client}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        Month {commission.month}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${(commission.setupFee + commission.residualAmount).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(commission.status)}`}>
-                          {commission.status.charAt(0).toUpperCase() + commission.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(commission.dealCloseDate).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                        No commission data available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Commission History - Primary Focus */}
+        <Card className="bg-white/95 backdrop-blur border-0 shadow-xl mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  Commission History
+                </CardTitle>
+                <CardDescription>
+                  View and manage all your commission earnings
+                </CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCommissionHistoryModalOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Deal</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date Earned</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {commissions.slice(0, 5).map((commission) => (
+                    <TableRow key={commission.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          <p className="font-medium">{commission.companyName}</p>
+                          <p className="text-sm text-gray-500">{commission.dealName}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {getServiceTypeIcon(commission.serviceType)}
+                          <span className="capitalize">{commission.serviceType}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {commission.type.replace('_', ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{commission.monthNumber}</TableCell>
+                      <TableCell className="font-medium">
+                        ${commission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(commission.status)}</TableCell>
+                      <TableCell>{new Date(commission.dateEarned).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="text-xs"
+                          onClick={() => handleRequestAdjustment(commission)}
+                        >
+                          Request Adjustment
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {commissions.length > 5 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-500">
+                  Showing {Math.min(5, commissions.length)} of {commissions.length} commissions
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Bonus Tracking Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Monthly Bonus Tracking */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-orange-600" />
+                Monthly Bonus Progress
+              </CardTitle>
+              <CardDescription>
+                Track your monthly client goals and bonus eligibility
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Clients Closed This Month</span>
+                  <span className="font-medium">{salesRepStats.totalClientsClosedMonthly}</span>
+                </div>
+                <Progress value={(salesRepStats.totalClientsClosedMonthly / 15) * 100} className="h-2" />
+              </div>
+              
+              {monthlyBonusEligibility && (
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="font-medium text-green-800">Bonus Eligible!</span>
+                  </div>
+                  <p className="text-sm text-green-700">{monthlyBonusEligibility.description}</p>
+                  <p className="text-lg font-bold text-green-800">${monthlyBonusEligibility.amount}</p>
+                </div>
+              )}
+
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex justify-between">
+                  <span>5 Clients</span>
+                  <span>$500 or AirPods</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>10 Clients</span>
+                  <span>$1,000 or Apple Watch</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>15+ Clients</span>
+                  <span>$1,500 or MacBook Air</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Milestone Bonus Tracking */}
+          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-yellow-600" />
+                Milestone Progress
+              </CardTitle>
+              <CardDescription>
+                Track lifetime client milestones and major bonuses
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progress to {nextMilestone.nextMilestone} Clients</span>
+                  <span className="font-medium">{salesRepStats.totalClientsClosedAllTime}/{nextMilestone.nextMilestone}</span>
+                </div>
+                <Progress value={nextMilestone.progress} className="h-2" />
+                <p className="text-xs text-gray-500">{nextMilestone.remaining} clients remaining</p>
+              </div>
+
+              {milestoneBonuses.length > 0 && (
+                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="w-5 h-5 text-yellow-600" />
+                    <span className="font-medium text-yellow-800">Last Achievement</span>
+                  </div>
+                  <p className="text-sm text-yellow-700">40 Client Milestone</p>
+                  <p className="text-lg font-bold text-yellow-800">$5,000 Bonus</p>
+                </div>
+              )}
+
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex justify-between">
+                  <span>25 Clients</span>
+                  <span>$1,000</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>40 Clients</span>
+                  <span>$5,000</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>60 Clients</span>
+                  <span>$7,500</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>100 Clients</span>
+                  <span>$10,000 + Equity</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Additional Content Tabs */}
+        <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+          <CardContent className="p-6">
+            <Tabs defaultValue="deals" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="deals">Recent Deals</TabsTrigger>
+                <TabsTrigger value="monthly-bonuses">Monthly Bonuses</TabsTrigger>
+                <TabsTrigger value="milestone-bonuses">Milestone Bonuses</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="deals" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Recent Closed Deals</h3>
+                    <Badge variant="outline">{deals.length} deals</Badge>
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Company</TableHead>
+                          <TableHead>Service</TableHead>
+                          <TableHead>Setup Fee</TableHead>
+                          <TableHead>Monthly Fee</TableHead>
+                          <TableHead>Total Value</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Closed Date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deals.map((deal) => (
+                          <TableRow key={deal.id}>
+                            <TableCell className="font-medium">{deal.companyName}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {getServiceTypeIcon(deal.serviceType)}
+                                <span className="capitalize">{deal.serviceType}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>${deal.setupFee.toLocaleString()}</TableCell>
+                            <TableCell>${deal.monthlyFee.toLocaleString()}</TableCell>
+                            <TableCell className="font-medium">${deal.amount.toLocaleString()}</TableCell>
+                            <TableCell>
+                              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                                {deal.status.replace('_', ' ').toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {deal.closedDate ? new Date(deal.closedDate).toLocaleDateString() : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="monthly-bonuses" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Monthly Bonuses</h3>
+                    <Badge variant="outline">{monthlyBonuses.length} bonuses</Badge>
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Month</TableHead>
+                          <TableHead>Clients Closed</TableHead>
+                          <TableHead>Bonus Type</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date Earned</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {monthlyBonuses.map((bonus) => (
+                          <TableRow key={bonus.id}>
+                            <TableCell className="font-medium">{bonus.month}</TableCell>
+                            <TableCell>{bonus.clientsClosedCount}</TableCell>
+                            <TableCell className="capitalize">{bonus.bonusType.replace('_', ' ')}</TableCell>
+                            <TableCell className="font-medium">
+                              ${bonus.bonusAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(bonus.status)}</TableCell>
+                            <TableCell>{new Date(bonus.dateEarned).toLocaleDateString()}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="milestone-bonuses" className="mt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Milestone Bonuses</h3>
+                    <Badge variant="outline">{milestoneBonuses.length} achievements</Badge>
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Milestone</TableHead>
+                          <TableHead>Bonus Amount</TableHead>
+                          <TableHead>Includes Equity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date Earned</TableHead>
+                          <TableHead>Date Paid</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {milestoneBonuses.map((bonus) => (
+                          <TableRow key={bonus.id}>
+                            <TableCell className="font-medium">{bonus.milestone} Clients</TableCell>
+                            <TableCell className="font-medium">
+                              ${bonus.bonusAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell>
+                              {bonus.includesEquity ? (
+                                <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
+                                  Yes
+                                </Badge>
+                              ) : (
+                                <span className="text-gray-500">No</span>
+                              )}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(bonus.status)}</TableCell>
+                            <TableCell>{new Date(bonus.dateEarned).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              {bonus.datePaid ? new Date(bonus.datePaid).toLocaleDateString() : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Commission History Modal */}
+        <Dialog open={commissionHistoryModalOpen} onOpenChange={setCommissionHistoryModalOpen}>
+          <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Complete Commission History</DialogTitle>
+              <DialogDescription>
+                View all your commission earnings and manage adjustments
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="overflow-y-auto max-h-[60vh]">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Deal</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Month</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date Earned</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {commissions.map((commission) => (
+                      <TableRow key={commission.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <p className="font-medium">{commission.companyName}</p>
+                            <p className="text-sm text-gray-500">{commission.dealName}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getServiceTypeIcon(commission.serviceType)}
+                            <span className="capitalize">{commission.serviceType}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {commission.type.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{commission.monthNumber}</TableCell>
+                        <TableCell className="font-medium">
+                          ${commission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(commission.status)}</TableCell>
+                        <TableCell>{new Date(commission.dateEarned).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => {
+                              setCommissionHistoryModalOpen(false);
+                              handleRequestAdjustment(commission);
+                            }}
+                          >
+                            Request Adjustment
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-sm text-gray-500">
+                  Total: {commissions.length} commission entries
+                </div>
+                <Button onClick={() => setCommissionHistoryModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Adjustment Request Dialog */}
+        <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Request Commission Adjustment</DialogTitle>
+              <DialogDescription>
+                Submit a request to adjust the commission amount for this deal.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedCommission && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-semibold">{selectedCommission.companyName}</h4>
+                  <p className="text-sm text-gray-600">{selectedCommission.dealName}</p>
+                  <p className="text-lg font-bold text-green-600">
+                    Current Amount: ${selectedCommission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="adjustment-amount">Requested Amount (optional)</Label>
+                  <Input
+                    id="adjustment-amount"
+                    type="number"
+                    step="0.01"
+                    placeholder="Leave blank if not requesting amount change"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="adjustment-reason">Reason for Adjustment *</Label>
+                  <Textarea
+                    id="adjustment-reason"
+                    placeholder="Please explain why this adjustment is needed..."
+                    value={adjustmentReason}
+                    onChange={(e) => setAdjustmentReason(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setAdjustmentDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitAdjustment}
+                disabled={!adjustmentReason.trim()}
+              >
+                Submit Request
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
 }
+

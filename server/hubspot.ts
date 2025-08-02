@@ -113,9 +113,6 @@ export class HubSpotService {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`HubSpot API Error - ${response.status}:`, errorText);
-      console.error(`Request URL: ${this.baseUrl}${endpoint}`);
-      console.error(`Request method: ${options.method || 'GET'}`);
       
       // Handle rate limiting with retry
       if (response.status === 429) {
@@ -371,11 +368,16 @@ export class HubSpotService {
 
   async createDeal(contactId: string, companyName: string, monthlyFee: number, setupFee: number, ownerId?: string, includesBookkeeping?: boolean, includesTaas?: boolean): Promise<HubSpotDeal | null> {
     try {
-      // Generate dynamic deal name based on services using enhanced naming logic
-      const dealName = this.generateDealName(companyName, {
-        includesBookkeeping,
-        includesTaas
-      });
+      // Generate dynamic deal name based on services
+      let serviceName = '';
+      if (includesBookkeeping && includesTaas) {
+        serviceName = 'Bookkeeping + TaaS';
+      } else if (includesTaas) {
+        serviceName = 'TaaS';
+      } else {
+        serviceName = 'Bookkeeping';
+      }
+      const dealName = `${companyName} - ${serviceName}`;
       const totalAmount = (monthlyFee * 12 + setupFee).toString();
 
       // First, let's get the correct pipeline and stage IDs
@@ -387,11 +389,6 @@ export class HubSpotService {
           pipeline: '761069086', // Seed Sales Pipeline ID
           dealtype: 'newbusiness', // Deal Type: New Business
           ...(ownerId && { hubspot_owner_id: ownerId }), // Set deal owner
-          // Add custom properties to track services (NOTE: these might not exist in HubSpot - for logging only)
-          // monthly_fee: monthlyFee?.toString() || '0',
-          // setup_fee: setupFee?.toString() || '0',
-          // includes_bookkeeping: includesBookkeeping ? 'true' : 'false',
-          // includes_taas: includesTaas ? 'true' : 'false'
         },
         associations: [
           {
@@ -401,27 +398,12 @@ export class HubSpotService {
         ]
       };
 
-      console.log('🔧 Creating deal with data:', {
-        dealName,
-        contactId,
-        companyName,
-        monthlyFee,
-        setupFee,
-        includesBookkeeping,
-        includesTaas,
-        ownerId
-      });
       console.log('Creating deal with body:', JSON.stringify(dealBody, null, 2));
 
       const result = await this.makeRequest('/crm/v3/objects/deals', {
         method: 'POST',
         body: JSON.stringify(dealBody)
       });
-      
-      if (!result || !result.id) {
-        console.error('Deal creation failed - no ID returned:', result);
-        return null;
-      }
       
       console.log('Deal created successfully:', result.id);
       
@@ -435,9 +417,6 @@ export class HubSpotService {
       };
     } catch (error) {
       console.error('Error creating deal in HubSpot:', error);
-      if (error instanceof Error) {
-        console.error('Deal creation error details:', error.message);
-      }
       return null;
     }
   }
@@ -445,31 +424,21 @@ export class HubSpotService {
   async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<{ id: string; title: string } | null> {
     try {
       // Create a proper HubSpot quote using the quotes API
-      console.log('🔧 Creating HubSpot quote with parameters:', {
-        dealId,
-        companyName,
-        monthlyFee,
-        setupFee,
-        userEmail,
-        firstName,
-        lastName,
-        includesBookkeeping,
-        includesTaas,
-        taasMonthlyFee,
-        taasPriorYearsFee,
-        bookkeepingMonthlyFee,
-        bookkeepingSetupFee
-      });
       console.log('Creating HubSpot quote...');
       
       // Get the user's profile information from HubSpot
       const userProfile = await this.getUserProfile(userEmail);
       
-      // Generate dynamic quote name based on services using enhanced naming logic
-      const quoteName = this.generateQuoteName(companyName, {
-        includesBookkeeping,
-        includesTaas
-      });
+      // Generate dynamic quote name based on services
+      let serviceName = '';
+      if (includesBookkeeping && includesTaas) {
+        serviceName = 'Bookkeeping + TaaS Services';
+      } else if (includesTaas) {
+        serviceName = 'TaaS Services';
+      } else {
+        serviceName = 'Bookkeeping Services';
+      }
+      const quoteName = `${companyName} - ${serviceName} Quote`;
       
       // Set expiration date to 30 days from now
       const expirationDate = new Date();
@@ -526,11 +495,6 @@ Services Include:
         body: JSON.stringify(quoteBody)
       });
 
-      if (!result || !result.id) {
-        console.error('Quote creation failed - no ID returned:', result);
-        return null;
-      }
-
       console.log('Quote created successfully:', result.id);
       
       // Add line items to the quote
@@ -542,9 +506,6 @@ Services Include:
       };
     } catch (error) {
       console.error('Error creating HubSpot quote:', error);
-      if (error instanceof Error) {
-        console.error('Quote creation error details:', error.message);
-      }
       // Fallback to updating deal with quote information
       try {
         console.log('Falling back to updating deal with quote info...');
@@ -555,9 +516,6 @@ Services Include:
         };
       } catch (fallbackError) {
         console.error('Fallback also failed:', fallbackError);
-        if (fallbackError instanceof Error) {
-          console.error('Fallback error details:', fallbackError.message);
-        }
         return null;
       }
     }
@@ -631,39 +589,7 @@ Services Include:
         // Future services can be easily added here:
         // payroll: {
         //   shouldInclude: serviceConfig.includesPayroll,
-        //   lineItems: [
-        //     {
-        //       condition: serviceConfig.payrollMonthlyFee > 0,
-        //       name: 'Monthly Payroll (Custom)',
-        //       price: serviceConfig.payrollMonthlyFee,
-        //       productId: 'PAYROLL_PRODUCT_ID',
-        //       description: 'Seed Financial Monthly Payroll (Custom)'
-        //     }
-        //   ]
-        // },
-        // apArLite: {
-        //   shouldInclude: serviceConfig.includesApArLite,
-        //   lineItems: [
-        //     {
-        //       condition: serviceConfig.apArLiteMonthlyFee > 0,
-        //       name: 'Monthly AP/AR Lite (Custom)',
-        //       price: serviceConfig.apArLiteMonthlyFee,
-        //       productId: 'AP_AR_LITE_PRODUCT_ID',
-        //       description: 'Seed Financial Monthly AP/AR Lite (Custom)'
-        //     }
-        //   ]
-        // },
-        // fpaLite: {
-        //   shouldInclude: serviceConfig.includesFpaLite,
-        //   lineItems: [
-        //     {
-        //       condition: serviceConfig.fpaLiteMonthlyFee > 0,
-        //       name: 'Monthly FP&A Lite (Custom)',
-        //       price: serviceConfig.fpaLiteMonthlyFee,
-        //       productId: 'FPA_LITE_PRODUCT_ID',
-        //       description: 'Seed Financial Monthly FP&A Lite (Custom)'
-        //     }
-        //   ]
+        //   lineItems: [...]
         // }
       };
 
@@ -1916,31 +1842,6 @@ Generated: ${new Date().toLocaleDateString()}`;
 
 
 
-
-  // Enhanced naming logic for scalable service support
-  generateDealName(companyName: string, serviceConfig: { includesBookkeeping?: boolean; includesTaas?: boolean; includesPayroll?: boolean; includesApArLite?: boolean; includesFpaLite?: boolean; }): string {
-    const services = [];
-    if (serviceConfig.includesBookkeeping) services.push('Bookkeeping');
-    if (serviceConfig.includesTaas) services.push('TaaS');
-    if (serviceConfig.includesPayroll) services.push('Payroll');
-    if (serviceConfig.includesApArLite) services.push('AP/AR Lite');
-    if (serviceConfig.includesFpaLite) services.push('FP&A Lite');
-    
-    const serviceName = services.length > 0 ? services.join(' + ') : 'Services';
-    return `${companyName} - ${serviceName}`;
-  }
-
-  generateQuoteName(companyName: string, serviceConfig: { includesBookkeeping?: boolean; includesTaas?: boolean; includesPayroll?: boolean; includesApArLite?: boolean; includesFpaLite?: boolean; }): string {
-    const services = [];
-    if (serviceConfig.includesBookkeeping) services.push('Bookkeeping');
-    if (serviceConfig.includesTaas) services.push('TaaS');
-    if (serviceConfig.includesPayroll) services.push('Payroll');
-    if (serviceConfig.includesApArLite) services.push('AP/AR Lite');
-    if (serviceConfig.includesFpaLite) services.push('FP&A Lite');
-    
-    const serviceName = services.length > 0 ? services.join(' + ') : 'Services';
-    return `${companyName} - ${serviceName} Quote`;
-  }
 
   // Get user details for profile syncing (name and email only)
   async getUserDetails(email: string): Promise<{ firstName?: string; lastName?: string; email?: string } | null> {

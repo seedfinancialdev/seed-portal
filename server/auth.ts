@@ -107,7 +107,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
   }));
@@ -222,26 +222,12 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     ),
   );
 
-  passport.serializeUser((user, done) => {
-    console.log('🔒 SERIALIZE USER: Storing user ID in session:', user.id);
-    done(null, user.id);
-  });
-  
+  passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
-      console.log('🔓 DESERIALIZE USER: Retrieving user with ID:', id, 'type:', typeof id);
       const user = await storage.getUser(id);
-      console.log('🔓 Deserialized user:', user ? `${user.email} (ID: ${user.id})` : 'null');
-      if (user && !user.id) {
-        console.error('❌ CRITICAL: User found but missing ID property!', JSON.stringify(user, null, 2));
-      }
-      if (user) {
-        console.log('🔓 User object has properties:', Object.keys(user));
-        console.log('🔓 User ID specifically:', user.id, 'type:', typeof user.id);
-      }
       done(null, user);
     } catch (error) {
-      console.error('❌ Deserialize user error:', error);
       done(error);
     }
   });
@@ -325,7 +311,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated || !req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json({
       id: req.user.id,
       email: req.user.email,
@@ -368,34 +354,13 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
 
 // Middleware to require authentication (supports both session and Google OAuth)
 export async function requireAuth(req: any, res: any, next: any) {
-  console.log('🔐 requireAuth: Checking authentication for', req.url);
-  console.log('🔐 requireAuth: Method:', req.method);
-  console.log('🔐 requireAuth: Session authenticated:', req.isAuthenticated ? req.isAuthenticated() : false);
-  console.log('🔐 requireAuth: Auth header present:', !!req.headers.authorization);
-  console.log('🔐 requireAuth: Session exists:', !!req.session);
-  console.log('🔐 requireAuth: User in req:', req.user?.email || 'NO USER');
-  
-  if (req.method === 'POST' && req.url?.includes('/quotes')) {
-    console.error('🔥🔥🔥 CRITICAL POST QUOTES AUTH CHECK 🔥🔥🔥');
-    console.error('🔥 User object exists:', !!req.user);
-    console.error('🔥 User ID exists:', !!req.user?.id);
-    console.error('🔥 User ID value:', req.user?.id);
-    console.error('🔥 User ID type:', typeof req.user?.id);
-    console.error('🔥 Session ID:', req.sessionID);
-    console.error('🔥 Session passport:', req.session?.passport);
-    console.error('🔥 isAuthenticated():', req.isAuthenticated ? req.isAuthenticated() : 'undefined');
-    console.error('🔥 Full user object:', JSON.stringify(req.user, null, 2));
-    
-    if (!req.user?.id) {
-      console.error('❌❌❌ FATAL: req.user.id is missing during POST /quotes');
-      console.error('❌ This will cause ownerId constraint violation');
-      console.error('❌ THIS IS THE ROOT CAUSE OF THE ISSUE!');
-    }
-  }
+  console.log('requireAuth: Checking authentication for', req.url);
+  console.log('requireAuth: Session authenticated:', req.isAuthenticated());
+  console.log('requireAuth: Auth header present:', !!req.headers.authorization);
   
   // First check session-based auth
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    console.log('✅ requireAuth: Session auth successful for', req.user?.email);
+  if (req.isAuthenticated()) {
+    console.log('requireAuth: Session auth successful for', req.user?.email);
     return next();
   }
   
@@ -437,7 +402,6 @@ export async function requireAuth(req: any, res: any, next: any) {
     }
   }
   
-  console.log('❌ requireAuth: Authentication failed - returning 401');
-  console.log('❌ requireAuth: About to send 401 response');
+  console.log('requireAuth: Authentication failed');
   return res.status(401).json({ message: "Authentication required" });
 }

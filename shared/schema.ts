@@ -79,28 +79,6 @@ export const insertQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-  ownerId: true, // Will be set by backend from authenticated user
-}).extend({
-  revenueBand: z.string().optional(), // Make revenueBand optional for inserts since backend maps from monthlyRevenueRange
-  // Make TaaS fields optional for form validation - backend will provide defaults
-  numEntities: z.number().optional(),
-  statesFiled: z.number().optional(),
-  internationalFiling: z.boolean().optional(),
-  numBusinessOwners: z.number().optional(),
-  include1040s: z.boolean().optional(),
-  priorYearsUnfiled: z.number().optional(),
-  alreadyOnSeedBookkeeping: z.boolean().optional(),
-  // Make client detail fields optional
-  contactFirstName: z.string().optional(),
-  contactLastName: z.string().optional(),
-  clientStreetAddress: z.string().optional(),
-  clientCity: z.string().optional(),
-  clientState: z.string().optional(),
-  clientZipCode: z.string().optional(),
-  // Make entity and accounting fields optional
-  entityType: z.string().optional(),
-  accountingBasis: z.string().optional(),
-  businessLoans: z.boolean().optional(),
 });
 
 export const updateQuoteSchema = createInsertSchema(quotes).omit({

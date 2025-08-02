@@ -67,10 +67,6 @@ async function redisHandshake(): Promise<Redis | null> {
 
 const app = express();
 
-// Standard middleware setup
-
-// Standard middleware setup
-
 // Initialize Sentry before other middleware
 const sentryInitialized = initializeSentry(app);
 
@@ -94,8 +90,6 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false, // Allow embedding resources
 }));
-
-// CSRF will be configured after session middleware is set up
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -143,7 +137,9 @@ app.use((req, res, next) => {
     
     // Apply Redis sessions before registering routes
     console.log('[Server] Applying Redis sessions at startup...');
-    console.log('[Server] Redis session setup handled by auth.ts');
+    const { applyRedisSessionsAtStartup } = await import('./apply-redis-sessions-startup');
+    await applyRedisSessionsAtStartup(app);
+    console.log('[Server] Redis sessions startup configuration completed');
     
     // Initialize Redis connections first
     console.log('[Server] Initializing Redis connections...');
@@ -197,43 +193,6 @@ app.use((req, res, next) => {
     
     const server = await registerRoutes(app, sessionRedis);
     console.log('[Server] ✅ Routes registered successfully');
-    console.log('[Server] App object type:', typeof app);
-    console.log('[Server] App has _router?', !!app._router);
-    
-    // ROUTE MAP - List all registered routes to find duplicates
-    function listRoutes(app: any) {
-      console.log('\n🗺️  ROUTE MAP ------------------------');
-      console.log('Router exists:', !!app._router);
-      console.log('Router stack exists:', !!app._router?.stack);
-      console.log('Router stack length:', app._router?.stack?.length || 0);
-      
-      if (app._router && app._router.stack) {
-        const routes = app._router.stack.filter((r: any) => r.route);
-        console.log('Total routes found:', routes.length);
-        routes.forEach((r: any) => {
-          const path = r.route?.path;
-          const methods = Object.keys(r.route.methods).join(',').toUpperCase();
-          console.log(`${methods.padEnd(7)} ${path}`);
-        });
-      } else {
-        console.log('❌ No routes found - router structure may be different');
-      }
-      console.log('------------------------------------\n');
-    }
-    listRoutes(app);
-    
-    // SIMPLE TEST ROUTES to confirm this Express app is handling requests
-    app.get('/api/test-server-identity', (req, res) => {
-      console.log('🆔 SERVER IDENTITY TEST ROUTE HIT - This confirms the right Express app');
-      res.json({ message: 'Server identity confirmed', method: 'GET' });
-    });
-    
-    app.post('/api/test-post', (req, res) => {
-      console.log('🆔 POST TEST ROUTE HIT - POST requests are working');
-      console.log('🆔 POST Test - Session ID:', req.sessionID);
-      console.log('🆔 POST Test - User:', req.user?.email || 'NO USER');
-      res.json({ message: 'POST test successful', method: 'POST', user: req.user?.email || 'NO USER' });
-    });
 
     // The Sentry error handler must be before any other error middleware (only if initialized)
     if (sentryInitialized && Sentry.Handlers?.errorHandler) {
@@ -266,17 +225,10 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
-  const currentEnv = process.env.NODE_ENV || app.get("env");
-  console.log(`[Server] Environment check: NODE_ENV="${process.env.NODE_ENV}" app.get("env")="${app.get("env")}" using="${currentEnv}"`);
-  
-  if (currentEnv === "development") {
-    console.log('[Server] Setting up Vite development middleware...');
+  if (app.get("env") === "development") {
     await setupVite(app, server);
-    console.log('[Server] ✅ Vite development middleware setup complete');
   } else {
-    console.log('[Server] Setting up static file serving for production...');
     serveStatic(app);
-    console.log('[Server] ✅ Static file serving setup complete');
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT

@@ -1,241 +1,525 @@
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { Link, useLocation } from "wouter";
+import { 
+  Calculator, 
+  LogOut, 
+  User, 
+  Settings, 
+  Bell, 
+  Search,
+  DollarSign,
+  Video,
+  Bot,
+  GraduationCap,
+  BookOpen,
+  UserCheck,
+  ChevronRight,
+  TrendingUp,
+  Target,
+  Activity,
+  Compass,
+  BrainCircuit,
+  Wrench,
+  Shield,
+  Heart,
+  Folder,
+  MessageSquare,
+  FileText,
+  BarChart3,
+  Calendar,
+  Phone,
+  Mail
+} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { UniversalNavbar } from "@/components/UniversalNavbar";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { NewsAggregator } from "@/components/NewsAggregator";
+import { useState, useEffect } from "react";
+import { Cloud, CloudRain, CloudSnow, Sun, CloudDrizzle, Zap } from "lucide-react";
 
-interface SalesMetrics {
-  totalPipeline: number;
-  closedDeals: number;
-  mtdRevenue: number;
-  ytdRevenue: number;
-  conversionRate: number;
-  avgDealSize: number;
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from "@/lib/queryClient";
+
+interface WeatherData {
+  temperature: number | null;
+  condition: string;
+  location: string;
+  isLoading: boolean;
 }
 
-interface SalesLead {
-  id: string;
+interface KbCategory {
+  id: number;
   name: string;
-  email: string;
-  stage: string;
-  value: number;
-  lastActivity: string;
+  slug: string;
+  description: string | null;
+  icon: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export default function SalesDashboard() {
-  const { user } = useAuth();
+// Icon mapping for categories
+const iconMap: Record<string, any> = {
+  'compass': Compass,
+  'calculator': Calculator,
+  'book-open': BookOpen,
+  'trending-up': TrendingUp,
+  'brain-circuit': BrainCircuit,
+  'target': Target,
+  'shield': Shield,
+  'wrench': Wrench,
+  'heart': Heart,
+  'folder': Folder,
+  'settings': Settings
+};
+
+// Weather icon component
+const getWeatherIcon = (condition: string) => {
+  const iconProps = { className: "h-4 w-4 text-white/70" };
   
-  const { data: metrics, isLoading: metricsLoading } = useQuery<SalesMetrics>({
-    queryKey: ["/api/dashboard/sales-metrics"],
-    enabled: !!user,
-  });
-
-  const { data: leads, isLoading: leadsLoading } = useQuery<SalesLead[]>({
-    queryKey: ["/api/sales-inbox/leads"],
-    enabled: !!user,
-  });
-
-  if (metricsLoading || leadsLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="bg-white rounded-lg p-6 shadow-sm">
-                  <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  switch (condition.toLowerCase()) {
+    case 'clear':
+    case 'sunny':
+      return <Sun {...iconProps} />;
+    case 'partly cloudy':
+      return <Cloud {...iconProps} />;
+    case 'cloudy':
+      return <Cloud {...iconProps} />;
+    case 'rainy':
+      return <CloudRain {...iconProps} />;
+    case 'showers':
+      return <CloudDrizzle {...iconProps} />;
+    case 'snowy':
+      return <CloudSnow {...iconProps} />;
+    case 'stormy':
+      return <Zap {...iconProps} />;
+    default:
+      return <Cloud {...iconProps} />;
   }
+};
+
+export default function Dashboard() {
+  const { dbUser: user } = useGoogleAuth();
+  const [, setLocation] = useLocation();
+
+  // Fetch knowledge base categories for the SEEDKB card
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery<KbCategory[]>({
+    queryKey: ["/api/kb/categories"],
+  });
+
+  const getIconComponent = (iconName: string) => {
+    const IconComponent = iconMap[iconName] || Folder;
+    return IconComponent;
+  };
+
+  const [weather, setWeather] = useState<WeatherData>({
+    temperature: null,
+    condition: '',
+    location: '',
+    isLoading: true
+  });
+
+
+
+  // Get time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  // Fetch live weather data based on user's location - defer until after initial load
+  useEffect(() => {
+    // Defer weather fetch by 500ms to prioritize core UI loading
+    const timeoutId = setTimeout(() => {
+      const fetchWeather = async () => {
+        try {
+          // Only fetch weather if user has coordinates set
+          if (!user?.latitude || !user?.longitude) {
+            setWeather({
+              temperature: null,
+              condition: '',
+              location: 'Set address in profile for weather',
+              isLoading: false
+            });
+            return;
+          }
+        
+        const lat = parseFloat(user.latitude.toString());
+        const lon = parseFloat(user.longitude.toString());
+        const locationName = user.city && user.state ? `${user.city}, ${user.state}` : 'Your Location';
+        
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&temperature_unit=fahrenheit`
+        );
+        
+        if (!response.ok) {
+          throw new Error('Weather fetch failed');
+        }
+        
+        const data = await response.json();
+        const currentWeather = data.current_weather;
+        
+        // Map weather codes to readable conditions
+        const getCondition = (code: number) => {
+          if (code === 0) return 'clear';
+          if (code <= 3) return 'partly cloudy';
+          if (code <= 48) return 'cloudy';
+          if (code <= 67) return 'rainy';
+          if (code <= 77) return 'snowy';
+          if (code <= 82) return 'showers';
+          return 'stormy';
+        };
+        
+        setWeather({
+          temperature: Math.round(currentWeather.temperature),
+          condition: getCondition(currentWeather.weathercode),
+          location: locationName,
+          isLoading: false
+        });
+      } catch (error) {
+        // Only log actual network errors, not expected timeouts
+        if (error instanceof Error && !error.message.includes('abort')) {
+          console.error('Weather API error:', error.message);
+        }
+        setWeather({
+          temperature: null,
+          condition: 'clear',
+          location: user?.city && user?.state ? `${user.city}, ${user.state}` : 'Weather unavailable',
+          isLoading: false
+        });
+      }
+    };
+
+      // Only fetch weather if user data exists
+      if (user) {
+        fetchWeather();
+        // Refresh weather every 30 minutes
+        const interval = setInterval(fetchWeather, 30 * 60 * 1000);
+        return () => {
+          clearTimeout(timeoutId);
+          clearInterval(interval);
+        };
+      }
+    }, 500); // 500ms delay for initial load performance
+
+    return () => clearTimeout(timeoutId);
+  }, [user?.latitude, user?.longitude, user?.city, user?.state, user?.id]); // Add user.id to prevent duplicate calls
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Sales Dashboard
-            </h1>
-            <p className="text-gray-600">
-              Welcome back, {user?.firstName || user?.email}. Here's your sales overview.
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
+      <UniversalNavbar />
 
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Pipeline</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ${metrics?.totalPipeline?.toLocaleString() || 0}
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
+      {/* Main Content Container */}
+      <main className="max-w-5xl mx-auto px-6 py-12">
+        {/* Welcome Section */}
+        <div className="text-center mb-12">
+          <h1 className="text-3xl font-light text-white mb-2">
+            {getGreeting()}, {user?.email?.split('@')[0] ? user.email.split('@')[0].charAt(0).toUpperCase() + user.email.split('@')[0].slice(1) : 'User'}!
+          </h1>
+          <div className="flex items-center justify-center gap-2 text-white/70 text-sm">
+            {weather.isLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-pulse">Loading weather...</div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Closed Deals</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {metrics?.closedDeals || 0}
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">MTD Revenue</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    ${metrics?.mtdRevenue?.toLocaleString() || 0}
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">YTD Revenue</p>
-                  <p className="text-2xl font-bold text-indigo-600">
-                    ${metrics?.ytdRevenue?.toLocaleString() || 0}
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-                  <p className="text-2xl font-bold text-yellow-600">
-                    {metrics?.conversionRate?.toFixed(1) || 0}%
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Deal Size</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    ${metrics?.avgDealSize?.toLocaleString() || 0}
-                  </p>
-                </div>
-                <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
-                  <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions & Recent Leads */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Quick Actions */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              <div className="space-y-3">
-                <Link href="/calculator">
-                  <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                    <div className="h-8 w-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                      <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <span className="font-medium text-gray-900">Create New Quote</span>
-                  </div>
-                </Link>
-
-                <Link href="/client-intel">
-                  <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                    <div className="h-8 w-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                      <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                    </div>
-                    <span className="font-medium text-gray-900">Client Intelligence</span>
-                  </div>
-                </Link>
-
-                <Link href="/commission-tracker">
-                  <div className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                    <div className="h-8 w-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-                      <svg className="h-4 w-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                    </div>
-                    <span className="font-medium text-gray-900">View Commissions</span>
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-            {/* Recent Leads */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Leads</h3>
-                <Link href="/sales-inbox" className="text-blue-600 hover:text-blue-800 text-sm">
-                  View All
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {Array.isArray(leads) ? leads.slice(0, 5).map((lead) => (
-                  <div key={lead.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{lead.name}</p>
-                      <p className="text-sm text-gray-600">{lead.email}</p>
-                      <p className="text-xs text-gray-500">{lead.stage}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-gray-900">${lead.value?.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">{new Date(lead.lastActivity).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="text-sm text-gray-500 text-center py-4">No leads available</div>
-                )}
-              </div>
-            </div>
+            ) : (
+              <>
+                {getWeatherIcon(weather.condition)}
+                <span>{weather.temperature}°F and {weather.condition} in {weather.location}</span>
+              </>
+            )}
           </div>
         </div>
-      </div>
+
+        {/* Sales Enablement Tools - Moved Quick Actions Here */}
+        <div className="mb-12">
+          <div className={`grid gap-8 justify-items-center ${(user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin') ? 'grid-cols-6' : 'grid-cols-5'}`}>
+            <Link href="/calculator">
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 1} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full mb-3 group-hover:from-orange-400 group-hover:to-orange-500 transition-all duration-300">
+                    <Calculator className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Quote Calculator</h3>
+                </div>
+              </div>
+            </Link>
+
+            <Link href="/commission-tracker">
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 2} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-3 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">
+                    <DollarSign className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Commission Tracker</h3>
+                </div>
+              </div>
+            </Link>
+
+            <Link href="/client-intel">
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 3} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full mb-3 group-hover:from-blue-400 group-hover:to-blue-500 transition-all duration-300">
+                    <UserCheck className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Client Intel</h3>
+                </div>
+              </div>
+            </Link>
+
+            <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 4} as React.CSSProperties}>
+              <div className="action-card-content">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full mb-3 group-hover:from-purple-400 group-hover:to-purple-500 transition-all duration-300">
+                  <Video className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Meeting Vault</h3>
+              </div>
+            </div>
+
+            <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 5} as React.CSSProperties}>
+              <div className="action-card-content">
+                <div className="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full mb-3 group-hover:from-teal-400 group-hover:to-teal-500 transition-all duration-300">
+                  <MessageSquare className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Sales Scripts</h3>
+              </div>
+            </div>
+
+            {/* Sales Trainer - Only visible to admins */}
+            {(user?.email === 'jon@seedfinancial.io' || user?.email === 'anthony@seedfinancial.io' || user?.role === 'admin') && (
+              <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 6} as React.CSSProperties}>
+                <div className="action-card-content">
+                  <div className="p-3 bg-gradient-to-br from-red-500 to-red-600 rounded-full mb-3 group-hover:from-red-400 group-hover:to-red-500 transition-all duration-300">
+                    <GraduationCap className="h-4 w-4 text-white" />
+                  </div>
+                  <h3 className="text-sm font-bold text-center text-white leading-tight px-1">Sales Trainer</h3>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sales Enablement Dashboard */}
+        <div className="grid grid-cols-3 gap-8 mb-16">
+          {/* Left Column - Sales Resources */}
+          <div className="col-span-2 space-y-6">
+            {/* Sales Playbook */}
+            <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-indigo-500/20 rounded-lg">
+                    <FileText className="h-5 w-5 text-indigo-300" />
+                  </div>
+                  Sales Playbook
+                </CardTitle>
+                <CardDescription className="text-white/70">
+                  Your complete guide to sales success
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Objection Handling</h4>
+                    <p className="text-xs text-white/70">Common objections and proven responses</p>
+                  </div>
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Discovery Questions</h4>
+                    <p className="text-xs text-white/70">Questions to uncover client needs</p>
+                  </div>
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Closing Techniques</h4>
+                    <p className="text-xs text-white/70">Proven methods to close deals</p>
+                  </div>
+                  <div className="p-4 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                    <h4 className="text-sm font-semibold text-white mb-2">Follow-up Templates</h4>
+                    <p className="text-xs text-white/70">Email templates for every scenario</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Competitive Intelligence */}
+            <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-3 text-white">
+                  <div className="p-2 bg-amber-500/20 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-amber-300" />
+                  </div>
+                  Competitive Intelligence
+                </CardTitle>
+                <CardDescription className="text-white/70">
+                  Know your competition inside and out
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="p-3 bg-white/20 border border-white/20 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">TaxGuard Pro</h4>
+                      <p className="text-xs text-white/70">Main competitor analysis</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-3 bg-white/20 border border-white/20 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">BookKeeper Elite</h4>
+                      <p className="text-xs text-white/70">Pricing comparison available</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-3 bg-white/20 border border-white/20 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">AccuFinance</h4>
+                      <p className="text-xs text-white/70">Feature comparison matrix</p>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - News Aggregator */}
+          <div>
+            <NewsAggregator />
+          </div>
+        </div>
+
+        {/* Additional Sales Tools */}
+        <div className="grid grid-cols-2 gap-8 mb-12">
+          {/* Quick Contact Templates */}
+          <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-white">
+                <div className="p-2 bg-pink-500/20 rounded-lg">
+                  <Mail className="h-5 w-5 text-pink-300" />
+                </div>
+                Quick Contact Templates
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Cold Outreach</h4>
+                <p className="text-xs text-white/70">Initial contact templates</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Meeting Follow-up</h4>
+                <p className="text-xs text-white/70">Post-meeting templates</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Proposal Delivery</h4>
+                <p className="text-xs text-white/70">Quote delivery templates</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Call Scheduling */}
+          <Card className="bg-white/30 backdrop-blur-md border border-white/40 shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-3 text-white">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <Calendar className="h-5 w-5 text-cyan-300" />
+                </div>
+                Smart Scheduling
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Discovery Call</h4>
+                <p className="text-xs text-white/70">30 min initial meeting</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Demo Session</h4>
+                <p className="text-xs text-white/70">45 min product demo</p>
+              </div>
+              <div className="p-3 bg-white/20 border border-white/20 rounded-lg hover:bg-white/30 transition-colors cursor-pointer">
+                <h4 className="text-sm font-semibold text-white">Closing Call</h4>
+                <p className="text-xs text-white/70">Final decision meeting</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Knowledge Base Access */}
+        <div className="mb-12">
+          <Card className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border-slate-600/50 backdrop-blur-xl border-2 rounded-2xl shadow-2xl">
+            <CardHeader className="pb-4 bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-b border-slate-600/30">
+              <CardTitle className="flex items-center gap-3 text-2xl font-bold" style={{ fontFamily: 'League Spartan, sans-serif' }}>
+                <div className="p-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg">
+                  <BookOpen className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-white">SEED<span style={{ color: '#e24c00' }}>KB</span></span>
+              </CardTitle>
+              <CardDescription className="text-slate-300 text-base">
+                Your comprehensive knowledge hub for sales success
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button 
+                    onClick={() => setLocation('/knowledge-base')}
+                    className="text-lg h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0 font-bold shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    <BookOpen className="h-5 w-5 mr-3" />
+                    Open Knowledge Base
+                  </Button>
+                  
+                  {categoriesLoading ? (
+                    <div className="text-slate-400">Loading categories...</div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/70 text-sm">{categories.length} categories available</span>
+                      <div className="flex gap-2">
+                        {categories.slice(0, 4).map((category: KbCategory) => {
+                          const IconComponent = getIconComponent(category.icon);
+                          return (
+                            <TooltipProvider key={category.id}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center`}>
+                                    <IconComponent className="h-4 w-4 text-white" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-slate-800 border-slate-600 text-white">
+                                  {category.name}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })}
+                        {categories.length > 4 && (
+                          <div className="w-8 h-8 rounded-lg bg-slate-600 flex items-center justify-center">
+                            <span className="text-white text-xs">+{categories.length - 4}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 }

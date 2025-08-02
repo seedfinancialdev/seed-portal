@@ -149,20 +149,10 @@ export function calculateTaaSFees(data: PricingData): FeeResult {
   const effectiveStatesFiled = data.customStatesFiled || data.statesFiled;
   const effectiveNumBusinessOwners = data.customNumBusinessOwners || data.numBusinessOwners;
 
-  // Entity upcharge: 
-  // - Entities 2-5: $100 per entity
-  // - Entities 6+: $75 per entity (above 5)
+  // Entity upcharge: Every entity above 5 adds $75/mo
   let entityUpcharge = 0;
-  if (effectiveNumEntities >= 2) {
-    if (effectiveNumEntities <= 5) {
-      // Entities 2-5: $100 per entity (starting from entity 2)
-      entityUpcharge = (effectiveNumEntities - 1) * 100;
-    } else {
-      // Entities 6+: $100 for entities 2-5, then $75 for each above 5
-      const entitiesUpTo5 = 4 * 100; // Entities 2-5 = 4 entities × $100
-      const entitiesAbove5 = (effectiveNumEntities - 5) * 75;
-      entityUpcharge = entitiesUpTo5 + entitiesAbove5;
-    }
+  if (effectiveNumEntities > 5) {
+    entityUpcharge = (effectiveNumEntities - 5) * 75;
   }
   
   // State upcharge: $50 per state above 1, up to 50 states
@@ -222,20 +212,8 @@ export function calculateTaaSFees(data: PricingData): FeeResult {
   const isBookkeepingClient = data.alreadyOnSeedBookkeeping;
   const monthlyFee = roundToNearest25(isBookkeepingClient ? rawFee * 0.85 : rawFee);
 
-  // Setup fee calculation:
-  // 1. Base setup fee: equivalent to 1 year of Prior Years Unfiled fee ($2,100)
-  // 2. Prior years unfiled fee: actual unfiled years * $2,100 per year
-  // 3. If Seed Bookkeeping Package is selected, the base setup fee is waived
-  
-  const baseSetupFee = 2100; // Base setup fee (1 year equivalent)
-  const priorYearsFee = (data.priorYearsUnfiled || 0) * 2100;
-  
-  let setupFee = baseSetupFee + priorYearsFee;
-  
-  // Waive base setup fee if already on Seed Bookkeeping
-  if (isBookkeepingClient) {
-    setupFee = priorYearsFee; // Only charge for actual prior years, waive base fee
-  }
+  // Setup fee: prior years unfiled * $2100 per year
+  const setupFee = (data.priorYearsUnfiled || 0) * 2100;
 
   return { monthlyFee, setupFee };
 }

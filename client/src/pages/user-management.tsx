@@ -1,236 +1,423 @@
-import { useAuth } from "@/hooks/use-auth";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Users, UserCheck, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, ArrowLeft } from "lucide-react";
+import { useNavigationHistory } from "@/hooks/use-navigation-history";
+import { BackButton } from "@/components/BackButton";
 
 interface WorkspaceUser {
   id: string;
+  primaryEmail: string;
+  name: {
+    givenName: string;
+    familyName: string;
+    fullName: string;
+  };
+  isAdmin: boolean;
+  suspended: boolean;
+  orgUnitPath: string;
+  lastLoginTime?: string;
+  creationTime: string;
+  thumbnailPhotoUrl?: string;
+}
+
+interface DatabaseUser {
+  id: number;
   email: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   role: string;
-  lastSyncDate: string;
-  isActive: boolean;
+  roleAssignedBy?: number;
+  roleAssignedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function UserManagement() {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [selectedRole, setSelectedRole] = useState<string>("");
-  const [selectedUser, setSelectedUser] = useState<WorkspaceUser | null>(null);
+  const { toast } = useToast();
+  const { navigateTo } = useNavigationHistory();
+  const [selectedRole, setSelectedRole] = useState<{[key: string]: string}>({});
 
-  const { data: workspaceUsers, isLoading } = useQuery<WorkspaceUser[]>({
-    queryKey: ["/api/admin/workspace-users"],
-    enabled: !!user,
+  // Fetch Google Workspace users
+  const { data: workspaceData, isLoading: loadingWorkspace, refetch: refetchWorkspace, error: workspaceError } = useQuery({
+    queryKey: ['/api/admin/workspace-users'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/workspace-users', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch workspace users');
+      }
+      return response.json();
+    },
+    retry: false, // Don't retry on errors so we can display setup instructions
   });
 
-  const syncUsersMutation = useMutation({
-    mutationFn: () => apiRequest("/api/admin/sync-workspace-users", { method: "POST" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/workspace-users"] });
+  // Fetch database users
+  const { data: databaseData, isLoading: loadingDatabase, refetch: refetchDatabase } = useQuery({
+    queryKey: ['/api/admin/users'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/users', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to fetch database users');
+      return response.json();
     },
   });
 
-  const updateUserRoleMutation = useMutation({
-    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
-      apiRequest(`/api/admin/users/${userId}/role`, { 
-        method: "PATCH", 
-        body: { role }
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/workspace-users"] });
-      setSelectedUser(null);
-      setSelectedRole("");
+  // Test Google Admin connection
+  const { data: connectionTest, refetch: testConnection } = useQuery({
+    queryKey: ['/api/admin/test-google-admin'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/test-google-admin', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to test Google Admin connection');
+      return response.json();
     },
   });
 
-  const handleRoleUpdate = () => {
-    if (selectedUser && selectedRole) {
-      updateUserRoleMutation.mutate({ userId: selectedUser.id, role: selectedRole });
+  // Update user role mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: number; role: string }) => {
+      const response = await fetch(`/api/admin/users/${userId}/role`, { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role })
+      });
+      if (!response.ok) throw new Error('Failed to update user role');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "User role updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update user role",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Sync workspace user mutation
+  const syncUserMutation = useMutation({
+    mutationFn: async ({ email, role }: { email: string; role: string }) => {
+      const response = await fetch('/api/admin/sync-workspace-user', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, role })
+      });
+      if (!response.ok) throw new Error('Failed to sync workspace user');
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Success",
+        description: `User ${data.action} successfully with ${data.user.role} role`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sync user",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleRoleUpdate = (userId: number, newRole: string) => {
+    updateRoleMutation.mutate({ userId, role: newRole });
+  };
+
+  const handleSyncUser = (email: string, role: string) => {
+    syncUserMutation.mutate({ email, role });
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'bg-red-100 text-red-800 border-red-200';
+      case 'sales': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'service': return 'bg-purple-100 text-purple-800 border-purple-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </div>
+  const workspaceUsers: WorkspaceUser[] = workspaceData?.users || [];
+  const databaseUsers: DatabaseUser[] = databaseData?.users || [];
+  const configured = workspaceData?.configured !== false;
+
+  // Create a map of database users by email for quick lookup
+  const databaseUserMap = databaseUsers.reduce((acc, user) => {
+    acc[user.email] = user;
+    return acc;
+  }, {} as {[key: string]: DatabaseUser});
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
+      {/* Header */}
+      <div className="bg-white/10 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <BackButton 
+              fallbackPath="/admin"
+              className="text-white hover:bg-white/20"
+            />
+            <h1 className="text-xl font-semibold text-white">User Management</h1>
+            <div></div>
           </div>
         </div>
       </div>
-    );
-  }
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center gap-3 mb-8">
+          <Users className="h-8 w-8 text-white" />
+          <h1 className="text-3xl font-bold text-white">User Management</h1>
+        </div>
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              User Management
-            </h1>
-            <p className="text-gray-600">
-              Manage user roles, permissions, and workspace synchronization
-            </p>
-          </div>
-
-          {/* Action Bar */}
-          <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 mb-6">
+        {/* Connection Status */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Google Workspace Integration
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => syncUsersMutation.mutate()}
-                  disabled={syncUsersMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {syncUsersMutation.isPending ? "Syncing..." : "Sync Workspace Users"}
-                </button>
+              <div className="flex items-center gap-2">
+                {configured ? (
+                  connectionTest?.connected ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-600" />
+                  )
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                )}
+                <span className="font-medium">
+                  {configured ? 
+                    (connectionTest?.connected ? 'Connected' : 'Connection Failed') : 
+                    'Not Configured'
+                  }
+                </span>
                 <span className="text-sm text-gray-600">
-                  Last sync: {workspaceUsers?.[0]?.lastSyncDate ? new Date(workspaceUsers[0].lastSyncDate).toLocaleString() : "Never"}
+                  {connectionTest?.message}
                 </span>
               </div>
-              <div className="text-sm text-gray-600">
-                Total Users: {workspaceUsers?.length || 0}
-              </div>
+              <Button onClick={() => testConnection()} size="sm" variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Test Connection
+              </Button>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Users Table */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {Array.isArray(workspaceUsers) ? workspaceUsers.map((workspaceUser) => (
-                    <tr key={workspaceUser.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-600">
-                              {workspaceUser.firstName?.[0]}{workspaceUser.lastName?.[0]}
-                            </span>
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {workspaceUser.firstName} {workspaceUser.lastName}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {workspaceUser.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          workspaceUser.role === 'admin' 
-                            ? 'bg-purple-100 text-purple-800'
-                            : workspaceUser.role === 'sales'
-                            ? 'bg-blue-100 text-blue-800'
-                            : workspaceUser.role === 'service'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {workspaceUser.role || 'No Role'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          workspaceUser.isActive 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {workspaceUser.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button
-                          onClick={() => setSelectedUser(workspaceUser)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          Edit Role
-                        </button>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                        No users available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Role Update Modal */}
-          {selectedUser && (
-            <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
-              <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                <div className="mt-3">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Update Role for {selectedUser.firstName} {selectedUser.lastName}
-                  </h3>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Role:
-                    </label>
-                    <select
-                      value={selectedRole}
-                      onChange={(e) => setSelectedRole(e.target.value)}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="">Select a role...</option>
-                      <option value="admin">Admin</option>
-                      <option value="sales">Sales</option>
-                      <option value="service">Service</option>
-                    </select>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Google Workspace Users */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Google Workspace Users</span>
+                <Button onClick={() => refetchWorkspace()} size="sm" variant="outline">
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingWorkspace ? (
+                <div className="text-center py-8">Loading workspace users...</div>
+              ) : workspaceError ? (
+                <div className="text-center py-8">
+                  <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                  <div className="text-red-600 font-medium mb-1">Setup Required</div>
+                  <div className="text-sm text-gray-600 max-w-md mx-auto mb-4">
+                    Google Workspace Admin API needs additional configuration
                   </div>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      onClick={() => {
-                        setSelectedUser(null);
-                        setSelectedRole("");
-                      }}
-                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleRoleUpdate}
-                      disabled={!selectedRole || updateUserRoleMutation.isPending}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {updateUserRoleMutation.isPending ? "Updating..." : "Update Role"}
-                    </button>
+                  {(workspaceError as any)?.setupInstructions && (
+                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-left max-w-2xl mx-auto">
+                      <div className="text-sm text-yellow-800">
+                        <strong className="block mb-3">Required Setup Steps:</strong>
+                        {Object.entries((workspaceError as any).setupInstructions).map(([key, value]) => {
+                          if (key === 'scopes') {
+                            return (
+                              <div key={key} className="mb-2">
+                                <strong>Required Scopes:</strong>
+                                <ul className="list-disc list-inside ml-2 mt-1">
+                                  {(value as string[]).map((scope, i) => (
+                                    <li key={i} className="text-xs font-mono break-all">{scope}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                          }
+                          if (key.startsWith('step')) {
+                            return <div key={key} className="mb-1">• {value as string}</div>;
+                          }
+                          if (key === 'clientId') {
+                            return <div key={key} className="mb-1"><strong>Client ID:</strong> {value as string}</div>;
+                          }
+                          return null;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : !configured ? (
+                <div className="text-center py-8 text-gray-500">
+                  Google Admin API not configured
+                </div>
+              ) : !connectionTest?.connected ? (
+                <div className="text-center py-8">
+                  <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+                  <div className="text-red-600 font-medium mb-1">Connection Failed</div>
+                  <div className="text-sm text-gray-600 max-w-md mx-auto">
+                    {connectionTest?.message || 'Unable to connect to Google Workspace'}
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              ) : workspaceUsers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No workspace users found
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {workspaceUsers.map((user) => {
+                    const dbUser = databaseUserMap[user.primaryEmail];
+                    const userRole = selectedRole[user.primaryEmail] || 'service';
+                    
+                    return (
+                      <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {user.thumbnailPhotoUrl ? (
+                            <img 
+                              src={user.thumbnailPhotoUrl} 
+                              alt="Profile" 
+                              className="w-8 h-8 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm">
+                              {user.name.givenName?.charAt(0) || user.primaryEmail.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-medium">{user.name.fullName || user.primaryEmail}</p>
+                            <p className="text-sm text-gray-600">{user.primaryEmail}</p>
+                            {user.suspended && (
+                              <Badge className="mt-1 bg-red-100 text-red-800">Suspended</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {dbUser ? (
+                            <Badge className={getRoleBadgeColor(dbUser.role)}>
+                              {dbUser.role}
+                            </Badge>
+                          ) : (
+                            <>
+                              <Select
+                                value={userRole}
+                                onValueChange={(value) => 
+                                  setSelectedRole(prev => ({ ...prev, [user.primaryEmail]: value }))
+                                }
+                              >
+                                <SelectTrigger className="w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="sales">Sales</SelectItem>
+                                  <SelectItem value="service">Service</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                size="sm"
+                                onClick={() => handleSyncUser(user.primaryEmail, userRole)}
+                                disabled={syncUserMutation.isPending}
+                              >
+                                Sync
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Database Users */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Portal Users</span>
+                <Button onClick={() => refetchDatabase()} size="sm" variant="outline">
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingDatabase ? (
+                <div className="text-center py-8">Loading portal users...</div>
+              ) : databaseUsers.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No portal users found
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {databaseUsers.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium">
+                          {user.firstName && user.lastName 
+                            ? `${user.firstName} ${user.lastName}` 
+                            : user.email
+                          }
+                        </p>
+                        <p className="text-sm text-gray-600">{user.email}</p>
+                        {user.roleAssignedAt && (
+                          <p className="text-xs text-gray-500">
+                            Role assigned: {new Date(user.roleAssignedAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={user.role}
+                          onValueChange={(newRole) => handleRoleUpdate(user.id, newRole)}
+                          disabled={updateRoleMutation.isPending}
+                        >
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="sales">Sales</SelectItem>
+                            <SelectItem value="service">Service</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Badge className={getRoleBadgeColor(user.role)}>
+                          {user.role}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

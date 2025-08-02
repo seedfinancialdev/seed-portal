@@ -56,12 +56,11 @@
 
 @layer base {
   * {
-    border-color: hsl(var(--border));
+    @apply border-border;
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    @apply bg-background text-foreground;
     font-family: 'Nunito Sans', sans-serif;
   }
   
@@ -131,67 +130,53 @@
   
   /* Enhanced card hover effects */
   .quote-card {
-    transition: box-shadow 0.3s ease-in-out;
+    @apply transition-shadow duration-300 ease-in-out;
   }
   
   .quote-card:hover {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    @apply shadow-2xl;
   }
   
   /* Enhanced table row hover */
   .quote-table-row {
-    transition: all 0.2s ease-in-out;
+    @apply transition-all duration-200 ease-in-out;
   }
   
   .quote-table-row:hover {
-    background: linear-gradient(to right, #eff6ff, #e0e7ff);
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    @apply bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm;
   }
   
   /* Gradient text effects */
   .gradient-text {
-    background: linear-gradient(to right, #253e31, #75c29a);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    @apply bg-gradient-to-r from-[#253e31] to-[#75c29a] bg-clip-text text-transparent;
   }
   
   /* Enhanced button styles */
   .button-shimmer {
-    position: relative;
-    overflow: hidden;
+    @apply relative overflow-hidden;
   }
   
   .button-shimmer::before {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transform: skewX(-12deg) translateX(-100%);
-    transition: transform 0.7s;
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-[-100%] transition-transform duration-700;
     content: '';
   }
   
   .button-shimmer:hover::before {
-    transform: skewX(-12deg) translateX(200%);
+    @apply translate-x-[200%];
   }
   
   /* Pulse animation for status indicators */
   .status-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    @apply animate-pulse;
   }
   
   /* Enhanced form inputs */
   .enhanced-input {
-    transition: all 0.2s ease-in-out;
+    @apply transition-all duration-200 ease-in-out;
   }
   
   .enhanced-input:focus {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    outline: 2px solid rgba(226, 76, 0, 0.2);
-    outline-offset: 2px;
+    @apply shadow-lg ring-2 ring-[#e24c00]/20;
   }
 
   /* Enhanced Client-Facing Article Styles */
