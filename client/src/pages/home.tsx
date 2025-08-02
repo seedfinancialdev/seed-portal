@@ -1964,7 +1964,7 @@ export default function Home() {
                     name="monthlyRevenueRange"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">Monthly Revenue Range</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">MONTHLY Revenue Range</label>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
