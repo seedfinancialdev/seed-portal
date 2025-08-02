@@ -1568,14 +1568,6 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                
-                <Button 
-                  onClick={() => handleEmailTrigger(triggerEmail)}
-                  disabled={!triggerEmail.includes('@')}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white py-3"
-                >
-                  Search Contacts
-                </Button>
               </div>
             </CardContent>
           </Card>
