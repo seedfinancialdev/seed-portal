@@ -18,6 +18,7 @@ This project is a comprehensive Internal Employee Portal for Seed Financial, bui
 - ✅ Enhanced breakdown display shows base fee, waiver status, and prior years fee separately with green text for discounts
 - ✅ "Push to HubSpot" button activation issue resolved - properly activates after contact selection flow
 - ✅ Removed entity type dropdown from TaaS quote card - Non-Profit uses same modifiers as C-Corp
+- ✅ Updated TaaS entity pricing structure: $100/month for entities 2-5, then $75/month for entities 6+
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

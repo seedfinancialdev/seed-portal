@@ -149,10 +149,20 @@ export function calculateTaaSFees(data: PricingData): FeeResult {
   const effectiveStatesFiled = data.customStatesFiled || data.statesFiled;
   const effectiveNumBusinessOwners = data.customNumBusinessOwners || data.numBusinessOwners;
 
-  // Entity upcharge: Every entity above 5 adds $75/mo
+  // Entity upcharge: 
+  // - Entities 2-5: $100 per entity
+  // - Entities 6+: $75 per entity (above 5)
   let entityUpcharge = 0;
-  if (effectiveNumEntities > 5) {
-    entityUpcharge = (effectiveNumEntities - 5) * 75;
+  if (effectiveNumEntities >= 2) {
+    if (effectiveNumEntities <= 5) {
+      // Entities 2-5: $100 per entity (starting from entity 2)
+      entityUpcharge = (effectiveNumEntities - 1) * 100;
+    } else {
+      // Entities 6+: $100 for entities 2-5, then $75 for each above 5
+      const entitiesUpTo5 = 4 * 100; // Entities 2-5 = 4 entities × $100
+      const entitiesAbove5 = (effectiveNumEntities - 5) * 75;
+      entityUpcharge = entitiesUpTo5 + entitiesAbove5;
+    }
   }
   
   // State upcharge: $50 per state above 1, up to 50 states
