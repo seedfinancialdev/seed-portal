@@ -73,6 +73,8 @@ app.use((req, res, next) => {
     console.error('🚨🚨🚨 SUPER EARLY: POST /api/quotes detected in index.ts 🚨🚨🚨');
     console.error('🚨 Time:', new Date().toISOString());
     console.error('🚨 Headers:', JSON.stringify(req.headers, null, 2));
+    console.error('🚨 Process ID:', process.pid);
+    console.error('🚨 Port:', process.env.PORT || 5000);
   }
   next();
 });
