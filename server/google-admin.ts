@@ -33,18 +33,47 @@ export class GoogleAdminService {
 
   private async initialize() {
     try {      
-      console.log('Initializing Google Admin API with user credentials...');
+      console.log('Initializing Google Admin API...');
       
-      // Check for required secrets
+      // Try service account first (preferred for production)
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        console.log('Attempting service account authentication...');
+        try {
+          const serviceAccountKey = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+          
+          const { GoogleAuth } = await import('google-auth-library');
+          const auth = new GoogleAuth({
+            credentials: serviceAccountKey,
+            scopes: [
+              'https://www.googleapis.com/auth/admin.directory.user.readonly',
+              'https://www.googleapis.com/auth/admin.directory.group.readonly',
+              'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
+            ],
+            // Enable domain-wide delegation
+            subject: 'jon@seedfinancial.io' // Admin user to impersonate
+          });
+          
+          this.admin = google.admin({ version: 'directory_v1', auth });
+          this.initialized = true;
+          
+          console.log('✅ Google Admin API initialized with service account (domain-wide delegation)');
+          return;
+        } catch (serviceError) {
+          console.log('Service account auth failed, falling back to user credentials:', serviceError.message);
+        }
+      }
+      
+      // Fallback to user credentials (current approach)
       const { GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN } = process.env;
       
       if (!GOOGLE_CLIENT_ID_OS || !GOOGLE_CLIENT_SECRET_OS || !GOOGLE_REFRESH_TOKEN) {
-        throw new Error('Missing required secrets: GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN');
+        throw new Error('Missing required secrets: GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN, or GOOGLE_SERVICE_ACCOUNT_JSON');
       }
 
-      // Use GoogleAuth library with user credentials (much simpler approach)
-      console.log('Creating Google Auth client with user refresh token...');
+      console.log('Using user credentials with automatic refresh...');
       const { GoogleAuth } = await import('google-auth-library');
+      
+      // Create auth client with automatic token refresh
       const auth = new GoogleAuth({
         credentials: {
           type: 'authorized_user',
@@ -59,10 +88,14 @@ export class GoogleAdminService {
         ]
       });
       
+      // Test the credentials to ensure they work and trigger refresh if needed
+      const authClient = await auth.getClient();
+      await authClient.getAccessToken(); // This will refresh if needed
+      
       this.admin = google.admin({ version: 'directory_v1', auth });
       this.initialized = true;
       
-      console.log('✅ Google Admin API initialized successfully with user credentials');
+      console.log('✅ Google Admin API initialized with automatic token refresh enabled');
       
     } catch (error) {
       // Log the actual error for debugging
