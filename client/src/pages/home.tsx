@@ -1729,7 +1729,7 @@ export default function Home() {
               </div>
               {/* Contact Email - Top Right Display */}
               <div className="text-right">
-                <FormLabel className="text-gray-700 font-medium text-sm">Contact Email</FormLabel>
+                <label className="text-gray-700 font-medium text-sm">Contact Email</label>
                 <div className="flex items-center gap-2 mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md">
                   <span className="text-gray-900 font-medium text-sm">{form.watch('contactEmail')}</span>
                   {hubspotVerificationStatus === 'verified' && (
