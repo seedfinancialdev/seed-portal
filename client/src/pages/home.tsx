@@ -2004,6 +2004,7 @@ export default function Home() {
                             <SelectItem value="S-Corporation">S-Corporation</SelectItem>
                             <SelectItem value="Partnership">Partnership</SelectItem>
                             <SelectItem value="Sole Proprietorship">Sole Proprietorship</SelectItem>
+                            <SelectItem value="Non-Profit">Non-Profit</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
