@@ -271,7 +271,7 @@ function roundToNearest25(num: number): number {
 }
 
 function calculateFees(data: Partial<FormData>) {
-  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
+  if (!data.monthlyRevenueRange || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
     return { 
       monthlyFee: 0, 
       setupFee: 0,
@@ -310,7 +310,7 @@ function calculateFees(data: Partial<FormData>) {
     };
   }
 
-  const revenueMultiplier = revenueMultipliers[data.revenueBand as keyof typeof revenueMultipliers] || 1.0;
+  const revenueMultiplier = revenueMultipliers[data.monthlyRevenueRange as keyof typeof revenueMultipliers] || 1.0;
   const txFee = txSurcharge[data.monthlyTransactions as keyof typeof txSurcharge] || 0;
   const industryData = industryMultipliers[data.industry as keyof typeof industryMultipliers] || { monthly: 1, cleanup: 1 };
   
@@ -369,7 +369,7 @@ function calculateFees(data: Partial<FormData>) {
 
 // TaaS-specific calculation function based on provided logic
 function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { monthlyFee: number; setupFee: number }) {
-  if (!data.revenueBand || !data.industry || !data.entityType || !data.numEntities || !data.statesFiled || 
+  if (!data.monthlyRevenueRange || !data.industry || !data.entityType || !data.numEntities || !data.statesFiled || 
       data.internationalFiling === undefined || !data.numBusinessOwners || !data.bookkeepingQuality || 
       data.include1040s === undefined || data.priorYearsUnfiled === undefined || data.alreadyOnSeedBookkeeping === undefined) {
     return { 
@@ -437,12 +437,12 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
   const industryMult = industryData.monthly;
 
   // Revenue multiplier (map our revenue bands to average monthly revenue)
-  const avgMonthlyRevenue = data.revenueBand === '<$10K' ? 5000 :
-                           data.revenueBand === '10K-25K' ? 17500 :
-                           data.revenueBand === '25K-75K' ? 50000 :
-                           data.revenueBand === '75K-250K' ? 162500 :
-                           data.revenueBand === '250K-1M' ? 625000 :
-                           data.revenueBand === '1M+' ? 1000000 : 5000;
+  const avgMonthlyRevenue = data.monthlyRevenueRange === '<$10K' ? 5000 :
+                           data.monthlyRevenueRange === '10K-25K' ? 17500 :
+                           data.monthlyRevenueRange === '25K-75K' ? 50000 :
+                           data.monthlyRevenueRange === '75K-250K' ? 162500 :
+                           data.monthlyRevenueRange === '250K-1M' ? 625000 :
+                           data.monthlyRevenueRange === '1M+' ? 1000000 : 5000;
 
   const revenueMult = avgMonthlyRevenue <= 10000 ? 1.0 :
                      avgMonthlyRevenue <= 25000 ? 1.2 :
@@ -624,7 +624,7 @@ export default function Home() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       contactEmail: "",
-      revenueBand: "",
+      monthlyRevenueRange: "",
       monthlyTransactions: "",
       industry: "",
       cleanupMonths: currentMonth,
@@ -1193,7 +1193,7 @@ export default function Home() {
           contactEmail: formData.contactEmail,
           quoteData: {
             contactEmail: formData.contactEmail,
-            revenueBand: formData.revenueBand,
+            monthlyRevenueRange: formData.monthlyRevenueRange,
             monthlyTransactions: formData.monthlyTransactions,
             industry: formData.industry,
             cleanupMonths: formData.cleanupMonths,
@@ -1525,14 +1525,30 @@ export default function Home() {
                               <SelectValue placeholder="Select industry" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Technology">Technology</SelectItem>
-                              <SelectItem value="Healthcare">Healthcare</SelectItem>
-                              <SelectItem value="Finance">Finance</SelectItem>
-                              <SelectItem value="Retail">Retail</SelectItem>
-                              <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-                              <SelectItem value="Real Estate">Real Estate</SelectItem>
+                              <SelectItem value="Software/SaaS">Software/SaaS</SelectItem>
                               <SelectItem value="Professional Services">Professional Services</SelectItem>
-                              <SelectItem value="Construction">Construction</SelectItem>
+                              <SelectItem value="Consulting">Consulting</SelectItem>
+                              <SelectItem value="Healthcare/Medical">Healthcare/Medical</SelectItem>
+                              <SelectItem value="Real Estate">Real Estate</SelectItem>
+                              <SelectItem value="Property Management">Property Management</SelectItem>
+                              <SelectItem value="E-commerce/Retail">E-commerce/Retail</SelectItem>
+                              <SelectItem value="Restaurant/Food Service">Restaurant/Food Service</SelectItem>
+                              <SelectItem value="Hospitality">Hospitality</SelectItem>
+                              <SelectItem value="Construction/Trades">Construction/Trades</SelectItem>
+                              <SelectItem value="Manufacturing">Manufacturing</SelectItem>
+                              <SelectItem value="Transportation/Logistics">Transportation/Logistics</SelectItem>
+                              <SelectItem value="Nonprofit">Nonprofit</SelectItem>
+                              <SelectItem value="Law Firm">Law Firm</SelectItem>
+                              <SelectItem value="Accounting/Finance">Accounting/Finance</SelectItem>
+                              <SelectItem value="Marketing/Advertising">Marketing/Advertising</SelectItem>
+                              <SelectItem value="Insurance">Insurance</SelectItem>
+                              <SelectItem value="Automotive">Automotive</SelectItem>
+                              <SelectItem value="Education">Education</SelectItem>
+                              <SelectItem value="Fitness/Wellness">Fitness/Wellness</SelectItem>
+                              <SelectItem value="Entertainment/Events">Entertainment/Events</SelectItem>
+                              <SelectItem value="Agriculture">Agriculture</SelectItem>
+                              <SelectItem value="Technology/IT Services">Technology/IT Services</SelectItem>
+                              <SelectItem value="Multi-entity/Holding Companies">Multi-entity/Holding Companies</SelectItem>
                               <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                           </Select>
@@ -1569,14 +1585,12 @@ export default function Home() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="0-10k">$0 - $10,000</SelectItem>
-                          <SelectItem value="10k-25k">$10,000 - $25,000</SelectItem>
-                          <SelectItem value="25k-50k">$25,000 - $50,000</SelectItem>
-                          <SelectItem value="50k-100k">$50,000 - $100,000</SelectItem>
-                          <SelectItem value="100k-250k">$100,000 - $250,000</SelectItem>
-                          <SelectItem value="250k-500k">$250,000 - $500,000</SelectItem>
-                          <SelectItem value="500k-1m">$500,000 - $1,000,000</SelectItem>
-                          <SelectItem value="1m+">$1,000,000+</SelectItem>
+                          <SelectItem value="<$10K">&lt;$10K</SelectItem>
+                          <SelectItem value="10K-25K">$10K - $25K</SelectItem>
+                          <SelectItem value="25K-75K">$25K - $75K</SelectItem>
+                          <SelectItem value="75K-250K">$75K - $250K</SelectItem>
+                          <SelectItem value="250K-1M">$250K - $1M</SelectItem>
+                          <SelectItem value="1M+">$1M+</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -1943,33 +1957,6 @@ export default function Home() {
                       </AlertDescription>
                     </Alert>
                   )}
-
-                  {/* Revenue Band */}
-                  <FormField
-                    control={form.control}
-                    name="revenueBand"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly Revenue Band</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
-                              <SelectValue placeholder="Select revenue band" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="<$10K">&lt;$10K</SelectItem>
-                            <SelectItem value="10K-25K">$10K - $25K</SelectItem>
-                            <SelectItem value="25K-75K">$25K - $75K</SelectItem>
-                            <SelectItem value="75K-250K">$75K - $250K</SelectItem>
-                            <SelectItem value="250K-1M">$250K - $1M</SelectItem>
-                            <SelectItem value="1M+">$1M+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   {/* Bookkeeping Service Details Section */}
                   {currentFormView === 'bookkeeping' && (
