@@ -633,6 +633,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(401).json({ message: "Authentication required" });
       }
       
+      console.log('👤 CRITICAL - User object during POST:', JSON.stringify(req.user, null, 2));
+      console.log('👤 CRITICAL - User ID during POST:', req.user.id);
+      console.log('👤 CRITICAL - User properties:', Object.keys(req.user || {}));
+      
       // Extract service flags with defaults
       const includesBookkeeping = req.body.includesBookkeeping !== false; // Default to true
       const includesTaas = req.body.includesTaas === true;
