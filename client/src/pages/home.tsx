@@ -1000,16 +1000,37 @@ export default function Home() {
     
     // Pre-populate form with contact data
     form.setValue('contactEmail', contact.properties.email || '');
-    form.setValue('companyName', contact.properties.company || '');
-    form.setValue('contactFirstName', contact.properties.firstname || '');
-    form.setValue('contactLastName', contact.properties.lastname || '');
-    form.setValue('industry', contact.properties.industry || '');
     
-    // Address fields
-    form.setValue('clientStreetAddress', contact.properties.address || '');
-    form.setValue('clientCity', contact.properties.city || '');
-    form.setValue('clientState', contact.properties.state || '');
-    form.setValue('clientZipCode', contact.properties.zip || '');
+    // Auto-lock fields that have data and set values
+    if (contact.properties.company) {
+      form.setValue('companyName', contact.properties.company);
+      form.setValue('companyNameLocked', true);
+    }
+    
+    if (contact.properties.firstname) {
+      form.setValue('contactFirstName', contact.properties.firstname);
+      form.setValue('contactFirstNameLocked', true);
+    }
+    
+    if (contact.properties.lastname) {
+      form.setValue('contactLastName', contact.properties.lastname);
+      form.setValue('contactLastNameLocked', true);
+    }
+    
+    if (contact.properties.industry) {
+      form.setValue('industry', contact.properties.industry);
+      form.setValue('industryLocked', true);
+    }
+    
+    // Address fields - lock if any address data is present
+    const hasAddressData = contact.properties.address || contact.properties.city || contact.properties.state || contact.properties.zip;
+    if (hasAddressData) {
+      form.setValue('clientStreetAddress', contact.properties.address || '');
+      form.setValue('clientCity', contact.properties.city || '');
+      form.setValue('clientState', contact.properties.state || '');
+      form.setValue('clientZipCode', contact.properties.zip || '');
+      form.setValue('companyAddressLocked', true);
+    }
 
     console.log('Setting showClientDetails to true');
     setShowClientDetails(true);
@@ -1163,7 +1184,7 @@ export default function Home() {
     // Set approval state before form reset
     setIsApproved(quote.approvalRequired || false);
     
-    // Reset form with quote data
+    // Reset form with quote data and auto-lock populated fields
     const formData = {
       contactEmail: quote.contactEmail,
       revenueBand: quote.revenueBand,
@@ -1174,12 +1195,27 @@ export default function Home() {
       cleanupOverride: quote.cleanupOverride || false,
       overrideReason: quote.overrideReason || "",
       companyName: quote.companyName || "",
+      contactFirstName: quote.contactFirstName || "",
+      contactLastName: quote.contactLastName || "",
+      monthlyRevenueRange: quote.monthlyRevenueRange || "",
+      entityType: quote.entityType || "LLC",
+      clientStreetAddress: quote.clientStreetAddress || "",
+      clientCity: quote.clientCity || "",
+      clientState: quote.clientState || "",
+      clientZipCode: quote.clientZipCode || "",
+      // Auto-lock fields that have data
+      companyNameLocked: !!(quote.companyName),
+      contactFirstNameLocked: !!(quote.contactFirstName),
+      contactLastNameLocked: !!(quote.contactLastName),
+      industryLocked: !!(quote.industry),
+      companyAddressLocked: !!(quote.clientStreetAddress || quote.clientCity || quote.clientState || quote.clientZipCode),
       // Quote type and service flags
       quoteType: quote.quoteType || "bookkeeping",
       includesBookkeeping: quote.includesBookkeeping ?? true,
       includesTaas: quote.includesTaas ?? false,
+      serviceBookkeeping: quote.includesBookkeeping ?? true,
+      serviceTaas: quote.includesTaas ?? false,
       // TaaS-specific fields (ensure proper type conversion)
-      entityType: quote.entityType || "LLC",
       numEntities: quote.numEntities ? Number(quote.numEntities) : 1,
       statesFiled: quote.statesFiled ? Number(quote.statesFiled) : 1,
       internationalFiling: quote.internationalFiling ?? false,
@@ -1693,54 +1729,19 @@ export default function Home() {
             
             <Form {...form}>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Contact Email - Primary starter field */}
-                <FormField
-                  control={form.control}
-                  name="contactEmail"
-                  render={({ field }) => (
-                    <FormItem className="lg:col-span-1">
-                      <FormLabel className="text-gray-700 font-medium">Contact Email *</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input 
-                            type="email"
-                            placeholder="client@company.com"
-                            className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500 pr-10"
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              const email = e.target.value;
-                              
-                              if (!email.trim()) {
-                                setExistingQuotesForEmail([]);
-                                setShowExistingQuotesNotification(false);
-                                setHubspotVerificationStatus('idle');
-                                setHubspotContact(null);
-                                setLastVerifiedEmail('');
-                                setSearchTerm("");
-                                form.setValue('companyName', '');
-                              }
-                              
-                              debouncedVerifyEmail(email);
-                            }}
-                          />
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                            {hubspotVerificationStatus === 'verifying' && (
-                              <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-                            )}
-                            {hubspotVerificationStatus === 'verified' && (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
-                            )}
-                            {hubspotVerificationStatus === 'not-found' && (
-                              <XCircle className="h-4 w-4 text-red-500" />
-                            )}
-                          </div>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                {/* Contact Email - Display Only */}
+                <div className="lg:col-span-1">
+                  <FormLabel className="text-gray-700 font-medium">Contact Email</FormLabel>
+                  <div className="flex items-center gap-2 mt-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                    <span className="text-gray-900 font-medium">{form.watch('contactEmail')}</span>
+                    {hubspotVerificationStatus === 'verified' && (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    )}
+                  </div>
+                  {hubspotVerificationStatus === 'verified' && (
+                    <p className="text-xs text-green-600 mt-1">✓ Verified in HubSpot</p>
                   )}
-                />
+                </div>
 
                 {/* Company Name with lock/unlock */}
                 <FormField
@@ -2035,6 +2036,25 @@ export default function Home() {
                           <FormControl>
                             <Input 
                               placeholder="CA"
+                              className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
+                              readOnly={form.watch('companyAddressLocked')}
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="clientZipCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm text-gray-600">Zip Code</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="90210"
                               className={`${form.watch('companyAddressLocked') ? 'bg-gray-50' : 'bg-white'} border-gray-300 focus:ring-blue-500 focus:border-blue-500`}
                               readOnly={form.watch('companyAddressLocked')}
                               {...field}
