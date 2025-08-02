@@ -592,6 +592,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const requestDataWithFees = {
         ...req.body,
         ownerId: req.user.id,
+        // Map monthlyRevenueRange to revenueBand for schema compatibility
+        revenueBand: req.body.monthlyRevenueRange || req.body.revenueBand || "",
         // Use the frontend-calculated values directly
         monthlyFee: req.body.monthlyFee || "0",
         setupFee: req.body.setupFee || "0", 
