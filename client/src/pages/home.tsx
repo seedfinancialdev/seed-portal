@@ -3804,7 +3804,9 @@ export default function Home() {
                               Updated: {new Date(quote.updatedAt || quote.createdAt).toLocaleDateString()}
                             </p>
                           </div>
-                          <Button size="sm" variant="ghost">Edit Quote</Button>
+                          <Button size="sm" variant="ghost">
+                            <Edit className="h-4 w-4" />
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
