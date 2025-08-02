@@ -1,0 +1,88 @@
+### You’re definitely talking to “*some*” server—just not the one you’ve been instrumenting
+
+Because the **exact error string** comes back while **none of your logs appear**, the request is landing in a *different* Node/Express process (or server-less handler) that:
+
+* already contains your **`"Cannot create quote: ownerId is required"`** logic, and
+* is starting **before** or **instead of** the instance you’re attaching middleware to.
+
+---
+
+## 1 — Find every copy of that error string
+
+```bash
+git grep -n "Cannot create quote: ownerId"
+```
+
+*Expected:* one hit in `quoteRoutes.ts`.
+*If you see two or more files* (e.g., a legacy `/functions/quote.js`, a Next.js `pages/api/quotes.ts`, etc.) you’ve found the shadow handler.
+
+---
+
+## 2 — Check what *actually* boots when you run `npm start`
+
+1. **Look at `package.json`**
+
+   ```json
+   "scripts": {
+     "start": "node dist/server.js",
+     "dev":   "nodemon src/server.ts",
+     ...
+   }
+   ```
+
+   Make sure the prod and dev entry points are *the same* server file. It’s common to have an old `server.js` lingering that still mounts its own routes.
+
+2. **Search for extra `app.listen` calls**
+
+   ```bash
+   git grep -n "app.listen("
+   ```
+
+   Only one file should call it. More than one = two servers.
+
+3. **Are you using `cluster`, `pm2`, or Vercel/Netlify functions?**
+
+   * Cluster: each worker has its own stdout — your tap logs could be in another worker.
+   * Serverless: `pages/api/quotes.ts` (Next.js) or `/api/quotes.js` (Netlify) may be handling POST while your Express server handles GET.
+
+---
+
+## 3 — Prove you have multiple Node processes
+
+From the Replit shell (or the host that’s running the app):
+
+```bash
+ps -ef | grep node
+```
+
+Two PIDs with `server.js` / `dist/index.js` means two instances.
+If one is a **BullMQ worker** that should have no HTTP listener, but it was started with a generic `node .` command, it could accidentally spin up its own Express app.
+
+---
+
+## 4 — Fix patterns (pick the one that matches what you find)
+
+| Symptom                                                   | Root cause                                                 | Fix                                                                                                        |
+| --------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Duplicate route file (old API)                            | Legacy file still imported                                 | Delete/rename the old file, or ensure only the real router is `require()`-d                                |
+| Two entry points (`src/server.ts` *and* `dist/server.js`) | Dev runs TS, prod runs compiled JS from *older commit*     | Point both scripts to **one** build artefact; re-build before start                                        |
+| Cluster/PM2 hides logs                                    | Worker 0 handles GET, worker 1 handles POST                | Add `console.log("PID", process.pid)` at top; ensure log aggregation or run single-process until bug fixed |
+| Next.js / Netlify Function matches `/api/quotes`          | Serverless route overrides Express route                   | Rename path, or disable the serverless function in `next.config.js` / `netlify.toml`                       |
+| BullMQ worker accidentally imports server                 | Worker file does `require('../server')` to reuse DB models | Isolate models into a shared lib; worker should never start an HTTP listener                               |
+
+---
+
+## 5 — Quick sanity check once fixed
+
+1. **Kill all Node processes**, then `npm start` once.
+2. **Route-map dump** now prints (🗺️) and lists one `POST /api/quotes`.
+3. **Tap middleware** logs on POST.
+4. Quote saves without `ownerId` error.
+
+---
+
+### TL;DR
+
+Your POST is hitting a *different* server instance or stale route definition.
+Search the repo for that error string, identify the extra `app.listen` / serverless file, remove or rename it, then restart with **one** entry point.
+As soon as there’s only a single `POST /api/quotes` route in memory, your debugging logs will appear and the ownerId will flow through.

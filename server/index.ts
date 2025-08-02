@@ -193,22 +193,36 @@ app.use((req, res, next) => {
     
     const server = await registerRoutes(app, sessionRedis);
     console.log('[Server] ✅ Routes registered successfully');
+    console.log('[Server] App object type:', typeof app);
+    console.log('[Server] App has _router?', !!app._router);
     
     // ROUTE MAP - List all registered routes to find duplicates
     function listRoutes(app: any) {
       console.log('\n🗺️  ROUTE MAP ------------------------');
+      console.log('Router exists:', !!app._router);
+      console.log('Router stack exists:', !!app._router?.stack);
+      console.log('Router stack length:', app._router?.stack?.length || 0);
+      
       if (app._router && app._router.stack) {
-        app._router.stack
-          .filter((r: any) => r.route)                   // only routes, skip middleware
-          .forEach((r: any) => {
-            const path = r.route?.path;
-            const methods = Object.keys(r.route.methods).join(',').toUpperCase();
-            console.log(`${methods.padEnd(7)} ${path}`);
-          });
+        const routes = app._router.stack.filter((r: any) => r.route);
+        console.log('Total routes found:', routes.length);
+        routes.forEach((r: any) => {
+          const path = r.route?.path;
+          const methods = Object.keys(r.route.methods).join(',').toUpperCase();
+          console.log(`${methods.padEnd(7)} ${path}`);
+        });
+      } else {
+        console.log('❌ No routes found - router structure may be different');
       }
       console.log('------------------------------------\n');
     }
     listRoutes(app);
+    
+    // SIMPLE TEST ROUTE to confirm this Express app is handling requests
+    app.get('/api/test-server-identity', (req, res) => {
+      console.log('🆔 SERVER IDENTITY TEST ROUTE HIT - This confirms the right Express app');
+      res.json({ message: 'This is the correct Express server instance', timestamp: new Date().toISOString() });
+    });
 
     // The Sentry error handler must be before any other error middleware (only if initialized)
     if (sentryInitialized && Sentry.Handlers?.errorHandler) {
