@@ -1,0 +1,75 @@
+**Agreed — this smells like a stale build or double-import.**
+Here’s the fastest path to prove it and permanently prevent it.
+
+---
+
+## 1  Blow away every compiled artefact
+
+```bash
+# From repo root
+rm -rf dist build .next .vercel functions  # whatever your toolchain spits out
+find . -name "*.js" -not -path "./node_modules/*" -not -path "./scripts/*" -delete
+```
+
+*(If you transpile TS in-place, be ruthless: delete any stray `.js` twins.)*
+
+---
+
+## 2  Re-build from scratch & run
+
+```bash
+npm run build      # tsc or next build etc.
+NODE_ENV=development npm start
+```
+
+*Now hit* **POST /api/quotes** *again.*
+
+* You **should** see all tap & catch-all logs.
+* If the error still bypasses logs, jump to step 5.
+
+---
+
+## 3  Assert only one route exists at runtime
+
+```bash
+node -e "
+ const app=require('./dist/server').default||require('./dist/server');
+ app._router.stack.filter(r=>r.route&&r.route.path==='/' || r.route?.path.includes('/api/quotes'))
+   .forEach(r=>console.log(r.route.stack[0].method.toUpperCase(), r.route.path));
+"
+```
+
+Expect exactly **one** `POST /api/quotes`.
+If you see two, note the order → you still have a duplicate import.
+
+---
+
+## 4  Guard against this ever happening again
+
+1. **Move build to `dist/` only** – configure `tsconfig` or `next.config.js` so compiled JS never pollutes `src/`.
+2. **Add a pre-start script** in `package.json`:
+
+   ```json
+   "scripts": {
+     "prestart": "rimraf dist && npm run build"
+   }
+   ```
+3. **CI check**: fail the build if any `.js` exists in `src/`.
+
+---
+
+## 5  If logs still don’t fire (rare)
+
+* **BullMQ worker importing server**: confirm worker file doesn’t `require('../server')`.
+* **Reverse proxy / edge function**: verify Vercel/Netlify `middleware.ts` or Cloudflare Worker isn’t mounted on `/api/quotes`.
+* **Container mix-up**: run `lsof -i :<port>` inside the pod; ensure only one PID owns the HTTP port.
+
+---
+
+### Action items
+
+1. **Wipe compiled junk → rebuild → retest.**
+2. If duplicate route persists, search for hidden imports or serverless functions.
+3. Lock in a clean build process so this never bites us again.
+
+Ping me once POST logs show up—then we can re-enable the quote save flow.
