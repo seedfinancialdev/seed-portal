@@ -355,10 +355,18 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
 // Middleware to require authentication (supports both session and Google OAuth)
 export async function requireAuth(req: any, res: any, next: any) {
   console.log('🔐 requireAuth: Checking authentication for', req.url);
+  console.log('🔐 requireAuth: Method:', req.method);
   console.log('🔐 requireAuth: Session authenticated:', req.isAuthenticated());
   console.log('🔐 requireAuth: Auth header present:', !!req.headers.authorization);
   console.log('🔐 requireAuth: Session exists:', !!req.session);
   console.log('🔐 requireAuth: User in req:', req.user?.email || 'NO USER');
+  
+  if (req.method === 'POST' && req.url?.includes('/quotes')) {
+    console.log('🔥🔥🔥 CRITICAL POST QUOTES AUTH CHECK 🔥🔥🔥');
+    console.log('🔥 User object:', JSON.stringify(req.user, null, 2));
+    console.log('🔥 User ID:', req.user?.id);
+    console.log('🔥 Session ID:', req.sessionID);
+  }
   
   // First check session-based auth
   if (req.isAuthenticated()) {

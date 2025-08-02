@@ -611,7 +611,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Create a new quote (protected)
-  app.post("/api/quotes", requireAuth, async (req, res) => {
+  app.post("/api/quotes", (req, res, next) => {
+    console.log('🚨🚨🚨 POST /api/quotes INTERCEPTED BEFORE AUTH 🚨🚨🚨');
+    console.log('🚨 Method:', req.method);
+    console.log('🚨 URL:', req.url);
+    console.log('🚨 Headers present:', Object.keys(req.headers));
+    console.log('🚨 Body keys:', Object.keys(req.body || {}));
+    next();
+  }, requireAuth, async (req, res) => {
     console.log('🎯🎯🎯 ====== CREATE QUOTE ENDPOINT HIT ====== 🎯🎯🎯');
     console.log('🔄 Quote creation request received at:', new Date().toISOString());
     console.log('📋 Request body keys:', Object.keys(req.body));
