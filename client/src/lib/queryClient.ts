@@ -38,13 +38,9 @@ async function getCSRFToken(): Promise<string | null> {
   return null;
 }
 
-// Development mode base URL configuration
+// Use relative URLs for all API calls
 function getBaseUrl(): string {
-  // In development, if we're running on a .replit.dev domain, redirect to localhost:5000
-  if (import.meta.env.DEV && window.location.hostname.includes('replit.dev')) {
-    return 'http://127.0.0.1:5000';
-  }
-  return ''; // Use relative URLs in production or when running on localhost
+  return ''; // Always use relative URLs
 }
 
 // Overloaded function to support both old and new calling patterns
@@ -181,7 +177,11 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = queryKey.join("/") as string;
+    // Apply base URL redirection for development like other API calls
+    const fullUrl = url.startsWith('http') ? url : `${getBaseUrl()}${url}`;
+    
+    const res = await fetch(fullUrl, {
       credentials: "include", // Session cookies only, no OAuth token
     });
 

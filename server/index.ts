@@ -67,27 +67,7 @@ async function redisHandshake(): Promise<Redis | null> {
 
 const app = express();
 
-// CORS MIDDLEWARE - Allow .replit.dev domain to access localhost:5000
-app.use((req, res, next) => {
-  const origin = req.get('Origin');
-  
-  // Allow .replit.dev domains to access localhost server in development
-  if (origin && origin.includes('replit.dev')) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, Cookie');
-    
-    console.log('🌐 CORS: Allowing origin:', origin);
-  }
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  next();
-});
+// Standard middleware setup
 
 // SUPER EARLY DEBUG - Before ANY other middleware
 app.use((req, res, next) => {
