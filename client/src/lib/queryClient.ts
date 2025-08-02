@@ -38,8 +38,9 @@ async function getCSRFToken(): Promise<string | null> {
   return null;
 }
 
-// Use relative URLs for all API calls
+// Use relative URLs for all API calls - PRODUCTION ONLY
 function getBaseUrl(): string {
+  console.log('🌐 getBaseUrl called - returning empty string for relative URLs');
   return ''; // Always use relative URLs
 }
 
@@ -99,10 +100,17 @@ export async function apiRequest(
       requestOptions.body = typeof data === 'string' ? data : JSON.stringify(data);
     }
 
-    // Apply base URL in development mode
-    const fullUrl = url.startsWith('http') ? url : `${getBaseUrl()}${url}`;
+    // Apply base URL - should always be relative now
+    const baseUrl = getBaseUrl();
+    const fullUrl = url.startsWith('http') ? url : `${baseUrl}${url}`;
     
-    console.log('🌐 About to send request (old signature):', { method, url: fullUrl, headers: requestOptions.headers });
+    console.log('🌐 About to send request (old signature):', { 
+      method, 
+      originalUrl: url,
+      baseUrl: baseUrl,
+      fullUrl: fullUrl, 
+      headers: requestOptions.headers 
+    });
     
     const response = await fetch(fullUrl, requestOptions);
     
