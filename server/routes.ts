@@ -162,6 +162,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   
   console.log('[Routes] Final session store type:', storeType);
   
+  // VERY EARLY debugging middleware to catch ALL requests before any processing
+  app.use((req, res, next) => {
+    if (req.method === 'POST' && req.url === '/api/quotes') {
+      console.log('🚀🚀🚀 VERY EARLY MIDDLEWARE - POST /api/quotes detected 🚀🚀🚀');
+      console.log('🚀 Method:', req.method);
+      console.log('🚀 URL:', req.url);
+      console.log('🚀 Headers keys:', Object.keys(req.headers));
+      console.log('🚀 This should appear for EVERY POST to /api/quotes');
+    }
+    next();
+  });
+  
   // Setup authentication after sessions
   await setupAuth(app, null);
   console.log('[Routes] ✅ Auth setup completed');

@@ -92,7 +92,27 @@ export async function apiRequest(
       requestOptions.body = typeof data === 'string' ? data : JSON.stringify(data);
     }
 
+    console.log('🌐 About to send request (old signature):', { method, url, headers: requestOptions.headers });
+    
     const response = await fetch(url, requestOptions);
+    
+    console.log('🌐 Response received (old signature):', { 
+      status: response.status, 
+      statusText: response.statusText,
+      url: response.url 
+    });
+    
+    // Log response body for debugging
+    if (url === '/api/quotes' && method === 'POST') {
+      const clonedResponse = response.clone();
+      try {
+        const responseText = await clonedResponse.text();
+        console.log('🌐 POST /api/quotes response body (old signature):', responseText);
+      } catch (e) {
+        console.log('🌐 Could not read response body (old signature):', e);
+      }
+    }
+    
     return response;
   }
 
@@ -114,7 +134,27 @@ export async function apiRequest(
     requestOptions.body = JSON.stringify(data);
   }
 
+  console.log('🌐 About to send request:', { method, url, headers: requestOptions.headers });
+  
   const response = await fetch(url, requestOptions);
+  
+  console.log('🌐 Response received:', { 
+    status: response.status, 
+    statusText: response.statusText,
+    url: response.url 
+  });
+  
+  // Log response body for debugging
+  if (url === '/api/quotes' && method === 'POST') {
+    const clonedResponse = response.clone();
+    try {
+      const responseText = await clonedResponse.text();
+      console.log('🌐 POST /api/quotes response body:', responseText);
+    } catch (e) {
+      console.log('🌐 Could not read response body:', e);
+    }
+  }
+  
   return response;
 }
 
