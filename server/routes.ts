@@ -567,9 +567,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.post("/api/quotes", 
     requireAuth, 
     async (req, res) => {
-    console.log('Creating quote for user:', req.user?.email);
-    console.log('POST request - User object:', JSON.stringify(req.user, null, 2));
-    console.log('POST request - Session passport:', req.session?.passport);
+    console.log('✅ Creating quote for authenticated user:', req.user?.email);
+    console.log('✅ User ID available:', req.user?.id);
     
     try {
       if (!req.user) {
@@ -580,21 +579,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       if (!req.user.id) {
         console.error('❌ CRITICAL: User exists but ID is missing!');
         console.error('❌ User object during POST:', JSON.stringify(req.user, null, 2));
-        console.error('❌ User properties during POST:', Object.keys(req.user || {}));
-        console.error('❌ Session during POST:', JSON.stringify(req.session?.passport, null, 2));
         
-        // Try to find the user ID in different possible locations
-        const possibleId = req.user.id || (req.user as any)._id || (req.user as any).userId || req.session?.passport?.user;
-        if (possibleId) {
-          console.log('✅ Found user ID in alternate location:', possibleId);
-          // Update the user object to include the ID
-          (req.user as any).id = possibleId;
-        } else {
-          return res.status(500).json({ 
-            message: "Cannot create quote: ownerId is required but was null/undefined",
-            error: "User ID missing from session"
-          });
-        }
+        return res.status(500).json({ 
+          message: "Cannot create quote: ownerId is required but was null/undefined",
+          error: "User ID missing from session"
+        });
       }
       
       // Extract service flags with defaults
