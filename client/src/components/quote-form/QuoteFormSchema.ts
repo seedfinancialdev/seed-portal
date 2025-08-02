@@ -32,7 +32,7 @@ export const formSchema = insertQuoteSchema.omit({
   priorYearsUnfiled: z.number().min(0, "Cannot be negative").max(5, "Maximum 5 years").optional(),
   alreadyOnSeedBookkeeping: z.boolean().optional(),
   // Bookkeeping information fields
-  accountingBasis: z.string().optional(),
+  accountingBasis: z.string().min(1, "Accounting basis is required"),
   businessLoans: z.boolean().optional(),
 }).superRefine((data, ctx) => {
   // If cleanup override is checked, require a reason
