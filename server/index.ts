@@ -193,6 +193,22 @@ app.use((req, res, next) => {
     
     const server = await registerRoutes(app, sessionRedis);
     console.log('[Server] ✅ Routes registered successfully');
+    
+    // ROUTE MAP - List all registered routes to find duplicates
+    function listRoutes(app: any) {
+      console.log('\n🗺️  ROUTE MAP ------------------------');
+      if (app._router && app._router.stack) {
+        app._router.stack
+          .filter((r: any) => r.route)                   // only routes, skip middleware
+          .forEach((r: any) => {
+            const path = r.route?.path;
+            const methods = Object.keys(r.route.methods).join(',').toUpperCase();
+            console.log(`${methods.padEnd(7)} ${path}`);
+          });
+      }
+      console.log('------------------------------------\n');
+    }
+    listRoutes(app);
 
     // The Sentry error handler must be before any other error middleware (only if initialized)
     if (sentryInitialized && Sentry.Handlers?.errorHandler) {

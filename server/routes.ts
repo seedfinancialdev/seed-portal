@@ -172,6 +172,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
     next();
   });
+
+  // CATCH-ALL ROUTE - Confirm we reach Express for POST /api/quotes
+  app.post('/api/quotes', (req, res, next) => {
+    console.log('🎯 REACHED CATCH-ALL in Express for POST /api/quotes');
+    console.log('🎯 User in catch-all:', req.user ? { id: req.user.id, email: req.user.email } : 'null');
+    next();
+  });
   
   // VERY EARLY debugging middleware to catch ALL requests before any processing
   app.use((req, res, next) => {
