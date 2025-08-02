@@ -603,8 +603,9 @@ export default function Home() {
   // Helper functions for navigation
   const getActiveServices = () => {
     const services: ('bookkeeping' | 'taas')[] = [];
-    if (feeCalculation.includesBookkeeping) services.push('bookkeeping');
-    if (feeCalculation.includesTaas) services.push('taas');
+    // Use the new service selection fields
+    if (form.watch('serviceBookkeeping')) services.push('bookkeeping');
+    if (form.watch('serviceTaas')) services.push('taas');
     return services;
   };
   
@@ -654,6 +655,12 @@ export default function Home() {
       // Service flags for combined quotes
       includesBookkeeping: true,
       includesTaas: false,
+      // New service selection flags (should match the old ones)
+      serviceBookkeeping: true,
+      serviceTaas: false,
+      servicePayroll: false,
+      serviceApArLite: false,
+      serviceFpaLite: false,
       // TaaS defaults
       numEntities: 1,
       statesFiled: 1,
@@ -2138,6 +2145,21 @@ export default function Home() {
               onClick={() => {
                 const newValue = !form.watch('serviceBookkeeping');
                 form.setValue('serviceBookkeeping', newValue);
+                form.setValue('includesBookkeeping', newValue); // Sync with fee calculation
+                
+                // Update current form view to Bookkeeping if selected and no other service is selected
+                if (newValue && !form.watch('serviceTaas')) {
+                  setCurrentFormView('bookkeeping');
+                } else if (newValue && form.watch('serviceTaas')) {
+                  // If both services are selected, stay on current view or go to bookkeeping
+                  // User can navigate using the form navigation buttons
+                } else if (!newValue && currentFormView === 'bookkeeping') {
+                  // If Bookkeeping is deselected and we're on Bookkeeping view, switch to TaaS
+                  if (form.watch('serviceTaas')) {
+                    setCurrentFormView('taas');
+                  }
+                }
+                
                 form.trigger();
               }}
             >
@@ -2173,6 +2195,21 @@ export default function Home() {
               onClick={() => {
                 const newValue = !form.watch('serviceTaas');
                 form.setValue('serviceTaas', newValue);
+                form.setValue('includesTaas', newValue); // Sync with fee calculation
+                
+                // Update current form view to TaaS if selected and no other service is selected
+                if (newValue && !form.watch('serviceBookkeeping')) {
+                  setCurrentFormView('taas');
+                } else if (newValue && form.watch('serviceBookkeeping')) {
+                  // If both services are selected, stay on current view or go to bookkeeping
+                  // User can navigate using the form navigation buttons
+                } else if (!newValue && currentFormView === 'taas') {
+                  // If TaaS is deselected and we're on TaaS view, switch to bookkeeping
+                  if (form.watch('serviceBookkeeping')) {
+                    setCurrentFormView('bookkeeping');
+                  }
+                }
+                
                 form.trigger();
               }}
             >
