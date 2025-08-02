@@ -173,12 +173,28 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       url: req.url,
       headers: req.headers['x-csrf-token'] ? 'CSRF token present' : 'No CSRF token'
     });
+    
+    // Special debugging for POST quotes
+    if (req.method === 'POST' && req.url === '/api/quotes') {
+      console.log('🚨 POST /api/quotes BEFORE CSRF - detailed debugging:');
+      console.log('🚨 CSRF token header value:', req.headers['x-csrf-token']);
+      console.log('🚨 Session ID:', req.sessionID);
+      console.log('🚨 Session exists:', !!req.session);
+      console.log('🚨 Authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'N/A');
+    }
+    
     next();
   });
   app.use(conditionalCsrf);
   app.use(provideCsrfToken); // Add token generation middleware
   app.use((req, res, next) => {
     console.log('After CSRF - Request passed CSRF check');
+    
+    // Special debugging for POST quotes
+    if (req.method === 'POST' && req.url === '/api/quotes') {
+      console.log('🎯 POST /api/quotes PASSED CSRF - proceeding to route handler');
+    }
+    
     next();
   });
   app.use(provideCsrfToken);
