@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings, Lock, Unlock, Building } from "lucide-react";
+import { Copy, Save, Check, Search, ArrowUpDown, Edit, AlertCircle, Archive, CheckCircle, XCircle, Loader2, Upload, User, LogOut, Calculator, FileText, Sparkles, DollarSign, X, Plus, ChevronLeft, ChevronRight, HelpCircle, Bell, Settings, Lock, Unlock, Building, Users, CreditCard } from "lucide-react";
 import { useLocation } from "wouter";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 
@@ -2369,37 +2369,84 @@ export default function Home() {
           {/* Quote Builder Form Card */}
           <Card className="bg-gray-50 shadow-xl border-0 quote-card lg:flex-1" style={{ flex: '1', minWidth: 0 }}>
             <CardContent className="p-6 sm:p-8">
-              {/* Pagination navigation - only show when multiple services are active */}
+              {/* Modern Tab-Style Navigation - only show when multiple services are active */}
               {getActiveServices().length > 1 && (
                 <div className="mb-6">
-                  <div className="flex items-center justify-center gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={navigateLeft}
-                      disabled={!canNavigateLeft()}
-                      className="text-gray-600 hover:text-gray-800 disabled:opacity-50"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Previous
-                    </Button>
+                  <div className="flex flex-col items-center gap-4">
+                    {/* Tab Pills */}
+                    <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-lg">
+                      {getActiveServices().map((service, index) => {
+                        const isActive = actualFormView === service;
+                        const serviceConfig = {
+                          bookkeeping: { 
+                            name: 'Bookkeeping', 
+                            icon: Calculator, 
+                            color: 'green',
+                            bgClass: isActive ? 'bg-green-500 text-white shadow-md' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
+                          },
+                          taas: { 
+                            name: 'TaaS', 
+                            icon: FileText, 
+                            color: 'blue',
+                            bgClass: isActive ? 'bg-blue-500 text-white shadow-md' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                          },
+                          payroll: { 
+                            name: 'Payroll', 
+                            icon: Users, 
+                            color: 'purple',
+                            bgClass: isActive ? 'bg-purple-500 text-white shadow-md' : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'
+                          },
+                          apArLite: { 
+                            name: 'AP/AR Lite', 
+                            icon: CreditCard, 
+                            color: 'orange',
+                            bgClass: isActive ? 'bg-orange-500 text-white shadow-md' : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'
+                          },
+                          fpaLite: { 
+                            name: 'FP&A Lite', 
+                            icon: Sparkles, 
+                            color: 'teal',
+                            bgClass: isActive ? 'bg-teal-500 text-white shadow-md' : 'text-gray-600 hover:text-teal-600 hover:bg-teal-50'
+                          }
+                        };
+                        
+                        const config = serviceConfig[service as keyof typeof serviceConfig];
+                        const IconComponent = config.icon;
+                        
+                        return (
+                          <button
+                            key={service}
+                            type="button"
+                            onClick={() => setCurrentFormView(service as any)}
+                            className={`
+                              flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium 
+                              transition-all duration-200 ease-in-out
+                              ${config.bgClass}
+                            `}
+                          >
+                            <IconComponent className="h-4 w-4" />
+                            {config.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                     
-                    <span className="text-sm text-gray-600 font-medium px-4 py-2 bg-gray-100 rounded-lg">
-                      {getActiveServices().indexOf(actualFormView) + 1} of {getActiveServices().length} Services
-                    </span>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={navigateRight}
-                      disabled={!canNavigateRight()}
-                      className="text-gray-600 hover:text-gray-800 disabled:opacity-50"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
+                    {/* Progress Dots */}
+                    <div className="flex items-center gap-2">
+                      {getActiveServices().map((service, index) => (
+                        <div
+                          key={service}
+                          className={`
+                            w-2 h-2 rounded-full transition-all duration-200
+                            ${actualFormView === service 
+                              ? 'bg-gray-800 scale-125' 
+                              : 'bg-gray-300 hover:bg-gray-400 cursor-pointer'
+                            }
+                          `}
+                          onClick={() => setCurrentFormView(service as any)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
