@@ -947,15 +947,20 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // Get the HubSpot owner ID for the user
       const ownerId = await hubSpotService.getOwnerByEmail(req.user!.email);
 
-      // Create deal in HubSpot
+      // Create deal in HubSpot - FIXED: Use serviceBookkeeping/serviceTaas for deal creation too
+      const dealIncludesBookkeeping = quote.serviceBookkeeping || quote.includesBookkeeping;
+      const dealIncludesTaas = quote.serviceTaas || quote.includesTaas;
+      
+      console.log(`🔧 Deal creation: Using includesBookkeeping=${dealIncludesBookkeeping}, includesTaas=${dealIncludesTaas}`);
+      
       const deal = await hubSpotService.createDeal(
         contact.id,
         companyName,
         parseFloat(quote.monthlyFee),
         parseFloat(quote.setupFee),
         ownerId || undefined,
-        quote.includesBookkeeping,
-        quote.includesTaas
+        dealIncludesBookkeeping,
+        dealIncludesTaas
       );
 
       if (!deal) {
@@ -968,8 +973,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       let bookkeepingMonthlyFee = parseFloat(quote.monthlyFee);
       let bookkeepingSetupFee = parseFloat(quote.setupFee);
       
-      if (quote.includesBookkeeping && quote.includesTaas) {
+      // FIXED: Use serviceBookkeeping/serviceTaas for fee calculation
+      const hasBothServices = (quote.serviceBookkeeping || quote.includesBookkeeping) && (quote.serviceTaas || quote.includesTaas);
+      
+      if (hasBothServices) {
         // Combined quote - need to separate fees
+        console.log('🔧 Combined service quote detected - separating fees');
         const pricingData = {
           ...quote,
           numEntities: quote.numEntities || 1,
@@ -987,10 +996,23 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         const fees = calculateCombinedFees(pricingData);
         bookkeepingMonthlyFee = fees.bookkeeping.monthlyFee;
         bookkeepingSetupFee = fees.bookkeeping.setupFee;
+        console.log(`🔧 Separated fees - BK Monthly: $${bookkeepingMonthlyFee}, BK Setup: $${bookkeepingSetupFee}`);
       }
       // For single service quotes, keep the saved values to preserve custom setup fees
       
-      // Create quote/note in HubSpot
+      // Create quote/note in HubSpot - FIXED: Use serviceBookkeeping/serviceTaas instead of includes* fields
+      console.log('🔧 DEBUG: Service fields for HubSpot quote creation');
+      console.log(`📊 includesBookkeeping: ${quote.includesBookkeeping}`);
+      console.log(`📊 includesTaas: ${quote.includesTaas}`);
+      console.log(`📊 serviceBookkeeping: ${quote.serviceBookkeeping}`);
+      console.log(`📊 serviceTaas: ${quote.serviceTaas}`);
+      
+      // Use the correct service fields - serviceBookkeeping/serviceTaas instead of includes*
+      const actualIncludesBookkeeping = quote.serviceBookkeeping || quote.includesBookkeeping;
+      const actualIncludesTaas = quote.serviceTaas || quote.includesTaas;
+      
+      console.log(`🔧 CORRECTED: Using actualIncludesBookkeeping=${actualIncludesBookkeeping}, actualIncludesTaas=${actualIncludesTaas}`);
+      
       const hubspotQuote = await hubSpotService.createQuote(
         deal.id,
         companyName,
@@ -999,8 +1021,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         req.user!.email,
         req.user!.firstName || '',
         req.user!.lastName || '',
-        quote.includesBookkeeping,
-        quote.includesTaas,
+        actualIncludesBookkeeping,
+        actualIncludesTaas,
         quote.taasMonthlyFee ? parseFloat(quote.taasMonthlyFee) : undefined,
         quote.taasPriorYearsFee ? parseFloat(quote.taasPriorYearsFee) : undefined,
         bookkeepingMonthlyFee,

@@ -4,12 +4,18 @@
 This project is a comprehensive Internal Employee Portal for Seed Financial, built with React, TypeScript, Express.js, and PostgreSQL. It aims to be a centralized command center, enhancing internal efficiency and client engagement. Key capabilities include a centralized dashboard, a sophisticated quote calculator (supporting 5 services: Bookkeeping, TaaS, Payroll, AP/AR Lite, FP&A Lite), a commission tracker, a client intelligence engine, and profile management. It integrates with HubSpot, provides real-time weather, address autocomplete, advanced sales analytics, and automates MSA document generation with Box integration for client folder management.
 
 ## Recent Changes (August 3, 2025)
-**CRITICAL API RESPONSE PARSING ISSUE RESOLVED**: Fixed quote creation and HubSpot integration.
-- ✅ **RESOLVED: Quote creation returning empty objects** - Fixed apiRequest JSON parsing in mutations
-- ✅ **RESOLVED: HubSpot push failing with null quote IDs** - Frontend now properly receives quote data with IDs
-- ✅ Added comprehensive debug logging throughout quote creation flow for future troubleshooting
-- ✅ Quote creation and HubSpot push workflow now fully functional
-- ✅ Example: Quote ID 118 successfully created and pushed to HubSpot (Deal: 41288732267, Quote: 22719074175)
+**CRITICAL HUBSPOT LINE ITEMS ISSUE RESOLVED**: Fixed service field mapping preventing line item creation.
+- ✅ **ROOT CAUSE IDENTIFIED**: Service field mapping mismatch between database fields (service_bookkeeping=true) and HubSpot parameters (includesBookkeeping=false)
+- ✅ **FIXED**: Updated routes.ts to use serviceBookkeeping/serviceTaas instead of includes* fields for HubSpot integration
+- ✅ **ENHANCED DIAGNOSTICS**: Added comprehensive step-by-step logging with emoji markers for line item creation process
+- ✅ **PRODUCT VERIFICATION**: Implemented HubSpot product ID verification system to detect and replace invalid product IDs
+- ✅ **ERROR HANDLING**: Line item creation failures no longer break quote creation - quotes succeed with manual line item addition option
+- ✅ **DEBUGGING ENDPOINT**: Added /api/hubspot/debug/products endpoint for real-time product ID verification
+- ✅ Example: Quote ID 120 successfully created and pushed to HubSpot (Deal: 41289977122, Quote: 22883799425) - testing line items with corrected service field mapping
+
+**PREVIOUS FIXES MAINTAINED**:
+- ✅ Quote creation returning empty objects - Fixed apiRequest JSON parsing in mutations
+- ✅ HubSpot push failing with null quote IDs - Frontend properly receives quote data with IDs
 
 **GIT AUTHENTICATION CLEANUP**: Resolved SSH authentication issues and restored Git functionality.
 - ✅ Removed SSH configuration file (~/.ssh/config) that was causing Git authentication failures
