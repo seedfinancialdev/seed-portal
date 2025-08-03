@@ -468,7 +468,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
-    console.log('POST /api/quotes - Creating new quote');
+    console.log('🟢 POST /api/quotes - HANDLER EXECUTING');
     try {
       console.log('=== QUOTE CREATION DEBUG ===');
       console.log('User:', req.user?.email, 'ID:', req.user?.id);
