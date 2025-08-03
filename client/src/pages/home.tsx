@@ -1060,10 +1060,12 @@ export default function Home() {
   // Push to HubSpot mutation
   const pushToHubSpotMutation = useMutation({
     mutationFn: async (quoteId: number) => {
+      console.log('🚀 pushToHubSpotMutation called with quoteId:', quoteId);
       const result = await apiRequest("/api/hubspot/push-quote", {
         method: "POST",
         body: JSON.stringify({ quoteId })
       });
+      console.log('🚀 HubSpot API response:', result);
       return { ...result, quoteId }; // Include the original quoteId in the response
     },
     onSuccess: (data) => {
@@ -3511,17 +3513,28 @@ export default function Home() {
                       <Button
                         type="button"
                         onClick={async () => {
+                          console.log('🔵 Push to HubSpot button clicked');
+                          console.log('🔵 editingQuoteId:', editingQuoteId);
+                          console.log('🔵 hasUnsavedChanges:', hasUnsavedChanges);
+                          console.log('🔵 allQuotes length:', allQuotes?.length);
+                          console.log('🔵 form contact email:', form.getValues().contactEmail);
+                          
                           // Check if current quote has HubSpot IDs
                           const currentQuote = editingQuoteId ? allQuotes?.find((q: Quote) => q.id === editingQuoteId) : null;
                           const hasHubSpotIds = currentQuote?.hubspotQuoteId && currentQuote?.hubspotDealId;
                           
+                          console.log('🔵 currentQuote:', currentQuote);
+                          console.log('🔵 hasHubSpotIds:', hasHubSpotIds);
+                          
                           if (!editingQuoteId && hasUnsavedChanges) {
+                            console.log('🟡 PATH: Auto-save then push to HubSpot');
                             // Auto-save the quote first, then push to HubSpot
                             const formData = form.getValues();
                             try {
                               await new Promise((resolve, reject) => {
                                 createQuoteMutation.mutate(formData, {
                                   onSuccess: (savedQuote) => {
+                                    console.log('🟢 Quote saved, now pushing to HubSpot with ID:', savedQuote.id);
                                     // Now push to HubSpot
                                     pushToHubSpotMutation.mutate(savedQuote.id);
                                     resolve(savedQuote);
@@ -3580,14 +3593,19 @@ export default function Home() {
                               pushToHubSpotMutation.mutate(editingQuoteId);
                             }
                           } else {
+                            console.log('🟡 PATH: Find most recent quote and push');
                             // Find the most recent quote for this contact and push it
                             const mostRecentQuote = allQuotes?.find((q: Quote) => 
                               q.contactEmail === form.getValues().contactEmail
                             );
                             
+                            console.log('🔵 mostRecentQuote found:', mostRecentQuote);
+                            
                             if (mostRecentQuote && mostRecentQuote.id) {
+                              console.log('🟢 Pushing quote to HubSpot with ID:', mostRecentQuote.id);
                               pushToHubSpotMutation.mutate(mostRecentQuote.id);
                             } else {
+                              console.log('🔴 No recent quote found, showing error');
                               toast({
                                 title: "Error",
                                 description: "Please save the quote first before pushing to HubSpot.",
