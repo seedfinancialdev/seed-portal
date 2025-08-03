@@ -469,6 +469,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Create a new quote (protected)
   app.post("/api/quotes", requireAuth, async (req, res) => {
     try {
+      console.log('=== QUOTE CREATION DEBUG ===');
+      console.log('User:', req.user?.email, 'ID:', req.user?.id);
+      
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
@@ -493,16 +496,28 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         cleanupMonths: req.body.cleanupMonths || 0,
       };
       
+      console.log('Processing quote data for:', req.body.contactEmail);
+      console.log('Request data (first 500 chars):', JSON.stringify(requestDataWithFees).substring(0, 500));
+      
       const quoteData = insertQuoteSchema.parse(requestDataWithFees);
+      console.log('Quote data validated successfully');
+      
       const quote = await storage.createQuote(quoteData);
+      console.log('Quote created from storage:', quote ? 'Has data' : 'No data');
+      console.log('Quote ID:', quote?.id);
+      console.log('Quote keys:', quote ? Object.keys(quote) : 'No keys');
       
       // Note: Slack notifications now only sent during approval request, not quote creation
       
+      console.log('Sending response with quote:', quote ? 'Has quote data' : 'Empty quote');
       res.json(quote);
     } catch (error) {
+      console.error('Quote creation error:', error);
       if (error instanceof z.ZodError) {
+        console.error('Validation errors:', error.errors);
         res.status(400).json({ message: "Invalid quote data", errors: error.errors });
       } else {
+        console.error('Database or other error:', error.message);
         res.status(500).json({ message: "Failed to create quote" });
       }
     }

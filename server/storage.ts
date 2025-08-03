@@ -289,10 +289,22 @@ export class DatabaseStorage implements IStorage {
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
     return await safeDbQuery(async () => {
+      console.log('Storage.createQuote - Inserting quote for:', insertQuote.contactEmail);
+      console.log('Storage.createQuote - Insert data keys:', Object.keys(insertQuote));
+      
       const [quote] = await db
         .insert(quotes)
         .values(insertQuote)
         .returning();
+      
+      console.log('Storage.createQuote - Insert result:', quote ? 'Success' : 'Failed');
+      console.log('Storage.createQuote - Quote ID:', quote?.id);
+      console.log('Storage.createQuote - Quote contact:', quote?.contactEmail);
+      
+      if (!quote) {
+        throw new Error('Database insert returned no quote');
+      }
+      
       return quote;
     }, 'createQuote');
   }
