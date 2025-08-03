@@ -69,6 +69,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   await setupAuth(app, null);
   console.log('[Routes] ✅ Auth setup completed');
 
+  // CATCH ALL REQUESTS - ULTRA DEBUG
+  app.use((req, res, next) => {
+    if (req.method === 'POST' && req.url.includes('quotes')) {
+      console.log('🔥🔥🔥 ULTRA DEBUG - POST TO QUOTES DETECTED! 🔥🔥🔥');
+      console.log('Method:', req.method);
+      console.log('URL:', req.url);
+      console.log('Original URL:', req.originalUrl);
+      console.log('Path:', req.path);
+    }
+    next();
+  });
+
   // Apply CSRF protection after sessions are initialized
   app.use((req, res, next) => {
     console.log('Before CSRF - Request:', {
