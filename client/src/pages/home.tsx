@@ -1148,6 +1148,14 @@ export default function Home() {
   const monthlyFee = feeCalculation.combined.monthlyFee;
   const setupFee = feeCalculation.combined.setupFee;
   
+  // Debug logging for fee calculation
+  console.log('=== FEE CALCULATION DEBUG ===');
+  console.log('watchedValues:', watchedValues);
+  console.log('feeCalculation:', feeCalculation);
+  console.log('monthlyFee:', monthlyFee);
+  console.log('isCalculated:', monthlyFee > 0);
+  console.log('hubspotVerificationStatus:', hubspotVerificationStatus);
+  
   const isCalculated = monthlyFee > 0;
 
   // Helper functions for navigation (defined after feeCalculation)
