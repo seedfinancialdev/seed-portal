@@ -193,7 +193,7 @@ export class HubSpotService {
         return retryResponse.json();
       }
       
-      console.error(`HubSpot API error details:`, {
+      console.error(`HubSpot API error details:`, JSON.stringify({
         status: response.status,
         statusText: response.statusText,
         endpoint,
