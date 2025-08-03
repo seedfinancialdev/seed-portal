@@ -1057,7 +1057,7 @@ export default function Home() {
       form.setValue('entityType', contact.properties.entity_type);
     }
     
-    // Address fields - lock if any address data is present
+    // Address fields - only lock if there's actual address data from HubSpot
     const hasAddressData = contact.properties.address || contact.properties.city || contact.properties.state || contact.properties.zip;
     if (hasAddressData) {
       form.setValue('clientStreetAddress', contact.properties.address || '');
@@ -1065,6 +1065,9 @@ export default function Home() {
       form.setValue('clientState', contact.properties.state || '');
       form.setValue('clientZipCode', contact.properties.zip || '');
       form.setValue('companyAddressLocked', true);
+    } else {
+      // If no address data from HubSpot, ensure address is unlocked
+      form.setValue('companyAddressLocked', false);
     }
 
     console.log('Setting showClientDetails to true');
@@ -1340,7 +1343,7 @@ export default function Home() {
       contactLastName: "",
       contactLastNameLocked: true,
       industryLocked: true,
-      companyAddressLocked: true,
+      companyAddressLocked: false,
       monthlyRevenueRange: "",
       quoteType: "bookkeeping",
       // Service flags for combined quotes

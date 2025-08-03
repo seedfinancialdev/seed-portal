@@ -325,6 +325,10 @@ export class HubSpotService {
         ],
         properties: [
           'email', 'firstname', 'lastname', 'company', 
+          // Address fields
+          'address', 'city', 'state', 'zip', 'country',
+          // Industry and business details
+          'hs_industry_group', 'industry', 'monthly_revenue_range', 'entity_type',
           // All possible phone field variations
           'phone', 'mobilephone', 'hs_phone', 'phone_number', 
           'work_phone', 'mobile_phone', 'home_phone', 'fax', 
