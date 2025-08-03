@@ -33,14 +33,17 @@ export class GoogleAdminService {
 
   private async initialize() {
     try {      
-      console.log('Initializing Google Admin API...');
+      console.log('🔧 Initializing Google Admin API...');
       
       // Try service account first (preferred for production)
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-        console.log('Attempting service account authentication...');
+        console.log('🔑 Attempting service account authentication...');
         try {
+          console.log('📋 Parsing service account JSON...');
           const serviceAccountKey = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-          console.log('Service account parsed successfully, client_email:', serviceAccountKey.client_email);
+          console.log('✅ Service account parsed successfully');
+          console.log('📧 Client email:', serviceAccountKey.client_email);
+          console.log('🏢 Project ID:', serviceAccountKey.project_id);
           
           const { GoogleAuth } = await import('google-auth-library');
           const auth = new GoogleAuth({
