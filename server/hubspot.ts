@@ -79,6 +79,49 @@ export class HubSpotService {
     }
   }
 
+  // Find "Seed Sales Pipeline" and get "Qualified" stage ID
+  async getSeedSalesPipelineStage(): Promise<{ pipelineId: string; qualifiedStageId: string } | null> {
+    try {
+      const pipelines = await this.getPipelines();
+      if (!pipelines?.results) {
+        console.error('No pipelines found');
+        return null;
+      }
+
+      // Find "Seed Sales Pipeline" (case-insensitive search)
+      const seedPipeline = pipelines.results.find((p: any) => 
+        p.label?.toLowerCase().includes('seed sales') || 
+        p.label?.toLowerCase() === 'seed sales pipeline'
+      );
+
+      if (!seedPipeline) {
+        console.error('Seed Sales Pipeline not found. Available pipelines:', 
+          pipelines.results.map((p: any) => p.label));
+        return null;
+      }
+
+      // Find "Qualified" stage (case-insensitive search)
+      const qualifiedStage = seedPipeline.stages?.find((stage: any) => 
+        stage.label?.toLowerCase().includes('qualified')
+      );
+
+      if (!qualifiedStage) {
+        console.error('Qualified stage not found in Seed Sales Pipeline. Available stages:', 
+          seedPipeline.stages?.map((s: any) => s.label));
+        return null;
+      }
+
+      console.log(`Found Seed Sales Pipeline: ${seedPipeline.id}, Qualified Stage: ${qualifiedStage.id}`);
+      return {
+        pipelineId: seedPipeline.id,
+        qualifiedStageId: qualifiedStage.id
+      };
+    } catch (error) {
+      console.error('Error finding pipeline/stage:', error);
+      return null;
+    }
+  }
+
   async getOwnerByEmail(email: string): Promise<string | null> {
     try {
       // Use cache for owner lookups
@@ -413,13 +456,19 @@ export class HubSpotService {
       const dealName = `${companyName} - ${serviceName}`;
       const totalAmount = (monthlyFee * 12 + setupFee).toString();
 
-      // First, let's get the correct pipeline and stage IDs
+      // Get the correct pipeline and stage IDs dynamically
+      const pipelineInfo = await this.getSeedSalesPipelineStage();
+      if (!pipelineInfo) {
+        console.error('Could not find Seed Sales Pipeline or Qualified stage');
+        return null;
+      }
+
       const dealBody = {
         properties: {
           dealname: dealName,
-          dealstage: '1108547151', // Qualified stage ID in Seed Sales Pipeline
+          dealstage: pipelineInfo.qualifiedStageId,
           amount: totalAmount,
-          pipeline: '761069086', // Seed Sales Pipeline ID
+          pipeline: pipelineInfo.pipelineId,
           dealtype: 'newbusiness', // Deal Type: New Business
           ...(ownerId && { hubspot_owner_id: ownerId }), // Set deal owner
         },
