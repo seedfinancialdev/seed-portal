@@ -487,7 +487,14 @@ export class HubSpotService {
         body: JSON.stringify(dealBody)
       });
       
-      console.log('Deal created successfully:', result.id);
+      console.log('Raw HubSpot API response:', JSON.stringify(result, null, 2));
+      
+      if (!result || !result.id) {
+        console.error('Deal creation failed - no ID returned. Full response:', result);
+        throw new Error(`Deal creation failed: No ID returned from HubSpot. Response: ${JSON.stringify(result)}`);
+      }
+      
+      console.log('Deal created successfully with ID:', result.id);
       
       return {
         id: result.id,

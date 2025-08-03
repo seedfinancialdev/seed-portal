@@ -675,7 +675,7 @@ export default function Home() {
       
       // Use combined calculation system
       const feeCalculation = calculateCombinedFees(data);
-      console.log('Calculated combined fees:', feeCalculation);
+
       
       const quoteData = {
         ...data,
@@ -1054,9 +1054,7 @@ export default function Home() {
     setHubspotVerificationStatus('verified');
     setHubspotContact(contact);
 
-    console.log('Setting showClientDetails to true');
     setShowClientDetails(true);
-    console.log('proceedToClientDetails completed');
   };
 
   // Push to HubSpot mutation
