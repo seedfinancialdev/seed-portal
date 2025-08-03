@@ -2369,26 +2369,37 @@ export default function Home() {
           {/* Quote Builder Form Card */}
           <Card className="bg-gray-50 shadow-xl border-0 quote-card lg:flex-1" style={{ flex: '1', minWidth: 0 }}>
             <CardContent className="p-6 sm:p-8">
-              {/* Modern Navigation Toggle - Only show if multiple services are active */}
+              {/* Pagination navigation - only show when multiple services are active */}
               {getActiveServices().length > 1 && (
                 <div className="mb-6">
-                  <div className="flex items-center justify-center">
-                    <div className="bg-gray-100 rounded-lg p-1 flex items-center gap-1">
-                      {getActiveServices().map((service) => (
-                        <button
-                          key={service}
-                          type="button"
-                          onClick={() => setCurrentFormView(service)}
-                          className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                            currentFormView === service
-                              ? 'bg-white shadow-sm text-[#e24c00] border border-gray-200'
-                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                          }`}
-                        >
-                          {service === 'bookkeeping' ? 'Bookkeeping' : 'Tax Service'}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={navigateLeft}
+                      disabled={!canNavigateLeft()}
+                      className="text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
+                    </Button>
+                    
+                    <span className="text-sm text-gray-600 font-medium px-4 py-2 bg-gray-100 rounded-lg">
+                      {getActiveServices().indexOf(actualFormView) + 1} of {getActiveServices().length} Services
+                    </span>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={navigateRight}
+                      disabled={!canNavigateRight()}
+                      className="text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
                   </div>
                 </div>
               )}
@@ -2415,32 +2426,12 @@ export default function Home() {
                   </div>
                 </div>
                 
-                {/* Navigation arrows - only show when multiple services are active */}
-                {getActiveServices().length > 1 && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={navigateLeft}
-                      disabled={!canNavigateLeft()}
-                      className="text-gray-600 hover:text-gray-800"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="text-sm text-gray-500 mx-2">
-                      {getActiveServices().indexOf(actualFormView) + 1} of {getActiveServices().length}
+                {/* Service info badge - show current service when active */}
+                {actualFormView !== 'placeholder' && (
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-600 font-medium px-3 py-1 bg-gray-100 rounded-full">
+                      {actualFormView === 'bookkeeping' ? 'Bookkeeping Service' : 'Tax Service'}
                     </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={navigateRight}
-                      disabled={!canNavigateRight()}
-                      className="text-gray-600 hover:text-gray-800"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
                   </div>
                 )}
               </div>
@@ -3179,16 +3170,7 @@ export default function Home() {
                     </div>
                   )}
                   
-                  {/* Form Submit Button Section */}
-                  <div className="flex justify-end pt-6">
-                    <Button
-                      type="submit"
-                      className="bg-[#e24c00] hover:bg-[#d43700] text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
-                      disabled={createQuoteMutation.isPending}
-                    >
-                      {createQuoteMutation.isPending ? "Generating Quote..." : "Generate Quote"}
-                    </Button>
-                  </div>
+                  {/* Note: Quotes are generated automatically when required fields are completed */}
                 </form>
               </Form>
             </CardContent>
