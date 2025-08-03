@@ -22,6 +22,8 @@ export function conditionalCsrf(req: Request, res: Response, next: NextFunction)
     '/api/health', // Health check
     '/api/auth/login', // Login endpoint needs to work without CSRF
     '/api/auth/logout', // Logout is safe without CSRF
+    '/api/hubspot/push-quote', // Protected by requireAuth middleware
+    '/api/hubspot/update-quote', // Protected by requireAuth middleware
   ];
 
   // Skip CSRF for preflight requests
