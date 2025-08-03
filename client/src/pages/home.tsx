@@ -3532,8 +3532,8 @@ export default function Home() {
                             } catch (error) {
                               console.error('Failed to save quote before pushing to HubSpot:', error);
                             }
-                          } else if (editingQuoteId || hasHubSpotIds) {
-                            // Update existing quote - auto-save first, then update HubSpot
+                          } else if (hasHubSpotIds) {
+                            // Update existing quote in HubSpot
                             const quoteId = editingQuoteId || currentQuote?.id;
                             if (quoteId && hasUnsavedChanges) {
                               // Auto-save the form changes first (editingQuoteId is already set)
@@ -3556,13 +3556,44 @@ export default function Home() {
                               // No unsaved changes, just update HubSpot
                               updateHubSpotMutation.mutate(quoteId);
                             }
+                          } else if (editingQuoteId) {
+                            // Editing a quote that hasn't been pushed to HubSpot yet
+                            if (hasUnsavedChanges) {
+                              // Auto-save first, then push to HubSpot
+                              const formData = form.getValues();
+                              try {
+                                await new Promise((resolve, reject) => {
+                                  createQuoteMutation.mutate(formData, {
+                                    onSuccess: (savedQuote) => {
+                                      // Now push to HubSpot
+                                      pushToHubSpotMutation.mutate(editingQuoteId);
+                                      resolve(savedQuote);
+                                    },
+                                    onError: reject
+                                  });
+                                });
+                              } catch (error) {
+                                console.error('Failed to save quote before pushing to HubSpot:', error);
+                              }
+                            } else {
+                              // No unsaved changes, just push to HubSpot
+                              pushToHubSpotMutation.mutate(editingQuoteId);
+                            }
                           } else {
-                            // This should not happen in normal flow, but handle as fallback
-                            toast({
-                              title: "Error",
-                              description: "Please save the quote first before pushing to HubSpot.",
-                              variant: "destructive",
-                            });
+                            // Find the most recent quote for this contact and push it
+                            const mostRecentQuote = allQuotes?.find((q: Quote) => 
+                              q.contactEmail === form.getValues().contactEmail
+                            );
+                            
+                            if (mostRecentQuote && mostRecentQuote.id) {
+                              pushToHubSpotMutation.mutate(mostRecentQuote.id);
+                            } else {
+                              toast({
+                                title: "Error",
+                                description: "Please save the quote first before pushing to HubSpot.",
+                                variant: "destructive",
+                              });
+                            }
                           }
                         }}
                         disabled={
