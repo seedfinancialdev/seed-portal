@@ -325,15 +325,14 @@ export class HubSpotService {
         ],
         properties: [
           'email', 'firstname', 'lastname', 'company', 
-          // Address fields
+          // Contact address fields
           'address', 'city', 'state', 'zip', 'country',
-          // Industry and business details
-          'hs_industry_group', 'industry', 'monthly_revenue_range', 'entity_type',
           // All possible phone field variations
           'phone', 'mobilephone', 'hs_phone', 'phone_number', 
           'work_phone', 'mobile_phone', 'home_phone', 'fax', 
           'secondary_phone', 'phone_ext', 'phonenumber'
-        ]
+        ],
+        associations: ['companies']
       };
 
       const result = await this.makeRequest('/crm/v3/objects/contacts/search', {
@@ -343,6 +342,27 @@ export class HubSpotService {
       
       if (result.results && result.results.length > 0) {
         const contact = result.results[0];
+        
+        // Get associated company data if available
+        let companyData = {};
+        if (contact.associations?.companies?.results?.length > 0) {
+          const companyId = contact.associations.companies.results[0].id;
+          try {
+            const companyResult = await this.makeRequest(`/crm/v3/objects/companies/${companyId}?properties=industry,annualrevenue,numberofemployees,hs_industry_group,monthly_revenue_range,entity_type`);
+            if (companyResult) {
+              companyData = {
+                industry: companyResult.properties?.industry || companyResult.properties?.hs_industry_group || '',
+                monthly_revenue_range: companyResult.properties?.monthly_revenue_range || '',
+                entity_type: companyResult.properties?.entity_type || '',
+                annualrevenue: companyResult.properties?.annualrevenue || '',
+                numberofemployees: companyResult.properties?.numberofemployees || ''
+              };
+            }
+          } catch (companyError) {
+            console.log('Could not fetch company data:', companyError);
+          }
+        }
+        
         return {
           verified: true,
           contact: {
@@ -352,12 +372,21 @@ export class HubSpotService {
               firstname: contact.properties?.firstname || '',
               lastname: contact.properties?.lastname || '',
               company: contact.properties?.company || '',
+              // Contact address fields
+              address: contact.properties?.address || '',
+              city: contact.properties?.city || '',
+              state: contact.properties?.state || '',
+              zip: contact.properties?.zip || '',
+              country: contact.properties?.country || '',
+              // Phone fields
               phone: contact.properties?.phone || '',
               mobilephone: contact.properties?.mobilephone || '',
               hs_phone: contact.properties?.hs_phone || '',
               phone_number: contact.properties?.phone_number || '',
               work_phone: contact.properties?.work_phone || '',
-              mobile_phone: contact.properties?.mobile_phone || ''
+              mobile_phone: contact.properties?.mobile_phone || '',
+              // Company properties (from associated company)
+              ...companyData
             }
           }
         };

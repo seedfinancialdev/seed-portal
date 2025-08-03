@@ -1040,19 +1040,19 @@ export default function Home() {
       form.setValue('contactLastNameLocked', true);
     }
     
-    // Map HubSpot industry_group to our industry field
-    if (contact.properties.hs_industry_group || contact.properties.industry) {
-      const industryValue = contact.properties.hs_industry_group || contact.properties.industry;
-      form.setValue('industry', industryValue);
+    // Map HubSpot company properties (industry, monthly revenue range, entity type)
+    // These come from the associated company, not the contact
+    if (contact.properties.industry) {
+      form.setValue('industry', contact.properties.industry);
       form.setValue('industryLocked', true);
     }
     
-    // Map HubSpot monthly_revenue_range
+    // Map HubSpot monthly_revenue_range (company property)
     if (contact.properties.monthly_revenue_range) {
       form.setValue('monthlyRevenueRange', contact.properties.monthly_revenue_range);
     }
     
-    // Map HubSpot entity_type
+    // Map HubSpot entity_type (company property)
     if (contact.properties.entity_type) {
       form.setValue('entityType', contact.properties.entity_type);
     }
