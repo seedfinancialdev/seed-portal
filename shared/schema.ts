@@ -77,6 +77,7 @@ export const quotes = pgTable("quotes", {
 
 export const insertQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
+  ownerId: true, // Added server-side from authenticated user
   createdAt: true,
   updatedAt: true,
 });
