@@ -148,11 +148,23 @@ export class GoogleAdminService {
       }
 
       console.log('📞 Making test API call to Google Admin...');
+      console.log('📋 Request parameters:', {
+        customer: 'my_customer',
+        domain: 'seedfinancial.io',
+        maxResults: 1
+      });
+      
       // Try to list users to test connection (simpler than domains)
       const response = await this.admin.users.list({
         customer: 'my_customer',
         domain: 'seedfinancial.io',
         maxResults: 1
+      });
+      
+      console.log('📊 Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        dataExists: !!response.data
       });
       
       console.log('✅ Test API call successful, status:', response.status);
