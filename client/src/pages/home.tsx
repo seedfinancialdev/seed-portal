@@ -9,6 +9,15 @@ import { useLocation } from "wouter";
 import { insertQuoteSchema, type Quote } from "@shared/schema";
 
 import { apiRequest, queryClient } from "@/lib/queryClient";
+
+// Import the error handling function
+async function throwIfResNotOk(res: Response) {
+  if (!res.ok) {
+    const text = (await res.text()) || res.statusText;
+    console.error('[ApiRequest] ❌ HTTP Error:', res.status, text);
+    throw new Error(`${res.status}: ${text}`);
+  }
+}
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -712,15 +721,19 @@ export default function Home() {
       console.log('Final quote data:', quoteData);
       
       if (editingQuoteId) {
-        return await apiRequest(`/api/quotes/${editingQuoteId}`, {
+        const response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
           method: "PUT",
           body: JSON.stringify(quoteData)
         });
+        await throwIfResNotOk(response);
+        return await response.json();
       } else {
-        return await apiRequest("/api/quotes", {
+        const response = await apiRequest("/api/quotes", {
           method: "POST",
           body: JSON.stringify(quoteData)
         });
+        await throwIfResNotOk(response);
+        return await response.json();
       }
     },
     onSuccess: (data) => {
@@ -1061,10 +1074,12 @@ export default function Home() {
   const pushToHubSpotMutation = useMutation({
     mutationFn: async (quoteId: number) => {
       console.log('🚀 pushToHubSpotMutation called with quoteId:', quoteId);
-      const result = await apiRequest("/api/hubspot/push-quote", {
+      const response = await apiRequest("/api/hubspot/push-quote", {
         method: "POST",
         body: JSON.stringify({ quoteId })
       });
+      await throwIfResNotOk(response);
+      const result = await response.json();
       console.log('🚀 HubSpot API response:', result);
       return { ...result, quoteId }; // Include the original quoteId in the response
     },
@@ -1104,14 +1119,15 @@ export default function Home() {
         taasPriorYearsFee: feeCalculation.taas.setupFee.toString()
       };
       
-      const result = await apiRequest("/api/hubspot/update-quote", {
+      const response = await apiRequest("/api/hubspot/update-quote", {
         method: "POST",
         body: JSON.stringify({
           quoteId, 
           currentFormData: enhancedFormData 
         })
       });
-      return result;
+      await throwIfResNotOk(response);
+      return await response.json();
     },
     onSuccess: (data) => {
       if (data.success) {
