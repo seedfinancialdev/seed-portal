@@ -40,6 +40,7 @@ export class GoogleAdminService {
         console.log('Attempting service account authentication...');
         try {
           const serviceAccountKey = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+          console.log('Service account parsed successfully, client_email:', serviceAccountKey.client_email);
           
           const { GoogleAuth } = await import('google-auth-library');
           const auth = new GoogleAuth({
@@ -53,14 +54,25 @@ export class GoogleAdminService {
             subject: 'jon@seedfinancial.io' // Admin user to impersonate
           });
           
+          // Test the service account credentials
+          console.log('Testing service account credentials...');
+          const authClient = await auth.getClient();
+          await authClient.getAccessToken(); // This will fail if domain-wide delegation isn't set up
+          
           this.admin = google.admin({ version: 'directory_v1', auth });
           this.initialized = true;
           
           console.log('✅ Google Admin API initialized with service account (domain-wide delegation)');
           return;
         } catch (serviceError) {
-          console.log('Service account auth failed, falling back to user credentials:', serviceError.message);
+          console.error('❌ Service account authentication failed:', serviceError.message);
+          if (serviceError.message?.includes('domain-wide delegation')) {
+            console.log('💡 Hint: Ensure domain-wide delegation is enabled in Google Workspace Admin Console');
+          }
+          console.log('⚠️ Falling back to user credentials...');
         }
+      } else {
+        console.log('No GOOGLE_SERVICE_ACCOUNT_JSON found, using user credentials...');
       }
       
       // Fallback to user credentials (current approach)
