@@ -2407,7 +2407,11 @@ export default function Home() {
               {/* Form Header */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#e24c00] to-[#ff6b35] rounded-lg">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-lg ${
+                    actualFormView === 'bookkeeping' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
+                    actualFormView === 'taas' ? 'bg-gradient-to-r from-blue-500 to-indigo-600' :
+                    'bg-gradient-to-r from-[#e24c00] to-[#ff6b35]'
+                  }`}>
                     {actualFormView === 'bookkeeping' ? <Calculator className="h-5 w-5 text-white" /> : 
                      actualFormView === 'taas' ? <FileText className="h-5 w-5 text-white" /> :
                      <HelpCircle className="h-5 w-5 text-white" />}
