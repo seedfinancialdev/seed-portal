@@ -501,8 +501,10 @@ function calculateTaaSFees(data: Partial<FormData>, existingBookkeepingFees?: { 
 
 // Combined calculation function for quotes that include both services
 function calculateCombinedFees(data: Partial<FormData>) {
-  const includesBookkeeping = data.includesBookkeeping !== false; // Default to true
-  const includesTaas = data.includesTaas === true;
+  // Use the new service selection fields (serviceBookkeeping, serviceTaas)
+  // Also check legacy fields for backward compatibility
+  const includesBookkeeping = data.serviceBookkeeping || data.includesBookkeeping !== false; // Default to true for legacy
+  const includesTaas = data.serviceTaas || data.includesTaas === true;
   
   let bookkeepingFees: any = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
   let taasFees: any = { monthlyFee: 0, setupFee: 0, breakdown: undefined };
@@ -651,7 +653,13 @@ export default function Home() {
       customSetupFee: "",
       companyName: "",
       quoteType: "bookkeeping",
-      // Service flags for combined quotes
+      // New 5-service system
+      serviceBookkeeping: false,
+      serviceTaas: false,
+      servicePayroll: false,
+      serviceApArLite: false,
+      serviceFpaLite: false,
+      // Service flags for combined quotes (legacy)
       includesBookkeeping: true,
       includesTaas: false,
       // TaaS defaults
