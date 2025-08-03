@@ -1217,17 +1217,24 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       console.log(`Calculated individual service fees - Bookkeeping Monthly: $${updateBookkeepingMonthlyFee}, Bookkeeping Setup: $${updateBookkeepingSetupFee}, TaaS Monthly: $${updateTaasMonthlyFee}, TaaS Setup: $${updateTaasPriorYearsFee}`);
 
-      // Update quote in HubSpot with current service configuration
-      const currentIncludesBookkeeping = currentFormData?.includesBookkeeping !== false;
-      const currentIncludesTaas = currentFormData?.includesTaas === true;
+      // 🔧 FIXED: Use correct service field mapping for HubSpot integration
+      // Use serviceBookkeeping/serviceTaas from form data instead of includes* fields
+      const currentServiceBookkeeping = currentFormData?.serviceBookkeeping === true;
+      const currentServiceTaas = currentFormData?.serviceTaas === true;
+      
+      console.log(`🔵 UPDATE QUOTE - Service field mapping:`);
+      console.log(`   Database serviceBookkeeping: ${currentFormData?.serviceBookkeeping}`);
+      console.log(`   Database serviceTaas: ${currentFormData?.serviceTaas}`);
+      console.log(`   Mapped to HubSpot includesBookkeeping: ${currentServiceBookkeeping}`);
+      console.log(`   Mapped to HubSpot includesTaas: ${currentServiceTaas}`);
       
       const success = await hubSpotService.updateQuote(
         quote.hubspotQuoteId,
         companyName,
         monthlyFee,
         setupFee,
-        currentIncludesBookkeeping,
-        currentIncludesTaas,
+        currentServiceBookkeeping, // ✅ Fixed: Use serviceBookkeeping instead of includesBookkeeping
+        currentServiceTaas, // ✅ Fixed: Use serviceTaas instead of includesTaas
         updateTaasMonthlyFee,
         updateTaasPriorYearsFee,
         updateBookkeepingMonthlyFee,

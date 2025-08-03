@@ -1607,15 +1607,28 @@ Generated: ${new Date().toLocaleDateString()}`;
 
   async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number, dealId?: string): Promise<boolean> {
     try {
+      console.log(`🔵 UPDATE QUOTE START - Quote ID: ${quoteId}`);
+      console.log(`🔵 Service Configuration:`);
+      console.log(`   includesBookkeeping: ${includesBookkeeping}`);
+      console.log(`   includesTaas: ${includesTaas}`);
+      console.log(`   monthlyFee: $${monthlyFee}`);
+      console.log(`   setupFee: $${setupFee}`);
+      console.log(`   taasMonthlyFee: $${taasMonthlyFee || 0}`);
+      console.log(`   taasPriorYearsFee: $${taasPriorYearsFee || 0}`);
+      console.log(`   bookkeepingMonthlyFee: $${bookkeepingMonthlyFee || 0}`);
+      console.log(`   bookkeepingSetupFee: $${bookkeepingSetupFee || 0}`);
+      
       // First check if the quote still exists and is in a valid state
       const quoteCheck = await this.makeRequest(`/crm/v3/objects/quotes/${quoteId}`, {
         method: 'GET'
       });
 
       if (!quoteCheck || quoteCheck.properties?.hs_status === 'EXPIRED') {
-        console.log(`Quote ${quoteId} is expired or not found`);
+        console.log(`❌ Quote ${quoteId} is expired or not found`);
         return false;
       }
+      
+      console.log(`✅ Quote ${quoteId} is valid and active`);
 
       // Update the quote title with correct service combination
       let serviceType = 'Services';
@@ -1744,6 +1757,14 @@ Generated: ${new Date().toLocaleDateString()}`;
       console.log('Refreshed line items:', refreshedLineItems.map(item => `${item.properties.name} ($${item.properties.price})`));
 
       // Handle service-specific line items based on quote configuration
+      console.log(`🔵 CALLING manageServiceLineItems with:`);
+      console.log(`   includesBookkeeping: ${includesBookkeeping ?? false}`);
+      console.log(`   includesTaas: ${includesTaas ?? false}`);
+      console.log(`   taasMonthlyFee: $${taasMonthlyFee || 0}`);
+      console.log(`   taasPriorYearsFee: $${taasPriorYearsFee || 0}`);
+      console.log(`   bookkeepingMonthlyFee: $${bookkeepingMonthlyFee || 0}`);
+      console.log(`   bookkeepingSetupFee: $${bookkeepingSetupFee || 0}`);
+      
       await this.manageServiceLineItems(quoteId, refreshedLineItems, {
         includesBookkeeping: includesBookkeeping ?? false,
         includesTaas: includesTaas ?? false,
@@ -1800,7 +1821,12 @@ Generated: ${new Date().toLocaleDateString()}`;
         console.log(`Successfully updated deal ${actualDealId} amount to $${totalAmount} and name to "${dealName}"`);
       }
 
-      console.log(`Quote ${quoteId}, line items, and deal amount updated successfully`);
+      console.log(`🟢 UPDATE QUOTE SUCCESS - Quote ID: ${quoteId}`);
+      console.log(`🟢 Summary:`);
+      console.log(`   ✅ Quote title updated`);
+      console.log(`   ✅ Line items managed (added/updated/removed as needed)`);
+      console.log(`   ✅ Deal amount and name updated`);
+      console.log(`   ✅ Service configuration: Bookkeeping=${includesBookkeeping}, TaaS=${includesTaas}`);
       return true;
     } catch (error: any) {
       console.error('Error updating quote in HubSpot:', error);
@@ -1824,13 +1850,22 @@ Generated: ${new Date().toLocaleDateString()}`;
     bookkeepingSetupFee: number;
   }): Promise<void> {
     try {
-      console.log(`Managing line items for quote ${quoteId} - Bookkeeping: ${serviceConfig.includesBookkeeping}, TaaS: ${serviceConfig.includesTaas}`);
+      console.log(`🔵 MANAGE SERVICE LINE ITEMS START - Quote ID: ${quoteId}`);
+      console.log(`🔵 Service Configuration Analysis:`);
+      console.log(`   includesBookkeeping: ${serviceConfig.includesBookkeeping}`);
+      console.log(`   includesTaas: ${serviceConfig.includesTaas}`);
+      console.log(`   bookkeepingMonthlyFee: $${serviceConfig.bookkeepingMonthlyFee}`);
+      console.log(`   bookkeepingSetupFee: $${serviceConfig.bookkeepingSetupFee}`);
+      console.log(`   taasMonthlyFee: $${serviceConfig.taasMonthlyFee}`);
+      console.log(`   taasPriorYearsFee: $${serviceConfig.taasPriorYearsFee}`);
+      console.log(`🔵 Current existing line items: ${existingLineItems.length}`);
       
       // Define what line items should exist based on current service configuration
       const requiredLineItems = new Map<string, any>();
       
       // Add bookkeeping line items if service is included
       if (serviceConfig.includesBookkeeping) {
+        console.log(`✅ Bookkeeping service ENABLED - Adding required line items`);
         if (serviceConfig.bookkeepingMonthlyFee > 0) {
           requiredLineItems.set('bookkeeping_monthly', {
             name: 'Monthly Bookkeeping (Custom)',
@@ -1839,6 +1874,7 @@ Generated: ${new Date().toLocaleDateString()}`;
             description: 'Seed Financial Monthly Bookkeeping (Custom)',
             identifiers: ['Monthly Bookkeeping']
           });
+          console.log(`   ✅ Added bookkeeping monthly: $${serviceConfig.bookkeepingMonthlyFee}`);
         }
         if (serviceConfig.bookkeepingSetupFee > 0) {
           requiredLineItems.set('bookkeeping_setup', {
@@ -1848,11 +1884,15 @@ Generated: ${new Date().toLocaleDateString()}`;
             description: 'Seed Financial Clean-Up / Catch-Up Project',
             identifiers: ['Clean-Up', 'Catch-Up Project']
           });
+          console.log(`   ✅ Added bookkeeping setup: $${serviceConfig.bookkeepingSetupFee}`);
         }
+      } else {
+        console.log(`❌ Bookkeeping service DISABLED - Will remove bookkeeping line items`);
       }
       
       // Add TaaS line items if service is included
       if (serviceConfig.includesTaas) {
+        console.log(`✅ TaaS service ENABLED - Adding required line items`);
         if (serviceConfig.taasMonthlyFee > 0) {
           requiredLineItems.set('taas_monthly', {
             name: 'Monthly TaaS (Custom)',
@@ -1861,6 +1901,7 @@ Generated: ${new Date().toLocaleDateString()}`;
             description: 'Seed Financial Monthly TaaS (Custom)',
             identifiers: ['Monthly TaaS', 'TaaS (Custom)']
           });
+          console.log(`   ✅ Added TaaS monthly: $${serviceConfig.taasMonthlyFee}`);
         }
         if (serviceConfig.taasPriorYearsFee > 0) {
           requiredLineItems.set('taas_setup', {
@@ -1870,8 +1911,13 @@ Generated: ${new Date().toLocaleDateString()}`;
             description: 'Seed Financial TaaS Prior Years (Custom)',
             identifiers: ['TaaS Prior Years', 'Prior Years (Custom)']
           });
+          console.log(`   ✅ Added TaaS setup: $${serviceConfig.taasPriorYearsFee}`);
         }
+      } else {
+        console.log(`❌ TaaS service DISABLED - Will remove TaaS line items`);
       }
+      
+      console.log(`🔵 Total required line items: ${requiredLineItems.size}`);
       
       // Step 1: Remove line items that shouldn't exist anymore
       const itemsToDelete = [];
@@ -1895,8 +1941,16 @@ Generated: ${new Date().toLocaleDateString()}`;
           
           if (isServiceItem) {
             itemsToDelete.push(existingItem);
-            console.log(`Marking line item ${existingItem.id} (product ${productId}, amount $${amount}) for deletion - shouldKeep: ${shouldKeep}, amount: ${amount}`);
+            console.log(`🗑️ MARKING FOR DELETION: Line item ${existingItem.id}`);
+            console.log(`   Product ID: ${productId}`);
+            console.log(`   Amount: $${amount}`);
+            console.log(`   Name: ${existingItem.properties?.name || 'Unknown'}`);
+            console.log(`   Reason: shouldKeep=${shouldKeep}, amount=${amount}`);
+          } else {
+            console.log(`⚠️ KEEPING NON-SERVICE ITEM: ${existingItem.id} (product ${productId})`);
           }
+        } else {
+          console.log(`✅ KEEPING EXISTING ITEM: ${existingItem.id} (product ${productId}, $${amount})`);
         }
       }
       

@@ -4,18 +4,29 @@
 This project is a comprehensive Internal Employee Portal for Seed Financial, built with React, TypeScript, Express.js, and PostgreSQL. It aims to be a centralized command center, enhancing internal efficiency and client engagement. Key capabilities include a centralized dashboard, a sophisticated quote calculator (supporting 5 services: Bookkeeping, TaaS, Payroll, AP/AR Lite, FP&A Lite), a commission tracker, a client intelligence engine, and profile management. It integrates with HubSpot, provides real-time weather, address autocomplete, advanced sales analytics, and automates MSA document generation with Box integration for client folder management.
 
 ## Recent Changes (August 3, 2025)
-**CRITICAL HUBSPOT LINE ITEMS ISSUE RESOLVED**: Fixed service field mapping preventing line item creation.
+**CRITICAL HUBSPOT INTEGRATION ISSUES RESOLVED**: Fixed service field mapping for both create and update quote flows.
+
+**QUOTE UPDATE FUNCTIONALITY FIXED**:
+- ✅ **ROOT CAUSE IDENTIFIED**: Same service field mapping issue affected quote updates - database fields (service_bookkeeping=true) vs HubSpot parameters (includesBookkeeping=false)
+- ✅ **FIXED UPDATE FLOW**: Updated routes.ts update quote endpoint to use serviceBookkeeping/serviceTaas instead of includes* fields
+- ✅ **ENHANCED UPDATE DIAGNOSTICS**: Added comprehensive step-by-step logging with emoji markers for update quote process
+- ✅ **LINE ITEM MANAGEMENT**: Fixed manageServiceLineItems function to properly handle service transitions during updates
+- ✅ **UPDATE ERROR HANDLING**: Quote updates now preserve line items correctly and provide detailed logging for troubleshooting
+
+**QUOTE CREATION FUNCTIONALITY (PREVIOUSLY FIXED)**:
 - ✅ **ROOT CAUSE IDENTIFIED**: Service field mapping mismatch between database fields (service_bookkeeping=true) and HubSpot parameters (includesBookkeeping=false)
-- ✅ **FIXED**: Updated routes.ts to use serviceBookkeeping/serviceTaas instead of includes* fields for HubSpot integration
+- ✅ **FIXED CREATE FLOW**: Updated routes.ts to use serviceBookkeeping/serviceTaas instead of includes* fields for HubSpot integration
 - ✅ **ENHANCED DIAGNOSTICS**: Added comprehensive step-by-step logging with emoji markers for line item creation process
 - ✅ **PRODUCT VERIFICATION**: Implemented HubSpot product ID verification system to detect and replace invalid product IDs
 - ✅ **ERROR HANDLING**: Line item creation failures no longer break quote creation - quotes succeed with manual line item addition option
 - ✅ **DEBUGGING ENDPOINT**: Added /api/hubspot/debug/products endpoint for real-time product ID verification
 - ✅ Example: Quote ID 120 successfully created and pushed to HubSpot (Deal: 41289977122, Quote: 22883799425) - testing line items with corrected service field mapping
 
-**PREVIOUS FIXES MAINTAINED**:
-- ✅ Quote creation returning empty objects - Fixed apiRequest JSON parsing in mutations
-- ✅ HubSpot push failing with null quote IDs - Frontend properly receives quote data with IDs
+**COMPREHENSIVE SOLUTION**:
+- ✅ Both quote creation and update flows now use correct service field mapping
+- ✅ Enhanced diagnostic logging provides complete visibility into line item management
+- ✅ Robust error handling ensures quotes succeed even if individual line items encounter issues
+- ✅ Ready for comprehensive testing of both create and update quote workflows
 
 **GIT AUTHENTICATION CLEANUP**: Resolved SSH authentication issues and restored Git functionality.
 - ✅ Removed SSH configuration file (~/.ssh/config) that was causing Git authentication failures
