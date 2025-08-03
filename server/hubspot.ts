@@ -200,7 +200,7 @@ export class HubSpotService {
         method: options.method || 'GET',
         body: options.body,
         errorResponse: errorText
-      });
+      }));
       throw new Error(`HubSpot API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
