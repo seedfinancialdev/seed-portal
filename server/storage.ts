@@ -289,21 +289,44 @@ export class DatabaseStorage implements IStorage {
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
     return await safeDbQuery(async () => {
-      console.log('Storage.createQuote - Inserting quote for:', insertQuote.contactEmail);
-      console.log('Storage.createQuote - Insert data keys:', Object.keys(insertQuote));
+      console.log('🔵 Storage.createQuote - START - Inserting quote for:', insertQuote.contactEmail);
+      console.log('🔵 Storage.createQuote - Insert data keys:', Object.keys(insertQuote));
+      console.log('🔵 Storage.createQuote - Sample data:', { 
+        contactEmail: insertQuote.contactEmail,
+        monthlyFee: insertQuote.monthlyFee,
+        ownerId: insertQuote.ownerId 
+      });
       
-      const [quote] = await db
+      console.log('🔵 EXECUTING DATABASE INSERT...');
+      const result = await db
         .insert(quotes)
         .values(insertQuote)
         .returning();
       
-      console.log('Storage.createQuote - Insert result:', quote ? 'Success' : 'Failed');
-      console.log('Storage.createQuote - Quote ID:', quote?.id);
-      console.log('Storage.createQuote - Quote contact:', quote?.contactEmail);
+      console.log('🟢 DATABASE INSERT COMPLETED');
+      console.log('🟢 Raw result from DB:', {
+        isArray: Array.isArray(result),
+        length: result?.length,
+        hasData: !!result,
+        resultType: typeof result
+      });
+      
+      const [quote] = result;
+      console.log('🟢 Destructured quote:', {
+        hasQuote: !!quote,
+        quoteType: typeof quote,
+        quoteKeys: quote ? Object.keys(quote) : 'N/A'
+      });
       
       if (!quote) {
+        console.error('🚨 CRITICAL: Database insert returned no quote in result array');
+        console.error('🚨 Full result object:', JSON.stringify(result));
         throw new Error('Database insert returned no quote');
       }
+      
+      console.log('🟢 Storage.createQuote - SUCCESS - Quote ID:', quote.id);
+      console.log('🟢 Storage.createQuote - Contact:', quote.contactEmail);
+      console.log('🟢 Storage.createQuote - Final quote object:', JSON.stringify(quote).substring(0, 300));
       
       return quote;
     }, 'createQuote');

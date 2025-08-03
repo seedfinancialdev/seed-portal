@@ -476,6 +476,74 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Test endpoint for database operations
+  app.get("/api/test/db-quote", requireAuth, async (req, res) => {
+    console.log('🔵 TEST DB ENDPOINT - Testing direct database operations');
+    try {
+      // Test direct database query
+      const testQuote = {
+        contactEmail: 'test@example.com',
+        companyName: 'Test Company',
+        monthlyFee: '100.00',
+        setupFee: '200.00',
+        taasMonthlyFee: '0.00',
+        taasPriorYearsFee: '0.00',
+        ownerId: req.user!.id,
+        includesBookkeeping: true,
+        includesTaas: false,
+        archived: false,
+        quoteType: 'bookkeeping',
+        entityType: 'LLC',
+        numEntities: 1,
+        customNumEntities: null,
+        statesFiled: 1,
+        customStatesFiled: null,
+        internationalFiling: false,
+        numBusinessOwners: 1,
+        customNumBusinessOwners: null,
+        monthlyRevenueRange: '10K-25K',
+        monthlyTransactions: '100-300',
+        industry: 'Professional Services',
+        cleanupMonths: 8,
+        cleanupComplexity: '0.25',
+        cleanupOverride: false,
+        overrideReason: '',
+        customOverrideReason: '',
+        customSetupFee: '',
+        serviceBookkeeping: true,
+        serviceTaas: false,
+        servicePayroll: false,
+        serviceApArLite: false,
+        serviceFpaLite: false,
+        contactFirstName: 'Test',
+        contactLastName: 'User',
+        clientStreetAddress: '',
+        clientCity: '',
+        clientState: 'CO',
+        clientZipCode: '',
+        accountingBasis: 'Cash'
+      };
+      
+      console.log('🔵 TESTING storage.createQuote directly...');
+      const result = await storage.createQuote(testQuote);
+      console.log('🟢 TEST RESULT:', {
+        hasResult: !!result,
+        resultType: typeof result,
+        resultId: result?.id,
+        resultStringified: JSON.stringify(result)
+      });
+      
+      res.json({ 
+        success: true, 
+        testResult: result,
+        message: 'Database test completed'
+      });
+    } catch (error) {
+      console.error('🚨 TEST ERROR:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create a new quote (protected)
   app.post("/api/quotes", (req, res, next) => {
     console.log('🟡 QUOTES MIDDLEWARE - Before requireAuth');
@@ -521,15 +589,28 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       };
       console.log('Quote data validated successfully');
       
+      console.log('🔵 CALLING storage.createQuote with data...');
       const quote = await storage.createQuote(quoteData);
-      console.log('Quote created from storage:', quote ? 'Has data' : 'No data');
-      console.log('Quote ID:', quote?.id);
-      console.log('Quote contact email:', quote?.contactEmail);
-      console.log('Quote monthly fee:', quote?.monthlyFee);
+      console.log('🟢 STORAGE RETURNED:', {
+        hasQuote: !!quote,
+        quoteType: typeof quote,
+        quoteKeys: quote ? Object.keys(quote) : 'N/A',
+        quoteId: quote?.id,
+        quoteSerialized: JSON.stringify(quote)
+      });
       
-      // Note: Slack notifications now only sent during approval request, not quote creation
+      if (!quote) {
+        console.error('🚨 CRITICAL: Storage returned null/undefined quote');
+        return res.status(500).json({ message: "Quote creation failed - no data returned" });
+      }
       
-      console.log('Sending response with quote data');
+      console.log('🔵 PREPARING RESPONSE - Quote object details:');
+      console.log('Quote ID:', quote.id);
+      console.log('Quote contact email:', quote.contactEmail);
+      console.log('Quote monthly fee:', quote.monthlyFee);
+      console.log('Quote object stringified:', JSON.stringify(quote).substring(0, 200) + '...');
+      
+      console.log('🚀 SENDING RESPONSE via res.json()');
       res.json(quote);
     } catch (error) {
       console.error('Quote creation error:', error);

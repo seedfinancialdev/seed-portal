@@ -12,16 +12,24 @@ export async function safeDbQuery<T>(
   operationName: string,
   maxRetries: number = 3
 ): Promise<T> {
+  console.log(`🔵 safeDbQuery START - Operation: ${operationName}`);
   let lastError: any;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await operation();
+      console.log(`🔵 safeDbQuery - Attempt ${attempt}/${maxRetries} for ${operationName}`);
+      const result = await operation();
+      console.log(`🟢 safeDbQuery SUCCESS - Operation: ${operationName}`, {
+        hasResult: !!result,
+        resultType: typeof result,
+        isArray: Array.isArray(result)
+      });
+      return result;
     } catch (error: any) {
       lastError = error;
       
       // Log the error with context
-      console.error(`Database operation '${operationName}' failed (attempt ${attempt}/${maxRetries}):`, {
+      console.error(`🚨 safeDbQuery FAILED - Operation '${operationName}' (attempt ${attempt}/${maxRetries}):`, {
         error: error.message,
         code: error.code,
         stack: error.stack?.split('\n')[0] // Just the first line of stack
@@ -46,7 +54,7 @@ export async function safeDbQuery<T>(
   }
   
   // If we get here, all retries failed
-  console.error(`Database operation '${operationName}' failed after ${maxRetries} attempts. Final error:`, lastError);
+  console.error(`🚨 safeDbQuery FINAL FAILURE - Operation '${operationName}' failed after ${maxRetries} attempts. Final error:`, lastError);
   throw new Error(`Database operation failed: ${lastError.message}`);
 }
 
