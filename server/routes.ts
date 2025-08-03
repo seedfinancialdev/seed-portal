@@ -87,6 +87,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Debug middleware to track all API requests
   app.use('/api', (req, res, next) => {
+    if (req.method === 'POST' && req.url.includes('quotes') && !req.url.includes('check-existing')) {
+      console.log('🔴🔴🔴 QUOTES POST MIDDLEWARE HIT:', {
+        method: req.method,
+        url: req.url,
+        path: req.path,
+        originalUrl: req.originalUrl,
+        query: req.query,
+        timestamp: new Date().toISOString()
+      });
+    }
     console.log('API Debug - Request intercepted:', {
       method: req.method,
       url: req.url,
@@ -467,7 +477,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Create a new quote (protected)
-  app.post("/api/quotes", requireAuth, async (req, res) => {
+  app.post("/api/quotes", (req, res, next) => {
+    console.log('🟡 QUOTES MIDDLEWARE - Before requireAuth');
+    next();
+  }, requireAuth, async (req, res) => {
     console.log('🟢 POST /api/quotes - HANDLER EXECUTING');
     try {
       console.log('=== QUOTE CREATION DEBUG ===');
