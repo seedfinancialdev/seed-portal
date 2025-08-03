@@ -93,14 +93,14 @@ const formSchema = insertQuoteSchema.omit({
   clientZipCode: z.string().optional(),
   clientCountry: z.string().default("US"),
   // Company name lock status
-  companyNameLocked: z.boolean().default(true),
+  companyNameLocked: z.boolean().default(false),
   // Additional client detail fields with lock status
   contactFirstName: z.string().optional(),
-  contactFirstNameLocked: z.boolean().default(true),
+  contactFirstNameLocked: z.boolean().default(false),
   contactLastName: z.string().optional(),
-  contactLastNameLocked: z.boolean().default(true),
-  industryLocked: z.boolean().default(true),
-  companyAddressLocked: z.boolean().default(true),
+  contactLastNameLocked: z.boolean().default(false),
+  industryLocked: z.boolean().default(false),
+  companyAddressLocked: z.boolean().default(false),
   monthlyRevenueRange: z.string().optional(),
   // TaaS fields
   numEntities: z.number().min(1, "Must have at least 1 entity").optional(),
