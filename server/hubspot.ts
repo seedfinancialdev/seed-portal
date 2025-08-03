@@ -1941,7 +1941,7 @@ Generated: ${new Date().toLocaleDateString()}`;
       if (companyId) {
         const companyUpdateProperties: any = {};
         
-        // Company properties (industry, revenue, entity type)
+        // Company properties (industry, revenue, entity type, accounting basis)
         if (quote.industry) {
           companyUpdateProperties.industry = quote.industry;
         }
@@ -1950,6 +1950,9 @@ Generated: ${new Date().toLocaleDateString()}`;
         }
         if (quote.entityType) {
           companyUpdateProperties.entity_type = quote.entityType;
+        }
+        if (quote.accountingBasis) {
+          companyUpdateProperties.accounting_basis = quote.accountingBasis;
         }
         
         // Update company if there are properties to change
