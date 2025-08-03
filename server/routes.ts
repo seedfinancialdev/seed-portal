@@ -511,11 +511,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const quote = await storage.createQuote(quoteData);
       console.log('Quote created from storage:', quote ? 'Has data' : 'No data');
       console.log('Quote ID:', quote?.id);
-      console.log('Quote keys:', quote ? Object.keys(quote) : 'No keys');
+      console.log('Quote contact email:', quote?.contactEmail);
+      console.log('Quote monthly fee:', quote?.monthlyFee);
       
       // Note: Slack notifications now only sent during approval request, not quote creation
       
-      console.log('Sending response with quote:', quote ? 'Has quote data' : 'Empty quote');
+      console.log('Sending response with quote data');
       res.json(quote);
     } catch (error) {
       console.error('Quote creation error:', error);
