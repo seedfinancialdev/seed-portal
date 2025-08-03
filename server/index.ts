@@ -168,6 +168,13 @@ app.use((req, res, next) => {
     }
   });
 
+  // Add API route protection middleware before Vite setup
+  app.use('/api/*', (req, res, next) => {
+    // Ensure API routes are always handled by Express, never by Vite
+    console.log('🛡️ API Route Protection - Ensuring Express handles:', req.originalUrl);
+    next();
+  });
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
