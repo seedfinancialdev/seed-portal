@@ -878,6 +878,35 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Debug endpoint: Verify HubSpot product IDs
+  app.get("/api/hubspot/debug/products", requireAuth, async (req, res) => {
+    try {
+      if (!hubSpotService) {
+        res.status(400).json({ message: "HubSpot integration not configured" });
+        return;
+      }
+
+      console.log('🔍 DEBUG: Checking HubSpot product IDs');
+      const productIds = await hubSpotService.verifyAndGetProductIds();
+      
+      // Also fetch all products for reference
+      const allProducts = await hubSpotService.getProducts();
+      
+      res.json({
+        productIds,
+        totalProducts: allProducts.length,
+        sampleProducts: allProducts.slice(0, 5).map(p => ({
+          id: p.id,
+          name: p.properties?.name,
+          sku: p.properties?.hs_sku
+        }))
+      });
+    } catch (error) {
+      console.error('Error debugging products:', error);
+      res.status(500).json({ message: "Failed to debug products" });
+    }
+  });
+
   // Push quote to HubSpot (create deal and quote)
   app.post("/api/hubspot/push-quote", requireAuth, async (req, res) => {
     try {

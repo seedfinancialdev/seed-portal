@@ -587,7 +587,14 @@ Services Include:
       console.log('Quote created successfully:', result.id);
       
       // Add line items to the quote
-      await this.addQuoteLineItems(result.id, monthlyFee, setupFee, includesBookkeeping, includesTaas, taasMonthlyFee || 0, taasPriorYearsFee || 0, bookkeepingMonthlyFee, bookkeepingSetupFee);
+      try {
+        await this.addQuoteLineItems(result.id, monthlyFee, setupFee, includesBookkeeping, includesTaas, taasMonthlyFee || 0, taasPriorYearsFee || 0, bookkeepingMonthlyFee, bookkeepingSetupFee);
+        console.log('📋 Line items added successfully to quote');
+      } catch (lineItemError) {
+        console.error('⚠️ Line item creation failed, but quote was created successfully:', lineItemError);
+        console.error('📝 Quote will be created without line items. User can add them manually in HubSpot.');
+        // Don't throw here - allow quote creation to succeed even if line items fail
+      }
 
       return {
         id: result.id,
@@ -612,6 +619,13 @@ Services Include:
 
   private async addQuoteLineItems(quoteId: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<void> {
     try {
+      console.log('🔧 STARTING LINE ITEM CREATION');
+      console.log(`📋 Quote ID: ${quoteId}`);
+      console.log(`💰 Fees - Monthly: $${monthlyFee}, Setup: $${setupFee}`);
+      console.log(`🔧 Services - Bookkeeping: ${includesBookkeeping ?? true}, TaaS: ${includesTaas ?? false}`);
+      console.log(`💸 TaaS Fees - Monthly: $${taasMonthlyFee || 0}, Prior Years: $${taasPriorYearsFee || 0}`);
+      console.log(`📊 Individual Fees - BK Monthly: $${bookkeepingMonthlyFee || monthlyFee}, BK Setup: $${bookkeepingSetupFee || setupFee}`);
+      
       // Use the generic service management system for initial quote creation
       await this.createInitialServiceLineItems(quoteId, {
         includesBookkeeping: includesBookkeeping ?? true,
@@ -621,8 +635,17 @@ Services Include:
         bookkeepingMonthlyFee: bookkeepingMonthlyFee || monthlyFee,
         bookkeepingSetupFee: bookkeepingSetupFee || setupFee
       });
+      
+      console.log('✅ LINE ITEM CREATION COMPLETED SUCCESSFULLY');
     } catch (error) {
-      console.warn('Could not add line items to quote:', error);
+      console.error('❌ CRITICAL ERROR: Line item creation failed:', error);
+      console.error('📝 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        quoteId,
+        fees: { monthlyFee, setupFee, taasMonthlyFee, taasPriorYearsFee }
+      });
+      throw error; // Re-throw to ensure calling code knows about the failure
     }
   }
 
@@ -635,7 +658,17 @@ Services Include:
     bookkeepingSetupFee: number;
   }): Promise<void> {
     try {
-      // Define all services in a consistent pattern
+      console.log('🏗️ CREATING SERVICE LINE ITEMS');
+      console.log('📋 Service Config:', JSON.stringify(serviceConfig, null, 2));
+      
+      // Verify product IDs before attempting to create line items
+      const productIds = await this.verifyAndGetProductIds();
+      console.log('🏷️ Product IDs:', productIds);
+      
+      if (!productIds.valid) {
+        console.warn('⚠️ Some product IDs may be invalid, but proceeding with line item creation');
+      }
+      // Define all services in a consistent pattern using verified product IDs
       const serviceDefinitions = {
         bookkeeping: {
           shouldInclude: serviceConfig.includesBookkeeping,
@@ -644,14 +677,14 @@ Services Include:
               condition: serviceConfig.bookkeepingMonthlyFee > 0,
               name: 'Monthly Bookkeeping (Custom)',
               price: serviceConfig.bookkeepingMonthlyFee,
-              productId: '25687054003',
+              productId: productIds.bookkeeping,
               description: 'Seed Financial Monthly Bookkeeping (Custom)'
             },
             {
               condition: serviceConfig.bookkeepingSetupFee > 0,
               name: 'Clean-Up / Catch-Up Project',
               price: serviceConfig.bookkeepingSetupFee,
-              productId: '25683750263',
+              productId: productIds.cleanup,
               description: 'Seed Financial Clean-Up / Catch-Up Project'
             }
           ]
@@ -663,14 +696,14 @@ Services Include:
               condition: serviceConfig.taasMonthlyFee > 0,
               name: 'Monthly TaaS (Custom)',
               price: serviceConfig.taasMonthlyFee,
-              productId: '25687054003', // Using bookkeeping product ID as placeholder
+              productId: productIds.bookkeeping, // Using bookkeeping product ID as placeholder
               description: 'Seed Financial Monthly TaaS (Custom)'
             },
             {
               condition: serviceConfig.taasPriorYearsFee > 0,
               name: 'TaaS Prior Years (Custom)',
               price: serviceConfig.taasPriorYearsFee,
-              productId: '25683750263', // Using cleanup product ID as placeholder
+              productId: productIds.cleanup, // Using cleanup product ID as placeholder
               description: 'Seed Financial TaaS Prior Years (Custom)'
             }
           ]
@@ -683,10 +716,25 @@ Services Include:
       };
 
       // Create line items for all included services
+      let totalLineItemsCreated = 0;
+      console.log('🔄 Processing service definitions...');
+      
       for (const [serviceName, config] of Object.entries(serviceDefinitions)) {
+        console.log(`🔍 Checking service: ${serviceName}`);
+        console.log(`📊 Should include: ${config.shouldInclude}`);
+        
         if (config.shouldInclude) {
+          console.log(`✅ Including ${serviceName} service`);
+          
           for (const lineItemConfig of config.lineItems) {
+            console.log(`🔧 Processing line item: ${lineItemConfig.name}`);
+            console.log(`📊 Condition met: ${lineItemConfig.condition}`);
+            console.log(`💰 Price: $${lineItemConfig.price}`);
+            console.log(`🏷️ Product ID: ${lineItemConfig.productId}`);
+            
             if (lineItemConfig.condition) {
+              console.log(`🚀 Creating line item: ${lineItemConfig.name}`);
+              
               await this.associateProductWithQuote(
                 quoteId,
                 lineItemConfig.productId,
@@ -694,10 +742,22 @@ Services Include:
                 1,
                 lineItemConfig.name
               );
-              console.log(`Associated ${serviceName} product with quote: $${lineItemConfig.price}`);
+              
+              totalLineItemsCreated++;
+              console.log(`✅ Successfully associated ${serviceName} product with quote: $${lineItemConfig.price}`);
+            } else {
+              console.log(`⏭️ Skipping line item ${lineItemConfig.name} - condition not met`);
             }
           }
+        } else {
+          console.log(`⏭️ Skipping ${serviceName} service - not included`);
         }
+      }
+      
+      console.log(`🎉 TOTAL LINE ITEMS CREATED: ${totalLineItemsCreated}`);
+      
+      if (totalLineItemsCreated === 0) {
+        console.warn('⚠️ WARNING: No line items were created! This may indicate a configuration issue.');
       }
     } catch (error) {
       console.error('Error creating initial service line items:', error);
@@ -715,12 +775,108 @@ Services Include:
     }
   }
 
+  // Verify product IDs and potentially find alternatives
+  async verifyAndGetProductIds(): Promise<{ bookkeeping: string; cleanup: string; valid: boolean }> {
+    try {
+      console.log('🔍 VERIFYING HUBSPOT PRODUCT IDS');
+      
+      const currentIds = {
+        bookkeeping: '25687054003',
+        cleanup: '25683750263'
+      };
+      
+      // Test current product IDs
+      let bookkeepingValid = false;
+      let cleanupValid = false;
+      
+      try {
+        await this.makeRequest(`/crm/v3/objects/products/${currentIds.bookkeeping}`);
+        bookkeepingValid = true;
+        console.log(`✅ Bookkeeping product ID ${currentIds.bookkeeping} is valid`);
+      } catch {
+        console.log(`❌ Bookkeeping product ID ${currentIds.bookkeeping} is invalid`);
+      }
+      
+      try {
+        await this.makeRequest(`/crm/v3/objects/products/${currentIds.cleanup}`);
+        cleanupValid = true;
+        console.log(`✅ Cleanup product ID ${currentIds.cleanup} is valid`);
+      } catch {
+        console.log(`❌ Cleanup product ID ${currentIds.cleanup} is invalid`);
+      }
+      
+      if (bookkeepingValid && cleanupValid) {
+        console.log('🎉 All product IDs are valid');
+        return { ...currentIds, valid: true };
+      }
+      
+      // If invalid, try to find alternatives
+      console.log('🔍 Searching for alternative products...');
+      const products = await this.getProducts();
+      
+      let altBookkeeping = currentIds.bookkeeping;
+      let altCleanup = currentIds.cleanup;
+      
+      for (const product of products) {
+        const name = product.properties?.name?.toLowerCase() || '';
+        const sku = product.properties?.hs_sku?.toLowerCase() || '';
+        
+        if (!bookkeepingValid && (name.includes('bookkeeping') || name.includes('monthly') || sku.includes('book'))) {
+          altBookkeeping = product.id;
+          bookkeepingValid = true;
+          console.log(`🔄 Found alternative bookkeeping product: ${product.id} - ${product.properties?.name}`);
+        }
+        
+        if (!cleanupValid && (name.includes('cleanup') || name.includes('catch') || name.includes('setup') || sku.includes('setup'))) {
+          altCleanup = product.id;
+          cleanupValid = true;
+          console.log(`🔄 Found alternative cleanup product: ${product.id} - ${product.properties?.name}`);
+        }
+      }
+      
+      return {
+        bookkeeping: altBookkeeping,
+        cleanup: altCleanup,
+        valid: bookkeepingValid && cleanupValid
+      };
+      
+    } catch (error) {
+      console.error('❌ Error verifying product IDs:', error);
+      return {
+        bookkeeping: '25687054003',
+        cleanup: '25683750263',
+        valid: false
+      };
+    }
+  }
+
   private async associateProductWithQuote(quoteId: string, productId: string, price: number, quantity: number, customName?: string): Promise<void> {
     try {
-      // Get product details first
-      const product = await this.makeRequest(`/crm/v3/objects/products/${productId}`);
+      console.log(`🔧 STARTING PRODUCT ASSOCIATION`);
+      console.log(`📋 Quote ID: ${quoteId}`);
+      console.log(`🏷️ Product ID: ${productId}`);
+      console.log(`💰 Price: $${price}`);
+      console.log(`📦 Quantity: ${quantity}`);
+      console.log(`🏷️ Custom Name: ${customName || 'None'}`);
       
-      // Create a line item with correct properties
+      // Step 1: Verify product exists
+      console.log(`🔍 Step 1: Fetching product details for ID: ${productId}`);
+      let product;
+      try {
+        product = await this.makeRequest(`/crm/v3/objects/products/${productId}`);
+        console.log(`✅ Product found:`, {
+          id: product.id,
+          name: product.properties?.name,
+          sku: product.properties?.hs_sku
+        });
+      } catch (productError) {
+        console.error(`❌ PRODUCT NOT FOUND: Product ID ${productId} does not exist in HubSpot`);
+        console.error('Product fetch error:', productError);
+        throw new Error(`Product ID ${productId} not found in HubSpot. Please verify the product exists.`);
+      }
+      
+      // Step 2: Create line item
+      console.log(`🏗️ Step 2: Creating line item`);
       const lineItem = {
         properties: {
           name: customName || product.properties?.name || 'Service',
@@ -732,34 +888,48 @@ Services Include:
         }
       };
 
-      console.log('Creating line item:', lineItem);
+      console.log('📝 Line item payload:', JSON.stringify(lineItem, null, 2));
       
-      const result = await this.makeRequest('/crm/v3/objects/line_items', {
-        method: 'POST',
-        body: JSON.stringify(lineItem)
-      });
+      let lineItemResult;
+      try {
+        lineItemResult = await this.makeRequest('/crm/v3/objects/line_items', {
+          method: 'POST',
+          body: JSON.stringify(lineItem)
+        });
+        console.log(`✅ Line item created successfully with ID: ${lineItemResult.id}`);
+      } catch (lineItemError) {
+        console.error('❌ LINE ITEM CREATION FAILED:', lineItemError);
+        throw new Error(`Failed to create line item: ${lineItemError instanceof Error ? lineItemError.message : 'Unknown error'}`);
+      }
 
-      console.log('Line item created:', result.id);
-
-      // Associate the quote with the line item using type 67 (reversed direction)
+      // Step 3: Associate line item with quote
+      console.log(`🔗 Step 3: Associating line item ${lineItemResult.id} with quote ${quoteId}`);
       const associationBody = {
         inputs: [
           {
             from: { id: quoteId },
-            to: { id: result.id },
+            to: { id: lineItemResult.id },
             types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 67 }]
           }
         ]
       };
 
-      await this.makeRequest('/crm/v4/associations/quotes/line_items/batch/create', {
-        method: 'POST',
-        body: JSON.stringify(associationBody)
-      });
+      console.log('🔗 Association payload:', JSON.stringify(associationBody, null, 2));
 
-      console.log(`Line item ${result.id} associated with quote ${quoteId} using type 67`);
+      try {
+        await this.makeRequest('/crm/v4/associations/quotes/line_items/batch/create', {
+          method: 'POST',
+          body: JSON.stringify(associationBody)
+        });
+        console.log(`✅ Successfully associated line item ${lineItemResult.id} with quote ${quoteId}`);
+      } catch (associationError) {
+        console.error('❌ ASSOCIATION FAILED:', associationError);
+        throw new Error(`Failed to associate line item with quote: ${associationError instanceof Error ? associationError.message : 'Unknown error'}`);
+      }
+      
+      console.log(`🎉 PRODUCT ASSOCIATION COMPLETED SUCCESSFULLY`);
     } catch (error) {
-      console.error('Error associating product with quote:', error);
+      console.error('❌ CRITICAL ERROR in associateProductWithQuote:', error);
       throw error;
     }
   }
