@@ -2418,8 +2418,8 @@ export default function Home() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-gray-800">
-                      {actualFormView === 'bookkeeping' ? 'Bookkeeping Quote' : 
-                       actualFormView === 'taas' ? 'Tax as a Service (TaaS) Quote' :
+                      {actualFormView === 'bookkeeping' ? 'Bookkeeping' : 
+                       actualFormView === 'taas' ? 'Tax as a Service (TaaS)' :
                        'Service Selection'}
                     </h2>
                     <p className="text-sm text-gray-500">
