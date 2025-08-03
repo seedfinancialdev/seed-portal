@@ -4,8 +4,9 @@ import { insertQuoteSchema } from "@shared/schema";
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
 
-// Create form schema without the calculated fields
+// Create form schema without the calculated fields and server-managed fields
 export const formSchema = insertQuoteSchema.omit({
+  ownerId: true, // Added server-side from authenticated user
   monthlyFee: true,
   setupFee: true,
   taasMonthlyFee: true,
