@@ -5,7 +5,7 @@ import { z } from "zod";
 export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
   contactEmail: text("contact_email").notNull(),
-  revenueBand: text("revenue_band").notNull(),
+  monthlyRevenueRange: text("monthly_revenue_range").notNull(),
   monthlyTransactions: text("monthly_transactions").notNull(),
   industry: text("industry").notNull(),
   cleanupMonths: integer("cleanup_months").notNull(),
@@ -62,7 +62,7 @@ export const quotes = pgTable("quotes", {
   contactLastNameLocked: boolean("contact_last_name_locked").default(true),
   industryLocked: boolean("industry_locked").default(true),
   companyAddressLocked: boolean("company_address_locked").default(true),
-  monthlyRevenueRange: text("monthly_revenue_range"),
+
   // User ownership
   ownerId: integer("owner_id").notNull(),
   // HubSpot integration fields

@@ -62,6 +62,13 @@ export const formSchema = insertQuoteSchema.omit({
   
   // TaaS validations
   if (data.quoteType === 'taas') {
+    if (!data.monthlyRevenueRange) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Monthly revenue range is required for TaaS quotes",
+        path: ["monthlyRevenueRange"],
+      });
+    }
     if (!data.entityType) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

@@ -1047,6 +1047,13 @@ export default function Home() {
       form.setValue('companyAddressLocked', false);
     }
 
+    // Hide the existing quotes modal and show client details
+    setShowExistingQuotesModal(false);
+    
+    // Auto-set verification status to verified since contact is from HubSpot
+    setHubspotVerificationStatus('verified');
+    setHubspotContact(contact);
+
     console.log('Setting showClientDetails to true');
     setShowClientDetails(true);
     console.log('proceedToClientDetails completed');

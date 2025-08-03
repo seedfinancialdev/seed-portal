@@ -2,7 +2,7 @@
 // This ensures consistency between frontend and backend calculations
 
 export interface PricingData {
-  revenueBand?: string;
+  monthlyRevenueRange?: string;
   monthlyTransactions?: string;
   industry?: string;
   cleanupMonths?: number;
@@ -93,7 +93,7 @@ export function roundToNearest25(num: number): number {
 }
 
 export function calculateBookkeepingFees(data: PricingData): FeeResult {
-  if (!data.revenueBand || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
+  if (!data.monthlyRevenueRange || !data.monthlyTransactions || !data.industry || data.cleanupMonths === undefined) {
     return { monthlyFee: 0, setupFee: 0 };
   }
   
@@ -102,7 +102,7 @@ export function calculateBookkeepingFees(data: PricingData): FeeResult {
     return { monthlyFee: 0, setupFee: 0 };
   }
 
-  const revenueMultiplier = PRICING_CONSTANTS.revenueMultipliers[data.revenueBand as keyof typeof PRICING_CONSTANTS.revenueMultipliers] || 1.0;
+  const revenueMultiplier = PRICING_CONSTANTS.revenueMultipliers[data.monthlyRevenueRange as keyof typeof PRICING_CONSTANTS.revenueMultipliers] || 1.0;
   const txFee = PRICING_CONSTANTS.txSurcharge[data.monthlyTransactions as keyof typeof PRICING_CONSTANTS.txSurcharge] || 0;
   const industryData = PRICING_CONSTANTS.industryMultipliers[data.industry as keyof typeof PRICING_CONSTANTS.industryMultipliers] || { monthly: 1, cleanup: 1 };
   
@@ -135,7 +135,7 @@ export function calculateBookkeepingFees(data: PricingData): FeeResult {
 }
 
 export function calculateTaaSFees(data: PricingData): FeeResult {
-  if (!data.includesTaas || !data.revenueBand || !data.industry || !data.entityType || 
+  if (!data.includesTaas || !data.monthlyRevenueRange || !data.industry || !data.entityType || 
       !data.numEntities || !data.statesFiled || data.internationalFiling === undefined || 
       !data.numBusinessOwners || !data.bookkeepingQuality || data.include1040s === undefined || 
       data.priorYearsUnfiled === undefined || data.alreadyOnSeedBookkeeping === undefined) {
@@ -192,12 +192,12 @@ export function calculateTaaSFees(data: PricingData): FeeResult {
   const industryMult = taasIndustryMult[data.industry] || 1.0;
 
   // Revenue multiplier (map our revenue bands to average monthly revenue)
-  const avgMonthlyRevenue = data.revenueBand === '<$10K' ? 5000 :
-                           data.revenueBand === '10K-25K' ? 17500 :
-                           data.revenueBand === '25K-75K' ? 50000 :
-                           data.revenueBand === '75K-250K' ? 162500 :
-                           data.revenueBand === '250K-1M' ? 625000 :
-                           data.revenueBand === '1M+' ? 1000000 : 5000;
+  const avgMonthlyRevenue = data.monthlyRevenueRange === '<$10K' ? 5000 :
+                           data.monthlyRevenueRange === '10K-25K' ? 17500 :
+                           data.monthlyRevenueRange === '25K-75K' ? 50000 :
+                           data.monthlyRevenueRange === '75K-250K' ? 162500 :
+                           data.monthlyRevenueRange === '250K-1M' ? 625000 :
+                           data.monthlyRevenueRange === '1M+' ? 1000000 : 5000;
 
   const revenueMult = avgMonthlyRevenue <= 10000 ? 1.0 :
                      avgMonthlyRevenue <= 25000 ? 1.2 :
