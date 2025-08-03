@@ -629,7 +629,7 @@ export default function Home() {
       serviceApArLite: false,
       serviceFpaLite: false,
       // Service flags for combined quotes (legacy)
-      includesBookkeeping: true,
+      includesBookkeeping: false,
       includesTaas: false,
       // TaaS defaults
       numEntities: 1,
@@ -2426,14 +2426,7 @@ export default function Home() {
                   </div>
                 </div>
                 
-                {/* Service info badge - show current service when active */}
-                {actualFormView !== 'placeholder' && (
-                  <div className="flex items-center">
-                    <span className="text-sm text-gray-600 font-medium px-3 py-1 bg-gray-100 rounded-full">
-                      {actualFormView === 'bookkeeping' ? 'Bookkeeping Service' : 'Tax Service'}
-                    </span>
-                  </div>
-                )}
+
               </div>
               
               <Form {...form}>
