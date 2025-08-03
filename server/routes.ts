@@ -867,20 +867,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return;
       }
 
-      // Update HubSpot contact properties with quote data for 2-way sync
+      // Update HubSpot contact AND company properties with quote data for 2-way sync
       try {
+        // Update contact properties (name, address, company name)
         const contactUpdateProperties: any = {};
         
-        // Map quote data to HubSpot contact properties
-        if (quote.industry) {
-          contactUpdateProperties.hs_industry_group = quote.industry;
-        }
-        if (quote.monthlyRevenueRange) {
-          contactUpdateProperties.monthly_revenue_range = quote.monthlyRevenueRange;
-        }
-        if (quote.entityType) {
-          contactUpdateProperties.entity_type = quote.entityType;
-        }
         if (quote.companyName && quote.companyName !== contact.properties.company) {
           contactUpdateProperties.company = quote.companyName;
         }
@@ -891,7 +882,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           contactUpdateProperties.lastname = quote.contactLastName;
         }
         
-        // Update address information if available
+        // Update contact address information if available
         if (quote.clientStreetAddress) {
           contactUpdateProperties.address = quote.clientStreetAddress;
         }
@@ -905,14 +896,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           contactUpdateProperties.zip = quote.clientZipCode;
         }
         
-        // Only update if there are properties to change
+        // Update contact properties if there are changes
         if (Object.keys(contactUpdateProperties).length > 0) {
           await hubSpotService.updateContactProperties(contact.id, contactUpdateProperties);
           console.log('Updated HubSpot contact properties:', contactUpdateProperties);
         }
-      } catch (contactUpdateError) {
-        console.error('Failed to update HubSpot contact properties:', contactUpdateError);
-        // Don't fail the entire operation if contact update fails
+
+        // Handle company properties (industry, revenue, entity type)
+        await hubSpotService.updateOrCreateCompanyFromQuote(contact.id, quote);
+        
+      } catch (updateError) {
+        console.error('Failed to update HubSpot contact/company properties:', updateError);
+        // Don't fail the entire operation if updates fail
       }
 
       // Update the quote in our database with HubSpot IDs

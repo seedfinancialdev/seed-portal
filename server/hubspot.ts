@@ -1870,6 +1870,110 @@ Generated: ${new Date().toLocaleDateString()}`;
     }
   }
 
+  // Update or create company from quote data for bidirectional sync
+  async updateOrCreateCompanyFromQuote(contactId: string, quote: any): Promise<void> {
+    try {
+      const companyName = quote.companyName;
+      if (!companyName) {
+        console.log('No company name in quote, skipping company update');
+        return;
+      }
+
+      // Check if contact has associated company
+      const existingCompanies = await this.getContactAssociatedCompanies(contactId);
+      
+      let companyId: string | null = null;
+      
+      if (existingCompanies.length > 0) {
+        // Update existing associated company
+        companyId = existingCompanies[0].toObjectId;
+        console.log(`Updating existing company ${companyId} with quote data`);
+      } else {
+        // Search for existing company by name
+        const searchBody = {
+          filterGroups: [{
+            filters: [{
+              propertyName: 'name',
+              operator: 'EQ',
+              value: companyName
+            }]
+          }],
+          properties: ['name'],
+          limit: 1
+        };
+
+        const searchResult = await this.makeRequest('/crm/v3/objects/companies/search', {
+          method: 'POST',
+          body: JSON.stringify(searchBody)
+        });
+
+        if (searchResult.results && searchResult.results.length > 0) {
+          // Found existing company, associate it with contact
+          companyId = searchResult.results[0].id;
+          console.log(`Found existing company ${companyName} (${companyId}), associating with contact`);
+          await this.associateContactWithCompany(contactId, companyId);
+        } else {
+          // Create new company
+          console.log(`Creating new company: ${companyName}`);
+          const newCompany = await this.createCompany({
+            name: companyName,
+            domain: this.extractDomainFromCompanyName(companyName),
+            industry: quote.industry || '',
+            // Add other fields from quote if available
+            city: quote.clientCity || '',
+            state: quote.clientState || '',
+            zip: quote.clientZipCode || '',
+            country: quote.clientCountry || 'US'
+          });
+          
+          if (newCompany) {
+            companyId = newCompany.id;
+            console.log(`Created new company ${companyName} (${companyId})`);
+            await this.associateContactWithCompany(contactId, companyId);
+          } else {
+            console.error('Failed to create new company');
+            return;
+          }
+        }
+      }
+
+      // Update company properties with quote data
+      if (companyId) {
+        const companyUpdateProperties: any = {};
+        
+        // Company properties (industry, revenue, entity type)
+        if (quote.industry) {
+          companyUpdateProperties.industry = quote.industry;
+        }
+        if (quote.monthlyRevenueRange) {
+          companyUpdateProperties.monthly_revenue_range = quote.monthlyRevenueRange;
+        }
+        if (quote.entityType) {
+          companyUpdateProperties.entity_type = quote.entityType;
+        }
+        
+        // Update company if there are properties to change
+        if (Object.keys(companyUpdateProperties).length > 0) {
+          await this.updateCompany(companyId, companyUpdateProperties);
+          console.log('Updated HubSpot company properties:', companyUpdateProperties);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error updating/creating company from quote:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to extract domain from company name
+  private extractDomainFromCompanyName(companyName: string): string {
+    // Simple domain extraction logic
+    const name = companyName.toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .replace(/inc|llc|corp|company|co|ltd/g, '');
+    return `${name}.com`;
+  }
+
 
 
 
