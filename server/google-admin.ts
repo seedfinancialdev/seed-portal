@@ -135,15 +135,19 @@ export class GoogleAdminService {
 
   async testConnection(): Promise<{ connected: boolean; error?: string }> {
     try {
+      console.log('🧪 Testing Google Admin API connection...');
+      
       // Wait for initialization to complete
       if (this.initializationPromise) {
         await this.initializationPromise;
       }
       
       if (!this.admin) {
+        console.log('❌ Test failed: Google Admin API not initialized');
         return { connected: false, error: 'Google Admin API not initialized' };
       }
 
+      console.log('📞 Making test API call to Google Admin...');
       // Try to list users to test connection (simpler than domains)
       const response = await this.admin.users.list({
         customer: 'my_customer',
@@ -151,23 +155,33 @@ export class GoogleAdminService {
         maxResults: 1
       });
       
+      console.log('✅ Test API call successful, status:', response.status);
       return { connected: response.status === 200 };
     } catch (error: any) {
-      console.error('Google Admin API connection test failed:', error);
+      console.error('❌ Google Admin API connection test failed:', error);
+      console.log('Error details:', {
+        code: error.code,
+        status: error.status,
+        message: error.message,
+        details: error.details || 'No details'
+      });
       
       if (error.code === 403 || error.status === 403) {
         if (error.message?.includes('iam.serviceAccounts.getAccessToken')) {
+          console.log('💡 Issue: Domain-wide delegation not configured properly');
           return { 
             connected: false, 
             error: 'Domain-wide delegation not configured. Please enable domain-wide delegation for the service account in Google Workspace Admin Console.' 
           };
         }
+        console.log('💡 Issue: Insufficient permissions');
         return { 
           connected: false, 
           error: 'Insufficient permissions. Check admin permissions and domain-wide delegation settings.' 
         };
       }
       
+      console.log('💡 Issue: General connection error');
       return { connected: false, error: error.message || 'Connection test failed' };
     }
   }
