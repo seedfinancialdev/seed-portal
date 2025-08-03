@@ -3173,8 +3173,20 @@ export default function Home() {
                           </FormItem>
                         )}
                       />
+                      </div>
                     </div>
                   )}
+                  
+                  {/* Form Submit Button Section */}
+                  <div className="flex justify-end pt-6">
+                    <Button
+                      type="submit"
+                      className="bg-[#e24c00] hover:bg-[#d43700] text-white px-8 py-3 text-lg font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105"
+                      disabled={mutation.isPending}
+                    >
+                      {mutation.isPending ? "Generating Quote..." : "Generate Quote"}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             </CardContent>
