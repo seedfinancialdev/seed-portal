@@ -69,18 +69,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   await setupAuth(app, null);
   console.log('[Routes] ✅ Auth setup completed');
 
-  // CATCH ALL REQUESTS - ULTRA DEBUG
-  app.use((req, res, next) => {
-    if (req.method === 'POST' && req.url.includes('quotes')) {
-      console.log('🔥🔥🔥 ULTRA DEBUG - POST TO QUOTES DETECTED! 🔥🔥🔥');
-      console.log('Method:', req.method);
-      console.log('URL:', req.url);
-      console.log('Original URL:', req.originalUrl);
-      console.log('Path:', req.path);
-    }
-    next();
-  });
-
   // Apply CSRF protection after sessions are initialized
   app.use((req, res, next) => {
     console.log('Before CSRF - Request:', {
@@ -479,11 +467,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
   // Create a new quote (protected)
-  app.post("/api/quotes", (req, res, next) => {
-    console.log('🔴 POST /api/quotes MIDDLEWARE HIT - Before requireAuth');
-    next();
-  }, requireAuth, async (req, res) => {
-    console.log('🚨🚨🚨 POST /api/quotes HIT! 🚨🚨🚨');
+  app.post("/api/quotes", requireAuth, async (req, res) => {
+    console.log('POST /api/quotes - Creating new quote');
     try {
       console.log('=== QUOTE CREATION DEBUG ===');
       console.log('User:', req.user?.email, 'ID:', req.user?.id);
@@ -496,11 +481,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const includesBookkeeping = req.body.includesBookkeeping !== false; // Default to true
       const includesTaas = req.body.includesTaas === true;
       
-      // Trust the frontend calculations - the frontend has the authoritative calculation logic
-      // The frontend already calculated and sent the correct fees, so we should use them
-      const requestDataWithFees = {
+      // Prepare data for validation (without ownerId since schema omits it)
+      const validationData = {
         ...req.body,
-        ownerId: req.user.id,
         // Use the frontend-calculated values directly
         monthlyFee: req.body.monthlyFee || "0",
         setupFee: req.body.setupFee || "0", 
@@ -513,9 +496,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       };
       
       console.log('Processing quote data for:', req.body.contactEmail);
-      console.log('Request data (first 500 chars):', JSON.stringify(requestDataWithFees).substring(0, 500));
+      console.log('Validation data (first 500 chars):', JSON.stringify(validationData).substring(0, 500));
       
-      const quoteData = insertQuoteSchema.parse(requestDataWithFees);
+      // Validate the data first (without ownerId)
+      const validatedQuoteData = insertQuoteSchema.parse(validationData);
+      
+      // Add ownerId after validation passes
+      const quoteData = {
+        ...validatedQuoteData,
+        ownerId: req.user.id,
+      };
       console.log('Quote data validated successfully');
       
       const quote = await storage.createQuote(quoteData);

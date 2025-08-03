@@ -723,20 +723,7 @@ export default function Home() {
         });
       }
     },
-    onSuccess: (response) => {
-      console.log('🔥 MUTATION SUCCESS - Raw response:', response);
-      
-      // Parse response properly
-      let data;
-      if (response && typeof response.json === 'function') {
-        response.json().then(parsedData => {
-          console.log('🔥 PARSED RESPONSE DATA:', parsedData);
-          data = parsedData;
-        });
-      } else {
-        data = response;
-      }
-      
+    onSuccess: (data) => {
       console.log('Quote saved successfully:', data);
       toast({
         title: editingQuoteId ? "Quote Updated" : "Quote Saved",

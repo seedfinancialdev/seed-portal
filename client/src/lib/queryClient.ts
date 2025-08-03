@@ -59,23 +59,7 @@ export async function apiRequest(
       requestOptions.body = typeof data === 'string' ? data : JSON.stringify(data);
     }
 
-    // ULTRA DEBUG FOR QUOTE REQUESTS
-    if (url.includes('/api/quotes') && method === 'POST') {
-      console.log('🔥 ULTRA CLIENT DEBUG - About to send POST /api/quotes');
-      console.log('URL:', url);
-      console.log('Method:', method);
-      console.log('Request Options:', requestOptions);
-      console.log('Body length:', requestOptions.body?.length);
-    }
-
     const response = await fetch(url, requestOptions);
-    
-    if (url.includes('/api/quotes') && method === 'POST') {
-      console.log('🔥 ULTRA CLIENT DEBUG - Response received');
-      console.log('Status:', response.status);
-      console.log('Headers:', response.headers);
-      console.log('Response OK:', response.ok);
-    }
     
     return response;
   }
