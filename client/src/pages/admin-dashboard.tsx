@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { useUnifiedAuth } from "@/hooks/use-unified-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PermissionGuard } from "@/components/PermissionGuard";
 import { PERMISSIONS } from "@shared/permissions";
@@ -215,7 +215,7 @@ const navigationItems = [
 ];
 
 export default function AdminDashboard() {
-  const { dbUser: user, signOut } = useGoogleAuth();
+  const { user, signOut } = useUnifiedAuth();
   const { hasPermission, getAvailableDashboards } = usePermissions();
   const [, setLocation] = useLocation();
   const { navigateTo } = useNavigationHistory();

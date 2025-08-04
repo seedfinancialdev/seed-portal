@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { useUnifiedAuth } from "@/hooks/use-unified-auth";
 import { useLocation } from "wouter";
 import { ArrowLeft, Bell, User, Settings, LogOut, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,7 +16,7 @@ export function UniversalNavbar({
   showBackButton = true,
   fallbackPath = "/"
 }: UniversalNavbarProps) {
-  const { dbUser, signOut } = useGoogleAuth();
+  const { user: dbUser, signOut } = useUnifiedAuth();
   const [location, setLocation] = useLocation();
   const { canGoBack } = useBackNavigation();
 

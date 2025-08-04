@@ -3,8 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 // import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/use-auth";
-import { GoogleAuthProvider } from "@/hooks/use-google-auth";
+import { UnifiedAuthProvider } from "@/hooks/use-unified-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { NavigationHistoryProvider } from "@/hooks/use-navigation-history";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -12,7 +11,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { RoleBasedRedirect } from "@/components/RoleBasedRedirect";
 import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
-import AuthPage from "@/pages/auth-page-google";
+import AuthPage from "@/pages/auth-page-unified";
 import Dashboard from "@/pages/sales-dashboard"; // Main dashboard home page
 import AdminDashboard from "@/pages/admin-dashboard"; // Admin dashboard
 import SalesDashboard from "@/pages/sales-dashboard"; // Sales dashboard
@@ -62,14 +61,12 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <GoogleAuthProvider>
-          <AuthProvider>
-            <NavigationHistoryProvider>
-              <Toaster />
-              <Router />
-            </NavigationHistoryProvider>
-          </AuthProvider>
-        </GoogleAuthProvider>
+        <UnifiedAuthProvider>
+          <NavigationHistoryProvider>
+            <Toaster />
+            <Router />
+          </NavigationHistoryProvider>
+        </UnifiedAuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
