@@ -38,6 +38,38 @@ import { UniversalNavbar } from "@/components/UniversalNavbar";
 // Get current month number (1-12)
 const currentMonth = new Date().getMonth() + 1;
 
+// Helper function to validate required fields based on engaged services
+const validateRequiredFields = (formValues: any): { isValid: boolean; missingFields: string[] } => {
+  const missingFields: string[] = [];
+  
+  // Always required fields (for any quote)
+  if (!formValues.industry) missingFields.push("Industry");
+  if (!formValues.monthlyRevenueRange) missingFields.push("Monthly Revenue Range");
+  if (!formValues.entityType) missingFields.push("Entity Type");
+  
+  // Company address - all fields required
+  if (!formValues.clientStreetAddress || !formValues.clientCity || !formValues.clientState || !formValues.clientZipCode) {
+    missingFields.push("Company Address (all fields)");
+  }
+  
+  // Service-specific required fields
+  if (formValues.serviceBookkeeping) {
+    if (!formValues.monthlyTransactions) missingFields.push("Monthly Transactions");
+    if (!formValues.cleanupComplexity) missingFields.push("Cleanup Complexity");
+    if (!formValues.accountingBasis) missingFields.push("Accounting Basis");
+    if (!formValues.bookkeepingQuality) missingFields.push("Bookkeeping Quality");
+  }
+  
+  if (formValues.serviceTaas) {
+    if (!formValues.monthlyRevenueRange) missingFields.push("Monthly Revenue Range");
+  }
+  
+  return {
+    isValid: missingFields.length === 0,
+    missingFields
+  };
+};
+
 // Helper functions for approval logic
 const getApprovalButtonDisabledReason = (formValues: any, isRequestingApproval: boolean, hasRequestedApproval: boolean): string | null => {
   if (isRequestingApproval) return null;
@@ -3628,27 +3660,33 @@ export default function Home() {
                             }
                           }
                         }}
-                        disabled={
-                          !isCalculated || 
-                          hubspotVerificationStatus !== 'verified' || 
-                          pushToHubSpotMutation.isPending || 
-                          updateHubSpotMutation.isPending ||
-                          createQuoteMutation.isPending ||
-                          // Disable if override requires approval but not yet approved
-                          (form.watch("cleanupOverride") && !isApproved && (() => {
-                            const overrideReason = form.watch("overrideReason");
-                            const customSetupFee = form.watch("customSetupFee");
-                            const cleanupMonths = form.watch("cleanupMonths");
-                            
-                            if (overrideReason === "Other") {
-                              // For "Other" - requires approval if custom setup fee OR cleanup months reduced
-                              return (customSetupFee && parseFloat(customSetupFee) > 0) || cleanupMonths < currentMonth;
-                            } else {
-                              // For other reasons - only requires approval if cleanup months reduced
-                              return cleanupMonths < currentMonth;
-                            }
-                          })())
-                        }
+                        disabled={(() => {
+                          const formValues = form.getValues();
+                          const requiredFieldsValidation = validateRequiredFields(formValues);
+                          
+                          return (
+                            !isCalculated || 
+                            hubspotVerificationStatus !== 'verified' || 
+                            !requiredFieldsValidation.isValid ||
+                            pushToHubSpotMutation.isPending || 
+                            updateHubSpotMutation.isPending ||
+                            createQuoteMutation.isPending ||
+                            // Disable if override requires approval but not yet approved
+                            (form.watch("cleanupOverride") && !isApproved && (() => {
+                              const overrideReason = form.watch("overrideReason");
+                              const customSetupFee = form.watch("customSetupFee");
+                              const cleanupMonths = form.watch("cleanupMonths");
+                              
+                              if (overrideReason === "Other") {
+                                // For "Other" - requires approval if custom setup fee OR cleanup months reduced
+                                return (customSetupFee && parseFloat(customSetupFee) > 0) || cleanupMonths < currentMonth;
+                              } else {
+                                // For other reasons - only requires approval if cleanup months reduced
+                                return cleanupMonths < currentMonth;
+                              }
+                            })())
+                          );
+                        })()}
                         className="flex-1 bg-orange-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-orange-700 active:bg-orange-800 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 button-shimmer transition-all duration-300"
                       >
                         <Upload className="w-4 h-4 mr-2" />
@@ -3673,6 +3711,29 @@ export default function Home() {
                       </AlertDescription>
                     </Alert>
                   )}
+                  
+                  {/* Show missing required fields alert */}
+                  {isCalculated && hubspotVerificationStatus === 'verified' && (() => {
+                    const formValues = form.getValues();
+                    const requiredFieldsValidation = validateRequiredFields(formValues);
+                    
+                    if (!requiredFieldsValidation.isValid) {
+                      return (
+                        <Alert className="border-red-200 bg-red-50">
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertDescription className="text-red-800">
+                            <div className="font-medium mb-1">Missing required fields:</div>
+                            <ul className="list-disc list-inside text-sm">
+                              {requiredFieldsValidation.missingFields.map((field, index) => (
+                                <li key={index}>{field}</li>
+                              ))}
+                            </ul>
+                          </AlertDescription>
+                        </Alert>
+                      );
+                    }
+                    return null;
+                  })()}
                   
                   {editingQuoteId && (
                     <Alert>
