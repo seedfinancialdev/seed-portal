@@ -65,8 +65,14 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies for Replit domains
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  };
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies for Replit domains
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      domain: process.env.NODE_ENV === 'production' ? undefined : undefined // Let browser handle domain for Replit
     }
   };
 }
