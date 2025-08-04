@@ -3712,24 +3712,28 @@ export default function Home() {
                   )}
                   
                   {/* Show missing required fields alert */}
-                  {isCalculated && hubspotVerificationStatus === 'verified' && (() => {
+                  {(() => {
                     const formValues = form.getValues();
-                    const requiredFieldsValidation = validateRequiredFields(formValues);
                     
-                    if (!requiredFieldsValidation.isValid) {
-                      return (
-                        <Alert className="border-red-200 bg-red-50">
-                          <AlertCircle className="h-4 w-4 text-red-600" />
-                          <AlertDescription className="text-red-800">
-                            <div className="font-medium mb-1">Missing required fields:</div>
-                            <ul className="list-disc list-inside text-sm">
-                              {requiredFieldsValidation.missingFields.map((field, index) => (
-                                <li key={index}>{field}</li>
-                              ))}
-                            </ul>
-                          </AlertDescription>
-                        </Alert>
-                      );
+                    // Show missing fields alert when any service is engaged and there are missing fields
+                    if (formValues.serviceBookkeeping || formValues.serviceTaas) {
+                      const requiredFieldsValidation = validateRequiredFields(formValues);
+                      
+                      if (!requiredFieldsValidation.isValid) {
+                        return (
+                          <Alert className="border-red-200 bg-red-50">
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <AlertDescription className="text-red-800">
+                              <div className="font-medium mb-1">Missing required fields:</div>
+                              <ul className="list-disc list-inside text-sm">
+                                {requiredFieldsValidation.missingFields.map((field, index) => (
+                                  <li key={index}>{field}</li>
+                                ))}
+                              </ul>
+                            </AlertDescription>
+                          </Alert>
+                        );
+                      }
                     }
                     return null;
                   })()}
