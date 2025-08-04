@@ -333,75 +333,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     });
   });
 
-  // Google OAuth user sync endpoint
-  app.post("/api/auth/google/sync", async (req, res) => {
-    try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ message: "Authorization header required" });
-      }
-
-      const token = authHeader.split(' ')[1];
-      const { googleId, email, name, picture, hd } = req.body;
-      
-      if (!googleId || !email) {
-        return res.status(400).json({ message: "Google ID and email are required" });
-      }
-
-      // Validate hosted domain
-      if (hd !== 'seedfinancial.io') {
-        return res.status(403).json({ message: "Only @seedfinancial.io accounts are allowed" });
-      }
-
-      // Check if user exists by Google ID or email
-      let user = await storage.getUserByGoogleId(googleId) || await storage.getUserByEmail(email);
-
-      if (!user) {
-        // No automatic user creation - user must be manually added by admin first
-        return res.status(403).json({ 
-          message: "ACCESS_NOT_GRANTED",
-          email: email,
-          needsApproval: true 
-        });
-      } else if (!user.googleId && user.email === email) {
-        // Update existing user to link Google account
-        await storage.updateUserGoogleId(user.id, googleId, 'google', picture);
-        user = await storage.getUser(user.id);
-      }
-      
-      // Ensure user object is valid
-      if (!user || !user.id) {
-        console.error('Invalid user object after retrieval:', user);
-        return res.status(500).json({ message: "Invalid user data" });
-      }
-
-      // Ensure jon@seedfinancial.io always has admin role (hardcoded protection)
-      if (user && user.email === 'jon@seedfinancial.io' && user.role !== 'admin') {
-        console.log(`Updating jon@seedfinancial.io role from ${user.role} to admin in Google sync`);
-        user = await storage.updateUserRole(user.id, 'admin', user.id);
-      }
-
-      // Log user into session for subsequent API requests
-      if (!user) {
-        return res.status(500).json({ message: "User creation failed" });
-      }
-      
-      // Simplified session establishment - avoid complex regeneration that can fail with Redis
-      req.login(user, (err: any) => {
-        if (err) {
-          console.error('Session login failed:', err);
-          return res.status(500).json({ message: "Failed to establish session" });
-        }
-        
-        // Return user data (excluding password)
-        const { password, ...safeUser } = user!;
-        res.json(safeUser);
-      });
-    } catch (error) {
-      console.error('Error syncing Google user:', error);
-      res.status(500).json({ message: "Failed to sync user" });
-    }
-  });
+  // OAuth sync endpoint removed - handled in auth.ts
 
   // Request portal access endpoint
   app.post("/api/auth/request-access", async (req, res) => {

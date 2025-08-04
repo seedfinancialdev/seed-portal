@@ -63,9 +63,9 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: true, // Always use secure cookies in Replit environments
+      secure: false, // Allow HTTP in development, HTTPS will be handled by proxy
       httpOnly: true,
-      sameSite: 'none', // Required for cross-origin iframe embedding in Replit
+      sameSite: 'lax', // More permissive for development and Replit environments
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       domain: undefined // Let browser determine domain automatically
     }
