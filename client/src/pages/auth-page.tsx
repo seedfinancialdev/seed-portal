@@ -18,6 +18,9 @@ export default function AuthPage() {
     return <Redirect to="/" />;
   }
 
+  // Detect Arc browser for special handling
+  const isArcBrowser = navigator.userAgent.includes('Arc');
+  
   const googleLogin = useGoogleLogin({
     onSuccess: async (response) => {
       console.log('[Google OAuth] Success:', response);
@@ -39,13 +42,36 @@ export default function AuthPage() {
     onNonOAuthError: (error) => {
       console.error('[Google OAuth] Non-OAuth error details:', error);
       if (error?.message === 'Popup window closed') {
-        console.error('[Google OAuth] Popup was blocked or closed by user');
-        console.error('Please allow popups for this site and try again');
+        console.error('[Google OAuth] Popup was blocked - Arc browser detected');
+        if (isArcBrowser) {
+          alert('Arc browser blocks popups by default.\n\nTo enable Google login:\n1. Click the shield icon in Arc\'s address bar\n2. Select "Allow popups"\n3. Try logging in again\n\nOr use Chrome/Safari for easier login.');
+        } else {
+          alert('Popup was blocked. Please allow popups for this site and try again.');
+        }
       }
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
     ux_mode: 'popup',
+  });
+
+  // Redirect flow fallback for Arc browser
+  const googleRedirectLogin = useGoogleLogin({
+    onSuccess: async (response) => {
+      console.log('[Google OAuth] Redirect success:', response);
+      try {
+        const result = await loginMutation.mutateAsync({ googleAccessToken: response.access_token });
+        console.log('[Auth] Redirect login successful:', result);
+      } catch (error) {
+        console.error('[Auth] Redirect login failed:', error);
+      }
+    },
+    onError: (error) => {
+      console.error('[Google OAuth] Redirect error:', error);
+    },
+    flow: 'implicit',
+    hosted_domain: 'seedfinancial.io',
+    ux_mode: 'redirect',
   });
 
   console.log('[AuthPage] Google Client ID available:', !!import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -81,15 +107,9 @@ export default function AuthPage() {
             <Button
               onClick={() => {
                 console.log('[AuthPage] Google login button clicked');
-                // Check for popup blockers
-                const popup = window.open('', 'popup', 'width=1,height=1');
-                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-                  console.warn('[AuthPage] Popup blocked - user needs to allow popups');
-                  alert('Please allow popups for this site to enable Google login, then try again.');
-                  return;
-                }
-                popup.close();
+                console.log('[AuthPage] Arc browser detected:', navigator.userAgent.includes('Arc'));
                 
+                // Try popup first
                 googleLogin();
               }}
               className="w-full bg-[#e24c00] hover:bg-[#c23e00] text-white"
@@ -116,6 +136,19 @@ export default function AuthPage() {
                 </>
               )}
             </Button>
+            
+            {isArcBrowser && (
+              <Button
+                onClick={() => {
+                  console.log('[AuthPage] Using redirect flow for Arc browser');
+                  googleRedirectLogin();
+                }}
+                className="w-full mt-2 bg-gray-600 hover:bg-gray-700 text-white"
+                disabled={loginMutation.isPending}
+              >
+                Alternative Login (Redirect)
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
