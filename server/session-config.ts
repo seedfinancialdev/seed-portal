@@ -63,9 +63,9 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: true, // Always use secure cookies for production
+      secure: process.env.NODE_ENV === 'production', // Secure in production only
       httpOnly: true,
-      sameSite: 'none', // Required for cross-origin iframe embedding
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for production cross-origin, 'lax' for dev
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       domain: undefined // Let browser determine domain automatically
     }
