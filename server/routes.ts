@@ -131,59 +131,36 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     });
   });
 
-  // Apply Redis session configuration directly
-  app.get("/api/admin/apply-redis-sessions", async (req, res) => {
-    console.log('[ApplyRedis] Applying Redis session configuration...');
+  // Redis session status endpoint (removed duplicate session middleware application)
+  app.get("/api/admin/redis-session-status", async (req, res) => {
+    console.log('[RedisStatus] Checking Redis session status...');
     
     if (!process.env.REDIS_URL) {
-      return res.json({ error: 'REDIS_URL not configured' });
+      return res.json({ 
+        status: 'no-redis-url',
+        message: 'REDIS_URL not configured - using fallback session store'
+      });
     }
     
     try {
       const Redis = (await import('ioredis')).default;
-      const RedisStore = (await import('connect-redis')).default;
-      const session = (await import('express-session')).default;
-      
-      // Create Redis client
       const redisClient = new Redis(process.env.REDIS_URL);
       await redisClient.ping();
-      console.log('[ApplyRedis] ✅ Redis connection successful');
-      
-      // Create RedisStore
-      const redisStore = new RedisStore({
-        client: redisClient,
-        prefix: 'sess:',
-        ttl: 24 * 60 * 60, // 24 hours
-      });
-      
-      console.log('[ApplyRedis] ✅ RedisStore created:', redisStore.constructor.name);
-      
-      // Apply session middleware with Redis store
-      app.use(session({
-        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-        resave: false,
-        saveUninitialized: false,
-        store: redisStore,
-        cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          sameSite: 'strict',
-          maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
-      }));
-      
-      console.log('[ApplyRedis] ✅ Redis session middleware applied');
+      await redisClient.quit();
       
       res.json({
-        status: 'success',
-        message: 'Redis sessions applied successfully',
-        storeType: redisStore.constructor.name,
+        status: 'redis-available',
+        message: 'Redis connection successful - sessions using Redis store',
         timestamp: new Date().toISOString()
       });
       
     } catch (error) {
-      console.error('[ApplyRedis] Error:', error);
-      res.json({ error: error.message });
+      console.error('[RedisStatus] Error:', error);
+      res.json({ 
+        status: 'redis-failed',
+        message: 'Redis connection failed - using fallback session store',
+        error: error.message 
+      });
     }
   });
 
@@ -213,24 +190,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       console.log('[TestRedis] RedisStore created:', store.constructor.name);
       
-      // ALSO APPLY REDIS SESSION MIDDLEWARE DIRECTLY
-      console.log('[TestRedis] Applying Redis session middleware to Express app...');
-      const session = (await import('express-session')).default;
-      
-      app.use(session({
-        secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-        resave: false,
-        saveUninitialized: false,
-        store: store,  // Use the RedisStore we just created
-        cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          sameSite: 'strict',
-          maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
-      }));
-      
-      console.log('[TestRedis] ✅ Redis session middleware applied to Express!');
+      // Test session store functionality without applying duplicate middleware
+      console.log('[TestRedis] Testing Redis session store functionality...');
       
       // Test storing a session
       const sessionId = 'test-session-123';

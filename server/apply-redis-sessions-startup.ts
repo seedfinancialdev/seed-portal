@@ -37,7 +37,7 @@ export async function applyRedisSessionsAtStartup(app: Express): Promise<void> {
       cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies for Replit domains
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       }
     }));
