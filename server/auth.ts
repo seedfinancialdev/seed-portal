@@ -228,6 +228,100 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   });
 
   app.post("/api/login", async (req, res, next) => {
+    // Handle Google OAuth token login
+    if (req.body.googleAccessToken) {
+      console.log('🔍 Google OAuth login detected, processing token...');
+      try {
+        const token = req.body.googleAccessToken;
+        
+        // Verify the token with Google
+        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+        
+        if (!response.ok) {
+          console.error('❌ Google token verification failed:', response.status, response.statusText);
+          return res.status(401).json({ message: "Invalid Google token" });
+        }
+
+        const userInfo = await response.json();
+        console.log('✅ Google token verified for:', userInfo.email);
+        
+        // Check domain restriction
+        if (userInfo.hd !== 'seedfinancial.io') {
+          console.log('❌ Domain restriction failed:', userInfo.hd);
+          return res.status(403).json({ 
+            message: "Access restricted to @seedfinancial.io domain" 
+          });
+        }
+
+        // Get or create user
+        let user = await storage.getUserByEmail(userInfo.email);
+        
+        if (!user) {
+          console.log('🆕 Creating new user for:', userInfo.email);
+          // Determine role - admin for jon@seedfinancial.io, service for others
+          let role = 'service';
+          if (userInfo.email === 'jon@seedfinancial.io') {
+            role = 'admin';
+          }
+          
+          user = await storage.createUser({
+            email: userInfo.email,
+            password: await hashPassword('oauth-google-' + Date.now()),
+            firstName: userInfo.given_name || '',
+            lastName: userInfo.family_name || '',
+            profilePhoto: userInfo.picture || null,
+            googleId: userInfo.sub,
+            role,
+            hubspotUserId: null,
+          });
+          console.log('✅ User created with ID:', user.id);
+        } else {
+          console.log('👤 Existing user found:', user.email);
+          // Update Google info if needed
+          if (userInfo.sub && userInfo.sub !== user.googleId) {
+            await storage.updateUserGoogleId(user.id, userInfo.sub, 'google', userInfo.picture || null);
+          }
+        }
+
+        // Create session
+        req.login(user, (err) => {
+          if (err) {
+            console.error('❌ Session creation failed:', err);
+            return res.status(500).json({ message: "Session creation failed" });
+          }
+          
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error('⚠️ Session save warning:', saveErr);
+            }
+            
+            console.log('✅ Google OAuth login successful for:', user.email);
+            console.log('🔑 Session created:', req.sessionID);
+            
+            res.status(200).json({
+              id: user.id,
+              email: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              role: user.role,
+              profilePhoto: user.profilePhoto
+            });
+          });
+        });
+
+      } catch (error) {
+        console.error('❌ Google OAuth login error:', error);
+        return res.status(500).json({ message: "Google authentication failed" });
+      }
+      return;
+    }
+
+    // Handle traditional email/password login
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) return next(err);
       if (!user) {
