@@ -52,16 +52,15 @@ const validateRequiredFields = (formValues: any): { isValid: boolean; missingFie
     missingFields.push("Company Address (all fields)");
   }
   
-  // Service-specific required fields
+  // Only validate service-specific fields if that service is actually engaged
   if (formValues.serviceBookkeeping) {
     if (!formValues.monthlyTransactions) missingFields.push("Monthly Transactions");
     if (!formValues.cleanupComplexity) missingFields.push("Cleanup Complexity");
     if (!formValues.accountingBasis) missingFields.push("Accounting Basis");
-    if (!formValues.bookkeepingQuality) missingFields.push("Bookkeeping Quality");
   }
   
   if (formValues.serviceTaas) {
-    if (!formValues.monthlyRevenueRange) missingFields.push("Monthly Revenue Range");
+    if (!formValues.bookkeepingQuality) missingFields.push("Bookkeeping Quality");
   }
   
   return {
