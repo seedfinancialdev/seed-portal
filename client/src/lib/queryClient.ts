@@ -61,7 +61,14 @@ export async function apiRequest(
 
     const response = await fetch(url, requestOptions);
     await throwIfResNotOk(response);
-    return await response.json();
+    
+    // Only parse JSON if response is successful
+    if (response.ok) {
+      return await response.json();
+    }
+    
+    // For error responses, throwIfResNotOk will handle the error
+    return null;
   }
 
   // For new signature calls, build standard request options
@@ -79,7 +86,14 @@ export async function apiRequest(
 
   const response = await fetch(url, requestOptions);
   await throwIfResNotOk(response);
-  return await response.json();
+  
+  // Only parse JSON if response is successful
+  if (response.ok) {
+    return await response.json();
+  }
+  
+  // For error responses, throwIfResNotOk will handle the error
+  return null;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
