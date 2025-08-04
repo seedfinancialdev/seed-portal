@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useUnifiedAuth } from "@/hooks/use-unified-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { PermissionGuard } from "@/components/PermissionGuard";
 import { PERMISSIONS } from "@shared/permissions";
@@ -215,7 +215,7 @@ const navigationItems = [
 ];
 
 export default function AdminDashboard() {
-  const { user, signOut } = useUnifiedAuth();
+  const { user, logoutMutation } = useAuth();
   const { hasPermission, getAvailableDashboards } = usePermissions();
   const [, setLocation] = useLocation();
   const { navigateTo } = useNavigationHistory();
@@ -482,7 +482,7 @@ export default function AdminDashboard() {
                 Service Dashboard
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut} className="text-red-600">
+              <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
               </DropdownMenuItem>

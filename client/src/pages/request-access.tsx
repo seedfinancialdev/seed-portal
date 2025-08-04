@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useGoogleAuth } from '@/hooks/use-google-auth';
+import { useAuth } from '@/hooks/use-auth';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, Clock, Mail, Shield } from 'lucide-react';
 
 export default function RequestAccess() {
-  const { googleUser, signOut } = useGoogleAuth();
+  const { user: googleUser, logoutMutation } = useAuth();
   const { toast } = useToast();
   const [requestSent, setRequestSent] = useState(false);
 
@@ -128,7 +128,7 @@ export default function RequestAccess() {
           <div className="pt-4 border-t">
             <Button
               variant="outline"
-              onClick={() => signOut()}
+              onClick={() => logoutMutation.mutate()}
               className="w-full"
             >
               Sign Out

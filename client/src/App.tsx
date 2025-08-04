@@ -3,7 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 // import { TooltipProvider } from "@/components/ui/tooltip";
-import { UnifiedAuthProvider } from "@/hooks/use-unified-auth";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import { AuthProvider } from "@/hooks/use-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { NavigationHistoryProvider } from "@/hooks/use-navigation-history";
 import { ProtectedRoute } from "@/lib/protected-route";
@@ -11,7 +12,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { RoleBasedRedirect } from "@/components/RoleBasedRedirect";
 import NotFound from "@/pages/not-found";
 import Calculator from "@/pages/home.tsx"; // Quote Calculator component  
-import AuthPage from "@/pages/auth-page-unified";
+import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/sales-dashboard"; // Main dashboard home page
 import AdminDashboard from "@/pages/admin-dashboard"; // Admin dashboard
 import SalesDashboard from "@/pages/sales-dashboard"; // Sales dashboard
@@ -61,12 +62,14 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <UnifiedAuthProvider>
-          <NavigationHistoryProvider>
-            <Toaster />
-            <Router />
-          </NavigationHistoryProvider>
-        </UnifiedAuthProvider>
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
+          <AuthProvider>
+            <NavigationHistoryProvider>
+              <Toaster />
+              <Router />
+            </NavigationHistoryProvider>
+          </AuthProvider>
+        </GoogleOAuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useUnifiedAuth } from "@/hooks/use-unified-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { updateProfileSchema, type UpdateProfile } from "@shared/schema";
@@ -63,7 +63,7 @@ interface AddressSuggestion {
 }
 
 export default function Profile() {
-  const { user } = useUnifiedAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   

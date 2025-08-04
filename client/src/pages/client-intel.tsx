@@ -37,7 +37,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useUnifiedAuth } from "@/hooks/use-unified-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
 
 interface ClientSnapshot {
@@ -68,7 +68,7 @@ interface ClientSnapshot {
 }
 
 export default function ClientIntel() {
-  const { user } = useUnifiedAuth();
+  const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");

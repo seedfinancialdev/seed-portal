@@ -4,7 +4,7 @@ import { PERMISSIONS } from "@shared/permissions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Wrench, Clock, CheckCircle, AlertTriangle, Users, FileText, Headphones, Settings } from "lucide-react";
 import navLogoPath from "@assets/Nav Logo_1753431362883.png";
-import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,7 +13,7 @@ import { useNavigationHistory } from "@/hooks/use-navigation-history";
 
 export default function ServiceDashboard() {
   const { hasPermission, getAvailableDashboards } = usePermissions();
-  const { dbUser: currentUser, signOut } = useGoogleAuth();
+  const { user: currentUser, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
   const { navigateTo } = useNavigationHistory();
   const availableDashboards = getAvailableDashboards();
@@ -64,13 +64,13 @@ export default function ServiceDashboard() {
                       {dashboard.name}
                     </DropdownMenuItem>
                   ))}
-                  <DropdownMenuItem className="border-t mt-2 pt-2" onClick={signOut}>
+                  <DropdownMenuItem className="border-t mt-2 pt-2" onClick={() => logoutMutation.mutate()}>
                     Sign out
                   </DropdownMenuItem>
                 </>
               )}
               {availableDashboards.length === 1 && (
-                <DropdownMenuItem onClick={signOut}>
+                <DropdownMenuItem onClick={() => logoutMutation.mutate()}>
                   Sign out
                 </DropdownMenuItem>
               )}

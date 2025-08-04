@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useUnifiedAuth } from "@/hooks/use-unified-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { ArrowLeft, Bell, User, Settings, LogOut, Shield } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,12 +16,12 @@ export function UniversalNavbar({
   showBackButton = true,
   fallbackPath = "/"
 }: UniversalNavbarProps) {
-  const { user: dbUser, signOut } = useUnifiedAuth();
+  const { user: dbUser, logoutMutation } = useAuth();
   const [location, setLocation] = useLocation();
   const { canGoBack } = useBackNavigation();
 
-  const handleLogout = async () => {
-    await signOut();
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   // Only show back button if there's history or if explicitly requested
