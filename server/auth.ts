@@ -256,12 +256,23 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log('🔐 /api/user endpoint called');
+    console.log('🔐 Session ID:', req.sessionID);
+    console.log('🔐 Authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
+    console.log('🔐 User:', req.user ? req.user.email : 'None');
+    
+    if (!req.isAuthenticated()) {
+      console.log('❌ User not authenticated, returning 401');
+      return res.sendStatus(401);
+    }
+    
+    console.log('✅ User authenticated, returning user data');
     res.json({
       id: req.user.id,
       email: req.user.email,
       firstName: req.user.firstName,
       lastName: req.user.lastName,
+      role: req.user.role,
       profilePhoto: req.user.profilePhoto,
       phoneNumber: req.user.phoneNumber,
       address: req.user.address,
@@ -279,36 +290,49 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   // Google OAuth Session-Based Authentication Endpoints
   app.post("/api/auth/google/sync", async (req, res) => {
     try {
+      console.log('🔐 Google OAuth sync endpoint called');
+      console.log('🔐 Auth header:', req.headers.authorization ? 'Present' : 'Missing');
+      console.log('🔐 Request body:', req.body);
+      
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
+        console.log('❌ No Bearer token provided');
         return res.status(401).json({ message: "Bearer token required" });
       }
 
       const token = authHeader.split(' ')[1];
+      console.log('🔐 Extracted token length:', token?.length || 0);
       
       // Verify the token with Google
+      console.log('🔐 Verifying token with Google...');
       const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       
+      console.log('🔐 Google API response status:', response.status);
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log('❌ Google API error:', errorText);
         return res.status(401).json({ message: "Invalid Google token" });
       }
 
       const userInfo = await response.json();
-      console.log('Google OAuth sync for:', userInfo.email, 'domain:', userInfo.hd);
+      console.log('✅ Google OAuth sync for:', userInfo.email, 'domain:', userInfo.hd);
       
       // Check domain restriction
       if (userInfo.hd !== 'seedfinancial.io') {
+        console.log('❌ Domain restriction failed:', userInfo.hd);
         return res.status(403).json({ 
           message: "Access restricted to @seedfinancial.io domain" 
         });
       }
 
       // Get or create user in database
+      console.log('🔐 Looking up user by email:', userInfo.email);
       let user = await storage.getUserByEmail(userInfo.email);
+      console.log('🔐 User found:', user ? 'Yes' : 'No');
       
       if (!user) {
         // Create new user if doesn't exist
@@ -338,13 +362,17 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
       }
 
       // Create session by logging in the user
+      console.log('🔐 Creating session for user:', user.email);
       req.login(user, (err) => {
         if (err) {
-          console.error('Session creation failed:', err);
+          console.error('❌ Session creation failed:', err);
           return res.status(500).json({ message: "Session creation failed" });
         }
         
-        console.log('Session created for user:', user.email);
+        console.log('✅ Session created successfully for user:', user.email);
+        console.log('🔐 Session ID:', req.sessionID);
+        console.log('🔐 User authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
+        
         res.json({
           id: user.id,
           email: user.email,
@@ -357,8 +385,9 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
       });
 
     } catch (error) {
-      console.error('Google OAuth sync error:', error);
-      res.status(500).json({ message: "Authentication failed" });
+      console.error('❌ Google OAuth sync error:', error);
+      console.error('❌ Error stack:', error.stack);
+      res.status(500).json({ message: "Authentication failed", error: error.message });
     }
   });
 
