@@ -87,6 +87,9 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           localStorage.removeItem('google_user');
           setAccessToken(null);
           // Keep googleUser for display purposes only
+          
+          // Invalidate session user query to trigger immediate refetch with new session
+          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         }
         
         return responseData;
@@ -104,7 +107,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     retry: false, // Don't retry on access denied
   });
 
-  // Separate query for current user session (independent of Google OAuth)
+  // Separate query for current user session - only runs when no OAuth flow is active
   const { data: sessionUser, isLoading: sessionLoading } = useQuery<DBUser | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
@@ -120,6 +123,8 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     },
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    // Disable session check while OAuth sync is happening to prevent timing conflicts
+    enabled: !googleUser && !accessToken,
   });
 
   const googleLogin = useGoogleLogin({
@@ -240,6 +245,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   });
 
   // Use session user if available, otherwise use dbUser from OAuth flow
+  // After OAuth sync completes and tokens are cleared, prioritize sessionUser
   const currentUser = sessionUser || dbUser;
   
   // Check if user is admin
@@ -253,7 +259,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       value={{
         googleUser,
         dbUser: currentUser ?? null,
-        isLoading: sessionLoading || dbLoading,
+        isLoading: dbLoading || (sessionLoading && !googleUser && !accessToken),
         error,
         needsApproval,
         signIn: googleLogin,
