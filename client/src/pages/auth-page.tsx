@@ -37,22 +37,10 @@ export default function AuthPage() {
       console.error('[Google OAuth] Login error:', error);
     },
     onNonOAuthError: (error) => {
-      console.error('[Google OAuth] Popup window closed - trying redirect flow');
+      console.error('[Google OAuth] Non-OAuth error details:', error);
       if (error?.message === 'Popup window closed') {
-        console.log('[Google OAuth] Switching to redirect flow due to popup blocker');
-        // Try redirect flow as fallback
-        const redirectLogin = useGoogleLogin({
-          flow: 'auth-code',
-          hosted_domain: 'seedfinancial.io',
-          onSuccess: async (codeResponse) => {
-            console.log('[Google OAuth] Redirect flow success:', codeResponse);
-            // Handle auth code flow
-          },
-          onError: (redirectError) => {
-            console.error('[Google OAuth] Redirect flow also failed:', redirectError);
-          }
-        });
-        redirectLogin();
+        console.error('[Google OAuth] Popup was blocked or closed by user');
+        console.error('Please allow popups for this site and try again');
       }
     },
     flow: 'implicit',
