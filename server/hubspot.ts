@@ -579,11 +579,10 @@ Services Include:
           hs_sender_lastname: userProfile?.lastName || lastName || 'Wells',
           hs_sender_email: userEmail,
           hs_esign_enabled: true,
-          hs_payment_enabled: true, // Enable payments
-          hs_payments_enabled: true, // Enable payments
-          hs_signature_required: true, // Require signature
+          // Removed invalid properties: hs_payment_enabled, hs_payments_enabled, hs_signature_required
+          // These will be set manually in HubSpot after quote creation
           hs_comments: scopeAssumptions, // Add scope assumptions to comments field
-          hs_terms: paymentTerms, // Add payment terms with MSA and service schedule links
+          hs_terms: paymentTerms // Add payment terms with MSA and service schedule links
         },
         associations: [
           {
@@ -1672,8 +1671,8 @@ Generated: ${new Date().toLocaleDateString()}`;
       const updateBody = {
         properties: {
           hs_title: updatedTitle,
-          hs_payments_enabled: true, // Enable payments
-          hs_signature_required: true, // Require signature
+          // Removed invalid properties: hs_payments_enabled, hs_signature_required
+          // These will be set manually in HubSpot after quote update
           hs_comments: scopeAssumptions, // Update scope assumptions in comments field
           hs_terms: paymentTerms // Update payment terms with MSA and service schedule links
         }
