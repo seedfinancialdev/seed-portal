@@ -464,17 +464,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // Google logout endpoint
-  app.post("/api/auth/logout", async (req, res) => {
-    try {
-      // For now, just acknowledge the logout
-      // In production, you might want to invalidate tokens on your end
-      res.json({ message: "Logged out successfully" });
-    } catch (error) {
-      console.error('Logout error:', error);
-      res.status(500).json({ message: "Logout failed" });
-    }
-  });
+  // Removed duplicate logout endpoint - using /api/logout from auth.ts instead
 
   // Test endpoint for database operations
   app.get("/api/test/db-quote", requireAuth, async (req, res) => {

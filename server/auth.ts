@@ -249,9 +249,19 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   });
 
   app.post("/api/logout", (req, res, next) => {
+    console.log('🚪 Session logout endpoint called');
+    console.log('🚪 Session ID before logout:', req.sessionID);
+    console.log('🚪 User before logout:', req.user ? req.user.email : 'None');
+    
     req.logout((err) => {
-      if (err) return next(err);
-      res.sendStatus(200);
+      if (err) {
+        console.error('❌ Session logout error:', err);
+        return next(err);
+      }
+      
+      console.log('✅ Session logout successful');
+      console.log('🚪 Session destroyed, user logged out');
+      res.json({ message: "Logged out successfully" });
     });
   });
 
