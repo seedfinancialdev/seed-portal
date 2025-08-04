@@ -107,7 +107,14 @@ export default function KnowledgeBase() {
     queryKey: ["/api/kb/articles", selectedCategory?.id],
     queryFn: async () => {
       if (!selectedCategory) return [];
-      return apiRequest(`/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
+      try {
+        const result = await apiRequest(`/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
+        // Ensure result is always an array
+        return Array.isArray(result) ? result : [];
+      } catch (error) {
+        console.error('Failed to fetch articles:', error);
+        return [];
+      }
     },
     enabled: !!selectedCategory,
   });
@@ -614,7 +621,7 @@ export default function KnowledgeBase() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {categoryArticles.map((article: KbArticle) => (
+                {Array.isArray(categoryArticles) ? categoryArticles.map((article: KbArticle) => (
                   <Card 
                     key={article.id} 
                     className="bg-white/10 border-white/20 hover:bg-white/15 transition-colors cursor-pointer"
@@ -657,7 +664,11 @@ export default function KnowledgeBase() {
                       )}
                     </div>
                   </Card>
-                ))}
+                )) : (
+                  <div className="text-center text-white py-8">
+                    Error loading articles. Please try again.
+                  </div>
+                )}
               </div>
             )}
           </div>
