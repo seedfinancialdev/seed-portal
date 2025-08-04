@@ -1649,7 +1649,7 @@ Generated: ${new Date().toLocaleDateString()}`;
         serviceType = 'Bookkeeping Services';
       }
       
-      const updatedTitle = `${companyName} - ${serviceType} Quote (Updated ${new Date().toLocaleDateString()})`;
+      const updatedTitle = `${companyName} - ${serviceType} Quote`;
       
       // Generate scope assumptions if quote data is available
       let scopeAssumptions = '';
@@ -1916,10 +1916,6 @@ Generated: ${new Date().toLocaleDateString()}`;
       
       assumptions.push(`• Number of Prior Years Filings: ${quoteData.priorYearsUnfiled || 0}`);
     }
-    
-    assumptions.push("");
-    assumptions.push("Generated on: " + new Date().toLocaleDateString());
-    assumptions.push("");
     
     return assumptions.join('\n');
   }
