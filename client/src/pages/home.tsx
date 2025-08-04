@@ -1048,17 +1048,15 @@ export default function Home() {
     }
     
     // Address fields - only lock if there's actual address data from HubSpot
-    const hasAddressData = contact.properties.address || contact.properties.city || contact.properties.state || contact.properties.zip;
-    if (hasAddressData) {
-      form.setValue('clientStreetAddress', contact.properties.address || '');
-      form.setValue('clientCity', contact.properties.city || '');
-      form.setValue('clientState', contact.properties.state || '');
-      form.setValue('clientZipCode', contact.properties.zip || '');
-      form.setValue('companyAddressLocked', true);
-    } else {
-      // If no address data from HubSpot, ensure address is unlocked
-      form.setValue('companyAddressLocked', false);
-    }
+    // Set address fields from HubSpot data
+    form.setValue('clientStreetAddress', contact.properties.address || '');
+    form.setValue('clientCity', contact.properties.city || '');
+    form.setValue('clientState', contact.properties.state || '');
+    form.setValue('clientZipCode', contact.properties.zip || '');
+    
+    // Only lock address if ALL required address fields are filled
+    const hasCompleteAddressData = contact.properties.address && contact.properties.city && contact.properties.state && contact.properties.zip;
+    form.setValue('companyAddressLocked', hasCompleteAddressData ? true : false);
 
     // Hide the existing quotes modal and show client details
     setShowExistingQuotesModal(false);
@@ -1955,7 +1953,7 @@ export default function Home() {
                     name="industry"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">Industry</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Industry <span className="text-red-500">*</span></label>
                         <FormControl>
                           <div className="flex gap-2">
                             <Select onValueChange={field.onChange} value={field.value} disabled={form.watch('industryLocked')}>
@@ -2015,7 +2013,7 @@ export default function Home() {
                     name="monthlyRevenueRange"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">MONTHLY Revenue Range</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">MONTHLY Revenue Range <span className="text-red-500">*</span></label>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
@@ -2042,7 +2040,7 @@ export default function Home() {
                     name="entityType"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="text-gray-700 font-medium text-sm block mb-2">Entity Type</label>
+                        <label className="text-gray-700 font-medium text-sm block mb-2">Entity Type <span className="text-red-500">*</span></label>
                         <Select onValueChange={field.onChange} value={field.value || ""}>
                           <FormControl>
                             <SelectTrigger className="bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500">
@@ -2068,7 +2066,7 @@ export default function Home() {
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <Building className="h-5 w-5 text-gray-600" />
-                    <h3 className="text-md font-semibold text-gray-700">Company Address</h3>
+                    <h3 className="text-md font-semibold text-gray-700">Company Address <span className="text-red-500">*</span></h3>
                     <Button
                       type="button"
                       variant="outline"
@@ -2560,7 +2558,7 @@ export default function Home() {
                         name="monthlyTransactions"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Monthly Transactions</FormLabel>
+                            <FormLabel>Monthly Transactions <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
@@ -2587,7 +2585,7 @@ export default function Home() {
                         name="cleanupComplexity"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Cleanup Complexity</FormLabel>
+                            <FormLabel>Cleanup Complexity <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
@@ -2843,7 +2841,7 @@ export default function Home() {
                           name="accountingBasis"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Accounting Basis</FormLabel>
+                              <FormLabel>Accounting Basis <span className="text-red-500">*</span></FormLabel>
                               <Select onValueChange={field.onChange} value={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
@@ -3157,7 +3155,7 @@ export default function Home() {
                         name="bookkeepingQuality"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Bookkeeping Quality</FormLabel>
+                            <FormLabel>Bookkeeping Quality <span className="text-red-500">*</span></FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || ""}>
                               <FormControl>
                                 <SelectTrigger className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent">
