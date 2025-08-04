@@ -1026,7 +1026,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         quote.taasMonthlyFee ? parseFloat(quote.taasMonthlyFee) : undefined,
         quote.taasPriorYearsFee ? parseFloat(quote.taasPriorYearsFee) : undefined,
         bookkeepingMonthlyFee,
-        bookkeepingSetupFee
+        bookkeepingSetupFee,
+        quote // Pass the complete quote data for scope assumptions
       );
 
       if (!hubspotQuote) {
@@ -1239,7 +1240,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         updateTaasPriorYearsFee,
         updateBookkeepingMonthlyFee,
         updateBookkeepingSetupFee,
-        quote.hubspotDealId || undefined // Pass deal ID for updating deal name and value
+        quote.hubspotDealId || undefined, // Pass deal ID for updating deal name and value
+        currentFormData // Pass the complete current form data for scope assumptions
       );
 
       if (success) {

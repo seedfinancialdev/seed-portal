@@ -510,7 +510,7 @@ export class HubSpotService {
     }
   }
 
-  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number): Promise<{ id: string; title: string } | null> {
+  async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number, quoteData?: any): Promise<{ id: string; title: string } | null> {
     try {
       // Create a proper HubSpot quote using the quotes API
       console.log('Creating HubSpot quote...');
@@ -555,6 +555,14 @@ Services Include:
 • Ongoing support and consultation
       `.trim();
 
+      // Generate scope assumptions if quote data is available
+      let scopeAssumptions = '';
+      if (quoteData) {
+        console.log('📋 Generating scope assumptions for quote creation');
+        scopeAssumptions = this.generateScopeAssumptions(quoteData);
+        console.log('📋 Scope assumptions generated:', scopeAssumptions);
+      }
+
       const quoteBody = {
         properties: {
           hs_title: quoteName,
@@ -568,6 +576,7 @@ Services Include:
           hs_sender_email: userEmail,
           hs_esign_enabled: true,
           hs_payment_enabled: false, // Disable for now, can be enabled manually in HubSpot
+          hs_comments: scopeAssumptions, // Add scope assumptions to comments field
         },
         associations: [
           {
@@ -1605,7 +1614,7 @@ Generated: ${new Date().toLocaleDateString()}`;
     }
   }
 
-  async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number, dealId?: string): Promise<boolean> {
+  async updateQuote(quoteId: string, companyName: string, monthlyFee: number, setupFee: number, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number, dealId?: string, quoteData?: any): Promise<boolean> {
     try {
       console.log(`🔵 UPDATE QUOTE START - Quote ID: ${quoteId}`);
       console.log(`🔵 Service Configuration:`);
@@ -1642,9 +1651,18 @@ Generated: ${new Date().toLocaleDateString()}`;
       
       const updatedTitle = `${companyName} - ${serviceType} Quote (Updated ${new Date().toLocaleDateString()})`;
       
+      // Generate scope assumptions if quote data is available
+      let scopeAssumptions = '';
+      if (quoteData) {
+        console.log('📋 Generating scope assumptions for quote update');
+        scopeAssumptions = this.generateScopeAssumptions(quoteData);
+        console.log('📋 Scope assumptions updated:', scopeAssumptions);
+      }
+      
       const updateBody = {
         properties: {
-          hs_title: updatedTitle
+          hs_title: updatedTitle,
+          hs_comments: scopeAssumptions // Update scope assumptions in comments field
         }
       };
 
@@ -1839,6 +1857,71 @@ Generated: ${new Date().toLocaleDateString()}`;
       
       return false;
     }
+  }
+
+  private generateScopeAssumptions(quoteData: any): string {
+    const assumptions: string[] = [];
+    
+    assumptions.push("SCOPE ASSUMPTIONS:");
+    assumptions.push("===================");
+    
+    // Bookkeeping scope assumptions
+    if (quoteData.serviceBookkeeping || quoteData.includesBookkeeping) {
+      assumptions.push("");
+      assumptions.push("BOOKKEEPING SERVICE:");
+      assumptions.push(`• Entity Type: ${quoteData.entityType || 'Not specified'}`);
+      assumptions.push(`• Monthly Transactions: ${quoteData.monthlyTransactions || 'Not specified'}`);
+      assumptions.push(`• Months of Cleanup Required: ${quoteData.cleanupMonths || 0}`);
+      assumptions.push(`• Accounting Basis: ${quoteData.accountingBasis || 'Not specified'}`);
+      assumptions.push(`• QuickBooks Subscription Needed: ${quoteData.qboSubscription ? 'Yes' : 'No'}`);
+    }
+    
+    // TaaS scope assumptions
+    if (quoteData.serviceTaas || quoteData.includesTaas) {
+      assumptions.push("");
+      assumptions.push("TAX AS A SERVICE (TaaS):");
+      
+      // Number of entities
+      let numEntitiesText = 'Not specified';
+      if (quoteData.numEntities) {
+        numEntitiesText = quoteData.numEntities.toString();
+        if (quoteData.customNumEntities) {
+          numEntitiesText = quoteData.customNumEntities.toString();
+        }
+      }
+      assumptions.push(`• Number of Entities: ${numEntitiesText}`);
+      
+      // States filed
+      let statesFiledText = 'Not specified';
+      if (quoteData.statesFiled) {
+        statesFiledText = quoteData.statesFiled.toString();
+        if (quoteData.customStatesFiled) {
+          statesFiledText = quoteData.customStatesFiled.toString();
+        }
+      }
+      assumptions.push(`• States Filed: ${statesFiledText}`);
+      
+      assumptions.push(`• International Filing Required: ${quoteData.internationalFiling ? 'Yes' : 'No'}`);
+      
+      // Number of personal 1040s (if include1040s is checked, use numBusinessOwners)
+      let personal1040sText = 'Not included';
+      if (quoteData.include1040s) {
+        let numOwners = quoteData.numBusinessOwners || 0;
+        if (quoteData.customNumBusinessOwners) {
+          numOwners = quoteData.customNumBusinessOwners;
+        }
+        personal1040sText = numOwners.toString();
+      }
+      assumptions.push(`• Number of Personal 1040s: ${personal1040sText}`);
+      
+      assumptions.push(`• Number of Prior Years Filings: ${quoteData.priorYearsUnfiled || 0}`);
+    }
+    
+    assumptions.push("");
+    assumptions.push("Generated on: " + new Date().toLocaleDateString());
+    assumptions.push("");
+    
+    return assumptions.join('\n');
   }
 
   private async manageServiceLineItems(quoteId: string, existingLineItems: any[], serviceConfig: {
