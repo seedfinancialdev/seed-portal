@@ -431,6 +431,48 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     }
   });
 
+  // Development login endpoint for testing
+  app.post("/api/auth/dev-login", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (email !== 'jon@seedfinancial.io') {
+        return res.status(403).json({ message: "Development login only available for jon@seedfinancial.io" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      req.login(user, (err) => {
+        if (err) {
+          console.error('Development login failed:', err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save failed:', saveErr);
+          }
+          
+          res.json({
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            profilePhoto: user.profilePhoto,
+            devLogin: true
+          });
+        });
+      });
+    } catch (error) {
+      console.error('Development login error:', error);
+      res.status(500).json({ message: "Authentication failed" });
+    }
+  });
+
   // Test endpoint for HubSpot verification
   app.post("/api/test-hubspot", async (req, res) => {
     try {

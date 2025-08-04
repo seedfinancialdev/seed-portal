@@ -19,6 +19,7 @@ export function conditionalCsrf(req: Request, res: Response, next: NextFunction)
   // Skip CSRF for API routes that are protected by other means
   const skipPaths = [
     '/api/auth/google/sync', // Uses bearer token
+    '/api/auth/dev-login', // Development login bypass
     '/api/health', // Health check
     '/api/auth/login', // Login endpoint needs to work without CSRF
     '/api/auth/logout', // Logout is safe without CSRF
