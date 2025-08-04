@@ -595,12 +595,13 @@ Services Include:
 
       console.log('Creating quote with body:', JSON.stringify(quoteBody, null, 2));
 
+      console.log('🚀 ATTEMPTING HUBSPOT QUOTE CREATION...');
       const result = await this.makeRequest('/crm/v3/objects/quotes', {
         method: 'POST',
         body: JSON.stringify(quoteBody)
       });
 
-      console.log('Quote created successfully:', result.id);
+      console.log('✅ Quote created successfully:', result.id);
       
       // Add line items to the quote
       try {
@@ -617,19 +618,17 @@ Services Include:
         title: quoteName
       };
     } catch (error) {
-      console.error('Error creating HubSpot quote:', error);
-      // Fallback to updating deal with quote information
-      try {
-        console.log('Falling back to updating deal with quote info...');
-        await this.updateDealWithQuote(dealId, companyName, monthlyFee, setupFee);
-        return {
-          id: `deal_${dealId}`,
-          title: `${companyName} - Bookkeeping Quote (Deal Updated)`
-        };
-      } catch (fallbackError) {
-        console.error('Fallback also failed:', fallbackError);
-        return null;
-      }
+      console.error('❌ HUBSPOT QUOTE CREATION FAILED:', error);
+      console.error('🔍 ERROR DETAILS:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: error.status || 'No status',
+        body: error.body || 'No body',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      console.error('🔍 QUOTE BODY THAT FAILED:', JSON.stringify(quoteBody, null, 2));
+      
+      // REMOVE MISLEADING FALLBACK - throw the actual error
+      throw error;
     }
   }
 
