@@ -55,14 +55,15 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Sync Google user with database - now handles access restrictions
+  // Sync Google user with database - creates session
   const { data: dbUser, isLoading: dbLoading, error } = useQuery<DBUser | null>({
     queryKey: ["/api/auth/google/sync", googleUser?.sub],
     queryFn: async () => {
       if (!googleUser || !accessToken) return null;
       
       try {
-        // Sync user with backend
+        console.log('Syncing Google user with backend for session creation...');
+        // Sync user with backend and create session
         const responseData = await apiRequest("/api/auth/google/sync", {
           method: "POST",
           headers: {
@@ -77,6 +78,17 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           }),
         });
         
+        console.log('Authentication successful for:', googleUser.email);
+        console.log('Session created:', responseData.sessionCreated);
+        
+        // Now that session is created, clear the OAuth tokens as we're using session-based auth
+        if (responseData.sessionCreated) {
+          localStorage.removeItem('google_access_token');
+          localStorage.removeItem('google_user');
+          setAccessToken(null);
+          // Keep googleUser for display purposes only
+        }
+        
         return responseData;
       } catch (error: any) {
         
@@ -90,6 +102,24 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     },
     enabled: !!googleUser && !!accessToken,
     retry: false, // Don't retry on access denied
+  });
+
+  // Separate query for current user session (independent of Google OAuth)
+  const { data: sessionUser, isLoading: sessionLoading } = useQuery<DBUser | null>({
+    queryKey: ["/api/user"],
+    queryFn: async () => {
+      try {
+        return await apiRequest("/api/user");
+      } catch (error: any) {
+        if (error.status === 401) {
+          // No active session
+          return null;
+        }
+        throw error;
+      }
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const googleLogin = useGoogleLogin({
@@ -168,22 +198,17 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     flow: 'implicit', // Force popup mode to prevent redirects
   });
 
-  // Sign out mutation
+  // Sign out mutation - session-based logout
   const signOutMutation = useMutation({
     mutationFn: async () => {
       try {
-        if (accessToken) {
-          // Try to notify backend of logout, but don't fail if it errors
-          await apiRequest("/api/logout", {
-            method: "POST",
-            headers: {
-              'Authorization': `Bearer ${accessToken}`
-            }
-          }).catch((error) => {
-            // Log but don't throw - we still want to clear local state
-            console.error('Backend logout error:', error);
-          });
-        }
+        // Logout from session (no Authorization header needed)
+        await apiRequest("/api/logout", {
+          method: "POST"
+        }).catch((error) => {
+          // Log but don't throw - we still want to clear local state
+          console.error('Backend logout error:', error);
+        });
       } catch (error) {
         // Log but continue with local cleanup
         console.error('Logout API error:', error);
@@ -214,8 +239,11 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     },
   });
 
+  // Use session user if available, otherwise use dbUser from OAuth flow
+  const currentUser = sessionUser || dbUser;
+  
   // Check if user is admin
-  const isAdmin = dbUser?.role === 'admin' || dbUser?.role === 'super_admin';
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
   
   // Check if user needs access approval
   const needsApproval = error?.message === 'ACCESS_NOT_GRANTED';
@@ -224,8 +252,8 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         googleUser,
-        dbUser: dbUser ?? null,
-        isLoading: dbLoading,
+        dbUser: currentUser ?? null,
+        isLoading: sessionLoading || dbLoading,
         error,
         needsApproval,
         signIn: googleLogin,

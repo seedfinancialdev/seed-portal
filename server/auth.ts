@@ -276,6 +276,92 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     });
   });
 
+  // Google OAuth Session-Based Authentication Endpoints
+  app.post("/api/auth/google/sync", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) {
+        return res.status(401).json({ message: "Bearer token required" });
+      }
+
+      const token = authHeader.split(' ')[1];
+      
+      // Verify the token with Google
+      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        return res.status(401).json({ message: "Invalid Google token" });
+      }
+
+      const userInfo = await response.json();
+      console.log('Google OAuth sync for:', userInfo.email, 'domain:', userInfo.hd);
+      
+      // Check domain restriction
+      if (userInfo.hd !== 'seedfinancial.io') {
+        return res.status(403).json({ 
+          message: "Access restricted to @seedfinancial.io domain" 
+        });
+      }
+
+      // Get or create user in database
+      let user = await storage.getUserByEmail(userInfo.email);
+      
+      if (!user) {
+        // Create new user if doesn't exist
+        try {
+          user = await storage.createUser({
+            email: userInfo.email,
+            password: await hashPassword('oauth-google-' + Date.now()), // Random password for OAuth users
+            firstName: userInfo.given_name || '',
+            lastName: userInfo.family_name || '',
+            profilePhoto: userInfo.picture || null,
+            googleId: userInfo.sub,
+          });
+          console.log('Created new user from Google OAuth:', user.email);
+        } catch (error) {
+          console.error('Failed to create user:', error);
+          return res.status(500).json({ message: "Failed to create user account" });
+        }
+      } else {
+        // Update existing user with Google info
+        await storage.updateUser(user.id, {
+          profilePhoto: userInfo.picture || user.profilePhoto,
+          googleId: userInfo.sub,
+          firstName: userInfo.given_name || user.firstName,
+          lastName: userInfo.family_name || user.lastName,
+        });
+        console.log('Updated existing user from Google OAuth:', user.email);
+      }
+
+      // Create session by logging in the user
+      req.login(user, (err) => {
+        if (err) {
+          console.error('Session creation failed:', err);
+          return res.status(500).json({ message: "Session creation failed" });
+        }
+        
+        console.log('Session created for user:', user.email);
+        res.json({
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          profilePhoto: user.profilePhoto,
+          sessionCreated: true
+        });
+      });
+
+    } catch (error) {
+      console.error('Google OAuth sync error:', error);
+      res.status(500).json({ message: "Authentication failed" });
+    }
+  });
+
   // Test endpoint for HubSpot verification
   app.post("/api/test-hubspot", async (req, res) => {
     try {
@@ -297,56 +383,18 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   });
 }
 
-// Middleware to require authentication (supports both session and Google OAuth)
+// Middleware to require authentication (session-based only)
 export async function requireAuth(req: any, res: any, next: any) {
   console.log('requireAuth: Checking authentication for', req.url);
   console.log('requireAuth: Session authenticated:', req.isAuthenticated());
   console.log('requireAuth: Auth header present:', !!req.headers.authorization);
   
-  // First check session-based auth
+  // Check session-based auth only
   if (req.isAuthenticated()) {
     console.log('requireAuth: Session auth successful for', req.user?.email);
     return next();
   }
   
-  // Then check for Google OAuth token
-  const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
-    console.log('requireAuth: Verifying Google OAuth token...');
-    try {
-      // Verify the token with Google
-      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const userInfo = await response.json();
-        console.log('requireAuth: Google token verified for', userInfo.email, 'domain:', userInfo.hd);
-        // Check if user is from seedfinancial.io domain
-        if (userInfo.hd === 'seedfinancial.io') {
-          // Get user from database
-          const user = await storage.getUserByEmail(userInfo.email);
-          if (user) {
-            console.log('requireAuth: Google OAuth auth successful for', user.email);
-            req.user = user;
-            return next();
-          } else {
-            console.log('requireAuth: User not found in database:', userInfo.email);
-          }
-        } else {
-          console.log('requireAuth: Invalid domain:', userInfo.hd);
-        }
-      } else {
-        console.log('requireAuth: Google token verification failed:', response.status);
-      }
-    } catch (error) {
-      console.error('requireAuth: Token verification failed:', error);
-    }
-  }
-  
-  console.log('requireAuth: Authentication failed');
+  console.log('requireAuth: Authentication failed - no valid session');
   return res.status(401).json({ message: "Authentication required" });
 }

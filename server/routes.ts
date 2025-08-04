@@ -1831,7 +1831,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.get("/api/kb/articles", requireAuth, async (req, res) => {
     try {
       const { categoryId, status, featured, title } = req.query;
-      console.log('📊 Articles Query Debug:', { categoryId, status, featured, title, query: req.query });
       
       const articles = await storage.getKbArticles(
         categoryId ? parseInt(categoryId as string) : undefined,
@@ -1840,10 +1839,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         title as string
       );
       
-      console.log('📊 Articles Found:', articles.length);
       res.json(articles);
     } catch (error) {
-      console.error('💥 Error fetching articles:', error);
+      console.error('Error fetching articles:', error);
       res.status(500).json({ message: "Failed to fetch articles" });
     }
   });
