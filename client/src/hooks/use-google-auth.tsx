@@ -63,7 +63,7 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
       
       try {
         // Sync user with backend
-        const response = await apiRequest("/api/auth/google/sync", {
+        const responseData = await apiRequest("/api/auth/google/sync", {
           method: "POST",
           headers: {
             'Authorization': `Bearer ${accessToken}`
@@ -77,8 +77,6 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           }),
         });
         
-        // Parse the actual response data
-        const responseData = await response.json();
         return responseData;
       } catch (error: any) {
         

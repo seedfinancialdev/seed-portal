@@ -2,7 +2,9 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
+    // Clone the response so we can read it without consuming the original
+    const clonedRes = res.clone();
+    const text = (await clonedRes.text()) || res.statusText;
     console.error('[ApiRequest] ❌ HTTP Error:', res.status, text);
     throw new Error(`${res.status}: ${text}`);
   }
@@ -61,14 +63,7 @@ export async function apiRequest(
 
     const response = await fetch(url, requestOptions);
     await throwIfResNotOk(response);
-    
-    // Only parse JSON if response is successful
-    if (response.ok) {
-      return await response.json();
-    }
-    
-    // For error responses, throwIfResNotOk will handle the error
-    return null;
+    return await response.json();
   }
 
   // For new signature calls, build standard request options
@@ -86,14 +81,7 @@ export async function apiRequest(
 
   const response = await fetch(url, requestOptions);
   await throwIfResNotOk(response);
-  
-  // Only parse JSON if response is successful
-  if (response.ok) {
-    return await response.json();
-  }
-  
-  // For error responses, throwIfResNotOk will handle the error
-  return null;
+  return await response.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
