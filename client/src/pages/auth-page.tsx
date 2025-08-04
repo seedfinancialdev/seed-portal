@@ -37,16 +37,27 @@ export default function AuthPage() {
       console.error('[Google OAuth] Login error:', error);
     },
     onNonOAuthError: (error) => {
-      console.error('[Google OAuth] Non-OAuth error details:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error keys:', Object.keys(error || {}));
-      console.error('Error message:', error?.message);
-      console.error('Error stack:', error?.stack);
-      console.error('Current domain:', window.location.origin);
-      console.error('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID?.substring(0, 20) + '...');
+      console.error('[Google OAuth] Popup window closed - trying redirect flow');
+      if (error?.message === 'Popup window closed') {
+        console.log('[Google OAuth] Switching to redirect flow due to popup blocker');
+        // Try redirect flow as fallback
+        const redirectLogin = useGoogleLogin({
+          flow: 'auth-code',
+          hosted_domain: 'seedfinancial.io',
+          onSuccess: async (codeResponse) => {
+            console.log('[Google OAuth] Redirect flow success:', codeResponse);
+            // Handle auth code flow
+          },
+          onError: (redirectError) => {
+            console.error('[Google OAuth] Redirect flow also failed:', redirectError);
+          }
+        });
+        redirectLogin();
+      }
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
+    ux_mode: 'popup',
   });
 
   console.log('[AuthPage] Google Client ID available:', !!import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -82,6 +93,15 @@ export default function AuthPage() {
             <Button
               onClick={() => {
                 console.log('[AuthPage] Google login button clicked');
+                // Check for popup blockers
+                const popup = window.open('', 'popup', 'width=1,height=1');
+                if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+                  console.warn('[AuthPage] Popup blocked - user needs to allow popups');
+                  alert('Please allow popups for this site to enable Google login, then try again.');
+                  return;
+                }
+                popup.close();
+                
                 googleLogin();
               }}
               className="w-full bg-[#e24c00] hover:bg-[#c23e00] text-white"
