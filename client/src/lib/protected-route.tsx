@@ -1,4 +1,4 @@
-import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
 
@@ -9,7 +9,7 @@ export function ProtectedRoute({
   path: string;
   component: () => React.JSX.Element;
 }) {
-  const { dbUser, isLoading, needsApproval, googleUser } = useGoogleAuth();
+  const { user, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -21,26 +21,8 @@ export function ProtectedRoute({
     );
   }
 
-  // If user needs approval and has authenticated with Google, redirect to request access
-  if (needsApproval && googleUser) {
-    return (
-      <Route path={path}>
-        <Redirect to="/request-access" />
-      </Route>
-    );
-  }
-
-  // If no Google authentication at all, redirect to auth
-  if (!dbUser && !googleUser) {
-    return (
-      <Route path={path}>
-        <Redirect to="/auth" />
-      </Route>
-    );
-  }
-
-  // If Google auth but no DB user and not needing approval, redirect to auth
-  if (!dbUser) {
+  // If no authenticated user, redirect to auth
+  if (!user) {
     return (
       <Route path={path}>
         <Redirect to="/auth" />

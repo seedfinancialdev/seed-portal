@@ -68,11 +68,8 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
           
           // If user doesn't exist, create them automatically for verified @seedfinancial.io emails
           if (!user) {
-            console.log(`User not found for email: ${email}, attempting auto-registration...`);
-            
-            // Validate email domain
+                  // Validate email domain
             if (!email.endsWith('@seedfinancial.io')) {
-              console.log(`Invalid email domain for: ${email}`);
               return done(null, false);
             }
 
@@ -304,49 +301,42 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   // Google OAuth Session-Based Authentication Endpoints
   app.post("/api/auth/google/sync", async (req, res) => {
     try {
-      console.log('🔐 Google OAuth sync endpoint called');
-      console.log('🔐 Auth header:', req.headers.authorization ? 'Present' : 'Missing');
-      console.log('🔐 Request body:', req.body);
-      
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
-        console.log('❌ No Bearer token provided');
         return res.status(401).json({ message: "Bearer token required" });
       }
 
       const token = authHeader.split(' ')[1];
-      console.log('🔐 Extracted token length:', token?.length || 0);
       
-      // Verify the token with Google
-      console.log('🔐 Verifying token with Google...');
-      const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      console.log('🔐 Google API response status:', response.status);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('❌ Google API error:', errorText);
-        return res.status(401).json({ message: "Invalid Google token" });
+      // Verify the token with Google with timeout and retry
+      let response;
+      try {
+        response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: AbortSignal.timeout(5000), // 5 second timeout
+        });
+        
+        if (!response.ok) {
+          return res.status(401).json({ message: "Invalid Google token" });
+        }
+      } catch (error: any) {
+        console.error('Google token verification failed:', error.message);
+        return res.status(401).json({ message: "Token verification failed" });
       }
 
       const userInfo = await response.json();
-      console.log('✅ Google OAuth sync for:', userInfo.email, 'domain:', userInfo.hd);
       
       // Check domain restriction
       if (userInfo.hd !== 'seedfinancial.io') {
-        console.log('❌ Domain restriction failed:', userInfo.hd);
         return res.status(403).json({ 
           message: "Access restricted to @seedfinancial.io domain" 
         });
       }
 
       // Get or create user in database
-      console.log('🔐 Looking up user by email:', userInfo.email);
       let user = await storage.getUserByEmail(userInfo.email);
-      console.log('🔐 User found:', user ? 'Yes' : 'No');
       
       if (!user) {
         // Create new user if doesn't exist
@@ -359,14 +349,12 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
             profilePhoto: userInfo.picture || null,
             googleId: userInfo.sub,
           });
-          console.log('Created new user from Google OAuth:', user.email);
         } catch (error) {
           console.error('Failed to create user:', error);
           return res.status(500).json({ message: "Failed to create user account" });
         }
       } else {
         // Update existing user with Google info
-        console.log('🔐 Updating existing user with Google data...');
         
         // Update Google ID if needed
         if (userInfo.sub && userInfo.sub !== user.googleId) {
@@ -388,39 +376,23 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
         if (Object.keys(profileUpdates).length > 0) {
           await storage.updateUserProfile(user.id, profileUpdates);
         }
-        
-        console.log('✅ Updated existing user from Google OAuth:', user.email);
       }
 
       // Create session by logging in the user
-      console.log('🔐 Creating session for user:', user.email);
-      console.log('🔐 Session ID before login:', req.sessionID);
-      console.log('🔐 Session exists before login:', !!req.session);
-      console.log('🔐 Session store type:', req.sessionStore?.constructor?.name || 'Unknown');
       
       req.login(user, (err) => {
         if (err) {
-          console.error('❌ Session creation failed:', err);
-          console.error('❌ Session creation error stack:', err.stack);
+          console.error('Session creation failed:', err);
           return res.status(500).json({ message: "Session creation failed" });
         }
-        
-        console.log('✅ Session created successfully for user:', user.email);
-        console.log('🔐 Session ID after login:', req.sessionID);
-        console.log('🔐 User authenticated after login:', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
-        console.log('🔐 Session user set:', req.user ? req.user.email : 'None');
-        console.log('🔐 Session save initiated...');
         
         // Force session save to ensure persistence
         req.session.save((saveErr) => {
           if (saveErr) {
-            console.error('❌ Session save failed:', saveErr);
-            console.error('❌ Session save error stack:', saveErr.stack);
-          } else {
-            console.log('✅ Session save completed successfully');
+            console.error('Session save failed:', saveErr);
           }
           
-          // Respond regardless of save status for now
+          // Respond with user data
           res.json({
             id: user.id,
             email: user.email,

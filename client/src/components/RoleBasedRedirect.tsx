@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { usePermissions } from '@/hooks/use-permissions';
-import { useGoogleAuth } from '@/hooks/use-google-auth';
+import { useAuth } from '@/hooks/use-auth';
 
 export function RoleBasedRedirect() {
   const [location, setLocation] = useLocation();
   const { getDefaultDashboard, userRole } = usePermissions();
-  const { dbUser: currentUser } = useGoogleAuth();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     // Only redirect if we're on the root path and user is authenticated
