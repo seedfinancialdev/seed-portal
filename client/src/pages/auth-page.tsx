@@ -21,7 +21,17 @@ export default function AuthPage() {
   const googleLogin = useGoogleLogin({
     onSuccess: async (response) => {
       console.log('[Google OAuth] Success:', response);
-      await loginMutation.mutateAsync({ googleAccessToken: response.access_token });
+      try {
+        console.log('[Auth] Starting login mutation...');
+        const result = await loginMutation.mutateAsync({ googleAccessToken: response.access_token });
+        console.log('[Auth] Login mutation successful:', result);
+        
+        // Give extra time for auth state to sync
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('[Auth] Ready for redirect');
+      } catch (error) {
+        console.error('[Auth] Login mutation failed:', error);
+      }
     },
     onError: (error) => {
       console.error('[Google OAuth] Login error:', error);
