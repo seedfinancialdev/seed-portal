@@ -268,8 +268,12 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   app.get("/api/user", (req, res) => {
     console.log('🔐 /api/user endpoint called');
     console.log('🔐 Session ID:', req.sessionID);
+    console.log('🔐 Session exists:', !!req.session);
+    console.log('🔐 Session store type:', req.sessionStore?.constructor?.name || 'Unknown');
+    console.log('🔐 Session data keys:', Object.keys(req.session || {}));
     console.log('🔐 Authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
     console.log('🔐 User:', req.user ? req.user.email : 'None');
+    console.log('🔐 Session passport:', req.session?.passport || 'None');
     
     if (!req.isAuthenticated()) {
       console.log('❌ User not authenticated, returning 401');
@@ -390,24 +394,44 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
 
       // Create session by logging in the user
       console.log('🔐 Creating session for user:', user.email);
+      console.log('🔐 Session ID before login:', req.sessionID);
+      console.log('🔐 Session exists before login:', !!req.session);
+      console.log('🔐 Session store type:', req.sessionStore?.constructor?.name || 'Unknown');
+      
       req.login(user, (err) => {
         if (err) {
           console.error('❌ Session creation failed:', err);
+          console.error('❌ Session creation error stack:', err.stack);
           return res.status(500).json({ message: "Session creation failed" });
         }
         
         console.log('✅ Session created successfully for user:', user.email);
-        console.log('🔐 Session ID:', req.sessionID);
-        console.log('🔐 User authenticated:', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
+        console.log('🔐 Session ID after login:', req.sessionID);
+        console.log('🔐 User authenticated after login:', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
+        console.log('🔐 Session user set:', req.user ? req.user.email : 'None');
+        console.log('🔐 Session save initiated...');
         
-        res.json({
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-          profilePhoto: user.profilePhoto,
-          sessionCreated: true
+        // Force session save to ensure persistence
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('❌ Session save failed:', saveErr);
+            console.error('❌ Session save error stack:', saveErr.stack);
+          } else {
+            console.log('✅ Session save completed successfully');
+          }
+          
+          // Respond regardless of save status for now
+          res.json({
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            profilePhoto: user.profilePhoto,
+            sessionCreated: true,
+            sessionId: req.sessionID,
+            sessionSaved: !saveErr
+          });
         });
       });
 
