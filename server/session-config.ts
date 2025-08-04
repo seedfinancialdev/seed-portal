@@ -63,9 +63,9 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: false, // Allow HTTP in development, HTTPS will be handled by proxy
+      secure: true, // Always use secure cookies for production
       httpOnly: true,
-      sameSite: 'lax', // More permissive for development and Replit environments
+      sameSite: 'none', // Required for cross-origin iframe embedding
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       domain: undefined // Let browser determine domain automatically
     }

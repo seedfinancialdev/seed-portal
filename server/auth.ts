@@ -311,39 +311,26 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
       
 
       
-      // Development bypass for jon@seedfinancial.io with any token
-      let userInfo;
-      if (email === 'jon@seedfinancial.io') {
-        console.log('🔧 Development bypass: Using provided user data for jon@seedfinancial.io');
-        userInfo = {
-          sub: googleId || 'dev-google-id-123',
-          email: email,
-          given_name: name?.split(' ')[0] || 'Jon',
-          family_name: name?.split(' ')[1] || 'Developer', 
-          picture: picture || 'https://example.com/avatar.jpg',
-          hd: hd || 'seedfinancial.io'
-        };
-      } else {
-        // Production: Verify the token with Google
-        let response;
-        try {
-          response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            signal: AbortSignal.timeout(5000), // 5 second timeout
-          });
-          
-          if (!response.ok) {
-            return res.status(401).json({ message: "Invalid Google token" });
-          }
-        } catch (error: any) {
-          console.error('Google token verification failed:', error.message);
-          return res.status(401).json({ message: "Token verification failed" });
+      // Verify the token with Google
+      let response;
+      try {
+        response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: AbortSignal.timeout(10000), // 10 second timeout for production
+        });
+        
+        if (!response.ok) {
+          console.error('Google token verification failed:', response.status, response.statusText);
+          return res.status(401).json({ message: "Invalid Google token" });
         }
-
-        userInfo = await response.json();
+      } catch (error: any) {
+        console.error('Google token verification error:', error.message);
+        return res.status(401).json({ message: "Token verification failed" });
       }
+
+      const userInfo = await response.json();
       
       // Check domain restriction
       if (userInfo.hd !== 'seedfinancial.io') {
@@ -431,47 +418,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     }
   });
 
-  // Development login endpoint for testing
-  app.post("/api/auth/dev-login", async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      if (email !== 'jon@seedfinancial.io') {
-        return res.status(403).json({ message: "Development login only available for jon@seedfinancial.io" });
-      }
-      
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      req.login(user, (err) => {
-        if (err) {
-          console.error('Development login failed:', err);
-          return res.status(500).json({ message: "Login failed" });
-        }
-        
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error('Session save failed:', saveErr);
-          }
-          
-          res.json({
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            role: user.role,
-            profilePhoto: user.profilePhoto,
-            devLogin: true
-          });
-        });
-      });
-    } catch (error) {
-      console.error('Development login error:', error);
-      res.status(500).json({ message: "Authentication failed" });
-    }
-  });
+
 
   // Test endpoint for HubSpot verification
   app.post("/api/test-hubspot", async (req, res) => {

@@ -129,32 +129,7 @@ export default function AuthPage() {
               </form>
             </Form>
             
-            {/* Development login button */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <Button 
-                onClick={async () => {
-                  try {
-                    const response = await fetch('/api/auth/dev-login', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ email: 'jon@seedfinancial.io' }),
-                      credentials: 'include'
-                    });
-                    
-                    if (response.ok) {
-                      window.location.reload();
-                    }
-                  } catch (error) {
-                    console.error('Dev login failed:', error);
-                  }
-                }}
-                variant="outline"
-                className="w-full text-gray-600"
-                data-testid="button-dev-login"
-              >
-                Development Login (jon@seedfinancial.io)
-              </Button>
-            </div>
+
           </CardContent>
         </Card>
       </div>
