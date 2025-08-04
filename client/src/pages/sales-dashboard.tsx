@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { 
   Calculator, 
@@ -106,7 +106,7 @@ const getWeatherIcon = (condition: string) => {
 };
 
 export default function Dashboard() {
-  const { dbUser: user } = useGoogleAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   // Fetch knowledge base categories for the SEEDKB card
