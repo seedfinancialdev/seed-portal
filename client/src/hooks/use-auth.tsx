@@ -18,8 +18,9 @@ type AuthContextType = {
 };
 
 type LoginData = {
-  email: string;
-  password: string;
+  email?: string;
+  password?: string;
+  googleAccessToken?: string;
 };
 
 type RegisterData = {
@@ -41,10 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      return await apiRequest("/api/login", {
+      console.log('[useAuth] Login mutation started with:', Object.keys(credentials));
+      const result = await apiRequest("/api/login", {
         method: "POST",
         body: JSON.stringify(credentials)
       });
+      console.log('[useAuth] Login mutation successful:', result);
+      return result;
     },
     onSuccess: async (user: SelectUser) => {
       // Clear all user-specific data to prevent cross-user data leakage
