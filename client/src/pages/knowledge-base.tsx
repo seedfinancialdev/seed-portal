@@ -104,7 +104,11 @@ export default function KnowledgeBase() {
 
   // Fetch articles for selected category
   const { data: categoryArticles = [], isLoading: articlesLoading } = useQuery({
-    queryKey: ["/api/kb/articles", `?categoryId=${selectedCategory?.id}&status=published`],
+    queryKey: ["/api/kb/articles", selectedCategory?.id, "published"],
+    queryFn: async () => {
+      if (!selectedCategory?.id) return [];
+      return apiRequest(`/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
+    },
     enabled: !!selectedCategory,
   });
 
