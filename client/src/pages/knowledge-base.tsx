@@ -107,14 +107,9 @@ export default function KnowledgeBase() {
     queryKey: ["/api/kb/articles", selectedCategory?.id],
     queryFn: async () => {
       if (!selectedCategory) return [];
-      try {
-        const result = await apiRequest(`/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
-        // Ensure result is always an array
-        return Array.isArray(result) ? result : [];
-      } catch (error) {
-        console.error('Failed to fetch articles:', error);
-        return [];
-      }
+      const result = await apiRequest(`/api/kb/articles?categoryId=${selectedCategory.id}&status=published`);
+      // Ensure result is always an array
+      return Array.isArray(result) ? result : [];
     },
     enabled: !!selectedCategory,
   });

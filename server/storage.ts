@@ -52,7 +52,7 @@ export interface IStorage {
   deleteKbCategory(id: number): Promise<void>;
   
   // Articles
-  getKbArticles(categoryId?: number, status?: string, featured?: boolean): Promise<KbArticle[]>;
+  getKbArticles(categoryId?: number, status?: string, featured?: boolean, title?: string): Promise<KbArticle[]>;
   getKbArticle(id: number): Promise<KbArticle | undefined>;
   getKbArticleBySlug(slug: string): Promise<KbArticle | undefined>;
   createKbArticle(article: InsertKbArticle): Promise<KbArticle>;

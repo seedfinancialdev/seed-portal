@@ -60,8 +60,8 @@ export async function apiRequest(
     }
 
     const response = await fetch(url, requestOptions);
-    
-    return response;
+    await throwIfResNotOk(response);
+    return await response.json();
   }
 
   // For new signature calls, build standard request options
@@ -78,7 +78,8 @@ export async function apiRequest(
   }
 
   const response = await fetch(url, requestOptions);
-  return response;
+  await throwIfResNotOk(response);
+  return await response.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
