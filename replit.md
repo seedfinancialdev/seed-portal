@@ -37,6 +37,7 @@ This project is a comprehensive Internal Employee Portal for Seed Financial, bui
 - ✅ **SERVICE-SPECIFIC SCHEDULES**: Dynamically includes Schedule A (Bookkeeping) and Schedule B (TaaS) based on engaged services
 - ✅ **BOTH FLOWS UPDATED**: Payment terms generated for both quote creation and update processes
 - ✅ **LEGAL COMPLIANCE**: All quotes now include proper legal framework and document references
+- ✅ **PAYMENT ENABLEMENT**: All quotes automatically enable payments (hs_payments_enabled: true) and require signatures (hs_signature_required: true)
 
 **COMPREHENSIVE SOLUTION**:
 - ✅ Both quote creation and update flows now use correct service field mapping
