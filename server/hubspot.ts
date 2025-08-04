@@ -2147,25 +2147,52 @@ Generated: ${new Date().toLocaleDateString()}`;
     hubspot_owner_id?: string;
   }) {
     try {
+      // Only include properties that have valid values (not empty strings, null, or undefined)
       const properties: any = {
-        name: companyData.name,
-        domain: companyData.domain,
-        city: companyData.city,
-        state: companyData.state,
-        country: companyData.country,
-        industry: companyData.industry,
-        annualrevenue: companyData.annualrevenue,
-        numberofemployees: companyData.numberofemployees,
-        linkedin_company_page: companyData.linkedin_company_page,
-        website: companyData.website,
-        address: companyData.address,
-        zip: companyData.zip,
+        name: companyData.name, // Always required
       };
 
-      // Add company owner if provided
-      if (companyData.hubspot_owner_id) {
-        properties.hubspot_owner_id = companyData.hubspot_owner_id;
+      // Add optional properties only if they have valid values
+      if (companyData.domain && companyData.domain.trim()) {
+        properties.domain = companyData.domain.trim();
       }
+      if (companyData.city && companyData.city.trim()) {
+        properties.city = companyData.city.trim();
+      }
+      if (companyData.state && companyData.state.trim()) {
+        properties.state = companyData.state.trim();
+      }
+      if (companyData.country && companyData.country.trim()) {
+        properties.country = companyData.country.trim();
+      }
+      if (companyData.industry && companyData.industry.trim()) {
+        properties.industry = companyData.industry.trim();
+      }
+      if (companyData.annualrevenue && companyData.annualrevenue.trim()) {
+        properties.annualrevenue = companyData.annualrevenue.trim();
+      }
+      if (companyData.numberofemployees && companyData.numberofemployees.trim()) {
+        properties.numberofemployees = companyData.numberofemployees.trim();
+      }
+      if (companyData.linkedin_company_page && companyData.linkedin_company_page.trim()) {
+        properties.linkedin_company_page = companyData.linkedin_company_page.trim();
+      }
+      if (companyData.website && companyData.website.trim()) {
+        properties.website = companyData.website.trim();
+      }
+      if (companyData.address && companyData.address.trim()) {
+        properties.address = companyData.address.trim();
+      }
+      if (companyData.zip && companyData.zip.trim()) {
+        properties.zip = companyData.zip.trim();
+      }
+
+      // Add company owner if provided
+      if (companyData.hubspot_owner_id && companyData.hubspot_owner_id.trim()) {
+        properties.hubspot_owner_id = companyData.hubspot_owner_id.trim();
+      }
+
+      console.log('Creating company with properties:', JSON.stringify(properties, null, 2));
 
       const response = await this.makeRequest('/crm/v3/objects/companies', {
         method: 'POST',
@@ -2281,11 +2308,11 @@ Generated: ${new Date().toLocaleDateString()}`;
           const newCompany = await this.createCompany({
             name: companyName,
             domain: this.extractDomainFromCompanyName(companyName),
-            industry: quote.industry || '',
+            industry: quote.industry,
             // Add other fields from quote if available
-            city: quote.clientCity || '',
-            state: quote.clientState || '',
-            zip: quote.clientZipCode || '',
+            city: quote.clientCity,
+            state: quote.clientState,
+            zip: quote.clientZipCode,
             country: quote.clientCountry || 'US'
           });
           
