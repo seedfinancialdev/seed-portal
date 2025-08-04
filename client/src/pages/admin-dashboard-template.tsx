@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
+import { useUnifiedAuth } from "@/hooks/use-unified-auth";
 import { Link } from "wouter";
 import { 
   Calculator, 
@@ -38,7 +38,7 @@ import { useState, useEffect } from 'react';
 // TEMPLATE: Saved for potential future admin dashboard implementation
 // This is the original dashboard design before dashboard-new.tsx became the main dashboard
 export default function AdminDashboardTemplate() {
-  const { user } = useAuth();
+  const { user } = useUnifiedAuth();
   const [weather, setWeather] = useState({ temp: 72, condition: 'sunny', location: 'Marina Del Rey, CA' });
 
   const currentDate = new Date().toLocaleDateString('en-US', { 

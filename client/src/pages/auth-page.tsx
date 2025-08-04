@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/use-auth";
+import { useUnifiedAuth } from "@/hooks/use-unified-auth";
 import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +22,9 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function AuthPage() {
-  const { user, loginMutation } = useAuth();
+  const { user, signInWithEmail } = useUnifiedAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -38,8 +39,15 @@ export default function AuthPage() {
     return <Redirect to="/" />;
   }
 
-  const onLogin = (data: LoginFormData) => {
-    loginMutation.mutate(data);
+  const onLogin = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      await signInWithEmail(data.email, data.password);
+    } catch (error) {
+      // Error is handled by the unified auth provider
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -74,7 +82,7 @@ export default function AuthPage() {
                           {...field} 
                           type="email" 
                           placeholder="name@seedfinancial.io"
-                          disabled={loginMutation.isPending}
+                          disabled={isLoading}
                           className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent"
                         />
                       </FormControl>
@@ -93,7 +101,7 @@ export default function AuthPage() {
                           <Input 
                             {...field} 
                             type={showPassword ? "text" : "password"}
-                            disabled={loginMutation.isPending}
+                            disabled={isLoading}
                             className="bg-white border-gray-300 focus:ring-[#e24c00] focus:border-transparent pr-10"
                           />
                           <Button
@@ -102,7 +110,7 @@ export default function AuthPage() {
                             size="sm"
                             className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                             onClick={() => setShowPassword(!showPassword)}
-                            disabled={loginMutation.isPending}
+                            disabled={isLoading}
                           >
                             {showPassword ? (
                               <EyeOff className="h-4 w-4 text-gray-500" />
@@ -119,9 +127,9 @@ export default function AuthPage() {
                 <Button 
                   type="submit" 
                   className="w-full bg-[#e24c00] hover:bg-[#c23e00] text-white" 
-                  disabled={loginMutation.isPending}
+                  disabled={isLoading}
                 >
-                  {loginMutation.isPending && (
+                  {isLoading && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Sign In

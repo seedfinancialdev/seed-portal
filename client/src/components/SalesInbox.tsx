@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Building2, ExternalLink, Filter, Inbox, Calendar, User, X, Search } from 'lucide-react';
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
-import { useAuth } from '@/hooks/use-auth';
+import { useUnifiedAuth } from '@/hooks/use-unified-auth';
 import { apiRequest } from '@/lib/queryClient';
 import { useState } from 'react';
 
@@ -36,7 +36,7 @@ interface SalesInboxProps {
 }
 
 export function SalesInbox({ limit = 8 }: SalesInboxProps) {
-  const { user } = useAuth();
+  const { user } = useUnifiedAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [stageFilter, setStageFilter] = useState<string>('all');

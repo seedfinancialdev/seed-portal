@@ -32,7 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 // import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/hooks/use-auth";
+import { useUnifiedAuth } from "@/hooks/use-unified-auth";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
 
 // Get current month number (1-12)
@@ -572,7 +572,7 @@ function calculateCombinedFees(data: Partial<FormData>) {
 
 export default function Home() {
   const { toast } = useToast();
-  const { user, logoutMutation } = useAuth();
+  const { user, signOut } = useUnifiedAuth();
   const [, setLocation] = useLocation();
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
