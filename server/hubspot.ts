@@ -563,6 +563,10 @@ Services Include:
         console.log('📋 Scope assumptions generated:', scopeAssumptions);
       }
 
+      // Generate payment terms based on service selection
+      const paymentTerms = this.generatePaymentTerms(includesBookkeeping, includesTaas);
+      console.log('📋 Payment terms generated:', paymentTerms);
+
       const quoteBody = {
         properties: {
           hs_title: quoteName,
@@ -577,6 +581,7 @@ Services Include:
           hs_esign_enabled: true,
           hs_payment_enabled: false, // Disable for now, can be enabled manually in HubSpot
           hs_comments: scopeAssumptions, // Add scope assumptions to comments field
+          hs_terms: paymentTerms, // Add payment terms with MSA and service schedule links
         },
         associations: [
           {
@@ -1658,11 +1663,16 @@ Generated: ${new Date().toLocaleDateString()}`;
         scopeAssumptions = this.generateScopeAssumptions(quoteData);
         console.log('📋 Scope assumptions updated:', scopeAssumptions);
       }
+
+      // Generate payment terms based on service selection
+      const paymentTerms = this.generatePaymentTerms(includesBookkeeping, includesTaas);
+      console.log('📋 Payment terms updated:', paymentTerms);
       
       const updateBody = {
         properties: {
           hs_title: updatedTitle,
-          hs_comments: scopeAssumptions // Update scope assumptions in comments field
+          hs_comments: scopeAssumptions, // Update scope assumptions in comments field
+          hs_terms: paymentTerms // Update payment terms with MSA and service schedule links
         }
       };
 
@@ -1857,6 +1867,27 @@ Generated: ${new Date().toLocaleDateString()}`;
       
       return false;
     }
+  }
+
+  // Generate payment terms based on service selection
+  private generatePaymentTerms(includesBookkeeping: boolean, includesTaas: boolean): string {
+    const baseTerms = `This Quote is the Order Form under Seed's MSA and the selected Service Schedule(s), which are incorporated by reference. By signing and paying, Client agrees to those documents. Pricing is based on the Assumptions listed above; material changes may adjust Bookkeeping fees prospectively per our right-sizing rule. Order of precedence: Quote → Schedule(s) → MSA. Governing law: California.
+
+<a href="https://seedfinancial.io/legal/msa-v-2025-07-01">MSA v2025.07.01</a>`;
+
+    const schedules: string[] = [];
+    
+    if (includesBookkeeping) {
+      schedules.push('<a href="https://seedfinancial.io/legal/ssa-v-2025.07.01">SCHEDULE A - BOOKKEEPING v2025.07.01</a>');
+    }
+    
+    if (includesTaas) {
+      schedules.push('<a href="https://seedfinancial.io/legal/ssb-v-2025-07-01">SCHEDULE B - TAX AS A SERVICE v2025.07.01</a>');
+    }
+
+    return schedules.length > 0 
+      ? `${baseTerms}\n${schedules.join('\n')}`
+      : baseTerms;
   }
 
   private generateScopeAssumptions(quoteData: any): string {

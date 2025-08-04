@@ -30,6 +30,14 @@ This project is a comprehensive Internal Employee Portal for Seed Financial, bui
 - ✅ **DYNAMIC CONTENT**: Personal 1040s field intelligently uses numBusinessOwners when include1040s checkbox is enabled
 - ✅ **PROFESSIONAL FORMAT**: Clear section headers and bullet points for easy reading in HubSpot interface
 
+**PAYMENT TERMS INTEGRATION (August 4, 2025)**:
+- ✅ **NEW FEATURE**: Added standardized payment terms to HubSpot quotes hs_terms field
+- ✅ **BASE TERMS**: MSA reference, pricing assumptions, order of precedence, California governing law
+- ✅ **CLICKABLE LINKS**: HTML formatted links to MSA and service schedules for legal documents
+- ✅ **SERVICE-SPECIFIC SCHEDULES**: Dynamically includes Schedule A (Bookkeeping) and Schedule B (TaaS) based on engaged services
+- ✅ **BOTH FLOWS UPDATED**: Payment terms generated for both quote creation and update processes
+- ✅ **LEGAL COMPLIANCE**: All quotes now include proper legal framework and document references
+
 **COMPREHENSIVE SOLUTION**:
 - ✅ Both quote creation and update flows now use correct service field mapping
 - ✅ Enhanced diagnostic logging provides complete visibility into line item management
