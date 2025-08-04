@@ -36,9 +36,15 @@ export default function AuthPage() {
     onError: (error) => {
       console.error('[Google OAuth] Login error:', error);
     },
+    onNonOAuthError: (error) => {
+      console.error('[Google OAuth] Non-OAuth error:', error);
+    },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
   });
+
+  console.log('[AuthPage] Google Client ID available:', !!import.meta.env.VITE_GOOGLE_CLIENT_ID);
+  console.log('[AuthPage] Hosted domain:', 'seedfinancial.io');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center px-4 sm:px-6 lg:px-8">
@@ -66,7 +72,10 @@ export default function AuthPage() {
           </CardHeader>
           <CardContent>
             <Button
-              onClick={() => googleLogin()}
+              onClick={() => {
+                console.log('[AuthPage] Google login button clicked');
+                googleLogin();
+              }}
               className="w-full bg-[#e24c00] hover:bg-[#c23e00] text-white"
               disabled={loginMutation.isPending}
             >
