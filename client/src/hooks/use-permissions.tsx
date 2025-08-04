@@ -1,8 +1,8 @@
-import { useGoogleAuth } from "./use-google-auth";
+import { useAuth } from "./use-auth";
 import { hasPermission, hasAnyPermission, hasAllPermissions, getDefaultDashboard, getAvailableDashboards, type UserRole, type Permission } from "@shared/permissions";
 
 export function usePermissions() {
-  const { dbUser: currentUser } = useGoogleAuth();
+  const { user: currentUser } = useAuth();
   const userRole = (currentUser?.role as UserRole) || 'service';
 
   return {

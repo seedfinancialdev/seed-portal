@@ -63,10 +63,11 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production',
+      secure: true, // Always use secure cookies in Replit environments
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies for Replit domains
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      sameSite: 'none', // Required for cross-origin iframe embedding in Replit
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      domain: undefined // Let browser determine domain automatically
     }
   };
 }

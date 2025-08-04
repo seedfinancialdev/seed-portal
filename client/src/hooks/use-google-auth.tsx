@@ -86,8 +86,10 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           setAccessToken(null);
           setGoogleUser(null);
           
-          // Trigger session refetch
-          await refetchSession();
+          // Trigger immediate session refetch with a slight delay to ensure backend session is ready
+          setTimeout(() => {
+            refetchSession();
+          }, 100);
         }
         
         return responseData;
@@ -135,8 +137,8 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     },
     retry: false,
     staleTime: 0, // Always check fresh during auth flow
-    // Disable session check while OAuth sync is happening to prevent timing conflicts
-    enabled: !googleUser && !accessToken,
+    // Enable session check always, but give priority to OAuth flow when it's active
+    enabled: true,
   });
 
   const googleLogin = useGoogleLogin({
