@@ -37,7 +37,9 @@ export default function AuthPage() {
       console.error('[Google OAuth] Login error:', error);
     },
     onNonOAuthError: (error) => {
-      console.error('[Google OAuth] Non-OAuth error:', error);
+      console.error('[Google OAuth] Non-OAuth error - likely domain mismatch:', error);
+      console.error('Current domain:', window.location.origin);
+      console.error('Make sure this domain is added to Google OAuth app authorized origins');
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
