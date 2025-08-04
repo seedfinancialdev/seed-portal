@@ -352,13 +352,30 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
         }
       } else {
         // Update existing user with Google info
-        await storage.updateUser(user.id, {
-          profilePhoto: userInfo.picture || user.profilePhoto,
-          googleId: userInfo.sub,
-          firstName: userInfo.given_name || user.firstName,
-          lastName: userInfo.family_name || user.lastName,
-        });
-        console.log('Updated existing user from Google OAuth:', user.email);
+        console.log('🔐 Updating existing user with Google data...');
+        
+        // Update Google ID if needed
+        if (userInfo.sub && userInfo.sub !== user.googleId) {
+          await storage.updateUserGoogleId(user.id, userInfo.sub, 'google', userInfo.picture || null);
+        }
+        
+        // Update profile information
+        const profileUpdates: any = {};
+        if (userInfo.given_name && userInfo.given_name !== user.firstName) {
+          profileUpdates.firstName = userInfo.given_name;
+        }
+        if (userInfo.family_name && userInfo.family_name !== user.lastName) {
+          profileUpdates.lastName = userInfo.family_name;
+        }
+        if (userInfo.picture && userInfo.picture !== user.profilePhoto) {
+          profileUpdates.profilePhoto = userInfo.picture;
+        }
+        
+        if (Object.keys(profileUpdates).length > 0) {
+          await storage.updateUserProfile(user.id, profileUpdates);
+        }
+        
+        console.log('✅ Updated existing user from Google OAuth:', user.email);
       }
 
       // Create session by logging in the user
