@@ -228,9 +228,14 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   });
 
   app.post("/api/login", async (req, res, next) => {
+    console.log('🔐 /api/login endpoint called');
+    console.log('🔐 Request body keys:', Object.keys(req.body));
+    console.log('🔐 Has googleAccessToken:', !!req.body.googleAccessToken);
+    
     // Handle Google OAuth token login
     if (req.body.googleAccessToken) {
       console.log('🔍 Google OAuth login detected, processing token...');
+      console.log('🔍 Token length:', req.body.googleAccessToken.length);
       try {
         const token = req.body.googleAccessToken;
         
@@ -276,6 +281,7 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
             lastName: userInfo.family_name || '',
             profilePhoto: userInfo.picture || null,
             googleId: userInfo.sub,
+            authProvider: 'google',
             role,
             hubspotUserId: null,
           });
@@ -284,6 +290,10 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
           console.log('👤 Existing user found:', user.email);
           // Update Google info if needed
           if (userInfo.sub && userInfo.sub !== user.googleId) {
+            await storage.updateUserGoogleId(user.id, userInfo.sub, 'google', userInfo.picture || null);
+          }
+          // Ensure auth provider is set to google for existing users
+          if (user.authProvider !== 'google') {
             await storage.updateUserGoogleId(user.id, userInfo.sub, 'google', userInfo.picture || null);
           }
         }
