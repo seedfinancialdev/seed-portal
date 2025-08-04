@@ -44,6 +44,17 @@ export default function AuthPage() {
                 </div>
               )}
 
+              {/* Debug information for development */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="bg-gray-50 p-3 rounded text-xs space-y-1">
+                  <div className="font-semibold">Debug Info:</div>
+                  <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+                  <div>Google User: {googleUser ? googleUser.email : 'None'}</div>
+                  <div>DB User: {dbUser ? dbUser.email : 'None'}</div>
+                  <div>Error: {error ? error.message : 'None'}</div>
+                </div>
+              )}
+
               {!isLoading && (
                 <>
                   <Button 

@@ -83,13 +83,16 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
         
         // Now that session is created, clear the OAuth tokens as we're using session-based auth
         if (responseData.sessionCreated) {
+          console.log('🧹 Clearing OAuth tokens after session creation...');
           localStorage.removeItem('google_access_token');
           localStorage.removeItem('google_user');
           setAccessToken(null);
-          // Keep googleUser for display purposes only
+          // Clear googleUser to trigger session-based auth
+          setGoogleUser(null);
           
-          // Invalidate session user query to trigger immediate refetch with new session
-          queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+          console.log('🔄 Triggering session refetch...');
+          // Force immediate session check
+          await refetchSession();
         }
         
         return responseData;
@@ -107,22 +110,26 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
     retry: false, // Don't retry on access denied
   });
 
-  // Separate query for current user session - only runs when no OAuth flow is active
-  const { data: sessionUser, isLoading: sessionLoading } = useQuery<DBUser | null>({
+  // Separate query for current user session - prioritize after OAuth completion
+  const { data: sessionUser, isLoading: sessionLoading, refetch: refetchSession } = useQuery<DBUser | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       try {
-        return await apiRequest("/api/user");
+        console.log('🔍 Checking current session...');
+        const result = await apiRequest("/api/user");
+        console.log('✅ Session check successful:', result.email);
+        return result;
       } catch (error: any) {
         if (error.status === 401) {
-          // No active session
+          console.log('❌ No active session found');
           return null;
         }
+        console.error('❌ Session check error:', error);
         throw error;
       }
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Always check fresh during auth flow
     // Disable session check while OAuth sync is happening to prevent timing conflicts
     enabled: !googleUser && !accessToken,
   });
@@ -130,7 +137,9 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
-        console.log('Google OAuth success, processing token...');
+        console.log('🚀 Google OAuth success, processing token...');
+        console.log('🔑 Access token length:', tokenResponse.access_token?.length || 0);
+        
         // Get user info using the access token
         const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
           headers: {
@@ -138,14 +147,15 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           },
         });
         
+        console.log('🔍 Google userinfo API response status:', userInfoResponse.status);
         if (!userInfoResponse.ok) {
           const errorText = await userInfoResponse.text();
-          console.error('User info API error:', userInfoResponse.status, errorText);
+          console.error('❌ User info API error:', userInfoResponse.status, errorText);
           throw new Error(`Failed to get user info: ${userInfoResponse.status} ${errorText}`);
         }
         
         const userInfo = await userInfoResponse.json();
-        console.log('Got user info:', userInfo.email, 'domain:', userInfo.hd);
+        console.log('✅ Got user info:', userInfo.email, 'domain:', userInfo.hd);
         
         // Check if user is from seedfinancial.io domain
         if (userInfo.hd !== 'seedfinancial.io') {
@@ -165,10 +175,12 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
           hd: userInfo.hd,
           sub: userInfo.sub,
         };
+        console.log('💾 Storing Google OAuth data temporarily...');
         localStorage.setItem('google_access_token', tokenResponse.access_token);
         localStorage.setItem('google_user', JSON.stringify(googleUser));
         setAccessToken(tokenResponse.access_token);
         setGoogleUser(googleUser);
+        console.log('✅ OAuth data stored, triggering sync process...');
         
         console.log('Authentication successful for:', userInfo.email);
         toast({
@@ -247,6 +259,16 @@ function AuthProviderContent({ children }: { children: ReactNode }) {
   // Use session user if available, otherwise use dbUser from OAuth flow
   // After OAuth sync completes and tokens are cleared, prioritize sessionUser
   const currentUser = sessionUser || dbUser;
+  
+  console.log('🔍 Auth state debug:', {
+    hasGoogleUser: !!googleUser,
+    hasAccessToken: !!accessToken,
+    hasDbUser: !!dbUser,
+    hasSessionUser: !!sessionUser,
+    currentUserEmail: currentUser?.email,
+    dbLoading,
+    sessionLoading
+  });
   
   // Check if user is admin
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super_admin';
