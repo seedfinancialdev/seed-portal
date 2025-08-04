@@ -37,9 +37,13 @@ export default function AuthPage() {
       console.error('[Google OAuth] Login error:', error);
     },
     onNonOAuthError: (error) => {
-      console.error('[Google OAuth] Non-OAuth error - likely domain mismatch:', error);
+      console.error('[Google OAuth] Non-OAuth error details:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error keys:', Object.keys(error || {}));
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
       console.error('Current domain:', window.location.origin);
-      console.error('Make sure this domain is added to Google OAuth app authorized origins');
+      console.error('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID?.substring(0, 20) + '...');
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
@@ -47,6 +51,8 @@ export default function AuthPage() {
 
   console.log('[AuthPage] Google Client ID available:', !!import.meta.env.VITE_GOOGLE_CLIENT_ID);
   console.log('[AuthPage] Hosted domain:', 'seedfinancial.io');
+  console.log('[AuthPage] OAuth Library version:', '@react-oauth/google@0.12.2');
+  console.log('[AuthPage] Current origin:', window.location.origin);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a] flex items-center justify-center px-4 sm:px-6 lg:px-8">
