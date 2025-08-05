@@ -25,13 +25,10 @@ export function useHubSpotIntegration() {
     
     try {
       // Check for existing quotes and verify HubSpot contact in parallel
-      const [hubspotResponse, existingQuotesResponse] = await Promise.all([
+      const [hubspotData, existingQuotesData] = await Promise.all([
         apiRequest('POST', '/api/hubspot/verify-contact', { email }),
         apiRequest('POST', '/api/quotes/check-existing', { email })
       ]);
-
-      const hubspotData = await hubspotResponse.json();
-      const existingQuotesData = await existingQuotesResponse.json();
 
       if (hubspotData.verified && hubspotData.contact) {
         setHubspotVerificationStatus('verified');
