@@ -18,10 +18,7 @@ export default function AuthPage() {
     return <Redirect to="/" />;
   }
 
-  // Detect Arc browser for special handling
-  const isArcBrowser = navigator.userAgent.includes('Arc');
-  
-  // Use redirect flow for Arc browser, popup for others
+  // Force popup mode for consistency
   const googleLogin = useGoogleLogin({
     onSuccess: async (response) => {
       console.log('[Google OAuth] Success:', response);
@@ -43,14 +40,12 @@ export default function AuthPage() {
     onNonOAuthError: (error) => {
       console.error('[Google OAuth] Non-OAuth error details:', error);
       if (error?.message === 'Popup window closed') {
-        console.error('[Google OAuth] OAuth flow failed - trying redirect');
-        alert('Login failed. Switching to redirect flow...');
-        window.location.href = `https://accounts.google.com/oauth/authorize?client_id=${import.meta.env.VITE_GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth')}&response_type=token&scope=openid email profile&hd=seedfinancial.io`;
+        console.error('[Google OAuth] Popup blocked or closed');
+        alert('Popup was blocked or closed.\n\nTo fix this:\n1. Allow popups for this site\n2. Or try using Chrome/Safari instead of Arc browser\n3. Make sure you\'re using a @seedfinancial.io Google account');
       }
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
-    ux_mode: isArcBrowser ? 'redirect' : 'popup',
   });
 
   console.log('[AuthPage] Google Client ID available:', !!import.meta.env.VITE_GOOGLE_CLIENT_ID);
@@ -116,11 +111,9 @@ export default function AuthPage() {
               )}
             </Button>
             
-            {isArcBrowser && (
-              <p className="text-sm text-gray-600 mt-2 text-center">
-                Arc browser detected - using redirect flow for better compatibility
-              </p>
-            )}
+            <p className="text-sm text-gray-600 mt-2 text-center">
+              Having trouble? Try Chrome or Safari if Arc browser blocks popups
+            </p>
           </CardContent>
         </Card>
       </div>
