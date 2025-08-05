@@ -28,24 +28,32 @@ export default function AuthPage() {
   });
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    console.log('[Google OAuth] Credential response received:', !!credentialResponse.credential);
-    console.log('[Google OAuth] Full response:', credentialResponse);
-    
-    if (!credentialResponse?.credential) {
-      console.error('[Google OAuth] No credential received');
-      alert('Google authentication failed - no credential received');
-      return;
-    }
-    
     try {
+      console.log('[Google OAuth] Credential response received:', !!credentialResponse.credential);
+      console.log('[Google OAuth] Full response:', credentialResponse);
+      
+      if (!credentialResponse?.credential) {
+        console.error('[Google OAuth] No credential received');
+        alert('Google authentication failed - no credential received');
+        return;
+      }
+      
       console.log('[Auth] Sending credential to backend...');
       const result = await loginMutation.mutateAsync({ 
         googleCredential: credentialResponse.credential 
       });
       console.log('[Auth] Login successful:', result);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Auth] Login failed:', error);
-      alert('Login failed: ' + (error?.message || 'Unknown error'));
+      
+      // Handle specific error types
+      if (error?.message?.includes('Network Error') || error?.message?.includes('Failed to fetch')) {
+        alert('Network error during login. Please check your connection and try again.');
+      } else if (error?.message?.includes('401') || error?.message?.includes('Unauthorized')) {
+        alert('Authentication failed. Please ensure you are using a @seedfinancial.io account.');
+      } else {
+        alert('Login failed: ' + (error?.message || 'Unknown error'));
+      }
     }
   };
 
@@ -54,12 +62,23 @@ export default function AuthPage() {
     
     // Handle specific error types
     if (error?.error === 'access_denied') {
-      alert('Google sign-in was cancelled. Please try again.');
+      console.log('[Google OAuth] User cancelled authentication');
+      return; // Don't show alert for user cancellation
+    }
+    
+    if (error?.error === 'redirect_uri_mismatch') {
+      alert('OAuth configuration error: Your domain needs to be added to the Google OAuth console. Please contact your administrator.');
       return;
     }
     
-    // Generic error handling
-    alert('Google authentication failed. Please try again.');
+    if (error?.error === 'invalid_client') {
+      alert('OAuth client configuration error. Please contact your administrator.');
+      return;
+    }
+    
+    // Generic error handling - only show for unexpected errors
+    console.log('[Google OAuth] Showing generic error for:', error);
+    alert('Google authentication failed. Please try again or contact support if the issue persists.');
   };
 
   return (

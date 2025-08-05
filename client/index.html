@@ -20,6 +20,24 @@
         }
         return originalAddEventListener.call(this, type, listener, options);
       };
+
+      // Enhanced error handling for Google OAuth
+      window.addEventListener('error', function(event) {
+        // Suppress generic "Script error" from Google OAuth cross-origin scripts
+        if (event.message === 'Script error.' && event.filename === '') {
+          console.log('[Google OAuth] Suppressed cross-origin script error (expected)');
+          event.preventDefault();
+          return false;
+        }
+      });
+
+      // Handle Google OAuth specific errors
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason && event.reason.message && event.reason.message.includes('gapi')) {
+          console.log('[Google OAuth] Suppressed GAPI promise rejection (expected)');
+          event.preventDefault();
+        }
+      });
     </script>
   </head>
   <body>
