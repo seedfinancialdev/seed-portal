@@ -52,7 +52,7 @@ function Router() {
         <ProtectedRoute path="/cdn-test" component={CDNTest} />
         <ProtectedRoute path="/profile" component={Profile} />
         <Route path="/auth" component={AuthPage} />
-        <Route path="/oauth-debug" component={OAuthDebug} />
+
         <Route path="/request-access" component={RequestAccess} />
         <Route component={NotFound} />
       </Switch>
