@@ -70,7 +70,9 @@ export default function AuthPage() {
       console.error('[Google OAuth] Error stack:', error?.stack);
       console.error('[Google OAuth] Full error object:', JSON.stringify(error, null, 2));
       
-      alert('Authentication system error. Please try again or contact support.');
+      // Show the actual error message to help debug
+      const errorMessage = error?.message || error?.toString() || 'Unknown authentication error';
+      alert(`Authentication error: ${errorMessage}\n\nPlease check the browser console for details.`);
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
@@ -109,12 +111,22 @@ export default function AuthPage() {
             <Button
               onClick={() => {
                 console.log('[AuthPage] Google login button clicked');
-                console.log('[AuthPage] Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+                console.log('[AuthPage] Google Client ID length:', import.meta.env.VITE_GOOGLE_CLIENT_ID?.length);
                 console.log('[AuthPage] Current URL:', window.location.href);
                 console.log('[AuthPage] User agent:', navigator.userAgent);
+                console.log('[AuthPage] Window location origin:', window.location.origin);
+                
+                // Validate Client ID before attempting login
+                if (!import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+                  console.error('[AuthPage] No Google Client ID available');
+                  alert('Google Client ID not configured. Please check environment variables.');
+                  return;
+                }
                 
                 try {
+                  console.log('[AuthPage] Calling googleLogin()...');
                   googleLogin();
+                  console.log('[AuthPage] googleLogin() called successfully');
                 } catch (error) {
                   console.error('[AuthPage] Error calling googleLogin:', error);
                   alert('Failed to initialize Google login: ' + error.message);
