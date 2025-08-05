@@ -7,13 +7,48 @@ export default function OAuthDebug() {
   const [debugInfo, setDebugInfo] = useState<any>({});
   const [errorDetails, setErrorDetails] = useState<string>('');
 
-  const handleGoogleSuccess = (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: any) => {
     console.log('✅ OAuth Success:', credentialResponse);
     setDebugInfo({
       status: 'SUCCESS',
       credential: !!credentialResponse.credential,
       credentialLength: credentialResponse.credential?.length
     });
+    
+    // Test full login flow
+    try {
+      console.log('🔄 Testing full login flow...');
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          googleCredential: credentialResponse.credential
+        }),
+      });
+      
+      const result = await response.json();
+      console.log('✅ Login API Response:', result);
+      
+      setDebugInfo(prev => ({
+        ...prev,
+        loginTest: {
+          status: response.ok ? 'SUCCESS' : 'FAILED',
+          statusCode: response.status,
+          response: result
+        }
+      }));
+    } catch (error) {
+      console.error('❌ Login test failed:', error);
+      setDebugInfo(prev => ({
+        ...prev,
+        loginTest: {
+          status: 'ERROR',
+          error: error.message
+        }
+      }));
+    }
   };
 
   const handleGoogleError = (error: any) => {
