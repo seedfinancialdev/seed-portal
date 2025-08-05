@@ -424,7 +424,10 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
       latitude: req.user.latitude,
       longitude: req.user.longitude,
       lastWeatherUpdate: req.user.lastWeatherUpdate,
-      lastHubspotSync: req.user.lastHubspotSync
+      lastHubspotSync: req.user.lastHubspotSync,
+      defaultDashboard: req.user.defaultDashboard,
+      isImpersonating: req.session.isImpersonating || false,
+      originalUser: req.session.originalUser || null
     });
   });
 

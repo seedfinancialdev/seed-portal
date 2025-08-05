@@ -242,13 +242,54 @@ export default function UserManagement() {
     setIsDeleteDialogOpen(true);
   };
 
+  const impersonateMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await fetch(`/api/admin/impersonate/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to impersonate user');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Impersonation Started",
+        description: `Now signed in as ${data.user.firstName} ${data.user.lastName}`,
+      });
+      
+      // Invalidate auth queries to refresh with impersonated user
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      
+      // Navigate to their default dashboard
+      const dashboard = data.user.defaultDashboard || 'sales';
+      switch (dashboard) {
+        case 'admin':
+          window.location.href = '/admin';
+          break;
+        case 'sales':
+          window.location.href = '/sales';
+          break;
+        case 'service':
+          window.location.href = '/service';
+          break;
+        default:
+          window.location.href = '/';
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Impersonation Failed",
+        description: error.message || "Failed to impersonate user",
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleImpersonate = (user: User) => {
-    // Implement impersonation logic - this would need backend support
-    toast({
-      title: "Impersonation Feature",
-      description: `Impersonation for ${user.firstName} ${user.lastName} - Feature coming soon`,
-      variant: "default"
-    });
+    impersonateMutation.mutate(user.id);
   };
 
   const handleConfirmResetPassword = () => {
@@ -296,7 +337,7 @@ export default function UserManagement() {
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <BackButton className="text-white hover:border-[#e24c00] hover:text-white border border-transparent" />
+          <BackButton className="text-white hover:border-[#e24c00] hover:text-white hover:bg-transparent border border-transparent" />
         </div>
 
         <div className="text-center mb-8">
@@ -498,7 +539,7 @@ export default function UserManagement() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-end space-x-3">
                       {/* Role Selector */}
                       <div className="flex flex-col">
                         <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Permission Level</label>
@@ -507,7 +548,7 @@ export default function UserManagement() {
                           onValueChange={(newRole) => handleRoleUpdate(user.id, newRole)}
                           disabled={updateRoleMutation.isPending}
                         >
-                          <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-role-${user.id}`}>
+                          <SelectTrigger className="w-32 h-9 text-xs" data-testid={`select-role-${user.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -525,7 +566,7 @@ export default function UserManagement() {
                           onValueChange={(newDashboard) => handleDashboardUpdate(user.id, newDashboard)}
                           disabled={updateDashboardMutation.isPending}
                         >
-                          <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-dashboard-${user.id}`}>
+                          <SelectTrigger className="w-32 h-9 text-xs" data-testid={`select-dashboard-${user.id}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -541,7 +582,7 @@ export default function UserManagement() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleImpersonate(user)}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-9"
                         data-testid={`button-impersonate-${user.id}`}
                       >
                         <UserCheck className="h-4 w-4 mr-1" />
@@ -557,6 +598,7 @@ export default function UserManagement() {
                           setIsResetPasswordDialogOpen(true);
                         }}
                         disabled={resetPasswordMutation.isPending}
+                        className="h-9"
                         data-testid={`button-reset-password-${user.id}`}
                       >
                         <RotateCcw className="h-4 w-4 mr-1" />
@@ -567,7 +609,7 @@ export default function UserManagement() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleDeleteUser(user)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-9"
                         data-testid={`button-delete-${user.id}`}
                       >
                         <Trash2 className="h-4 w-4" />

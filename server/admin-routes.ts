@@ -412,6 +412,75 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       });
     }
   });
+
+  // Impersonate user
+  app.post('/api/admin/impersonate/:userId', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      if (!userId || isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      // Get the user to impersonate
+      const userToImpersonate = await storage.getUser(userId);
+      if (!userToImpersonate) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Store original user info in session for later restoration
+      req.session.originalUser = {
+        id: req.user.id,
+        email: req.user.email,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        role: req.user.role,
+        defaultDashboard: req.user.defaultDashboard
+      };
+      req.session.isImpersonating = true;
+
+      // Update session with impersonated user
+      req.user = userToImpersonate;
+
+      res.json({
+        message: 'Impersonation started successfully',
+        user: userToImpersonate,
+        isImpersonating: true
+      });
+    } catch (error: any) {
+      console.error('Error starting impersonation:', error);
+      res.status(500).json({ 
+        message: 'Failed to start impersonation: ' + error.message 
+      });
+    }
+  });
+
+  // Stop impersonation and return to original user
+  app.post('/api/admin/stop-impersonation', requireAuth, async (req, res) => {
+    try {
+      if (!req.session.isImpersonating || !req.session.originalUser) {
+        return res.status(400).json({ message: 'Not currently impersonating' });
+      }
+
+      // Restore original user
+      req.user = req.session.originalUser;
+      
+      // Clean up session
+      delete req.session.originalUser;
+      delete req.session.isImpersonating;
+
+      res.json({
+        message: 'Impersonation stopped successfully',
+        user: req.user,
+        isImpersonating: false
+      });
+    } catch (error: any) {
+      console.error('Error stopping impersonation:', error);
+      res.status(500).json({ 
+        message: 'Failed to stop impersonation: ' + error.message 
+      });
+    }
+  });
 }
 
 // Helper function for password hashing (reused from auth.ts)
