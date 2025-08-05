@@ -751,37 +751,21 @@ export default function Home() {
         
         console.log('Final quote data:', quoteData);
         
-        let response;
+        let result;
         if (editingQuoteId) {
           console.log('💡 Updating existing quote with ID:', editingQuoteId);
-          response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
+          result = await apiRequest(`/api/quotes/${editingQuoteId}`, {
             method: "PUT",
             body: JSON.stringify(quoteData)
           });
         } else {
           console.log('💡 Creating new quote');
-          response = await apiRequest("/api/quotes", {
+          result = await apiRequest("/api/quotes", {
             method: "POST",
             body: JSON.stringify(quoteData)
           });
         }
         
-        console.log('💡 Quote API response status:', response.status);
-        console.log('💡 Quote API response ok:', response.ok);
-        
-        if (!response.ok) {
-          // Try to get error details from response
-          let errorData;
-          try {
-            errorData = await response.json();
-          } catch (e) {
-            errorData = await response.text();
-          }
-          console.error('💡 Quote API error data:', errorData);
-          throw new Error(errorData?.message || errorData || `HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const result = await response.json();
         console.log('💡 Quote API success response:', result);
         return result;
       } catch (error: any) {
