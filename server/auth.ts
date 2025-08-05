@@ -164,12 +164,23 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     ),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user, done) => {
+    console.log('🔄 Serializing user:', user.email, 'ID:', user.id);
+    done(null, user.id);
+  });
   passport.deserializeUser(async (id: number, done) => {
+    console.log('🔄 Deserializing user ID:', id);
     try {
       const user = await storage.getUser(id);
-      done(null, user);
+      if (user) {
+        console.log('🔄 Deserialized user:', user.email);
+        done(null, user);
+      } else {
+        console.log('🔄 User not found for ID:', id);
+        done(null, null);
+      }
     } catch (error) {
+      console.error('🔄 Deserialization error:', error);
       done(error);
     }
   });
@@ -299,16 +310,29 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
         }
 
         // Create session
+        console.log('🎯 About to create session for user:', user.email, 'ID:', user.id);
         req.login(user, (err) => {
           if (err) {
             console.error('❌ Session creation failed:', err);
             return res.status(500).json({ message: "Session creation failed" });
           }
           
+          console.log('🎯 req.login callback success, checking session...');
+          console.log('🎯 req.user after login:', req.user ? req.user.email : 'None');
+          console.log('🎯 req.isAuthenticated():', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
+          console.log('🎯 Session passport data:', req.session?.passport || 'None');
+          
           req.session.save((saveErr) => {
             if (saveErr) {
               console.error('⚠️ Session save warning:', saveErr);
+            } else {
+              console.log('✅ Session saved successfully');
             }
+            
+            // Double-check authentication after save
+            console.log('🎯 Final auth check - req.user:', req.user ? req.user.email : 'None');
+            console.log('🎯 Final auth check - isAuthenticated:', req.isAuthenticated ? req.isAuthenticated() : 'Unknown');
+            console.log('🎯 Final session data keys:', Object.keys(req.session || {}));
             
             console.log('✅ Google OAuth login successful for:', user.email);
             console.log('🔑 Session created:', req.sessionID);

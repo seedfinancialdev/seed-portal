@@ -18,31 +18,42 @@ export default function AuthPage() {
     return <Redirect to="/" />;
   }
 
-  // Force popup mode for consistency
   const googleLogin = useGoogleLogin({
     onSuccess: async (response) => {
-      console.log('[Google OAuth] Success:', response);
+      console.log('[Google OAuth] Success response:', response);
+      console.log('[Google OAuth] Access token received:', response.access_token ? 'Yes' : 'No');
+      console.log('[Google OAuth] Token type:', response.token_type);
+      console.log('[Google OAuth] Expires in:', response.expires_in);
+      
       try {
-        console.log('[Auth] Starting login mutation...');
+        console.log('[Auth] Sending login request to backend...');
         const result = await loginMutation.mutateAsync({ googleAccessToken: response.access_token });
-        console.log('[Auth] Login mutation successful:', result);
+        console.log('[Auth] Backend response:', result);
         
-        // Give extra time for auth state to sync
-        await new Promise(resolve => setTimeout(resolve, 100));
-        console.log('[Auth] Ready for redirect');
+        // Check if authentication actually worked
+        console.log('[Auth] Checking authentication status...');
+        const authCheck = await fetch('/api/user');
+        console.log('[Auth] Auth check status:', authCheck.status);
+        
+        if (authCheck.ok) {
+          const userData = await authCheck.json();
+          console.log('[Auth] User authenticated:', userData);
+        } else {
+          console.error('[Auth] Authentication failed - user not authenticated after login');
+          alert('Login failed. Please try again.');
+        }
       } catch (error) {
-        console.error('[Auth] Login mutation failed:', error);
+        console.error('[Auth] Login process failed:', error);
+        alert('Login failed: ' + (error.message || 'Unknown error'));
       }
     },
     onError: (error) => {
-      console.error('[Google OAuth] Login error:', error);
+      console.error('[Google OAuth] OAuth error:', error);
+      alert('Google authentication failed: ' + JSON.stringify(error));
     },
     onNonOAuthError: (error) => {
-      console.error('[Google OAuth] Non-OAuth error details:', error);
-      if (error?.message === 'Popup window closed') {
-        console.error('[Google OAuth] Popup blocked or closed');
-        alert('Popup was blocked or closed.\n\nTo fix this:\n1. Allow popups for this site\n2. Or try using Chrome/Safari instead of Arc browser\n3. Make sure you\'re using a @seedfinancial.io Google account');
-      }
+      console.error('[Google OAuth] Non-OAuth error:', error);
+      alert('Authentication error: ' + (error.message || JSON.stringify(error)));
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
@@ -111,9 +122,14 @@ export default function AuthPage() {
               )}
             </Button>
             
-            <p className="text-sm text-gray-600 mt-2 text-center">
-              Having trouble? Try Chrome or Safari if Arc browser blocks popups
-            </p>
+            <div className="text-sm text-gray-600 mt-4 space-y-1">
+              <p className="text-center">Troubleshooting:</p>
+              <ul className="text-left space-y-1 ml-4">
+                <li>• Make sure you're using a @seedfinancial.io Google account</li>
+                <li>• Allow popups for this site if prompted</li>
+                <li>• Check browser console for detailed error messages</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
