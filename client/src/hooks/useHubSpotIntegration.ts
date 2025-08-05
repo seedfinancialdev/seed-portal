@@ -61,23 +61,29 @@ export function useHubSpotIntegration() {
       console.log('[HubSpot] Push successful:', result);
       return result;
     } catch (error: any) {
-      console.error('[HubSpot] Error pushing quote to HubSpot:', error);
-      console.error('[HubSpot] Error details:', {
-        message: error?.message,
-        status: error?.status,
-        statusText: error?.statusText,
-        body: error?.body
-      });
+      console.error('[HubSpot] Raw error object:', error);
+      console.error('[HubSpot] Error type:', typeof error);
+      console.error('[HubSpot] Error constructor:', error?.constructor?.name);
+      console.error('[HubSpot] Error message:', error?.message);
+      console.error('[HubSpot] Error status:', error?.status);
+      console.error('[HubSpot] Error statusText:', error?.statusText);
+      console.error('[HubSpot] Error response:', error?.response);
+      console.error('[HubSpot] Error body:', error?.body);
+      console.error('[HubSpot] Error details stringified:', JSON.stringify(error, null, 2));
       
       // Try to extract more meaningful error message
       let errorMessage = 'Failed to push quote to HubSpot';
-      if (error?.message) {
+      if (error?.message && error.message !== '[object Object]') {
         errorMessage = error.message;
-      } else if (error?.body) {
+      } else if (error?.body && typeof error.body === 'string') {
         errorMessage = error.body;
       } else if (error?.statusText) {
         errorMessage = error.statusText;
+      } else if (error?.status) {
+        errorMessage = `HTTP Error ${error.status}`;
       }
+      
+      console.error('[HubSpot] Final error message:', errorMessage);
       
       // Re-throw with better error message
       const enhancedError = new Error(errorMessage);

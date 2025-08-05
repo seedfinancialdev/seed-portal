@@ -908,20 +908,27 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Push quote to HubSpot (create deal and quote)
   app.post("/api/hubspot/push-quote", requireAuth, async (req, res) => {
+    console.log('🚀 HUBSPOT PUSH START - Quote ID:', req.body.quoteId);
+    console.log('🚀 User authenticated:', req.user?.email);
+    console.log('🚀 HubSpot service available:', !!hubSpotService);
+    
     try {
       const { quoteId } = req.body;
       
       if (!quoteId) {
+        console.log('❌ Missing quote ID');
         res.status(400).json({ message: "Quote ID is required" });
         return;
       }
 
       if (!req.user) {
+        console.log('❌ User not authenticated');
         res.status(401).json({ message: "User not authenticated" });
         return;
       }
 
       if (!hubSpotService) {
+        console.log('❌ HubSpot service not configured');
         res.status(400).json({ message: "HubSpot integration not configured" });
         return;
       }
@@ -1098,9 +1105,23 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         dealName: deal.properties.dealname,
         message: "Successfully pushed to HubSpot"
       });
-    } catch (error) {
-      console.error('Error pushing to HubSpot:', error);
-      res.status(500).json({ message: "Failed to push quote to HubSpot" });
+    } catch (error: any) {
+      console.error('❌ HUBSPOT PUSH ERROR:', error);
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error message:', error?.message);
+      console.error('❌ Error stack:', error?.stack);
+      console.error('❌ Error response:', error?.response?.data);
+      console.error('❌ Error status:', error?.response?.status);
+      
+      // Send more detailed error response
+      const errorMessage = error?.response?.data?.message || error?.message || "Failed to push quote to HubSpot";
+      const statusCode = error?.response?.status || 500;
+      
+      res.status(statusCode).json({ 
+        message: errorMessage,
+        details: error?.response?.data || null,
+        errorType: error?.name || 'Unknown'
+      });
     }
   });
 
