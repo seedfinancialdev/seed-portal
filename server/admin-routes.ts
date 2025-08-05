@@ -439,13 +439,20 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       };
       req.session.isImpersonating = true;
 
-      // Update session with impersonated user
-      req.user = userToImpersonate;
-
-      res.json({
-        message: 'Impersonation started successfully',
-        user: userToImpersonate,
-        isImpersonating: true
+      // Update session with impersonated user - use passport's login method
+      req.login(userToImpersonate, (err) => {
+        if (err) {
+          console.error('Error logging in as impersonated user:', err);
+          return res.status(500).json({ 
+            message: 'Failed to start impersonation: ' + err.message 
+          });
+        }
+        
+        res.json({
+          message: 'Impersonation started successfully',
+          user: userToImpersonate,
+          isImpersonating: true
+        });
       });
     } catch (error: any) {
       console.error('Error starting impersonation:', error);
@@ -462,17 +469,25 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
         return res.status(400).json({ message: 'Not currently impersonating' });
       }
 
-      // Restore original user
-      req.user = req.session.originalUser;
-      
-      // Clean up session
-      delete req.session.originalUser;
-      delete req.session.isImpersonating;
+      // Restore original user using passport login
+      const originalUser = req.session.originalUser;
+      req.login(originalUser, (err) => {
+        if (err) {
+          console.error('Error restoring original user:', err);
+          return res.status(500).json({ 
+            message: 'Failed to stop impersonation: ' + err.message 
+          });
+        }
+        
+        // Clean up session and respond
+        delete req.session.originalUser;
+        delete req.session.isImpersonating;
 
-      res.json({
-        message: 'Impersonation stopped successfully',
-        user: req.user,
-        isImpersonating: false
+        res.json({
+          message: 'Impersonation stopped successfully',
+          user: originalUser,
+          isImpersonating: false
+        });
       });
     } catch (error: any) {
       console.error('Error stopping impersonation:', error);
