@@ -60,8 +60,11 @@ export async function apiRequest(
     // Build request options with custom headers support
     const requestOptions: RequestInit = {
       method,
+      mode: 'cors',
+      cache: 'no-cache',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         ...(options.headers || {}), // Merge custom headers (like Authorization)
       },
       credentials: 'include', // This sends session cookies for authentication
@@ -78,8 +81,8 @@ export async function apiRequest(
       method,
       hasCredentials: requestOptions.credentials === 'include',
       headers: requestOptions.headers,
-      cookiesAvailable: document.cookie ? 'YES' : 'NO',
-      cookieSnippet: document.cookie.substring(0, 100),
+      cookiesAvailable: document.cookie ? 'YES' : 'HttpOnly-Hidden',
+      cookieSnippet: document.cookie.substring(0, 100) || 'HttpOnly cookies invisible to JS',
       location: window.location.href,
       origin: window.location.origin,
       protocol: window.location.protocol,
@@ -106,8 +109,11 @@ export async function apiRequest(
   // For new signature calls, build standard request options
   const requestOptions: RequestInit = {
     method,
+    mode: 'cors', // Explicit CORS mode
+    cache: 'no-cache', // Prevent caching issues with authentication
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     },
     credentials: 'include', // This sends session cookies for authentication
   };
@@ -155,13 +161,22 @@ export const getQueryFn: <T>(options: {
     console.log('[QueryFn] 🔍 Query request details:', {
       url,
       queryKey,
-      cookiesAvailable: document.cookie ? 'YES' : 'NO',
-      cookieSnippet: document.cookie.substring(0, 100),
-      timestamp: new Date().toISOString()
+      cookiesAvailable: document.cookie ? 'YES' : 'HttpOnly-Hidden',
+      cookieSnippet: document.cookie.substring(0, 100) || 'HttpOnly cookies invisible to JS',
+      timestamp: new Date().toISOString(),
+      location: window.location.href,
+      origin: window.location.origin
     });
     
     const res = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache', // Prevent caching issues with authentication
       credentials: "include", // Session cookies only, no OAuth token
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
     });
 
     // Log query function response details

@@ -25,21 +25,27 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
   try {
     console.log('[createRedisConnections] Creating Redis clients...');
     
-    // Create ioredis instances with proper connection pooling
+    // Create ioredis instances with more aggressive connection settings for production
     const baseOptions = {
       enableReadyCheck: true,
-      maxRetriesPerRequest: 2,
-      connectTimeout: 10000,
-      lazyConnect: true,
+      maxRetriesPerRequest: 3,
+      connectTimeout: 30000, // Increased from 10s to 30s
+      commandTimeout: 20000, // Added command timeout
+      lazyConnect: false, // Connect immediately instead of lazy
       keepAlive: true,
       family: 4, // Force IPv4
       retryStrategy: (times: number) => {
-        if (times > 5) {
-          return null; // Stop retrying sooner
+        console.log(`[Redis] Retry attempt ${times}`);
+        if (times > 8) { // Increased retries
+          console.log('[Redis] Max retries reached, giving up');
+          return null;
         }
-        return Math.min(times * 100, 2000);
+        const delay = Math.min(times * 200, 3000); // Increased delay
+        console.log(`[Redis] Retrying in ${delay}ms`);
+        return delay;
       },
       reconnectOnError: (err: Error) => {
+        console.log('[Redis] Reconnect on error:', err.message);
         const targetError = 'READONLY';
         if (err.message.includes(targetError)) {
           return true;

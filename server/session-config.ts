@@ -150,12 +150,64 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
     storeType = 'NoRedisURL';
   }
   
-  // Fall back to MemoryStore if Redis failed
+  // Fall back to MemoryStore if Redis failed - with enhanced debugging
   if (!sessionStore) {
+    console.log('[SessionConfig] 🚨 CREATING MEMORYSTORE FALLBACK');
     const MemoryStoreClass = MemoryStore(session);
     sessionStore = new MemoryStoreClass({
       checkPeriod: 86400000, // prune expired entries every 24h
+      stale: false, // Don't return stale sessions
+      max: 500, // Limit memory usage
+      ttl: 24 * 60 * 60 * 1000, // 24 hours TTL
     });
+    
+    // Add debugging wrapper for MemoryStore operations
+    const originalMemGet = sessionStore.get.bind(sessionStore);
+    const originalMemSet = sessionStore.set.bind(sessionStore);
+    const originalMemDestroy = sessionStore.destroy.bind(sessionStore);
+
+    sessionStore.get = function(sid, callback) {
+      console.log('[MemoryStore] 🔍 GET operation:', { sid: sid?.substring(0, 10) + '...' });
+      return originalMemGet(sid, (err, session) => {
+        console.log('[MemoryStore] 🔍 GET result:', { 
+          sid: sid?.substring(0, 10) + '...', 
+          hasSession: !!session, 
+          error: err?.message,
+          sessionKeys: session ? Object.keys(session) : [],
+          hasPassport: !!(session as any)?.passport
+        });
+        callback(err, session);
+      });
+    };
+
+    sessionStore.set = function(sid, session, callback) {
+      console.log('[MemoryStore] 🔍 SET operation:', { 
+        sid: sid?.substring(0, 10) + '...', 
+        sessionKeys: Object.keys(session || {}),
+        hasPassport: !!(session as any)?.passport,
+        passportUser: (session as any)?.passport?.user
+      });
+      return originalMemSet(sid, session, (err) => {
+        console.log('[MemoryStore] 🔍 SET result:', { 
+          sid: sid?.substring(0, 10) + '...', 
+          error: err?.message,
+          success: !err
+        });
+        callback && callback(err);
+      });
+    };
+
+    sessionStore.destroy = function(sid, callback) {
+      console.log('[MemoryStore] 🔍 DESTROY operation:', { sid: sid?.substring(0, 10) + '...' });
+      return originalMemDestroy(sid, (err) => {
+        console.log('[MemoryStore] 🔍 DESTROY result:', { 
+          sid: sid?.substring(0, 10) + '...', 
+          error: err?.message,
+          success: !err
+        });
+        callback && callback(err);
+      });
+    };
     
     if (storeType.startsWith('RedisFailure:')) {
       storeType = `MemoryStore (Redis failed: ${storeType.replace('RedisFailure: ', '')})`;
