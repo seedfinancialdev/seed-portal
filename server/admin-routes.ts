@@ -429,7 +429,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       }
 
       // Store original user info in session for later restoration
-      req.session.originalUser = {
+      const originalUserData = {
         id: req.user.id,
         email: req.user.email,
         firstName: req.user.firstName,
@@ -437,6 +437,8 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
         role: req.user.role,
         defaultDashboard: req.user.defaultDashboard
       };
+      
+      req.session.originalUser = originalUserData;
       req.session.isImpersonating = true;
       
       console.log('🎭 IMPERSONATION STARTED:');
@@ -445,8 +447,15 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       console.log('🎭 Session ID:', req.sessionID);
       console.log('🎭 Session isImpersonating:', req.session.isImpersonating);
 
+      // Create enhanced user object with impersonation data
+      const impersonatedUser = {
+        ...userToImpersonate,
+        isImpersonating: true,
+        originalUser: originalUserData
+      };
+      
       // Update session with impersonated user - use passport's login method
-      req.login(userToImpersonate, (err) => {
+      req.login(impersonatedUser, (err) => {
         if (err) {
           console.error('Error logging in as impersonated user:', err);
           return res.status(500).json({ 
@@ -454,33 +463,35 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
           });
         }
         
-        // Ensure impersonation flags are preserved after login
+        // Set session flags as backup
         req.session.isImpersonating = true;
-        req.session.originalUser = {
-          id: req.session.originalUser.id,
-          email: req.session.originalUser.email,
-          firstName: req.session.originalUser.firstName,
-          lastName: req.session.originalUser.lastName,
-          role: req.session.originalUser.role,
-          defaultDashboard: req.session.originalUser.defaultDashboard
-        };
+        req.session.originalUser = originalUserData;
         
-        // Save session to ensure persistence
+        console.log('🎭 After login - user object:', {
+          id: req.user.id,
+          email: req.user.email,
+          isImpersonating: (req.user as any).isImpersonating,
+          originalUser: (req.user as any).originalUser?.email
+        });
+        console.log('🎭 Session data:', {
+          isImpersonating: req.session.isImpersonating,
+          originalUser: req.session.originalUser?.email
+        });
+        
+        // Force session save for in-memory store
         req.session.save((saveErr) => {
           if (saveErr) {
-            console.error('Error saving impersonation session:', saveErr);
+            console.error('🎭 Error saving impersonation session:', saveErr);
             return res.status(500).json({ 
               message: 'Failed to save impersonation session: ' + saveErr.message 
             });
           }
           
-          console.log('🎭 Session saved with impersonation data');
-          console.log('🎭 Final session isImpersonating:', req.session.isImpersonating);
-          console.log('🎭 Final session originalUser:', req.session.originalUser?.email);
+          console.log('🎭 Session save completed successfully');
           
           res.json({
             message: 'Impersonation started successfully',
-            user: userToImpersonate,
+            user: impersonatedUser,
             isImpersonating: true
           });
         });

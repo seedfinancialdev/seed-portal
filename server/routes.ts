@@ -229,9 +229,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     const user = req.user || (req.session as any)?.user;
     if (user) {
       const { password: _, ...userWithoutPassword } = user;
-      // Add impersonation status from session
-      const isImpersonating = !!(req.session as any)?.isImpersonating;
-      const originalUser = (req.session as any)?.originalUser;
+      // Get impersonation status from user object first, then session as backup
+      const isImpersonating = !!(user as any).isImpersonating || !!(req.session as any)?.isImpersonating;
+      const originalUser = (user as any).originalUser || (req.session as any)?.originalUser;
       const userData = {
         ...userWithoutPassword,
         isImpersonating,
