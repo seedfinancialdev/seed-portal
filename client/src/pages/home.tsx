@@ -1113,27 +1113,11 @@ export default function Home() {
     mutationFn: async (quoteId: number) => {
       console.log('🚀 pushToHubSpotMutation called with quoteId:', quoteId);
       try {
-        const response = await apiRequest("/api/hubspot/push-quote", {
+        const result = await apiRequest("/api/hubspot/push-quote", {
           method: "POST",
           body: JSON.stringify({ quoteId })
         });
         
-        console.log('🚀 Raw response status:', response.status);
-        console.log('🚀 Raw response ok:', response.ok);
-        
-        if (!response.ok) {
-          // Try to get error details from response
-          let errorData;
-          try {
-            errorData = await response.json();
-          } catch (e) {
-            errorData = await response.text();
-          }
-          console.error('🚀 Response error data:', errorData);
-          throw new Error(errorData?.message || errorData || `HTTP ${response.status}`);
-        }
-        
-        const result = await response.json();
         console.log('🚀 HubSpot API success response:', result);
         return { ...result, quoteId }; // Include the original quoteId in the response
       } catch (error: any) {
