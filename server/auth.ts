@@ -174,22 +174,48 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
   );
 
   passport.serializeUser((user, done) => {
-    console.log('🔄 Serializing user:', user.email, 'ID:', user.id);
+    console.log('🔄 [PASSPORT] Serializing user:', {
+      email: user.email,
+      id: user.id,
+      role: user.role,
+      userKeys: Object.keys(user),
+      timestamp: new Date().toISOString()
+    });
     done(null, user.id);
   });
+  
   passport.deserializeUser(async (id: number, done) => {
-    console.log('🔄 Deserializing user ID:', id);
+    console.log('🔄 [PASSPORT] Deserializing user ID:', {
+      id,
+      idType: typeof id,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       const user = await storage.getUser(id);
       if (user) {
-        console.log('🔄 Deserialized user:', user.email);
+        console.log('🔄 [PASSPORT] ✅ Deserialized user successfully:', {
+          email: user.email,
+          id: user.id,
+          role: user.role,
+          userKeys: Object.keys(user)
+        });
         done(null, user);
       } else {
-        console.log('🔄 User not found for ID:', id);
+        console.log('🔄 [PASSPORT] ❌ User not found for ID:', {
+          attemptedId: id,
+          idType: typeof id,
+          timestamp: new Date().toISOString()
+        });
         done(null, null);
       }
     } catch (error) {
-      console.error('🔄 Deserialization error:', error);
+      console.error('🔄 [PASSPORT] ❌ Deserialization error:', {
+        error: error.message,
+        userId: id,
+        stack: error.stack?.split('\n').slice(0, 3),
+        timestamp: new Date().toISOString()
+      });
       done(error);
     }
   });

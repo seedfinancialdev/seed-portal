@@ -57,6 +57,37 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add response header debugging middleware
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/')) {
+    const originalSend = res.send;
+    const originalJson = res.json;
+    
+    res.send = function(body) {
+      console.log('📤 [Response Debug] Headers being sent:', {
+        url: req.originalUrl,
+        statusCode: res.statusCode,
+        headers: res.getHeaders(),
+        hasCookieHeader: !!res.getHeaders()['set-cookie'],
+        cookieHeaders: res.getHeaders()['set-cookie']
+      });
+      return originalSend.call(this, body);
+    };
+    
+    res.json = function(body) {
+      console.log('📤 [Response Debug] JSON Headers being sent:', {
+        url: req.originalUrl,
+        statusCode: res.statusCode,
+        headers: res.getHeaders(),
+        hasCookieHeader: !!res.getHeaders()['set-cookie'],
+        cookieHeaders: res.getHeaders()['set-cookie']
+      });
+      return originalJson.call(this, body);
+    };
+  }
+  next();
+});
+
 // Enable CORS for production deployments with credentials
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -68,7 +99,10 @@ app.use((req, res, next) => {
       method: req.method,
       origin: origin || 'NO_ORIGIN',
       host: req.headers.host,
-      userAgent: req.headers['user-agent']?.substring(0, 30)
+      userAgent: req.headers['user-agent']?.substring(0, 30),
+      referer: req.headers.referer,
+      secFetchSite: req.headers['sec-fetch-site'],
+      secFetchMode: req.headers['sec-fetch-mode']
     });
   }
   

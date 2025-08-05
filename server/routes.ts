@@ -10,6 +10,7 @@ import { z } from "zod";
 import { sendSystemAlert } from "./slack";
 import { hubSpotService } from "./hubspot";
 import { setupAuth, requireAuth } from "./auth";
+import passport from "passport";
 import { registerAdminRoutes } from "./admin-routes";
 import { calculateCombinedFees } from "@shared/pricing";
 import { clientIntelEngine } from "./client-intel";
@@ -156,100 +157,75 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   
 
   
-  // Login endpoint - simple email/password authentication
-  app.post("/api/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-      }
+  // Login endpoint - FIXED to use proper passport authentication
+  app.post("/api/login", (req, res, next) => {
+    console.log('[Login] 🔑 Starting PASSPORT authentication for:', req.body.email);
+    console.log('[Login] Environment debug:', {
+      NODE_ENV: process.env.NODE_ENV,
+      REPLIT_DEPLOYMENT: process.env.REPLIT_DEPLOYMENT,
+      sessionId: req.sessionID,
+      cookieSecure: req.session?.cookie?.secure,
+      cookieSameSite: req.session?.cookie?.sameSite
+    });
 
-      // Environment debugging for production issues
-      console.log('[Login] Environment debug:', {
-        NODE_ENV: process.env.NODE_ENV,
-        REPLIT_DEPLOYMENT: process.env.REPLIT_DEPLOYMENT,
-        isProduction: process.env.NODE_ENV === 'production',
-        isDeployment: process.env.REPLIT_DEPLOYMENT === '1',
-        sessionId: req.sessionID,
-        cookieSecure: req.session?.cookie?.secure,
-        cookieSameSite: req.session?.cookie?.sameSite
+    // Use passport.authenticate() instead of manual authentication
+    passport.authenticate('local', (err, user, info) => {
+      console.log('[Login] 🔑 Passport authentication callback:', {
+        hasError: !!err,
+        hasUser: !!user,
+        userEmail: user?.email,
+        info: info,
+        timestamp: new Date().toISOString()
       });
-
-      // For basic local authentication, verify directly with storage
-      console.log('[Login] Starting authentication for:', email);
-      console.log('[Login] Password provided:', password);
-      console.log('[Login] Password length:', password?.length);
       
-      const user = await storage.verifyUserPassword(email, password);
+      if (err) {
+        console.error('[Login] ❌ Passport authentication error:', err);
+        return res.status(500).json({ message: "Authentication error" });
+      }
+      
       if (!user) {
-        console.log('[Login] Authentication failed for:', email);
+        console.log('[Login] ❌ Authentication failed - no user returned');
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Create session data that works with passport deserialization
-      (req.session as any).passport = { user: user.id };
-      (req.session as any).user = user;
-      
-      console.log('[Login] Session created for:', user.email);
-      console.log('[Login] Session details:', {
-        sessionId: req.sessionID,
-        hasSession: !!req.session,
-        storeType: req.session?.store?.constructor?.name,
-        passportData: (req.session as any).passport,
-        cookieConfig: {
-          secure: req.session?.cookie?.secure,
-          httpOnly: req.session?.cookie?.httpOnly,
-          sameSite: req.session?.cookie?.sameSite,
-          domain: req.session?.cookie?.domain
+      // CRITICAL: Use req.login() to properly serialize user into session
+      console.log('[Login] 🔑 Calling req.login() for user:', user.email);
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error('[Login] ❌ req.login() failed:', loginErr);
+          return res.status(500).json({ message: "Login session creation failed" });
         }
-      });
-      
-      // Log what we're about to save
-      console.log('[Login] About to save session with data:', {
-        passport: (req.session as any).passport,
-        user: (req.session as any).user ? (req.session as any).user.email : 'None',
-        sessionId: req.sessionID
-      });
-      
-      // Force session save and respond after save completes
-      req.session.save((err) => {
-        if (err) {
-          console.error('[Login] Session save error:', err);
-          return res.status(500).json({ message: "Session save failed" });
-        } else {
-          console.log('[Login] Session saved successfully');
+
+        console.log('[Login] 🔑 ✅ req.login() successful - user should be serialized now');
+        console.log('[Login] Session state after login:', {
+          sessionId: req.sessionID,
+          isAuthenticated: req.isAuthenticated(),
+          passport: (req.session as any).passport,
+          userInReq: req.user ? req.user.email : 'NONE'
+        });
+        
+        // Force session save and respond after save completes
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('[Login] ❌ Session save error:', saveErr);
+            return res.status(500).json({ message: "Session save failed" });
+          }
+          
+          console.log('[Login] 🔑 ✅ Session saved successfully');
           console.log('[Login] Post-save session verification:', {
             passport: (req.session as any).passport,
-            user: (req.session as any).user ? (req.session as any).user.email : 'None',
+            user: req.user ? req.user.email : 'NONE',
             sessionId: req.sessionID,
-            keys: Object.keys(req.session)
-          });
-          
-          // CRITICAL: Log the exact cookie being set for debugging
-          console.log('[Login] 🍪 COOKIE DEBUG - Response will set cookie:', {
-            cookieName: 'oseed.sid',
-            sessionId: req.sessionID,
-            path: req.session?.cookie?.path,
-            domain: req.session?.cookie?.domain,
-            secure: req.session?.cookie?.secure,
-            httpOnly: req.session?.cookie?.httpOnly,
-            sameSite: req.session?.cookie?.sameSite,
-            expires: req.session?.cookie?.expires,
-            userAgent: req.headers['user-agent']?.substring(0, 50)
+            isAuthenticated: req.isAuthenticated()
           });
           
           console.log('[Login] Authentication successful for:', user.email);
           // Don't return the password hash
           const { password: _, ...userWithoutPassword } = user;
           res.json(userWithoutPassword);
-        }
+        });
       });
-
-    } catch (error) {
-      console.error('[Login] Error:', error);
-      res.status(500).json({ message: error.message || "Authentication failed" });
-    }
+    })(req, res, next);
   });
 
   // Logout endpoint 

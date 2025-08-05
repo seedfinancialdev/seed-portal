@@ -80,6 +80,10 @@ export async function apiRequest(
       headers: requestOptions.headers,
       cookiesAvailable: document.cookie ? 'YES' : 'NO',
       cookieSnippet: document.cookie.substring(0, 100),
+      location: window.location.href,
+      origin: window.location.origin,
+      protocol: window.location.protocol,
+      userAgent: navigator.userAgent.substring(0, 50),
       timestamp: new Date().toISOString()
     });
 
