@@ -104,8 +104,6 @@ export default function AuthPage() {
                 shape="rectangular"
                 auto_select={false}
                 cancel_on_tap_outside={true}
-                ux_mode="redirect"
-                redirect_uri={window.location.origin + "/auth"}
                 data-testid="google-login-button"
               />
             </div>
@@ -121,7 +119,7 @@ export default function AuthPage() {
               <p className="text-center">Requirements:</p>
               <ul className="text-left space-y-1 ml-4">
                 <li>• Use your @seedfinancial.io Google account</li>
-                <li>• Authentication will redirect to Google and back</li>
+                <li>• Allow popups if your browser blocks them</li>
                 <li>• Check browser console for detailed messages</li>
               </ul>
             </div>
