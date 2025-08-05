@@ -78,7 +78,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     });
     next();
   });
-  app.use(conditionalCsrf);
+  // Apply CSRF protection, but skip for user creation endpoint
+  app.use((req, res, next) => {
+    if (req.path === '/api/create-user') {
+      return next(); // Skip CSRF for user creation
+    }
+    conditionalCsrf(req, res, next);
+  });
   app.use((req, res, next) => {
     console.log('After CSRF - Request passed CSRF check');
     next();
@@ -121,84 +127,113 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   
 
   
-  // OAuth token exchange endpoint
-  app.post("/api/oauth/google", async (req, res) => {
-    console.log('[OAuth] Google OAuth token exchange started');
+  // Login endpoint - simple email/password authentication
+  app.post("/api/login", async (req, res) => {
     try {
-      const { authorizationCode } = req.body;
+      const { email, password } = req.body;
       
-      if (!authorizationCode) {
-        return res.status(400).json({ message: "Authorization code required" });
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
       }
 
-      // Exchange authorization code for access token
-      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: process.env.VITE_GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET_OS!,
-          code: authorizationCode,
-          grant_type: 'authorization_code',
-          redirect_uri: `${req.protocol}://${req.get('host')}/auth`,
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.text();
-        console.error('[OAuth] Token exchange failed:', errorData);
-        return res.status(400).json({ message: "Failed to exchange authorization code" });
-      }
-
-      const tokens = await tokenResponse.json();
+      // For basic local authentication, verify directly with storage
+      console.log('[Login] Starting authentication for:', email);
+      console.log('[Login] Password provided:', password);
+      console.log('[Login] Password length:', password?.length);
       
-      // Get user info from Google
-      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-        },
-      });
-
-      if (!userResponse.ok) {
-        console.error('[OAuth] Failed to fetch user info');
-        return res.status(400).json({ message: "Failed to fetch user information" });
+      const user = await storage.verifyUserPassword(email, password);
+      if (!user) {
+        console.log('[Login] Authentication failed for:', email);
+        return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      const googleUser = await userResponse.json();
-      console.log('[OAuth] Google user info:', { email: googleUser.email, verified: googleUser.verified_email });
+      // Create session manually without Passport for now
+      (req.session as any).user = user;
+      console.log('[Login] Session created for:', user.email);
+      
+      console.log('[Login] Authentication successful for:', user.email);
+      // Don't return the password hash
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
 
-      // Verify domain restriction
-      if (!googleUser.email?.endsWith('@seedfinancial.io')) {
+    } catch (error) {
+      console.error('[Login] Error:', error);
+      res.status(500).json({ message: error.message || "Authentication failed" });
+    }
+  });
+
+  // Logout endpoint 
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error('[Logout] Error:', err);
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('[Logout] Session destroy error:', err);
+          return res.status(500).json({ message: "Logout failed" });
+        }
+        
+        res.clearCookie('connect.sid'); // Clear session cookie
+        console.log('[Logout] User logged out successfully');
+        res.json({ message: "Logged out successfully" });
+      });
+    });
+  });
+
+  // Get user endpoint for frontend
+  app.get("/api/user", (req, res) => {
+    // Check both passport and manual session
+    const user = req.user || (req.session as any)?.user;
+    if (user) {
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
+    }
+  });
+
+  // Simple user creation endpoint for initial setup - CSRF exempt for testing
+  app.post("/api/create-user", (req, res, next) => {
+    req.csrfToken = () => 'skip'; // Skip CSRF for this endpoint
+    next();
+  }, async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      if (!email.endsWith('@seedfinancial.io')) {
         return res.status(403).json({ message: "Access restricted to @seedfinancial.io domain" });
       }
 
-      // Find or create user
-      let user = await storage.getUserByEmail(googleUser.email);
-      if (!user) {
-        user = await storage.createUser({
-          email: googleUser.email,
-          firstName: googleUser.given_name || '',
-          lastName: googleUser.family_name || '',
-          role: 'service' as const,
-        });
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ message: "User already exists" });
       }
 
-      // Create session
-      req.login(user, (err) => {
-        if (err) {
-          console.error('[OAuth] Session creation failed:', err);
-          return res.status(500).json({ message: "Session creation failed" });
-        }
-        
-        console.log('[OAuth] Authentication successful for:', user.email);
-        res.json(user);
+      // Create user with hashed password
+      const user = await storage.createUser({
+        email,
+        password,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        role: 'service' as const,
       });
 
+      // Don't return the password hash
+      const { password: _, ...userWithoutPassword } = user;
+      
+      console.log('[CreateUser] User created successfully:', user.email);
+      res.json(userWithoutPassword);
     } catch (error) {
-      console.error('[OAuth] Error:', error);
-      res.status(500).json({ message: "OAuth authentication failed" });
+      console.error('[CreateUser] Error:', error);
+      res.status(500).json({ message: "Failed to create user" });
     }
   });
 

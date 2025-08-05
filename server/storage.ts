@@ -12,6 +12,7 @@ import { z } from "zod";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { getRedis, getRedisAsync } from "./redis";
+import bcrypt from "bcryptjs";
 
 type UpdateQuote = z.infer<typeof updateQuoteSchema>;
 
@@ -25,6 +26,7 @@ export interface IStorage {
   getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  verifyUserPassword(email: string, password: string): Promise<User | null>;
   updateUserProfile(userId: number, profile: UpdateProfile): Promise<User>;
   updateUserHubSpotData(userId: number, hubspotData: Partial<User>): Promise<User>;
   updateUserFirebaseUid(userId: number, firebaseUid: string, authProvider: string, profilePhoto: string | null): Promise<void>;
@@ -189,9 +191,16 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     return await safeDbQuery(async () => {
+      // Hash password if provided
+      let userToInsert = { ...insertUser };
+      if (userToInsert.password) {
+        const saltRounds = 12;
+        userToInsert.password = await bcrypt.hash(userToInsert.password, saltRounds);
+      }
+
       const [user] = await db
         .insert(users)
-        .values(insertUser)
+        .values(userToInsert)
         .returning();
       
       if (!user) {
@@ -200,6 +209,30 @@ export class DatabaseStorage implements IStorage {
       
       return user;
     }, 'createUser');
+  }
+
+  async verifyUserPassword(email: string, password: string): Promise<User | null> {
+    return await safeDbQuery(async () => {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      
+      if (!user || !user.password) {
+        console.log('[verifyUserPassword] User not found or no password:', { email, hasUser: !!user, hasPassword: !!user?.password });
+        return null;
+      }
+      
+      console.log('[verifyUserPassword] Checking password for:', email);
+      console.log('[verifyUserPassword] Stored password hash length:', user.password?.length);
+      console.log('[verifyUserPassword] Stored password hash starts with:', user.password?.substring(0, 10));
+      
+      try {
+        const isValid = await bcrypt.compare(password, user.password);
+        console.log('[verifyUserPassword] Password valid:', isValid);
+        return isValid ? user : null;
+      } catch (error) {
+        console.error('[verifyUserPassword] Bcrypt comparison error:', error);
+        return null;
+      }
+    }, 'verifyUserPassword');
   }
 
   async updateUserProfile(userId: number, profile: UpdateProfile): Promise<User> {

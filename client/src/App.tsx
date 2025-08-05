@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 // import { TooltipProvider } from "@/components/ui/tooltip";
-import { GoogleOAuthProvider } from "@react-oauth/google";
+
 import { AuthProvider } from "@/hooks/use-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { NavigationHistoryProvider } from "@/hooks/use-navigation-history";
@@ -64,14 +64,12 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ''}>
-          <AuthProvider>
-            <NavigationHistoryProvider>
-              <Toaster />
-              <Router />
-            </NavigationHistoryProvider>
-          </AuthProvider>
-        </GoogleOAuthProvider>
+        <AuthProvider>
+          <NavigationHistoryProvider>
+            <Toaster />
+            <Router />
+          </NavigationHistoryProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );
