@@ -27,6 +27,7 @@ import RequestAccess from "@/pages/request-access";
 import CDNMonitoring from "@/pages/CDNMonitoring";
 import CDNTest from "@/pages/CDNTest";
 import StripeDashboard from "@/pages/stripe-dashboard";
+import OAuthDebug from "@/pages/oauth-debug";
 
 function Router() {
   // Automatically scroll to top when route changes
@@ -51,6 +52,7 @@ function Router() {
         <ProtectedRoute path="/cdn-test" component={CDNTest} />
         <ProtectedRoute path="/profile" component={Profile} />
         <Route path="/auth" component={AuthPage} />
+        <Route path="/oauth-debug" component={OAuthDebug} />
         <Route path="/request-access" component={RequestAccess} />
         <Route component={NotFound} />
       </Switch>

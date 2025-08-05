@@ -21,7 +21,12 @@ export default function AuthPage() {
   console.log('[AuthPage] Environment check:', {
     clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ? 'Present' : 'Missing',
     clientIdLength: import.meta.env.VITE_GOOGLE_CLIENT_ID?.length,
+    clientIdPrefix: import.meta.env.VITE_GOOGLE_CLIENT_ID?.substring(0, 20) + '...',
     origin: window.location.origin,
+    fullURL: window.location.href,
+    hostname: window.location.hostname,
+    protocol: window.location.protocol,
+    port: window.location.port
   });
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
