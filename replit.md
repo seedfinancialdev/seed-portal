@@ -10,6 +10,7 @@ This project is Seed Financial's Internal Employee Portal, built with React, Typ
 - **Test Environment**: Created test users for development with proper bcrypt password hashing
 - **HubSpot Integration Fully Operational**: Fixed critical apiRequest function compatibility issues in quote saving and HubSpot push/update mutations. Complete end-to-end workflow now functions seamlessly with proper error handling and user feedback.
 - **User Management System Enhanced**: Implemented comprehensive portal user management with default dashboard assignment (Admin, Sales, Service), automatic password generation, user creation/deletion, and password reset functionality. Simplified role structure to admin/employee with dashboard preferences controlling initial login destination.
+- **Admin Impersonation System**: Added full impersonation functionality allowing admins to sign in as any user for support purposes. System preserves original admin session, automatically redirects to user's default dashboard (/admin, /sales-dashboard, /service-dashboard), and provides secure session switching with proper authentication handling.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

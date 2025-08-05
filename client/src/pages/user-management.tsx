@@ -270,10 +270,10 @@ export default function UserManagement() {
           window.location.href = '/admin';
           break;
         case 'sales':
-          window.location.href = '/sales';
+          window.location.href = '/sales-dashboard';
           break;
         case 'service':
-          window.location.href = '/service';
+          window.location.href = '/service-dashboard';
           break;
         default:
           window.location.href = '/';
