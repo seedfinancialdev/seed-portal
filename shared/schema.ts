@@ -180,6 +180,18 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type UpdateProfile = z.infer<typeof updateProfileSchema>;
 
+// Password change schema
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your new password"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "New passwords don't match",
+  path: ["confirmPassword"],
+});
+
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
+
 // Sales Representatives (extends users)
 export const salesReps = pgTable("sales_reps", {
   id: serial("id").primaryKey(),

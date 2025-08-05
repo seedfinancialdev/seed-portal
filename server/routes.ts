@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import type Redis from "ioredis";
 import { storage } from "./storage";
 import { 
-  insertQuoteSchema, updateQuoteSchema, updateProfileSchema,
+  insertQuoteSchema, updateQuoteSchema, updateProfileSchema, changePasswordSchema,
   insertKbCategorySchema, insertKbArticleSchema, insertKbBookmarkSchema, insertKbSearchHistorySchema
 } from "@shared/schema";
 import { z } from "zod";
@@ -16,6 +16,8 @@ import { clientIntelEngine } from "./client-intel";
 import { apiRateLimit, searchRateLimit, enhancementRateLimit } from "./middleware/rate-limiter";
 import { conditionalCsrf, provideCsrfToken } from "./middleware/csrf";
 import multer from "multer";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 import path from "path";
 import { promises as fs } from "fs";
 import express from "express";
@@ -54,6 +56,33 @@ const upload = multer({
     }
   }
 });
+
+// Password utilities
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const bcrypt = await import('bcryptjs');
+  const saltRounds = 12;
+  return await bcrypt.hash(password, saltRounds);
+}
+
+async function comparePasswords(supplied: string, stored: string) {
+  // Check if this is a bcrypt hash (starts with $2a$, $2b$, or $2y$)
+  if (stored.startsWith('$2a$') || stored.startsWith('$2b$') || stored.startsWith('$2y$')) {
+    // Use bcrypt for comparison
+    const bcrypt = await import('bcryptjs');
+    return await bcrypt.compare(supplied, stored);
+  }
+  
+  // Legacy scrypt hash format (hash.salt)
+  const [hashed, salt] = stored.split(".");
+  if (!hashed || !salt) {
+    throw new Error('Invalid password hash format');
+  }
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
 
 export async function registerRoutes(app: Express, sessionRedis?: Redis | null): Promise<Server> {
   console.log('[Routes] ============= REGISTERROUTES CALLED =============');
@@ -1729,6 +1758,44 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       } else {
         console.error('Profile update error:', error);
         res.status(500).json({ message: "Failed to update profile" });
+      }
+    }
+  });
+
+  // Change password endpoint
+  app.post("/api/user/change-password", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const passwordData = changePasswordSchema.parse(req.body);
+      
+      // Get current user with password hash
+      const currentUser = await storage.getUserWithPassword(req.user.id);
+      if (!currentUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isCurrentPasswordValid = await comparePasswords(passwordData.currentPassword, currentUser.passwordHash);
+      if (!isCurrentPasswordValid) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await hashPassword(passwordData.newPassword);
+      
+      // Update password in database
+      await storage.updateUserPassword(req.user.id, hashedNewPassword);
+      
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid password data", errors: error.errors });
+      } else {
+        console.error('Password change error:', error);
+        res.status(500).json({ message: "Failed to change password" });
       }
     }
   });

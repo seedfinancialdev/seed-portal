@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { updateProfileSchema, type UpdateProfile } from "@shared/schema";
+import { updateProfileSchema, type UpdateProfile, changePasswordSchema, type ChangePassword } from "@shared/schema";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -26,7 +26,9 @@ import {
   CloudRain,
   CloudSnow,
   CloudDrizzle,
-  Zap
+  Zap,
+  Lock,
+  Shield
 } from "lucide-react";
 import navLogoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -66,6 +68,44 @@ export default function Profile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Password change form
+  const passwordForm = useForm<ChangePassword>({
+    resolver: zodResolver(changePasswordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  // Password change mutation
+  const changePasswordMutation = useMutation({
+    mutationFn: async (data: ChangePassword) => {
+      return await apiRequest("/api/user/change-password", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password Changed",
+        description: "Your password has been updated successfully.",
+      });
+      passwordForm.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Password Change Failed",
+        description: error.message || "Failed to change password. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onPasswordSubmit = (data: ChangePassword) => {
+    changePasswordMutation.mutate(data);
+  };
   
   const [weather, setWeather] = useState<WeatherData>({
     temperature: null,
@@ -948,6 +988,94 @@ export default function Profile() {
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Password Change Card */}
+            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg text-gray-900">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  Change Password
+                </CardTitle>
+                <CardDescription>
+                  Update your account password
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...passwordForm}>
+                  <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                    <FormField
+                      control={passwordForm.control}
+                      name="currentPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Current Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              placeholder="Enter current password"
+                              data-testid="input-current-password"
+                              {...field}
+                              className="bg-white border-gray-200"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={passwordForm.control}
+                      name="newPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>New Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              placeholder="Enter new password (min 8 characters)"
+                              data-testid="input-new-password"
+                              {...field}
+                              className="bg-white border-gray-200"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={passwordForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm New Password</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="password" 
+                              placeholder="Confirm new password"
+                              data-testid="input-confirm-password"
+                              {...field}
+                              className="bg-white border-gray-200"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      disabled={changePasswordMutation.isPending}
+                      data-testid="button-change-password"
+                    >
+                      {changePasswordMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                      Change Password
+                    </Button>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </div>
