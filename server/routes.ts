@@ -225,6 +225,20 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             sessionId: req.sessionID,
             keys: Object.keys(req.session)
           });
+          
+          // CRITICAL: Log the exact cookie being set for debugging
+          console.log('[Login] 🍪 COOKIE DEBUG - Response will set cookie:', {
+            cookieName: 'oseed.sid',
+            sessionId: req.sessionID,
+            path: req.session?.cookie?.path,
+            domain: req.session?.cookie?.domain,
+            secure: req.session?.cookie?.secure,
+            httpOnly: req.session?.cookie?.httpOnly,
+            sameSite: req.session?.cookie?.sameSite,
+            expires: req.session?.cookie?.expires,
+            userAgent: req.headers['user-agent']?.substring(0, 50)
+          });
+          
           console.log('[Login] Authentication successful for:', user.email);
           // Don't return the password hash
           const { password: _, ...userWithoutPassword } = user;
@@ -263,6 +277,17 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Get user endpoint for frontend
   app.get("/api/user", (req, res) => {
     console.log('🔐 /api/user endpoint called');
+    
+    // CRITICAL: Log incoming cookie details for debugging
+    console.log('🔐 🍪 INCOMING COOKIE DEBUG:', {
+      hasCookieHeader: !!req.headers.cookie,
+      cookieHeader: req.headers.cookie?.substring(0, 100) + '...',
+      oseedSidPresent: req.headers.cookie?.includes('oseed.sid'),
+      userAgent: req.headers['user-agent']?.substring(0, 50),
+      origin: req.headers.origin,
+      referer: req.headers.referer
+    });
+    
     console.log('🔐 Session ID:', req.sessionID);
     console.log('🔐 Session exists:', !!req.session);
     console.log('🔐 Session store type:', req.session.constructor.name);

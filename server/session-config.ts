@@ -142,7 +142,8 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
     secure: isProduction, // Enable secure cookies in production
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: undefined // Let browser determine domain automatically
+    domain: undefined, // Let browser determine domain automatically
+    path: '/', // Explicitly set path to root
   };
 
   // Replit deployment-specific cookie settings
