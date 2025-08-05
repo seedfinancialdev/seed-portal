@@ -242,10 +242,112 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     console.log('🔐 /api/login endpoint called');
     console.log('🔐 Request body keys:', Object.keys(req.body));
     console.log('🔐 Has googleAccessToken:', !!req.body.googleAccessToken);
+    console.log('🔐 Has googleCredential:', !!req.body.googleCredential);
     console.log('🔐 User-Agent:', req.headers['user-agent']);
     console.log('🔐 Referer:', req.headers.referer);
     
-    // Handle Google OAuth token login
+    // Handle Google OAuth credential (JWT ID Token) login
+    if (req.body.googleCredential) {
+      console.log('🔍 Google OAuth credential login detected, processing JWT...');
+      console.log('🔍 Credential length:', req.body.googleCredential.length);
+      try {
+        const credential = req.body.googleCredential;
+        
+        // Verify the JWT credential with Google's tokeninfo endpoint
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`, {
+          signal: AbortSignal.timeout(10000),
+        });
+        
+        if (!response.ok) {
+          console.error('❌ Google credential verification failed:', response.status, response.statusText);
+          return res.status(401).json({ message: "Invalid Google credential" });
+        }
+
+        const userInfo = await response.json();
+        console.log('✅ Google credential verified for:', userInfo.email);
+        
+        // Check domain restriction
+        if (userInfo.hd !== 'seedfinancial.io') {
+          console.log('❌ Domain restriction failed:', userInfo.hd);
+          return res.status(403).json({ 
+            message: "Access restricted to @seedfinancial.io domain" 
+          });
+        }
+
+        // Get or create user
+        let user = await storage.getUserByEmail(userInfo.email);
+        
+        if (!user) {
+          console.log('🆕 Creating new user for:', userInfo.email);
+          // Determine role - admin for jon@seedfinancial.io, service for others
+          let role = 'service';
+          if (userInfo.email === 'jon@seedfinancial.io') {
+            role = 'admin';
+          }
+          
+          user = await storage.createUser({
+            email: userInfo.email,
+            password: await hashPassword('oauth-google-' + Date.now()),
+            firstName: userInfo.given_name || '',
+            lastName: userInfo.family_name || '',
+            profilePhoto: userInfo.picture || null,
+            googleId: userInfo.sub,
+            authProvider: 'google',
+            role,
+            hubspotUserId: null,
+          });
+          console.log('✅ User created with ID:', user.id);
+        } else {
+          console.log('👤 Existing user found:', user.email);
+          // Update Google info if needed
+          if (userInfo.sub && userInfo.sub !== user.googleId) {
+            await storage.updateUserGoogleId(user.id, userInfo.sub, 'google', userInfo.picture || null);
+          }
+          
+          // Update profile if needed
+          const updates: any = {};
+          if (userInfo.given_name && userInfo.given_name !== user.firstName) {
+            updates.firstName = userInfo.given_name;
+          }
+          if (userInfo.family_name && userInfo.family_name !== user.lastName) {
+            updates.lastName = userInfo.family_name;
+          }
+          if (userInfo.picture && userInfo.picture !== user.profilePhoto) {
+            updates.profilePhoto = userInfo.picture;
+          }
+          
+          if (Object.keys(updates).length > 0) {
+            await storage.updateUserProfile(user.id, updates);
+          }
+        }
+
+        // Create session
+        req.login(user, (err) => {
+          if (err) {
+            console.error('❌ Session creation failed:', err);
+            return res.status(500).json({ message: "Session creation failed" });
+          }
+          
+          console.log('✅ User logged in successfully:', user.email);
+          res.json({
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            profilePhoto: user.profilePhoto,
+            authMethod: 'google-credential'
+          });
+        });
+        
+      } catch (error) {
+        console.error('❌ Google credential login error:', error);
+        res.status(500).json({ message: "Authentication failed", error: error.message });
+      }
+      return; // Exit early for credential flow
+    }
+    
+    // Handle Google OAuth token login (legacy)
     if (req.body.googleAccessToken) {
       console.log('🔍 Google OAuth login detected, processing token...');
       console.log('🔍 Token length:', req.body.googleAccessToken.length);
