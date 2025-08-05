@@ -60,15 +60,31 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
   
   console.log('[SessionConfig] Final session store type:', storeType);
   
+  // Robust production detection using multiple signals
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                      process.env.REPLIT_DEPLOYMENT === '1' ||
+                      (process.env.REPL_ID && !process.env.REPL_SLUG?.includes('workspace')) ||
+                      process.env.PORT === '5000'; // Replit production uses port 5000
+  
+  console.log('[SessionConfig] Production detection:', {
+    NODE_ENV: process.env.NODE_ENV || 'NOT SET',
+    REPLIT_DEPLOYMENT: process.env.REPLIT_DEPLOYMENT || 'NOT SET',
+    REPL_ID: process.env.REPL_ID ? 'EXISTS' : 'NOT SET',
+    REPL_SLUG: process.env.REPL_SLUG || 'NOT SET',
+    PORT: process.env.PORT || 'NOT SET',
+    isProduction
+  });
+
   return {
     secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
+    name: 'oseed.sid', // Custom session name to avoid conflicts
     cookie: {
-      secure: process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1', // Secure in production or Replit deployments
+      secure: isProduction, // Enable secure cookies in production
       httpOnly: true,
-      sameSite: (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1') ? 'lax' : 'lax', // Use 'lax' for better compatibility
+      sameSite: isProduction ? 'lax' : 'lax', // Use 'lax' for better compatibility
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       domain: undefined // Let browser determine domain automatically
     }

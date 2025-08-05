@@ -252,7 +252,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           return res.status(500).json({ message: "Logout failed" });
         }
         
-        res.clearCookie('connect.sid'); // Clear session cookie
+        res.clearCookie('oseed.sid'); // Clear the custom session cookie
+        res.clearCookie('connect.sid'); // Clear default session cookie as backup
         console.log('[Logout] User logged out successfully');
         res.json({ message: "Logged out successfully" });
       });
@@ -349,6 +350,31 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.error('[CreateUser] Error:', error);
       res.status(500).json({ message: "Failed to create user" });
     }
+  });
+
+  // Session health monitoring endpoint
+  app.get("/api/session-health", (req, res) => {
+    const sessionHealth = {
+      hasSession: !!req.session,
+      sessionId: req.sessionID,
+      isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+      storeType: req.session?.store?.constructor?.name || 'Unknown',
+      cookieConfig: {
+        secure: req.session?.cookie?.secure,
+        httpOnly: req.session?.cookie?.httpOnly,
+        sameSite: req.session?.cookie?.sameSite,
+        maxAge: req.session?.cookie?.maxAge
+      },
+      environment: {
+        nodeEnv: process.env.NODE_ENV || 'NOT SET',
+        replitDeployment: process.env.REPLIT_DEPLOYMENT || 'NOT SET',
+        hasReplId: !!process.env.REPL_ID,
+        port: process.env.PORT || 'NOT SET'
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    res.json(sessionHealth);
   });
 
   // Simple test endpoint to verify API routing

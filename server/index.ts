@@ -46,8 +46,13 @@ app.use(helmet({
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
+  // Robust production detection using multiple signals
+  const isProduction = process.env.NODE_ENV === 'production' || 
+                      process.env.REPLIT_DEPLOYMENT === '1' ||
+                      (process.env.REPL_ID && !process.env.REPL_SLUG?.includes('workspace'));
+  
   // Allow requests from the same domain in production
-  if (process.env.NODE_ENV === 'production') {
+  if (isProduction) {
     // For Replit deployments, allow the production domain
     const allowedOrigins = [
       'https://os.seedfinancial.io',
