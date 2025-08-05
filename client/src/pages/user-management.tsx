@@ -280,7 +280,7 @@ export default function UserManagement() {
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <BackButton />
+          <BackButton className="text-white hover:text-white/80" />
         </div>
 
         <div className="text-center mb-8">
