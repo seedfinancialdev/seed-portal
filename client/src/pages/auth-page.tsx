@@ -18,6 +18,13 @@ export default function AuthPage() {
     return <Redirect to="/" />;
   }
 
+  console.log('[AuthPage] Creating googleLogin hook...');
+  console.log('[AuthPage] Environment check:', {
+    clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ? 'Present' : 'Missing',
+    clientIdLength: import.meta.env.VITE_GOOGLE_CLIENT_ID?.length,
+    origin: window.location.origin,
+  });
+
   const googleLogin = useGoogleLogin({
     onSuccess: async (response) => {
       console.log('[Google OAuth] Success response:', response);
@@ -125,8 +132,13 @@ export default function AuthPage() {
                 
                 try {
                   console.log('[AuthPage] Calling googleLogin()...');
-                  googleLogin();
-                  console.log('[AuthPage] googleLogin() called successfully');
+                  
+                  // Add a small delay to ensure console logs are visible
+                  setTimeout(() => {
+                    googleLogin();
+                    console.log('[AuthPage] googleLogin() called successfully');
+                  }, 100);
+                  
                 } catch (error) {
                   console.error('[AuthPage] Error calling googleLogin:', error);
                   alert('Failed to initialize Google login: ' + error.message);
