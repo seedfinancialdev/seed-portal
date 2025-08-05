@@ -42,6 +42,42 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Allow embedding resources
 }));
 
+// Enable CORS for production deployments with credentials
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Allow requests from the same domain in production
+  if (process.env.NODE_ENV === 'production') {
+    // For Replit deployments, allow the production domain
+    const allowedOrigins = [
+      'https://os.seedfinancial.io',
+      'https://osseedfinancial.io',
+      req.headers.host ? `https://${req.headers.host}` : undefined
+    ].filter(Boolean);
+    
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+    } else if (!origin) {
+      // Same-origin requests (no origin header)
+      res.header('Access-Control-Allow-Origin', `https://${req.headers.host}`);
+    }
+  } else {
+    // Development: allow all origins
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization,x-csrf-token');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -170,6 +206,13 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     app.use(session.default(sessionConfig));
     console.log('[Server] ✅ Session middleware applied with proper production configuration');
 
+    // Add API route protection middleware BEFORE route registration
+    app.use('/api/*', (req, res, next) => {
+      // Ensure API routes are always handled by Express, never by static serving
+      console.log('🛡️ API Route Protection - Ensuring Express handles:', req.originalUrl);
+      next();
+    });
+
     // Register routes after session middleware is ready
     const server = await registerRoutes(app, null);
     console.log('[Server] ✅ Routes registered successfully');
@@ -199,11 +242,10 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
       }
     });
 
-    // Add API route protection middleware before Vite setup
-    app.use('/api/*', (req, res, next) => {
-      // Ensure API routes are always handled by Express, never by Vite
-      console.log('🛡️ API Route Protection - Ensuring Express handles:', req.originalUrl);
-      next();
+    // Add explicit 404 handler for unmatched API routes BEFORE static serving
+    app.use('/api/*', (req, res) => {
+      console.log('🔴 Unmatched API route hit 404 handler:', req.originalUrl);
+      res.status(404).json({ message: 'API endpoint not found', route: req.originalUrl });
     });
 
     // importantly only setup vite in development and after
