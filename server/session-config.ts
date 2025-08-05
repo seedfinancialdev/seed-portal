@@ -66,9 +66,9 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
     saveUninitialized: false,
     store: sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // Secure in production only
+      secure: process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1', // Secure in production or Replit deployments
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for production cross-origin, 'lax' for dev
+      sameSite: (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1') ? 'lax' : 'lax', // Use 'lax' for better compatibility
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       domain: undefined // Let browser determine domain automatically
     }

@@ -165,6 +165,17 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(400).json({ message: "Email and password are required" });
       }
 
+      // Environment debugging for production issues
+      console.log('[Login] Environment debug:', {
+        NODE_ENV: process.env.NODE_ENV,
+        REPLIT_DEPLOYMENT: process.env.REPLIT_DEPLOYMENT,
+        isProduction: process.env.NODE_ENV === 'production',
+        isDeployment: process.env.REPLIT_DEPLOYMENT === '1',
+        sessionId: req.sessionID,
+        cookieSecure: req.session?.cookie?.secure,
+        cookieSameSite: req.session?.cookie?.sameSite
+      });
+
       // For basic local authentication, verify directly with storage
       console.log('[Login] Starting authentication for:', email);
       console.log('[Login] Password provided:', password);
@@ -179,6 +190,17 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // Create session manually without Passport for now
       (req.session as any).user = user;
       console.log('[Login] Session created for:', user.email);
+      console.log('[Login] Session details:', {
+        sessionId: req.sessionID,
+        hasSession: !!req.session,
+        storeType: req.session?.store?.constructor?.name,
+        cookieConfig: {
+          secure: req.session?.cookie?.secure,
+          httpOnly: req.session?.cookie?.httpOnly,
+          sameSite: req.session?.cookie?.sameSite,
+          domain: req.session?.cookie?.domain
+        }
+      });
       
       console.log('[Login] Authentication successful for:', user.email);
       // Don't return the password hash

@@ -41,9 +41,9 @@ export async function applyRedisSessionsAtStartup(app: Express): Promise<void> {
       rolling: true, // Extend session on each request
       store: redisStore,
       cookie: {
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1',
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Allow cross-site cookies for Replit domains
+        sameSite: (process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1') ? 'lax' : 'lax', // Use 'lax' for better compatibility
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
       }
     }));
