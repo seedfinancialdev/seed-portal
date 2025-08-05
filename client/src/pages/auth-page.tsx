@@ -105,6 +105,7 @@ export default function AuthPage() {
                 shape="rectangular"
                 auto_select={false}
                 cancel_on_tap_outside={true}
+                ux_mode="popup"
                 data-testid="google-login-button"
               />
             </div>
