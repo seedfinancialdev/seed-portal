@@ -501,7 +501,14 @@ export default function AdminDashboard() {
                 {category.items.map((item) => (
                   <button
                     key={item.name}
-                    onClick={() => item.path.startsWith('/admin') ? setSelectedSection(item.name.toLowerCase()) : navigateTo(item.path)}
+                    onClick={() => {
+                      // Navigate to specific routes instead of setting sections
+                      if (item.path === '/admin') {
+                        setSelectedSection('dashboard');
+                      } else {
+                        navigateTo(item.path);
+                      }
+                    }}
                     className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${
                       (item.active || selectedSection === item.name.toLowerCase()) 
                         ? 'bg-orange-500/20 text-orange-300 border-r-2 border-orange-500' 
