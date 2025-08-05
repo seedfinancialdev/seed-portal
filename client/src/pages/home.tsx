@@ -713,58 +713,83 @@ export default function Home() {
     mutationFn: async (data: FormData) => {
       console.log('Submitting quote data:', data);
       
-      // Use combined calculation system
-      const feeCalculation = calculateCombinedFees(data);
+      try {
+        // Use combined calculation system
+        const feeCalculation = calculateCombinedFees(data);
 
-      
-      const quoteData = {
-        ...data,
-        monthlyFee: feeCalculation.combined.monthlyFee.toString(),
-        setupFee: feeCalculation.combined.setupFee.toString(),
-        taasMonthlyFee: feeCalculation.taas.monthlyFee.toString(),
-        taasPriorYearsFee: feeCalculation.taas.setupFee.toString(),
-        approvalRequired: data.cleanupOverride && isApproved,
-        // Ensure all client details are stored for future ClickUp integration
-        companyName: data.companyName || '',
-        contactFirstName: data.contactFirstName || '',
-        contactLastName: data.contactLastName || '',
-        industry: data.industry || '',
-        monthlyRevenueRange: data.monthlyRevenueRange || '',
-        entityType: data.entityType || '',
-        clientStreetAddress: data.clientStreetAddress || '',
-        clientCity: data.clientCity || '',
-        clientState: data.clientState || '',
-        clientZipCode: data.clientZipCode || '',
-        // Lock status for form state preservation
-        companyNameLocked: data.companyNameLocked || false,
-        contactFirstNameLocked: data.contactFirstNameLocked || false,
-        contactLastNameLocked: data.contactLastNameLocked || false,
-        industryLocked: data.industryLocked || false,
-        companyAddressLocked: data.companyAddressLocked || false,
-        // Service selections for ClickUp project creation
-        serviceBookkeeping: data.serviceBookkeeping || false,
-        serviceTaas: data.serviceTaas || false,
-        servicePayroll: data.servicePayroll || false,
-        serviceApArLite: data.serviceApArLite || false,
-        serviceFpaLite: data.serviceFpaLite || false,
-      };
-      
-      console.log('Final quote data:', quoteData);
-      
-      if (editingQuoteId) {
-        const response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
-          method: "PUT",
-          body: JSON.stringify(quoteData)
-        });
-        await throwIfResNotOk(response);
-        return await response.json();
-      } else {
-        const response = await apiRequest("/api/quotes", {
-          method: "POST",
-          body: JSON.stringify(quoteData)
-        });
-        await throwIfResNotOk(response);
-        return await response.json();
+        const quoteData = {
+          ...data,
+          monthlyFee: feeCalculation.combined.monthlyFee.toString(),
+          setupFee: feeCalculation.combined.setupFee.toString(),
+          taasMonthlyFee: feeCalculation.taas.monthlyFee.toString(),
+          taasPriorYearsFee: feeCalculation.taas.setupFee.toString(),
+          approvalRequired: data.cleanupOverride && isApproved,
+          // Ensure all client details are stored for future ClickUp integration
+          companyName: data.companyName || '',
+          contactFirstName: data.contactFirstName || '',
+          contactLastName: data.contactLastName || '',
+          industry: data.industry || '',
+          monthlyRevenueRange: data.monthlyRevenueRange || '',
+          entityType: data.entityType || '',
+          clientStreetAddress: data.clientStreetAddress || '',
+          clientCity: data.clientCity || '',
+          clientState: data.clientState || '',
+          clientZipCode: data.clientZipCode || '',
+          // Lock status for form state preservation
+          companyNameLocked: data.companyNameLocked || false,
+          contactFirstNameLocked: data.contactFirstNameLocked || false,
+          contactLastNameLocked: data.contactLastNameLocked || false,
+          industryLocked: data.industryLocked || false,
+          companyAddressLocked: data.companyAddressLocked || false,
+          // Service selections for ClickUp project creation
+          serviceBookkeeping: data.serviceBookkeeping || false,
+          serviceTaas: data.serviceTaas || false,
+          servicePayroll: data.servicePayroll || false,
+          serviceApArLite: data.serviceApArLite || false,
+          serviceFpaLite: data.serviceFpaLite || false,
+        };
+        
+        console.log('Final quote data:', quoteData);
+        
+        let response;
+        if (editingQuoteId) {
+          console.log('💡 Updating existing quote with ID:', editingQuoteId);
+          response = await apiRequest(`/api/quotes/${editingQuoteId}`, {
+            method: "PUT",
+            body: JSON.stringify(quoteData)
+          });
+        } else {
+          console.log('💡 Creating new quote');
+          response = await apiRequest("/api/quotes", {
+            method: "POST",
+            body: JSON.stringify(quoteData)
+          });
+        }
+        
+        console.log('💡 Quote API response status:', response.status);
+        console.log('💡 Quote API response ok:', response.ok);
+        
+        if (!response.ok) {
+          // Try to get error details from response
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            errorData = await response.text();
+          }
+          console.error('💡 Quote API error data:', errorData);
+          throw new Error(errorData?.message || errorData || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('💡 Quote API success response:', result);
+        return result;
+      } catch (error: any) {
+        console.error('💡 createQuoteMutation full error:', error);
+        console.error('💡 Error type:', typeof error);
+        console.error('💡 Error message:', error?.message);
+        console.error('💡 Error stack:', error?.stack);
+        throw error;
       }
     },
     onSuccess: (data) => {
