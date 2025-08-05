@@ -4,20 +4,6 @@ import { storage } from "./storage";
 import { requireAuth, hashPassword } from "./auth";
 import { scheduleWorkspaceSync } from "./jobs";
 
-// In-memory impersonation store
-const impersonationStore = new Map<string, {
-  adminUserId: number;
-  adminEmail: string;
-  impersonatedUserId: number;
-  impersonatedEmail: string;
-  createdAt: Date;
-}>();
-
-// Helper function to get impersonation data by session ID
-export function getImpersonationData(sessionId: string) {
-  return impersonationStore.get(sessionId);
-}
-
 export async function registerAdminRoutes(app: Express): Promise<void> {
   let googleAdminService: GoogleAdminService | null = null;
   
@@ -427,19 +413,6 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Debug endpoint to check session state
-  app.get('/api/admin/debug-session', requireAuth, requireAdmin, (req, res) => {
-    res.json({
-      sessionID: req.sessionID,
-      sessionKeys: Object.keys(req.session),
-      isAuthenticated: req.isAuthenticated(),
-      user: req.user ? { id: req.user.id, email: req.user.email } : null,
-      sessionPassport: (req.session as any)?.passport,
-      sessionIsImpersonating: (req.session as any)?.isImpersonating,
-      sessionOriginalUser: (req.session as any)?.originalUser
-    });
-  });
-
   // Impersonate user
   app.post('/api/admin/impersonate/:userId', requireAuth, requireAdmin, async (req, res) => {
     try {
@@ -456,7 +429,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       }
 
       // Store original user info in session for later restoration
-      const originalUserData = {
+      req.session.originalUser = {
         id: req.user.id,
         email: req.user.email,
         firstName: req.user.firstName,
@@ -464,8 +437,6 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
         role: req.user.role,
         defaultDashboard: req.user.defaultDashboard
       };
-      
-      req.session.originalUser = originalUserData;
       req.session.isImpersonating = true;
       
       console.log('🎭 IMPERSONATION STARTED:');
@@ -474,38 +445,18 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       console.log('🎭 Session ID:', req.sessionID);
       console.log('🎭 Session isImpersonating:', req.session.isImpersonating);
 
-      // Store impersonation data in memory store
-      impersonationStore.set(req.sessionID, {
-        adminUserId: req.user.id,
-        adminEmail: req.user.email,
-        impersonatedUserId: userToImpersonate.id,
-        impersonatedEmail: userToImpersonate.email,
-        createdAt: new Date()
-      });
-      
-      console.log('🎭 Impersonation stored in memory:', req.sessionID);
-      
-      // Login as the impersonated user
+      // Update session with impersonated user - use passport's login method
       req.login(userToImpersonate, (err) => {
         if (err) {
           console.error('Error logging in as impersonated user:', err);
-          // Clean up the impersonation store on error
-          impersonationStore.delete(req.sessionID);
           return res.status(500).json({ 
             message: 'Failed to start impersonation: ' + err.message 
           });
         }
         
-        console.log('🎭 Impersonation successful - logged in as:', userToImpersonate.email);
-        
-        // Return success with impersonation data
         res.json({
           message: 'Impersonation started successfully',
-          user: {
-            ...userToImpersonate,
-            isImpersonating: true,
-            originalUser: originalUserData
-          },
+          user: userToImpersonate,
           isImpersonating: true
         });
       });
