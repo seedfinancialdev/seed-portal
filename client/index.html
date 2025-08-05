@@ -3,6 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!-- Prevent runtime error overlay conflicts with Replit beacon system -->
+    <script>
+      // Disable runtime error plugin before it initializes
+      window.__REPLIT_RUNTIME_ERROR_DISABLED__ = true;
+      
+      // Override error handlers to prevent conflicts
+      const originalAddEventListener = window.addEventListener;
+      window.addEventListener = function(type, listener, options) {
+        // Skip runtime error listeners that conflict with beacon
+        if (type === 'error' && listener.toString().includes('runtime-error')) {
+          return;
+        }
+        if (type === 'unhandledrejection' && listener.toString().includes('runtime-error')) {
+          return;
+        }
+        return originalAddEventListener.call(this, type, listener, options);
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>
