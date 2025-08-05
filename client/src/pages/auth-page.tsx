@@ -49,7 +49,18 @@ export default function AuthPage() {
     },
     onError: (error) => {
       console.error('[Google OAuth] OAuth error:', error);
-      alert('Google authentication failed: ' + JSON.stringify(error));
+      console.error('[Google OAuth] Full error details:', JSON.stringify(error, null, 2));
+      
+      // Don't show popup errors to user - they're usually not actionable
+      if (error && typeof error === 'object' && 'type' in error) {
+        console.log('[Google OAuth] Error type detected:', error.type);
+        if (error.type === 'popup_closed') {
+          console.log('[Google OAuth] User closed popup - this is normal, not showing error');
+          return; // Don't show error for user-closed popup
+        }
+      }
+      
+      alert('Google authentication failed. Please try again.');
     },
     onNonOAuthError: (error) => {
       console.error('[Google OAuth] Non-OAuth error details:', error);
@@ -59,21 +70,9 @@ export default function AuthPage() {
       console.error('[Google OAuth] Error stack:', error?.stack);
       console.error('[Google OAuth] Full error object:', JSON.stringify(error, null, 2));
       
-      // Try to extract meaningful error info
-      let errorMessage = 'Google authentication failed';
-      if (error?.message) {
-        errorMessage += ': ' + error.message;
-      } else if (typeof error === 'string') {
-        errorMessage += ': ' + error;
-      } else {
-        errorMessage += '. Check browser console for details.';
-      }
-      
-      alert(errorMessage);
+      alert('Authentication system error. Please try again or contact support.');
     },
-    flow: 'auth-code',
-    ux_mode: 'redirect',
-    redirect_uri: window.location.origin + '/auth',
+    flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
   });
 
