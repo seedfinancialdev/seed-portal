@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { useGoogleAuth } from '@/hooks/use-google-auth';
+import { useAuth } from '@/hooks/use-auth';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -89,11 +89,11 @@ export default function KnowledgeBase() {
   const [selectedArticle, setSelectedArticle] = useState<KbArticle | null>(null);
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false);
   
-  const { dbUser: user, signOut } = useGoogleAuth();
+  const { user, logoutMutation } = useAuth();
   const [, setLocation] = useLocation();
 
   const handleLogout = async () => {
-    await signOut();
+    await logoutMutation.mutateAsync();
     setLocation('/');
   };
 

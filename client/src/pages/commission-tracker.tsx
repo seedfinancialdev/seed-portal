@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { useGoogleAuth } from "@/hooks/use-google-auth";
+import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
 import {
@@ -106,7 +106,7 @@ interface SalesRepStats {
 }
 
 export default function CommissionTracker() {
-  const { dbUser: user } = useGoogleAuth();
+  const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
