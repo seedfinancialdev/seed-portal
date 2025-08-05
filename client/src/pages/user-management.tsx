@@ -277,7 +277,7 @@ export default function UserManagement() {
   const users: User[] = usersData?.users || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
           <BackButton />
