@@ -207,9 +207,14 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     const session = await import('express-session');
     const { createSessionConfig } = await import('./session-config');
     
+    console.log('[Server] Initializing session configuration with enhanced Redis handling...');
     const sessionConfig = await createSessionConfig();
-    app.use(session.default(sessionConfig));
-    console.log('[Server] ✅ Session middleware applied with proper production configuration');
+    const { storeType, ...expressSessionConfig } = sessionConfig;
+    
+    app.use(session.default(expressSessionConfig));
+    console.log('[Server] ✅ Session middleware applied successfully');
+    console.log('[Server] Session store type:', storeType);
+    console.log('[Server] Production mode:', expressSessionConfig.cookie?.secure ? 'ENABLED' : 'DISABLED');
 
     // Add API route protection middleware BEFORE route registration
     app.use('/api/*', (req, res, next) => {

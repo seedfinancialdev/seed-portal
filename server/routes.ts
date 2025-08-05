@@ -354,11 +354,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Session health monitoring endpoint
   app.get("/api/session-health", (req, res) => {
+    // Use global storeType from session configuration instead of trying to read from session store
+    const storeType = (global as any).sessionStoreType || 
+                     req.session?.store?.constructor?.name || 
+                     'Unknown';
+    
     const sessionHealth = {
       hasSession: !!req.session,
       sessionId: req.sessionID,
       isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-      storeType: req.session?.store?.constructor?.name || 'Unknown',
+      storeType: storeType,
       cookieConfig: {
         secure: req.session?.cookie?.secure,
         httpOnly: req.session?.cookie?.httpOnly,
@@ -374,6 +379,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       timestamp: new Date().toISOString()
     };
     
+    console.log('[SessionHealth] Store type from global:', (global as any).sessionStoreType);
+    console.log('[SessionHealth] Store type from session:', req.session?.store?.constructor?.name);
+    console.log('[SessionHealth] Final store type:', storeType);
+    
     res.json(sessionHealth);
   });
 
@@ -385,6 +394,56 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       timestamp: new Date().toISOString(),
       redisUrl: !!process.env.REDIS_URL 
     });
+  });
+
+  // Test endpoint to check global variables
+  app.get("/api/test/globals", (req, res) => {
+    console.log('[GlobalTest] Checking global variables...');
+    console.log('[GlobalTest] sessionStoreType:', (global as any).sessionStoreType);
+    console.log('[GlobalTest] sessionStore exists:', !!(global as any).sessionStore);
+    
+    res.json({
+      globalStoreType: (global as any).sessionStoreType || 'NOT SET',
+      globalStoreExists: !!(global as any).sessionStore,
+      sessionStoreFromReq: req.session?.store?.constructor?.name || 'NOT DETECTED',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Cookie verification endpoint for Step 2 debugging
+  app.get("/api/test/cookie-verification", (req, res) => {
+    console.log('[CookieTest] Testing cookie transmission...');
+    console.log('[CookieTest] Incoming cookies:', req.headers.cookie || 'NONE');
+    console.log('[CookieTest] Session ID:', req.sessionID);
+    console.log('[CookieTest] Session exists:', !!req.session);
+    
+    // Set a test cookie explicitly
+    res.cookie('test-cookie', 'cookie-works', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1',
+      sameSite: 'lax',
+      maxAge: 60000 // 1 minute
+    });
+    
+    // Set a test value in session
+    if (req.session) {
+      req.session.testValue = 'session-persistence-test';
+    }
+    
+    const result = {
+      message: 'Cookie test performed',
+      incomingCookies: req.headers.cookie || 'NONE',
+      sessionId: req.sessionID,
+      hasSession: !!req.session,
+      testCookieSet: true,
+      sessionTestValue: req.session?.testValue || 'NOT SET',
+      isProduction: process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1',
+      cookieSecure: process.env.NODE_ENV === 'production' || process.env.REPLIT_DEPLOYMENT === '1',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('[CookieTest] Response data:', result);
+    res.json(result);
   });
 
   // Redis session status endpoint (removed duplicate session middleware application)
