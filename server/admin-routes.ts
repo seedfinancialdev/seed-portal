@@ -236,7 +236,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
   // Create a new user
   app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { firstName, lastName, email, role = 'employee' } = req.body;
+      const { firstName, lastName, email, role = 'employee', defaultDashboard = 'sales' } = req.body;
       const adminUserId = req.user.id;
 
       if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
@@ -254,6 +254,12 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       if (!['admin', 'employee'].includes(role)) {
         return res.status(400).json({ 
           message: 'Invalid role. Must be admin or employee' 
+        });
+      }
+
+      if (!['admin', 'sales', 'service'].includes(defaultDashboard)) {
+        return res.status(400).json({ 
+          message: 'Invalid default dashboard. Must be admin, sales, or service' 
         });
       }
 
@@ -276,6 +282,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
         lastName: lastName.trim(),
         hubspotUserId: null,
         role,
+        defaultDashboard,
         roleAssignedBy: adminUserId,
         roleAssignedAt: new Date(),
       });

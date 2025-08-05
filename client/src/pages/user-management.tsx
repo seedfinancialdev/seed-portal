@@ -33,6 +33,7 @@ interface User {
   firstName?: string;
   lastName?: string;
   role: string;
+  defaultDashboard?: string;
   roleAssignedBy?: number;
   roleAssignedAt?: string;
   createdAt: string;
@@ -46,7 +47,8 @@ const createUserSchema = z.object({
     (email) => email.endsWith("@seedfinancial.io"),
     "Email must be a @seedfinancial.io address"
   ),
-  role: z.enum(["admin", "employee"], { required_error: "Role is required" })
+  role: z.enum(["admin", "employee"], { required_error: "Role is required" }),
+  defaultDashboard: z.enum(["admin", "sales", "service"], { required_error: "Default dashboard is required" })
 });
 
 type CreateUserForm = z.infer<typeof createUserSchema>;
@@ -65,7 +67,8 @@ export default function UserManagement() {
       firstName: "",
       lastName: "",
       email: "",
-      role: "employee"
+      role: "employee",
+      defaultDashboard: "sales"
     }
   });
 
@@ -139,6 +142,30 @@ export default function UserManagement() {
     }
   });
 
+  // Update user default dashboard mutation
+  const updateDashboardMutation = useMutation({
+    mutationFn: async ({ userId, defaultDashboard }: { userId: number; defaultDashboard: string }) => {
+      const response = await fetch(`/api/admin/users/${userId}/dashboard`, { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ defaultDashboard })
+      });
+      if (!response.ok) throw new Error('Failed to update default dashboard');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Default dashboard updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update default dashboard",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -203,6 +230,10 @@ export default function UserManagement() {
     updateRoleMutation.mutate({ userId, role: newRole });
   };
 
+  const handleDashboardUpdate = (userId: number, newDashboard: string) => {
+    updateDashboardMutation.mutate({ userId, defaultDashboard: newDashboard });
+  };
+
   const handleDeleteUser = (user: User) => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
@@ -222,6 +253,24 @@ export default function UserManagement() {
       case 'admin': return 'bg-red-100 text-red-800 border-red-200';
       case 'employee': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getDashboardBadgeColor = (dashboard: string) => {
+    switch (dashboard) {
+      case 'admin': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'sales': return 'bg-green-100 text-green-800 border-green-200';
+      case 'service': return 'bg-orange-100 text-orange-800 border-orange-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getDashboardDisplayName = (dashboard: string) => {
+    switch (dashboard) {
+      case 'admin': return 'Admin';
+      case 'sales': return 'Sales';
+      case 'service': return 'Service';
+      default: return dashboard;
     }
   };
 
@@ -310,6 +359,28 @@ export default function UserManagement() {
                           <SelectContent>
                             <SelectItem value="employee">Employee</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="defaultDashboard"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Default Dashboard</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-default-dashboard">
+                              <SelectValue placeholder="Select default dashboard" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin Dashboard</SelectItem>
+                            <SelectItem value="sales">Sales Dashboard</SelectItem>
+                            <SelectItem value="service">Service Dashboard</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -410,9 +481,13 @@ export default function UserManagement() {
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
                       <Badge className={`${getRoleBadgeColor(user.role)} border`}>
                         {user.role}
+                      </Badge>
+                      
+                      <Badge className={`${getDashboardBadgeColor(user.defaultDashboard || 'sales')} border`}>
+                        {getDashboardDisplayName(user.defaultDashboard || 'sales')}
                       </Badge>
                       
                       <Select
@@ -420,12 +495,27 @@ export default function UserManagement() {
                         onValueChange={(newRole) => handleRoleUpdate(user.id, newRole)}
                         disabled={updateRoleMutation.isPending}
                       >
-                        <SelectTrigger className="w-32" data-testid={`select-role-${user.id}`}>
+                        <SelectTrigger className="w-28" data-testid={`select-role-${user.id}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="employee">Employee</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <Select
+                        value={user.defaultDashboard || 'sales'}
+                        onValueChange={(newDashboard) => handleDashboardUpdate(user.id, newDashboard)}
+                        disabled={updateDashboardMutation.isPending}
+                      >
+                        <SelectTrigger className="w-28" data-testid={`select-dashboard-${user.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="sales">Sales</SelectItem>
+                          <SelectItem value="service">Service</SelectItem>
                         </SelectContent>
                       </Select>
                       

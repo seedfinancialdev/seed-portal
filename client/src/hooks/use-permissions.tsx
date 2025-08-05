@@ -3,17 +3,16 @@ import { hasPermission, hasAnyPermission, hasAllPermissions, getDefaultDashboard
 
 export function usePermissions() {
   const { user: currentUser } = useAuth();
-  const userRole = (currentUser?.role as UserRole) || 'service';
+  const userRole = (currentUser?.role as UserRole) || 'employee';
 
   return {
     userRole,
     hasPermission: (permission: Permission) => hasPermission(userRole, permission),
     hasAnyPermission: (permissions: Permission[]) => hasAnyPermission(userRole, permissions),
     hasAllPermissions: (permissions: Permission[]) => hasAllPermissions(userRole, permissions),
-    getDefaultDashboard: () => getDefaultDashboard(userRole),
+    getDefaultDashboard: () => getDefaultDashboard(userRole, currentUser?.defaultDashboard),
     getAvailableDashboards: () => getAvailableDashboards(userRole),
     isAdmin: userRole === 'admin',
-    isSales: userRole === 'sales',
-    isService: userRole === 'service'
+    isEmployee: userRole === 'employee'
   };
 }

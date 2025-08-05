@@ -132,6 +132,7 @@ export const users: any = pgTable("users", {
   googleId: text("google_id").unique(), // Google user ID for OIDC
   authProvider: text("auth_provider").default("local"), // 'local' or 'google'
   role: text("role").default("employee"), // 'admin', 'employee'
+  defaultDashboard: text("default_dashboard").default("sales"), // 'admin', 'sales', 'service'
   roleAssignedBy: integer("role_assigned_by").references((): any => users.id),
   roleAssignedAt: timestamp("role_assigned_at"),
   // Profile information

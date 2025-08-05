@@ -116,8 +116,18 @@ export function hasAllPermissions(userRole: UserRole, permissions: Permission[])
   return permissions.every(permission => hasPermission(userRole, permission));
 }
 
-// Get default dashboard route based on user role
-export function getDefaultDashboard(userRole: UserRole): string {
+// Get default dashboard route based on user's preference or role
+export function getDefaultDashboard(userRole: UserRole, userDashboardPreference?: string): string {
+  // If user has a specific dashboard preference, use that
+  if (userDashboardPreference) {
+    switch (userDashboardPreference) {
+      case 'admin': return '/admin';
+      case 'sales': return '/sales-dashboard';
+      case 'service': return '/service-dashboard';
+    }
+  }
+  
+  // Fallback to role-based default
   switch (userRole) {
     case USER_ROLES.ADMIN:
       return '/admin';

@@ -28,6 +28,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   deleteUser(userId: number): Promise<void>;
   updateUserPassword(userId: number, hashedPassword: string): Promise<void>;
+  updateUserDefaultDashboard(userId: number, defaultDashboard: string): Promise<void>;
   verifyUserPassword(email: string, password: string): Promise<User | null>;
   updateUserProfile(userId: number, profile: UpdateProfile): Promise<User>;
   updateUserHubSpotData(userId: number, hubspotData: Partial<User>): Promise<User>;
@@ -338,6 +339,18 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(users.id, userId));
     }, 'updateUserPassword');
+  }
+
+  async updateUserDefaultDashboard(userId: number, defaultDashboard: string): Promise<void> {
+    return await safeDbQuery(async () => {
+      await db
+        .update(users)
+        .set({ 
+          defaultDashboard: defaultDashboard,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, userId));
+    }, 'updateUserDefaultDashboard');
   }
 
   async createQuote(insertQuote: InsertQuote): Promise<Quote> {
