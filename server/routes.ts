@@ -205,6 +205,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         }
       });
       
+      // Log what we're about to save
+      console.log('[Login] About to save session with data:', {
+        passport: (req.session as any).passport,
+        user: (req.session as any).user ? (req.session as any).user.email : 'None',
+        sessionId: req.sessionID
+      });
+      
       // Force session save and respond after save completes
       req.session.save((err) => {
         if (err) {
@@ -212,6 +219,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           return res.status(500).json({ message: "Session save failed" });
         } else {
           console.log('[Login] Session saved successfully');
+          console.log('[Login] Post-save session verification:', {
+            passport: (req.session as any).passport,
+            user: (req.session as any).user ? (req.session as any).user.email : 'None',
+            sessionId: req.sessionID,
+            keys: Object.keys(req.session)
+          });
           console.log('[Login] Authentication successful for:', user.email);
           // Don't return the password hash
           const { password: _, ...userWithoutPassword } = user;
@@ -253,11 +266,21 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.log('🔐 Session exists:', !!req.session);
     console.log('🔐 Session store type:', req.session.constructor.name);
     console.log('🔐 Session data keys:', Object.keys(req.session));
+    console.log('🔐 Raw session dump:', req.session);
+    console.log('🔐 Serialized session:', JSON.stringify(req.session, null, 2));
     console.log('🔐 Authenticated:', req.isAuthenticated());
     console.log('🔐 User:', req.user ? `${req.user.email} (${req.user.id})` : 'None');
     console.log('🔐 Session passport:', (req.session as any)?.passport);
+    console.log('🔐 Session user:', (req.session as any)?.user);
     console.log('🔐 Session isImpersonating:', (req.session as any)?.isImpersonating);
     console.log('🔐 Session originalUser:', (req.session as any)?.originalUser);
+    console.log('🔐 Cookie details:', {
+      secure: req.session?.cookie?.secure,
+      httpOnly: req.session?.cookie?.httpOnly,
+      sameSite: req.session?.cookie?.sameSite,
+      domain: req.session?.cookie?.domain,
+      path: req.session?.cookie?.path
+    });
     
     // Check both passport and manual session
     const user = req.user || (req.session as any)?.user;

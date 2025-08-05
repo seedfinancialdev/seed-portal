@@ -51,10 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return result;
     },
     onSuccess: async (user: SelectUser) => {
+      console.log('[useAuth] Login success, waiting before queries...');
+      
+      // Wait a moment for session to propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Clear all user-specific data to prevent cross-user data leakage
       await queryClient.invalidateQueries();
       
-      // Force fresh fetch of user profile
+      // Force fresh fetch of user profile with a small delay
+      await new Promise(resolve => setTimeout(resolve, 200));
       await queryClient.refetchQueries({ queryKey: ["/api/user"] });
       
       toast({
