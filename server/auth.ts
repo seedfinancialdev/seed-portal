@@ -242,6 +242,8 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
     console.log('🔐 /api/login endpoint called');
     console.log('🔐 Request body keys:', Object.keys(req.body));
     console.log('🔐 Has googleAccessToken:', !!req.body.googleAccessToken);
+    console.log('🔐 User-Agent:', req.headers['user-agent']);
+    console.log('🔐 Referer:', req.headers.referer);
     
     // Handle Google OAuth token login
     if (req.body.googleAccessToken) {
@@ -428,6 +430,12 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
 
   // Google OAuth Session-Based Authentication Endpoints
   app.post("/api/auth/google/sync", async (req, res) => {
+    console.log('🚨 /api/auth/google/sync called - THIS SHOULD NOT BE USED');
+    console.log('🚨 Request headers:', req.headers);
+    console.log('🚨 Request body keys:', Object.keys(req.body));
+    console.log('🚨 User-Agent:', req.headers['user-agent']);
+    console.log('🚨 Referer:', req.headers.referer);
+    
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader?.startsWith('Bearer ')) {
