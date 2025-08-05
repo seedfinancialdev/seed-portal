@@ -104,8 +104,8 @@ export async function setupAuth(app: Express, sessionRedis?: Redis | null) {
             // Create user automatically with default password and role assignment
             console.log(`Creating new user for ${email} with default password`);
             
-            // Create user with default service role (admin must manually assign roles)
-            let role = 'service'; // Default role for all new users
+            // Create user with default employee role (admin can manually assign admin role later)
+            let role = 'employee'; // Default role for all new users
             // Hardcode jon@seedfinancial.io as permanent admin to bootstrap the system
             if (email === 'jon@seedfinancial.io') {
               role = 'admin';
