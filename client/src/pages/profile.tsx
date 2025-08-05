@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -69,6 +70,9 @@ export default function Profile() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Password change modal state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
   // Password change form
   const passwordForm = useForm<ChangePassword>({
     resolver: zodResolver(changePasswordSchema),
@@ -93,6 +97,7 @@ export default function Profile() {
         description: "Your password has been updated successfully.",
       });
       passwordForm.reset();
+      setIsPasswordModalOpen(false);
     },
     onError: (error: any) => {
       toast({
@@ -1003,79 +1008,116 @@ export default function Profile() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...passwordForm}>
-                  <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                    <FormField
-                      control={passwordForm.control}
-                      name="currentPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Current Password</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Enter current password"
-                              data-testid="input-current-password"
-                              {...field}
-                              className="bg-white border-gray-200"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={passwordForm.control}
-                      name="newPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>New Password</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Enter new password (min 8 characters)"
-                              data-testid="input-new-password"
-                              {...field}
-                              className="bg-white border-gray-200"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={passwordForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm New Password</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Confirm new password"
-                              data-testid="input-confirm-password"
-                              {...field}
-                              className="bg-white border-gray-200"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
+                <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
+                  <DialogTrigger asChild>
                     <Button 
-                      type="submit" 
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      disabled={changePasswordMutation.isPending}
-                      data-testid="button-change-password"
+                      data-testid="button-open-password-modal"
                     >
-                      {changePasswordMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                      <Shield className="mr-2 h-4 w-4" />
                       Change Password
                     </Button>
-                  </form>
-                </Form>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-green-600" />
+                        Change Password
+                      </DialogTitle>
+                      <DialogDescription>
+                        Update your account password. You'll need to enter your current password for verification.
+                      </DialogDescription>
+                    </DialogHeader>
+                    
+                    <Form {...passwordForm}>
+                      <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                        <FormField
+                          control={passwordForm.control}
+                          name="currentPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Current Password</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="password" 
+                                  placeholder="Enter current password"
+                                  data-testid="input-current-password"
+                                  {...field}
+                                  className="bg-white border-gray-200"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="newPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>New Password</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="password" 
+                                  placeholder="Enter new password (min 8 characters)"
+                                  data-testid="input-new-password"
+                                  {...field}
+                                  className="bg-white border-gray-200"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={passwordForm.control}
+                          name="confirmPassword"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Confirm New Password</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  type="password" 
+                                  placeholder="Confirm new password"
+                                  data-testid="input-confirm-password"
+                                  {...field}
+                                  className="bg-white border-gray-200"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="flex gap-3 pt-4">
+                          <Button 
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              passwordForm.reset();
+                              setIsPasswordModalOpen(false);
+                            }}
+                            className="flex-1"
+                            data-testid="button-cancel-password"
+                          >
+                            Cancel
+                          </Button>
+                          <Button 
+                            type="submit" 
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                            disabled={changePasswordMutation.isPending}
+                            data-testid="button-change-password"
+                          >
+                            {changePasswordMutation.isPending && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            Change Password
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           </div>
