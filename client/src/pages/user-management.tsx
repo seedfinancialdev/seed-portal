@@ -5,28 +5,29 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Users, UserCheck, Settings, RefreshCw, CheckCircle, XCircle, AlertCircle, ArrowLeft } from "lucide-react";
-import { useNavigationHistory } from "@/hooks/use-navigation-history";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { 
+  Users, 
+  UserPlus, 
+  Settings, 
+  Trash2, 
+  RotateCcw, 
+  Copy, 
+  CheckCircle, 
+  AlertTriangle,
+  Eye,
+  EyeOff
+} from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 
-interface WorkspaceUser {
-  id: string;
-  primaryEmail: string;
-  name: {
-    givenName: string;
-    familyName: string;
-    fullName: string;
-  };
-  isAdmin: boolean;
-  suspended: boolean;
-  orgUnitPath: string;
-  lastLoginTime?: string;
-  creationTime: string;
-  thumbnailPhotoUrl?: string;
-}
-
-interface DatabaseUser {
+interface User {
   id: number;
   email: string;
   firstName?: string;
@@ -38,52 +39,80 @@ interface DatabaseUser {
   updatedAt: string;
 }
 
+const createUserSchema = z.object({
+  firstName: z.string().min(1, "First name is required").max(50, "First name too long"),
+  lastName: z.string().min(1, "Last name is required").max(50, "Last name too long"),
+  email: z.string().email("Invalid email").refine(
+    (email) => email.endsWith("@seedfinancial.io"),
+    "Email must be a @seedfinancial.io address"
+  ),
+  role: z.enum(["admin", "employee"], { required_error: "Role is required" })
+});
+
+type CreateUserForm = z.infer<typeof createUserSchema>;
+
 export default function UserManagement() {
   const { toast } = useToast();
-  const { navigateTo } = useNavigationHistory();
-  const [selectedRole, setSelectedRole] = useState<{[key: string]: string}>({});
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Fetch Google Workspace users
-  const { data: workspaceData, isLoading: loadingWorkspace, refetch: refetchWorkspace, error: workspaceError } = useQuery({
-    queryKey: ['/api/admin/workspace-users'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/workspace-users', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch workspace users');
-      }
-      return response.json();
-    },
-    retry: false, // Don't retry on errors so we can display setup instructions
+  const form = useForm<CreateUserForm>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      role: "employee"
+    }
   });
 
-  // Fetch database users
-  const { data: databaseData, isLoading: loadingDatabase, refetch: refetchDatabase } = useQuery({
+  // Fetch all users
+  const { data: usersData, isLoading, refetch } = useQuery({
     queryKey: ['/api/admin/users'],
     queryFn: async () => {
       const response = await fetch('/api/admin/users', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-      if (!response.ok) throw new Error('Failed to fetch database users');
+      if (!response.ok) throw new Error('Failed to fetch users');
       return response.json();
     },
   });
 
-  // Test Google Admin connection
-  const { data: connectionTest, refetch: testConnection } = useQuery({
-    queryKey: ['/api/admin/test-google-admin'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/test-google-admin', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: CreateUserForm) => {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
       });
-      if (!response.ok) throw new Error('Failed to test Google Admin connection');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create user');
+      }
       return response.json();
     },
+    onSuccess: (data) => {
+      toast({ 
+        title: "User Created Successfully", 
+        description: `${data.user.firstName} ${data.user.lastName} has been added to the portal.` 
+      });
+      setGeneratedPassword(data.generatedPassword);
+      setIsCreateDialogOpen(false);
+      form.reset();
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error Creating User",
+        description: error.message || "Failed to create user",
+        variant: "destructive"
+      });
+    }
   });
 
   // Update user role mutation
@@ -110,28 +139,61 @@ export default function UserManagement() {
     }
   });
 
-  // Sync workspace user mutation
-  const syncUserMutation = useMutation({
-    mutationFn: async ({ email, role }: { email: string; role: string }) => {
-      const response = await fetch('/api/admin/sync-workspace-user', { 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, role })
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
       });
-      if (!response.ok) throw new Error('Failed to sync workspace user');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete user');
+      }
       return response.json();
     },
-    onSuccess: (data: any) => {
-      toast({
-        title: "Success",
-        description: `User ${data.action} successfully with ${data.user.role} role`
+    onSuccess: (data) => {
+      toast({ 
+        title: "User Deleted", 
+        description: `${data.deletedUser.firstName} ${data.deletedUser.lastName} has been removed from the portal.` 
       });
+      setIsDeleteDialogOpen(false);
+      setSelectedUser(null);
       queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
     },
     onError: (error: any) => {
       toast({
-        title: "Error",
-        description: error.message || "Failed to sync user",
+        title: "Error Deleting User",
+        description: error.message || "Failed to delete user",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Reset password mutation
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to reset password');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Password Reset", 
+        description: `New password generated for ${data.user.firstName} ${data.user.lastName}` 
+      });
+      setGeneratedPassword(data.newPassword);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error Resetting Password",
+        description: error.message || "Failed to reset password",
         variant: "destructive"
       });
     }
@@ -141,284 +203,293 @@ export default function UserManagement() {
     updateRoleMutation.mutate({ userId, role: newRole });
   };
 
-  const handleSyncUser = (email: string, role: string) => {
-    syncUserMutation.mutate({ email, role });
+  const handleDeleteUser = (user: User) => {
+    setSelectedUser(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleResetPassword = (userId: number) => {
+    resetPasswordMutation.mutate(userId);
+  };
+
+  const copyPasswordToClipboard = () => {
+    navigator.clipboard.writeText(generatedPassword);
+    toast({ title: "Copied", description: "Password copied to clipboard" });
   };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-red-100 text-red-800 border-red-200';
-      case 'sales': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'service': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'employee': return 'bg-blue-100 text-blue-800 border-blue-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  const workspaceUsers: WorkspaceUser[] = workspaceData?.users || [];
-  const databaseUsers: DatabaseUser[] = databaseData?.users || [];
-  const configured = workspaceData?.configured !== false;
-
-  // Create a map of database users by email for quick lookup
-  const databaseUserMap = databaseUsers.reduce((acc, user) => {
-    acc[user.email] = user;
-    return acc;
-  }, {} as {[key: string]: DatabaseUser});
+  const users: User[] = usersData?.users || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
-      {/* Header */}
-      <div className="bg-white/10 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <BackButton 
-              fallbackPath="/admin"
-              className="text-white hover:bg-white/20"
-            />
-            <h1 className="text-xl font-semibold text-white">User Management</h1>
-            <div></div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-8">
-          <Users className="h-8 w-8 text-white" />
-          <h1 className="text-3xl font-bold text-white">User Management</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="container mx-auto p-6">
+        <div className="mb-6">
+          <BackButton />
         </div>
 
-        {/* Connection Status */}
-        <Card className="mb-6">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
+            <p className="text-gray-600">Manage portal users and their access permissions</p>
+          </div>
+          
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-green-600 hover:bg-green-700" data-testid="button-add-user">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add New User</DialogTitle>
+                <DialogDescription>
+                  Create a new user account for the portal. A password will be generated automatically.
+                </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => createUserMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>First Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter first name" data-testid="input-first-name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Last Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Enter last name" data-testid="input-last-name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="user@seedfinancial.io" data-testid="input-email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Permission Level</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-role">
+                              <SelectValue placeholder="Select permission level" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="employee">Employee</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter>
+                    <Button 
+                      type="submit" 
+                      disabled={createUserMutation.isPending}
+                      data-testid="button-create-user"
+                    >
+                      {createUserMutation.isPending ? "Creating..." : "Create User"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Generated Password Display */}
+        {generatedPassword && (
+          <Card className="mb-6 border-green-200 bg-green-50">
+            <CardHeader>
+              <CardTitle className="text-green-800 flex items-center">
+                <CheckCircle className="h-5 w-5 mr-2" />
+                Password Generated
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-green-700 mb-3">
+                Save this password and share it with the user. It won't be shown again.
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="bg-white border rounded px-3 py-2 flex-1 font-mono">
+                  {showPassword ? generatedPassword : "••••••••••••"}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPassword(!showPassword)}
+                  data-testid="button-toggle-password"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={copyPasswordToClipboard}
+                  data-testid="button-copy-password"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Users List */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Google Workspace Integration
+            <CardTitle className="flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              Portal Users ({users.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {configured ? (
-                  connectionTest?.connected ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-red-600" />
-                  )
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-yellow-600" />
-                )}
-                <span className="font-medium">
-                  {configured ? 
-                    (connectionTest?.connected ? 'Connected' : 'Connection Failed') : 
-                    'Not Configured'
-                  }
-                </span>
-                <span className="text-sm text-gray-600">
-                  {connectionTest?.message}
-                </span>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading users...</p>
               </div>
-              <Button onClick={() => testConnection()} size="sm" variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Test Connection
-              </Button>
-            </div>
+            ) : users.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No users found</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center space-x-4">
+                      <div className="bg-blue-100 rounded-full p-2">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {user.firstName && user.lastName 
+                            ? `${user.firstName} ${user.lastName}` 
+                            : user.email.split('@')[0]
+                          }
+                        </div>
+                        <div className="text-sm text-gray-600">{user.email}</div>
+                        <div className="text-xs text-gray-500">
+                          Created {new Date(user.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      <Badge className={`${getRoleBadgeColor(user.role)} border`}>
+                        {user.role}
+                      </Badge>
+                      
+                      <Select
+                        value={user.role}
+                        onValueChange={(newRole) => handleRoleUpdate(user.id, newRole)}
+                        disabled={updateRoleMutation.isPending}
+                      >
+                        <SelectTrigger className="w-32" data-testid={`select-role-${user.id}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="employee">Employee</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResetPassword(user.id)}
+                        disabled={resetPasswordMutation.isPending}
+                        data-testid={`button-reset-password-${user.id}`}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        data-testid={`button-delete-${user.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Google Workspace Users */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Google Workspace Users</span>
-                <Button onClick={() => refetchWorkspace()} size="sm" variant="outline">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingWorkspace ? (
-                <div className="text-center py-8">Loading workspace users...</div>
-              ) : workspaceError ? (
-                <div className="text-center py-8">
-                  <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                  <div className="text-red-600 font-medium mb-1">Setup Required</div>
-                  <div className="text-sm text-gray-600 max-w-md mx-auto mb-4">
-                    Google Workspace Admin API needs additional configuration
-                  </div>
-                  {(workspaceError as any)?.setupInstructions && (
-                    <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md text-left max-w-2xl mx-auto">
-                      <div className="text-sm text-yellow-800">
-                        <strong className="block mb-3">Required Setup Steps:</strong>
-                        {Object.entries((workspaceError as any).setupInstructions).map(([key, value]) => {
-                          if (key === 'scopes') {
-                            return (
-                              <div key={key} className="mb-2">
-                                <strong>Required Scopes:</strong>
-                                <ul className="list-disc list-inside ml-2 mt-1">
-                                  {(value as string[]).map((scope, i) => (
-                                    <li key={i} className="text-xs font-mono break-all">{scope}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            );
-                          }
-                          if (key.startsWith('step')) {
-                            return <div key={key} className="mb-1">• {value as string}</div>;
-                          }
-                          if (key === 'clientId') {
-                            return <div key={key} className="mb-1"><strong>Client ID:</strong> {value as string}</div>;
-                          }
-                          return null;
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : !configured ? (
-                <div className="text-center py-8 text-gray-500">
-                  Google Admin API not configured
-                </div>
-              ) : !connectionTest?.connected ? (
-                <div className="text-center py-8">
-                  <XCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-                  <div className="text-red-600 font-medium mb-1">Connection Failed</div>
-                  <div className="text-sm text-gray-600 max-w-md mx-auto">
-                    {connectionTest?.message || 'Unable to connect to Google Workspace'}
-                  </div>
-                </div>
-              ) : workspaceUsers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No workspace users found
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {workspaceUsers.map((user) => {
-                    const dbUser = databaseUserMap[user.primaryEmail];
-                    const userRole = selectedRole[user.primaryEmail] || 'service';
-                    
-                    return (
-                      <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          {user.thumbnailPhotoUrl ? (
-                            <img 
-                              src={user.thumbnailPhotoUrl} 
-                              alt="Profile" 
-                              className="w-8 h-8 rounded-full"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-sm">
-                              {user.name.givenName?.charAt(0) || user.primaryEmail.charAt(0)}
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-medium">{user.name.fullName || user.primaryEmail}</p>
-                            <p className="text-sm text-gray-600">{user.primaryEmail}</p>
-                            {user.suspended && (
-                              <Badge className="mt-1 bg-red-100 text-red-800">Suspended</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {dbUser ? (
-                            <Badge className={getRoleBadgeColor(dbUser.role)}>
-                              {dbUser.role}
-                            </Badge>
-                          ) : (
-                            <>
-                              <Select
-                                value={userRole}
-                                onValueChange={(value) => 
-                                  setSelectedRole(prev => ({ ...prev, [user.primaryEmail]: value }))
-                                }
-                              >
-                                <SelectTrigger className="w-24">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="admin">Admin</SelectItem>
-                                  <SelectItem value="sales">Sales</SelectItem>
-                                  <SelectItem value="service">Service</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                size="sm"
-                                onClick={() => handleSyncUser(user.primaryEmail, userRole)}
-                                disabled={syncUserMutation.isPending}
-                              >
-                                Sync
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Database Users */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Portal Users</span>
-                <Button onClick={() => refetchDatabase()} size="sm" variant="outline">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loadingDatabase ? (
-                <div className="text-center py-8">Loading portal users...</div>
-              ) : databaseUsers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No portal users found
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {databaseUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">
-                          {user.firstName && user.lastName 
-                            ? `${user.firstName} ${user.lastName}` 
-                            : user.email
-                          }
-                        </p>
-                        <p className="text-sm text-gray-600">{user.email}</p>
-                        {user.roleAssignedAt && (
-                          <p className="text-xs text-gray-500">
-                            Role assigned: {new Date(user.roleAssignedAt).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={user.role}
-                          onValueChange={(newRole) => handleRoleUpdate(user.id, newRole)}
-                          disabled={updateRoleMutation.isPending}
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="sales">Sales</SelectItem>
-                            <SelectItem value="service">Service</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Badge className={getRoleBadgeColor(user.role)}>
-                          {user.role}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center text-red-600">
+                <AlertTriangle className="h-5 w-5 mr-2" />
+                Delete User
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete{" "}
+                <span className="font-medium">
+                  {selectedUser?.firstName && selectedUser?.lastName 
+                    ? `${selectedUser.firstName} ${selectedUser.lastName}` 
+                    : selectedUser?.email
+                  }
+                </span>
+                ? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => selectedUser && deleteUserMutation.mutate(selectedUser.id)}
+                disabled={deleteUserMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

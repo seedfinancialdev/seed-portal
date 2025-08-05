@@ -159,9 +159,9 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       const { role } = req.body;
       const adminUserId = req.user.id;
 
-      if (!role || !['admin', 'sales', 'service'].includes(role)) {
+      if (!role || !['admin', 'employee'].includes(role)) {
         return res.status(400).json({ 
-          message: 'Invalid role. Must be admin, sales, or service' 
+          message: 'Invalid role. Must be admin or employee' 
         });
       }
 
@@ -186,7 +186,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
   // Sync a Google Workspace user to our database
   app.post('/api/admin/sync-workspace-user', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const { email, role = 'service' } = req.body;
+      const { email, role = 'employee' } = req.body;
       const adminUserId = req.user.id;
 
       if (!email || !email.endsWith('@seedfinancial.io')) {
@@ -233,19 +233,132 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Get workspace users from database
-  app.get('/api/admin/workspace-users-db', requireAuth, requireAdmin, async (req, res) => {
+  // Create a new user
+  app.post('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
     try {
-      const workspaceUsers = await storage.getAllWorkspaceUsers();
+      const { firstName, lastName, email, role = 'employee' } = req.body;
+      const adminUserId = req.user.id;
+
+      if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
+        return res.status(400).json({ 
+          message: 'First name, last name, and email are required' 
+        });
+      }
+
+      if (!email.endsWith('@seedfinancial.io')) {
+        return res.status(400).json({ 
+          message: 'Email must be a @seedfinancial.io address' 
+        });
+      }
+
+      if (!['admin', 'employee'].includes(role)) {
+        return res.status(400).json({ 
+          message: 'Invalid role. Must be admin or employee' 
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ 
+          message: 'A user with this email already exists' 
+        });
+      }
+
+      // Generate a random password
+      const generatedPassword = generatePassword();
+
+      // Create new user
+      const user = await storage.createUser({
+        email,
+        password: await hashPassword(generatedPassword),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        hubspotUserId: null,
+        role,
+        roleAssignedBy: adminUserId,
+        roleAssignedAt: new Date(),
+      });
+
       res.json({ 
-        users: workspaceUsers,
-        count: workspaceUsers.length,
-        source: 'database'
+        message: 'User created successfully',
+        user,
+        generatedPassword // Return the password so admin can share it
       });
     } catch (error: any) {
-      console.error('Error fetching workspace users from database:', error);
+      console.error('Error creating user:', error);
       res.status(500).json({ 
-        message: 'Failed to fetch workspace users from database: ' + error.message 
+        message: 'Failed to create user: ' + error.message 
+      });
+    }
+  });
+
+  // Delete a user
+  app.delete('/api/admin/users/:userId', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const currentUserId = req.user.id;
+
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      // Prevent user from deleting themselves
+      if (userId === currentUserId) {
+        return res.status(400).json({ 
+          message: 'You cannot delete your own account' 
+        });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      await storage.deleteUser(userId);
+      
+      res.json({ 
+        message: 'User deleted successfully',
+        deletedUser: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName }
+      });
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ 
+        message: 'Failed to delete user: ' + error.message 
+      });
+    }
+  });
+
+  // Generate password reset for a user
+  app.post('/api/admin/users/:userId/reset-password', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: 'Invalid user ID' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Generate a new password
+      const newPassword = generatePassword();
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user's password
+      await storage.updateUserPassword(userId, hashedPassword);
+      
+      res.json({ 
+        message: 'Password reset successfully',
+        newPassword,
+        user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName }
+      });
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      res.status(500).json({ 
+        message: 'Failed to reset password: ' + error.message 
       });
     }
   });
@@ -299,6 +412,18 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
 const scryptAsync = promisify(scrypt);
+
+// Password generation function
+function generatePassword(): string {
+  const adjectives = ['Quick', 'Bright', 'Swift', 'Smart', 'Bold', 'Sharp', 'Clear', 'Fresh', 'Strong', 'Wise'];
+  const nouns = ['Tiger', 'Eagle', 'Wolf', 'Falcon', 'Lion', 'Shark', 'Bear', 'Fox', 'Hawk', 'Lynx'];
+  const numbers = Math.floor(Math.random() * 900) + 100; // 3-digit number
+  
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  
+  return `${adjective}${noun}${numbers}!`;
+}
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");

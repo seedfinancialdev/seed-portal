@@ -3,8 +3,7 @@ import { z } from "zod";
 // Define user roles
 export const USER_ROLES = {
   ADMIN: 'admin',
-  SALES: 'sales', 
-  SERVICE: 'service'
+  EMPLOYEE: 'employee'
 } as const;
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
@@ -58,8 +57,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [USER_ROLES.ADMIN]: [
     // Admins have access to everything
     PERMISSIONS.VIEW_ADMIN_DASHBOARD,
-    PERMISSIONS.VIEW_SALES_DASHBOARD, // For testing
-    PERMISSIONS.VIEW_SERVICE_DASHBOARD, // For testing
+    PERMISSIONS.VIEW_SALES_DASHBOARD,
+    PERMISSIONS.VIEW_SERVICE_DASHBOARD,
     PERMISSIONS.VIEW_QUOTE_CALCULATOR,
     PERMISSIONS.CREATE_QUOTES,
     PERMISSIONS.EDIT_QUOTES,
@@ -82,9 +81,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.VIEW_SERVICE_METRICS
   ],
   
-  [USER_ROLES.SALES]: [
-    // Sales team permissions
+  [USER_ROLES.EMPLOYEE]: [
+    // Employee permissions (combines previous sales and service permissions)
     PERMISSIONS.VIEW_SALES_DASHBOARD,
+    PERMISSIONS.VIEW_SERVICE_DASHBOARD,
     PERMISSIONS.VIEW_QUOTE_CALCULATOR,
     PERMISSIONS.CREATE_QUOTES,
     PERMISSIONS.EDIT_QUOTES,
@@ -92,18 +92,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     PERMISSIONS.VIEW_CLIENT_INTEL,
     PERMISSIONS.EDIT_CLIENT_INTEL,
     PERMISSIONS.VIEW_KNOWLEDGE_BASE,
+    PERMISSIONS.EDIT_KNOWLEDGE_BASE,
     PERMISSIONS.VIEW_SALES_PIPELINE,
     PERMISSIONS.MANAGE_LEADS,
-    PERMISSIONS.VIEW_SALES_INBOX
-  ],
-  
-  [USER_ROLES.SERVICE]: [
-    // Service team permissions
-    PERMISSIONS.VIEW_SERVICE_DASHBOARD,
-    PERMISSIONS.VIEW_QUOTE_CALCULATOR, // Read-only for reference
-    PERMISSIONS.VIEW_CLIENT_INTEL,
-    PERMISSIONS.VIEW_KNOWLEDGE_BASE,
-    PERMISSIONS.EDIT_KNOWLEDGE_BASE, // Can contribute to KB
+    PERMISSIONS.VIEW_SALES_INBOX,
     PERMISSIONS.VIEW_SERVICE_TICKETS,
     PERMISSIONS.MANAGE_CLIENT_ACCOUNTS,
     PERMISSIONS.VIEW_SERVICE_METRICS
@@ -129,12 +121,10 @@ export function getDefaultDashboard(userRole: UserRole): string {
   switch (userRole) {
     case USER_ROLES.ADMIN:
       return '/admin';
-    case USER_ROLES.SALES:
-      return '/sales-dashboard';
-    case USER_ROLES.SERVICE:
-      return '/service-dashboard';
+    case USER_ROLES.EMPLOYEE:
+      return '/sales-dashboard'; // Default employee dashboard
     default:
-      return '/service-dashboard'; // Default fallback
+      return '/sales-dashboard'; // Default fallback
   }
 }
 
@@ -160,7 +150,7 @@ export function getAvailableDashboards(userRole: UserRole): Array<{route: string
 // Schema for role updates
 export const updateUserRoleSchema = z.object({
   userId: z.number(),
-  role: z.enum([USER_ROLES.ADMIN, USER_ROLES.SALES, USER_ROLES.SERVICE])
+  role: z.enum([USER_ROLES.ADMIN, USER_ROLES.EMPLOYEE])
 });
 
 export type UpdateUserRole = z.infer<typeof updateUserRoleSchema>;
