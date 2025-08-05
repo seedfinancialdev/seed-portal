@@ -77,7 +77,24 @@ export default function AuthPage() {
       console.error('[Google OAuth] Error stack:', error?.stack);
       console.error('[Google OAuth] Full error object:', JSON.stringify(error, null, 2));
       
-      // Show the actual error message to help debug
+      // Handle popup closed error specifically
+      if (error?.type === 'popup_closed' || error?.message?.includes('Popup window closed')) {
+        console.log('[Google OAuth] Popup closed automatically - this indicates a Google Cloud Console configuration issue');
+        alert(`Google OAuth Configuration Issue
+
+The Google login popup opened but closed immediately. This means your Google Cloud Console OAuth app needs to be updated.
+
+Current domain: ${window.location.origin}
+
+Please verify in Google Cloud Console → APIs & Services → Credentials:
+1. Your OAuth 2.0 Client ID includes this EXACT domain in "Authorized JavaScript origins"
+2. The domain is entered exactly as shown above (including https://)
+
+After updating, the login will work immediately.`);
+        return;
+      }
+      
+      // Show the actual error message for other errors
       const errorMessage = error?.message || error?.toString() || 'Unknown authentication error';
       alert(`Authentication error: ${errorMessage}\n\nPlease check the browser console for details.`);
     },

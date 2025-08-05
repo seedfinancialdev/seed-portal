@@ -1,0 +1,87 @@
+Failed to load resource: the server responded with a status of 401 (Unauthorized)
+auth-page.tsx:79 [AuthPage] Google Client ID available: true
+auth-page.tsx:80 [AuthPage] Hosted domain: seedfinancial.io
+auth-page.tsx:81 [AuthPage] OAuth Library version: @react-oauth/google@0.12.2
+auth-page.tsx:82 [AuthPage] Current origin: https://0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev
+auth-page.tsx:111 [AuthPage] Google login button clicked
+auth-page.tsx:112 [AuthPage] Google Client ID: 537178633862-nbot6gc7o72du7nj8p4hlhklfuvl9s28.apps.googleusercontent.com
+auth-page.tsx:113 [AuthPage] Current URL: https://0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/auth
+auth-page.tsx:114 [AuthPage] User agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36
+auth-page.tsx:66 [Google OAuth] Non-OAuth error details: 
+_.Lc {message: 'Popup window closed', stack: 'Error: Popup window closed\n    at new _.Lc (https:… (https://accounts.google.com/gsi/client:122:551)', type: 'popup_closed'}
+message
+: 
+"Popup window closed"
+stack
+: 
+"Error: Popup window closed\n    at new _.Lc (https://accounts.google.com/gsi/client:90:28)\n    at _.Nf.D (https://accounts.google.com/gsi/client:126:365)\n    at wf (https://accounts.google.com/gsi/client:116:460)\n    at _.l.dispatchEvent (https://accounts.google.com/gsi/client:115:342)\n    at _.Lf.I (https://accounts.google.com/gsi/client:122:551)"
+type
+: 
+"popup_closed"
+[[Prototype]]
+: 
+Error
+auth-page.tsx:67 [Google OAuth] Error type: object
+onNonOAuthError	@	auth-page.tsx:67
+_.Nf.D	@	client:126
+wf	@	client:116
+_.l.dispatchEvent	@	client:115
+_.Lf.I	@	client:122
+setTimeout		
+_.Lf.start	@	client:123
+_.Qf	@	client:126
+Yt.requestAccessToken	@	client:366
+onClick	@	auth-page.tsx:117
+auth-page.tsx:68 [Google OAuth] Error constructor: 
+onNonOAuthError	@	auth-page.tsx:68
+_.Nf.D	@	client:126
+wf	@	client:116
+_.l.dispatchEvent	@	client:115
+_.Lf.I	@	client:122
+setTimeout		
+_.Lf.start	@	client:123
+_.Qf	@	client:126
+Yt.requestAccessToken	@	client:366
+onClick	@	auth-page.tsx:117
+auth-page.tsx:69 [Google OAuth] Error message: Popup window closed
+onNonOAuthError	@	auth-page.tsx:69
+_.Nf.D	@	client:126
+wf	@	client:116
+_.l.dispatchEvent	@	client:115
+_.Lf.I	@	client:122
+setTimeout		
+_.Lf.start	@	client:123
+_.Qf	@	client:126
+Yt.requestAccessToken	@	client:366
+onClick	@	auth-page.tsx:117
+auth-page.tsx:70 [Google OAuth] Error stack: Error: Popup window closed
+    at new _.Lc (https://accounts.google.com/gsi/client:90:28)
+    at _.Nf.D (https://accounts.google.com/gsi/client:126:365)
+    at wf (https://accounts.google.com/gsi/client:116:460)
+    at _.l.dispatchEvent (https://accounts.google.com/gsi/client:115:342)
+    at _.Lf.I (https://accounts.google.com/gsi/client:122:551)
+onNonOAuthError	@	auth-page.tsx:70
+_.Nf.D	@	client:126
+wf	@	client:116
+_.l.dispatchEvent	@	client:115
+_.Lf.I	@	client:122
+setTimeout		
+_.Lf.start	@	client:123
+_.Qf	@	client:126
+Yt.requestAccessToken	@	client:366
+onClick	@	auth-page.tsx:117
+auth-page.tsx:71 [Google OAuth] Full error object: {
+  "message": "Popup window closed",
+  "stack": "Error: Popup window closed\n    at new _.Lc (https://accounts.google.com/gsi/client:90:28)\n    at _.Nf.D (https://accounts.google.com/gsi/client:126:365)\n    at wf (https://accounts.google.com/gsi/client:116:460)\n    at _.l.dispatchEvent (https://accounts.google.com/gsi/client:115:342)\n    at _.Lf.I (https://accounts.google.com/gsi/client:122:551)",
+  "type": "popup_closed"
+}
+onNonOAuthError	@	auth-page.tsx:71
+_.Nf.D	@	client:126
+wf	@	client:116
+_.l.dispatchEvent	@	client:115
+_.Lf.I	@	client:122
+setTimeout		
+_.Lf.start	@	client:123
+_.Qf	@	client:126
+Yt.requestAccessToken	@	client:366
+onClick	@	auth-page.tsx:117
