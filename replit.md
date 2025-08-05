@@ -30,7 +30,7 @@ Preferred communication style: Simple, everyday language.
 - **Rate Limiting**: Express-rate-limit
 
 ### System Design Choices
-- **Authentication**: Google Workspace OIDC, restricted to `@seedfinancial.io` emails, with multi-layer admin enforcement, manual role assignment, and Google Admin API integration for user syncing.
+- **Authentication**: Google Workspace OIDC using JWT credential flow, restricted to `@seedfinancial.io` emails, with multi-layer admin enforcement, manual role assignment, and Google Admin API integration for user syncing. Successfully cleaned up from 4 competing auth systems to 1 working system.
 - **Role-Based Access Control**: Implemented for Admin, Sales, and Service roles.
 - **Data Integration Strategy**: Direct API integrations with third-party services using a "Doorway Pattern" for consistent health monitoring, caching, and error handling.
 - **Secret Management**: Environment variables and ADC files for Google API authentication.
