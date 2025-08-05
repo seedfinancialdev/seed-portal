@@ -5,7 +5,18 @@ async function throwIfResNotOk(res: Response) {
     // Clone the response so we can read it without consuming the original
     const clonedRes = res.clone();
     const text = (await clonedRes.text()) || res.statusText;
-    console.error('[ApiRequest] ❌ HTTP Error:', res.status, text);
+    
+    // ENHANCED DEBUGGING for authentication issues
+    console.error('[ApiRequest] ❌ HTTP Error:', {
+      status: res.status,
+      statusText: res.statusText,
+      url: res.url,
+      text: text,
+      headers: Object.fromEntries(res.headers.entries()),
+      cookiesInResponse: res.headers.get('set-cookie'),
+      timestamp: new Date().toISOString()
+    });
+    
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -61,7 +72,29 @@ export async function apiRequest(
       requestOptions.body = typeof data === 'string' ? data : JSON.stringify(data);
     }
 
+    // CRITICAL: Log frontend request details for debugging
+    console.log('[ApiRequest] 🚀 Frontend request details:', {
+      url,
+      method,
+      hasCredentials: requestOptions.credentials === 'include',
+      headers: requestOptions.headers,
+      cookiesAvailable: document.cookie ? 'YES' : 'NO',
+      cookieSnippet: document.cookie.substring(0, 100),
+      timestamp: new Date().toISOString()
+    });
+
     const response = await fetch(url, requestOptions);
+    
+    // Log response details for debugging
+    console.log('[ApiRequest] 📥 Response details:', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      cookiesSet: response.headers.get('set-cookie'),
+      timestamp: new Date().toISOString()
+    });
+    
     await throwIfResNotOk(response);
     return await response.json();
   }
@@ -79,7 +112,29 @@ export async function apiRequest(
     requestOptions.body = JSON.stringify(data);
   }
 
+  // CRITICAL: Log frontend request details for debugging (new signature)
+  console.log('[ApiRequest] 🚀 Frontend request details (new sig):', {
+    url,
+    method,
+    hasCredentials: requestOptions.credentials === 'include',
+    headers: requestOptions.headers,
+    cookiesAvailable: document.cookie ? 'YES' : 'NO',
+    cookieSnippet: document.cookie.substring(0, 100),
+    timestamp: new Date().toISOString()
+  });
+
   const response = await fetch(url, requestOptions);
+  
+  // Log response details for debugging (new signature)
+  console.log('[ApiRequest] 📥 Response details (new sig):', {
+    url,
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+    cookiesSet: response.headers.get('set-cookie'),
+    timestamp: new Date().toISOString()
+  });
+  
   await throwIfResNotOk(response);
   return await response.json();
 }
@@ -90,11 +145,33 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const url = queryKey.join("/") as string;
+    
+    // CRITICAL: Log query function request details
+    console.log('[QueryFn] 🔍 Query request details:', {
+      url,
+      queryKey,
+      cookiesAvailable: document.cookie ? 'YES' : 'NO',
+      cookieSnippet: document.cookie.substring(0, 100),
+      timestamp: new Date().toISOString()
+    });
+    
+    const res = await fetch(url, {
       credentials: "include", // Session cookies only, no OAuth token
     });
 
+    // Log query function response details
+    console.log('[QueryFn] 📥 Query response details:', {
+      url,
+      status: res.status,
+      statusText: res.statusText,
+      headers: Object.fromEntries(res.headers.entries()),
+      cookiesSet: res.headers.get('set-cookie'),
+      timestamp: new Date().toISOString()
+    });
+
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      console.log('[QueryFn] ⚠️ 401 detected, returning null');
       return null;
     }
 

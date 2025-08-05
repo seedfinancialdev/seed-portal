@@ -42,27 +42,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      console.log('[useAuth] Login mutation started with:', Object.keys(credentials));
+      console.log('[useAuth] 🚀 Login mutation started with:', {
+        keys: Object.keys(credentials),
+        email: credentials.email,
+        hasPassword: !!credentials.password,
+        hasGoogleCredential: !!credentials.googleCredential,
+        timestamp: new Date().toISOString()
+      });
+      
       const result = await apiRequest("/api/login", {
         method: "POST",
         body: JSON.stringify(credentials)
       });
-      console.log('[useAuth] Login mutation successful:', result);
+      
+      console.log('[useAuth] ✅ Login mutation successful:', {
+        result,
+        timestamp: new Date().toISOString()
+      });
       return result;
     },
     onSuccess: async (user: SelectUser) => {
-      console.log('[useAuth] Login success, waiting before queries...');
+      console.log('[useAuth] 🎉 Login success callback triggered:', {
+        user: user.email,
+        timestamp: new Date().toISOString(),
+        cookiesAfterLogin: document.cookie ? 'YES' : 'NO',
+        cookieSnippet: document.cookie.substring(0, 100)
+      });
       
+      console.log('[useAuth] ⏳ Waiting for session propagation...');
       // Wait a moment for session to propagate
       await new Promise(resolve => setTimeout(resolve, 100));
       
+      console.log('[useAuth] 🧹 Clearing query cache...');
       // Clear all user-specific data to prevent cross-user data leakage
       await queryClient.invalidateQueries();
       
+      console.log('[useAuth] ⏳ Additional delay before refetch...');
       // Force fresh fetch of user profile with a small delay
       await new Promise(resolve => setTimeout(resolve, 200));
+      
+      console.log('[useAuth] 🔄 Refetching user data...');
       await queryClient.refetchQueries({ queryKey: ["/api/user"] });
       
+      console.log('[useAuth] 🍞 Showing success toast...');
       toast({
         title: "Welcome back!",
         description: "You have successfully logged in.",

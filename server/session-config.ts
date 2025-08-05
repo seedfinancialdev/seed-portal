@@ -52,14 +52,61 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
           const pingResult = await redisClient.ping();
           console.log('[SessionConfig] ✅ Redis ping result:', pingResult);
           
-          // Create Redis store with explicit error handling
+          // Create Redis store with explicit error handling and debugging
           sessionStore = new RedisStore({
             client: redisClient,
             prefix: 'sess:',
             ttl: 24 * 60 * 60, // 24 hours
             disableTouch: false,
             disableTTL: false,
+            logErrors: true // Enable Redis store error logging
           });
+
+          // Add session store operation debugging
+          const originalGet = sessionStore.get.bind(sessionStore);
+          const originalSet = sessionStore.set.bind(sessionStore);
+          const originalDestroy = sessionStore.destroy.bind(sessionStore);
+
+          sessionStore.get = function(sid, callback) {
+            console.log('[SessionStore] 🔍 GET operation:', { sid: sid?.substring(0, 10) + '...' });
+            return originalGet(sid, (err, session) => {
+              console.log('[SessionStore] 🔍 GET result:', { 
+                sid: sid?.substring(0, 10) + '...', 
+                hasSession: !!session, 
+                error: err?.message,
+                sessionKeys: session ? Object.keys(session) : []
+              });
+              callback(err, session);
+            });
+          };
+
+          sessionStore.set = function(sid, session, callback) {
+            console.log('[SessionStore] 🔍 SET operation:', { 
+              sid: sid?.substring(0, 10) + '...', 
+              sessionKeys: Object.keys(session || {}),
+              hasPassport: !!(session as any)?.passport
+            });
+            return originalSet(sid, session, (err) => {
+              console.log('[SessionStore] 🔍 SET result:', { 
+                sid: sid?.substring(0, 10) + '...', 
+                error: err?.message,
+                success: !err
+              });
+              callback && callback(err);
+            });
+          };
+
+          sessionStore.destroy = function(sid, callback) {
+            console.log('[SessionStore] 🔍 DESTROY operation:', { sid: sid?.substring(0, 10) + '...' });
+            return originalDestroy(sid, (err) => {
+              console.log('[SessionStore] 🔍 DESTROY result:', { 
+                sid: sid?.substring(0, 10) + '...', 
+                error: err?.message,
+                success: !err
+              });
+              callback && callback(err);
+            });
+          };
           
           // Verify the store was created correctly
           const storeName = sessionStore.constructor.name;

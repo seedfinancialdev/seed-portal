@@ -42,9 +42,35 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Allow embedding resources
 }));
 
+// Add CSRF debugging middleware BEFORE CSRF is applied
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/')) {
+    console.log('🔒 [CSRF Debug] BEFORE CSRF middleware:', {
+      url: req.originalUrl,
+      method: req.method,
+      hasCsrfToken: !!req.headers['x-csrf-token'],
+      csrfToken: req.headers['x-csrf-token']?.substring(0, 10) + '...',
+      contentType: req.headers['content-type'],
+      timestamp: new Date().toISOString()
+    });
+  }
+  next();
+});
+
 // Enable CORS for production deployments with credentials
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  
+  // Enhanced debugging for CORS
+  if (req.originalUrl.startsWith('/api/')) {
+    console.log('🌐 [CORS Debug] Processing request:', {
+      url: req.originalUrl,
+      method: req.method,
+      origin: origin || 'NO_ORIGIN',
+      host: req.headers.host,
+      userAgent: req.headers['user-agent']?.substring(0, 30)
+    });
+  }
   
   // Robust production detection using multiple signals
   const isProduction = process.env.NODE_ENV === 'production' || 
@@ -219,10 +245,62 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     const sessionConfig = await createSessionConfig();
     const { storeType, ...expressSessionConfig } = sessionConfig;
     
+    // Add session debugging middleware BEFORE session setup
+    app.use((req, res, next) => {
+      const originalUrl = req.originalUrl;
+      if (originalUrl.startsWith('/api/')) {
+        console.log('🔍 [SessionDebug] BEFORE session middleware:', {
+          url: originalUrl,
+          method: req.method,
+          hasCookie: !!req.headers.cookie,
+          cookieSnippet: req.headers.cookie?.substring(0, 50),
+          sessionID: req.sessionID || 'NOT_SET',
+          userAgent: req.headers['user-agent']?.substring(0, 30)
+        });
+      }
+      next();
+    });
+
     app.use(session.default(expressSessionConfig));
+
+    // Add session debugging middleware AFTER session setup
+    app.use((req, res, next) => {
+      const originalUrl = req.originalUrl;
+      if (originalUrl.startsWith('/api/')) {
+        console.log('🔍 [SessionDebug] AFTER session middleware:', {
+          url: originalUrl,
+          method: req.method,
+          sessionID: req.sessionID,
+          sessionExists: !!req.session,
+          sessionKeys: req.session ? Object.keys(req.session) : [],
+          hasPassport: !!(req.session as any)?.passport,
+          isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : 'NO_METHOD',
+          userInSession: req.user ? req.user.email : 'NONE'
+        });
+      }
+      next();
+    });
+
     console.log('[Server] ✅ Session middleware applied successfully');
     console.log('[Server] Session store type:', storeType);
     console.log('[Server] Production mode:', expressSessionConfig.cookie?.secure ? 'ENABLED' : 'DISABLED');
+
+    // Add comprehensive request logging middleware
+    app.use((req, res, next) => {
+      if (req.originalUrl.startsWith('/api/')) {
+        console.log('🎯 [Request Pipeline] Processing API request:', {
+          url: req.originalUrl,
+          method: req.method,
+          timestamp: new Date().toISOString(),
+          sessionID: req.sessionID || 'NO_SESSION_ID',
+          hasCookieHeader: !!req.headers.cookie,
+          cookieCount: req.headers.cookie ? req.headers.cookie.split(';').length : 0,
+          userAgent: req.headers['user-agent']?.substring(0, 40),
+          contentType: req.headers['content-type']
+        });
+      }
+      next();
+    });
 
     // Add API route protection middleware BEFORE route registration
     app.use('/api/*', (req, res, next) => {
