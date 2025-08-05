@@ -171,7 +171,7 @@ const navigationItems = [
     items: [
       { name: 'Sales Pipeline', icon: Target, path: '/admin/sales' },
       { name: 'Client Management', icon: Users, path: '/admin/clients' },
-      { name: 'Commission Tracking', icon: DollarSign, path: '/admin-commission-tracker' },
+      { name: 'Commission Tracking', icon: DollarSign, path: '/admin/commission-tracker' },
       { name: 'Quote Calculator', icon: Calculator, path: '/calculator' }
     ]
   },
