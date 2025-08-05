@@ -25,15 +25,19 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
   try {
     console.log('[createRedisConnections] Creating Redis clients...');
     
-    // Create ioredis instances with better compatibility
+    // Create ioredis instances with proper connection pooling
     const baseOptions = {
       enableReadyCheck: true,
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 2,
+      connectTimeout: 10000,
+      lazyConnect: true,
+      keepAlive: true,
+      family: 4, // Force IPv4
       retryStrategy: (times: number) => {
-        if (times > 10) {
-          return null; // Stop retrying
+        if (times > 5) {
+          return null; // Stop retrying sooner
         }
-        return Math.min(times * 100, 3000);
+        return Math.min(times * 100, 2000);
       },
       reconnectOnError: (err: Error) => {
         const targetError = 'READONLY';
@@ -48,6 +52,10 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
     const queueOptions = {
       enableReadyCheck: true,
       maxRetriesPerRequest: null, // Required for BullMQ
+      connectTimeout: 10000,
+      lazyConnect: true,
+      keepAlive: true,
+      family: 4, // Force IPv4
       retryStrategy: baseOptions.retryStrategy,
       reconnectOnError: baseOptions.reconnectOnError,
     };

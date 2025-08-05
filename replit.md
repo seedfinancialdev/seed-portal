@@ -4,14 +4,20 @@
 This project is a comprehensive Internal Employee Portal for Seed Financial, built with React, TypeScript, Express.js, and PostgreSQL. It aims to be a centralized command center, enhancing internal efficiency and client engagement. Key capabilities include a centralized dashboard, a sophisticated quote calculator (supporting 5 services: Bookkeeping, TaaS, Payroll, AP/AR Lite, FP&A Lite), a commission tracker, a client intelligence engine, and profile management. It integrates with HubSpot, provides real-time weather, address autocomplete, advanced sales analytics, and automates MSA document generation with Box integration for client folder management.
 
 ## Recent Changes (August 5, 2025)
-**AUTHENTICATION DOMAIN ISSUE IDENTIFIED**: Root cause of Google OAuth failures discovered and solution provided.
-- 🔍 **ROOT CAUSE FOUND**: Google OAuth failing due to dynamic Replit domain mismatch in Google Cloud Console
-- 📋 **CURRENT DYNAMIC DOMAIN**: `https://0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev` (changes each session)
-- ✅ **PERMANENT DOMAIN IDENTIFIED**: `https://workspace.JonBBF.repl.co` (stable, should be used in Google Cloud Console)
-- 🔧 **SOLUTION**: Add permanent domain to Google Cloud Console OAuth 2.0 Client ID authorized JavaScript origins
-- 📝 **AUTHENTICATION LOGIC CONFIRMED**: Backend `/api/login` endpoint working correctly, no code changes needed
-- 🚨 **LEGACY ENDPOINT IDENTIFIED**: `/api/auth/google/sync` causing 401 errors but not used in current flow
-- 💡 **TEAM LEARNING**: Dynamic domains are common OAuth gotcha - always use permanent domains for OAuth configuration
+**POPUP-TO-INLINE AUTHENTICATION CONVERSION COMPLETED**: Successfully replaced popup-based OAuth with inline authentication.
+- ✅ **POPUP AUTHENTICATION ELIMINATED**: Replaced useGoogleLogin popup hook with GoogleLogin inline component
+- ✅ **BACKEND UPDATED**: Added JWT ID token support (googleCredential) alongside legacy access token support
+- ✅ **USER EXPERIENCE IMPROVED**: No more popup blockers, cleaner inline authentication flow
+- ✅ **REDIS CONNECTION POOLING FIXED**: Resolved "max number of clients reached" error with proper connection limits
+- ✅ **DUAL DOMAIN OAUTH SOLUTION**: Both development (workspace.jonbbf.repl.co) and production (os.seedfinancial.io) domains need authorization
+
+**AUTHENTICATION DOMAIN ISSUE RESOLVED**: Complete OAuth configuration solution provided.
+- 🔍 **ROOT CAUSE**: Google OAuth requires ALL domains to be pre-authorized in Google Cloud Console
+- 📋 **DEVELOPMENT DOMAIN**: `https://workspace.jonbbf.repl.co` (stable Replit domain)
+- 📋 **PRODUCTION DOMAIN**: `https://os.seedfinancial.io` (live site)
+- 🔧 **SOLUTION**: Add BOTH domains to Google Cloud Console OAuth 2.0 Client ID authorized JavaScript origins
+- ✅ **CONNECTION ISSUES FIXED**: Redis connection pooling optimized to prevent client limit errors
+- 💡 **DEPLOYMENT READY**: Changes need to be deployed to production for os.seedfinancial.io to work
 
 **QUOTE UPDATE FUNCTIONALITY FIXED**:
 - ✅ **ROOT CAUSE IDENTIFIED**: Same service field mapping issue affected quote updates - database fields (service_bookkeeping=true) vs HubSpot parameters (includesBookkeeping=false)

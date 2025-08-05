@@ -18,8 +18,11 @@ export async function createSessionConfig(): Promise<session.SessionOptions> {
       const redisClient = new Redis(process.env.REDIS_URL, {
         keyPrefix: '',
         retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
-        lazyConnect: false,
+        maxRetriesPerRequest: 2,
+        lazyConnect: true,
+        connectTimeout: 10000,
+        keepAlive: true,
+        family: 4,
       });
       
       // Test the connection

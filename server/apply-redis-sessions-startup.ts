@@ -14,7 +14,13 @@ export async function applyRedisSessionsAtStartup(app: Express): Promise<void> {
 
   try {
     console.log('[RedisStartup] Creating Redis connection...');
-    const redisClient = new Redis(process.env.REDIS_URL);
+    const redisClient = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 2,
+      lazyConnect: true,
+      connectTimeout: 10000,
+      keepAlive: true,
+      family: 4,
+    });
     await redisClient.ping();
     console.log('[RedisStartup] ✅ Redis ping successful');
     
