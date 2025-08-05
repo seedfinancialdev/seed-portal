@@ -277,19 +277,21 @@ export default function UserManagement() {
   const users: User[] = usersData?.users || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-6 py-8">
-        <BackButton />
+        <div className="mb-8">
+          <BackButton />
+        </div>
 
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">User Management</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">Manage portal users and their access permissions</p>
-          </div>
-          
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">User Management</h1>
+          <p className="text-gray-600 dark:text-gray-400">Manage portal users and their access permissions</p>
+        </div>
+
+        <div className="flex justify-center mb-8">
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm" data-testid="button-add-user">
+              <Button className="bg-[#e24c00] hover:bg-[#c13e00] text-white shadow-sm" data-testid="button-add-user">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add User
               </Button>
@@ -387,7 +389,8 @@ export default function UserManagement() {
                   />
                   <DialogFooter>
                     <Button 
-                      type="submit" 
+                      type="submit"
+                      className="bg-[#e24c00] hover:bg-[#c13e00] text-white"
                       disabled={createUserMutation.isPending}
                       data-testid="button-create-user"
                     >
