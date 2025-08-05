@@ -18,12 +18,9 @@ export function initializeSentry(app: Express): boolean {
         // HTTP calls tracing
         Sentry.httpIntegration(),
         // Express middleware
-        Sentry.expressIntegration({
-          app,
-        }),
+        Sentry.expressIntegration(),
       ],
-      // Disable Redis instrumentation to prevent session store conflicts
-      instrumenter: 'sentry',
+      // Performance Monitoring
       registerEsmLoaderHooks: false,
       // Performance Monitoring
       tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
