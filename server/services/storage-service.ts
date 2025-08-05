@@ -97,59 +97,7 @@ export class StorageService {
     }
   }
 
-  async createFolder(parentId: string, name: string): Promise<StorageFolder> {
-    if (!this.serviceAccountClient) {
-      throw new Error('Storage service not configured');
-    }
-    
-    try {
-      const folder = await this.serviceAccountClient.folders.create(parentId, name);
-      return {
-        id: folder.id,
-        name: folder.name,
-        path: `/${name}`,
-        parentId: folder.parent?.id
-      };
-    } catch (error: any) {
-      logger.error('Failed to create folder', { error: error.message, name, parentId });
-      throw new Error(`Storage folder creation failed: ${error.message}`);
-    }
-  }
 
-  async uploadFile(folderId: string, fileName: string, fileBuffer: Buffer): Promise<StorageFile> {
-    if (!this.serviceAccountClient) {
-      throw new Error('Storage service not configured');
-    }
-    
-    try {
-      const fileStream = require('stream').Readable.from(fileBuffer);
-      const file = await this.serviceAccountClient.files.uploadFile(folderId, fileName, fileStream);
-      
-      return {
-        id: file.entries[0].id,
-        name: file.entries[0].name,
-        size: file.entries[0].size,
-        folderId: folderId
-      };
-    } catch (error: any) {
-      logger.error('Failed to upload file', { error: error.message, fileName, folderId });
-      throw new Error(`Storage file upload failed: ${error.message}`);
-    }
-  }
-
-  async getDownloadUrl(fileId: string): Promise<string> {
-    if (!this.serviceAccountClient) {
-      throw new Error('Storage service not configured');
-    }
-    
-    try {
-      const downloadUrl = await this.serviceAccountClient.files.getDownloadURL(fileId);
-      return downloadUrl;
-    } catch (error: any) {
-      logger.error('Failed to get download URL', { error: error.message, fileId });
-      throw new Error(`Storage download URL failed: ${error.message}`);
-    }
-  }
 
   async createFolder(name: string, parentFolderId = '0'): Promise<StorageFolder> {
     try {
