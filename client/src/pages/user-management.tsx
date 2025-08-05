@@ -277,30 +277,28 @@ export default function UserManagement() {
   const users: User[] = usersData?.users || [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <BackButton />
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="container mx-auto px-6 py-8">
+        <BackButton />
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-            <p className="text-gray-600">Manage portal users and their access permissions</p>
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">User Management</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Manage portal users and their access permissions</p>
           </div>
           
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-green-600 hover:bg-green-700" data-testid="button-add-user">
+              <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm" data-testid="button-add-user">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
                 <DialogDescription>
-                  Create a new user account for the portal. A password will be generated automatically.
+                  Create a new user account for the portal. A secure password will be generated automatically and displayed after creation.
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -357,8 +355,8 @@ export default function UserManagement() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="employee">Employee</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="employee">Employee - Regular portal access</SelectItem>
+                            <SelectItem value="admin">Admin - Full administrative access</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -378,9 +376,9 @@ export default function UserManagement() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="admin">Admin Dashboard</SelectItem>
-                            <SelectItem value="sales">Sales Dashboard</SelectItem>
-                            <SelectItem value="service">Service Dashboard</SelectItem>
+                            <SelectItem value="admin">Admin Dashboard - User management & system settings</SelectItem>
+                            <SelectItem value="sales">Sales Dashboard - Quotes, clients & commissions</SelectItem>
+                            <SelectItem value="service">Service Dashboard - Client support & operations</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -404,19 +402,19 @@ export default function UserManagement() {
 
         {/* Generated Password Display */}
         {generatedPassword && (
-          <Card className="mb-6 border-green-200 bg-green-50">
+          <Card className="mb-6 border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
             <CardHeader>
-              <CardTitle className="text-green-800 flex items-center">
+              <CardTitle className="text-green-800 dark:text-green-400 flex items-center">
                 <CheckCircle className="h-5 w-5 mr-2" />
                 Password Generated
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-green-700 mb-3">
+              <p className="text-green-700 dark:text-green-300 mb-3">
                 Save this password and share it with the user. It won't be shown again.
               </p>
               <div className="flex items-center gap-2">
-                <div className="bg-white border rounded px-3 py-2 flex-1 font-mono">
+                <div className="bg-white dark:bg-gray-800 border rounded px-3 py-2 flex-1 font-mono text-sm">
                   {showPassword ? generatedPassword : "••••••••••••"}
                 </div>
                 <Button
@@ -441,83 +439,95 @@ export default function UserManagement() {
         )}
 
         {/* Users List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="h-5 w-5 mr-2" />
+        <Card className="bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-800">
+          <CardHeader className="border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 px-6 py-4">
+            <CardTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+              <Users className="h-5 w-5" />
               Portal Users ({users.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {isLoading ? (
-              <div className="text-center py-8">
+              <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-2 text-gray-600">Loading users...</p>
+                <p className="mt-3 text-gray-600 dark:text-gray-400 text-sm">Loading users...</p>
               </div>
             ) : users.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No users found</p>
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400 text-sm">No users found</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                  <div key={user.id} className="flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <div className="flex items-center space-x-4">
-                      <div className="bg-blue-100 rounded-full p-2">
-                        <Users className="h-5 w-5 text-blue-600" />
+                      <div className="bg-blue-100 dark:bg-blue-900/30 rounded-full p-2">
+                        <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 dark:text-white">
                           {user.firstName && user.lastName 
                             ? `${user.firstName} ${user.lastName}` 
                             : user.email.split('@')[0]
                           }
                         </div>
-                        <div className="text-sm text-gray-600">{user.email}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-sm text-gray-600 dark:text-gray-400">{user.email}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-500">
                           Created {new Date(user.createdAt).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
-                      <Badge className={`${getRoleBadgeColor(user.role)} border`}>
+                    <div className="flex items-center space-x-3">
+                      {/* Role Badge */}
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Role:</div>
+                      <Badge className={`${getRoleBadgeColor(user.role)} border text-xs`}>
                         {user.role}
                       </Badge>
                       
-                      <Badge className={`${getDashboardBadgeColor(user.defaultDashboard || 'sales')} border`}>
+                      {/* Dashboard Badge */}
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Dashboard:</div>
+                      <Badge className={`${getDashboardBadgeColor(user.defaultDashboard || 'sales')} border text-xs`}>
                         {getDashboardDisplayName(user.defaultDashboard || 'sales')}
                       </Badge>
                       
-                      <Select
-                        value={user.role}
-                        onValueChange={(newRole) => handleRoleUpdate(user.id, newRole)}
-                        disabled={updateRoleMutation.isPending}
-                      >
-                        <SelectTrigger className="w-28" data-testid={`select-role-${user.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="employee">Employee</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {/* Role Selector */}
+                      <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Permission Level</label>
+                        <Select
+                          value={user.role}
+                          onValueChange={(newRole) => handleRoleUpdate(user.id, newRole)}
+                          disabled={updateRoleMutation.isPending}
+                        >
+                          <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-role-${user.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="employee">Employee</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                      <Select
-                        value={user.defaultDashboard || 'sales'}
-                        onValueChange={(newDashboard) => handleDashboardUpdate(user.id, newDashboard)}
-                        disabled={updateDashboardMutation.isPending}
-                      >
-                        <SelectTrigger className="w-28" data-testid={`select-dashboard-${user.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="sales">Sales</SelectItem>
-                          <SelectItem value="service">Service</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {/* Dashboard Selector */}
+                      <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Default Dashboard</label>
+                        <Select
+                          value={user.defaultDashboard || 'sales'}
+                          onValueChange={(newDashboard) => handleDashboardUpdate(user.id, newDashboard)}
+                          disabled={updateDashboardMutation.isPending}
+                        >
+                          <SelectTrigger className="w-32 h-8 text-xs" data-testid={`select-dashboard-${user.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="sales">Sales</SelectItem>
+                            <SelectItem value="service">Service</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                       
                       <Button
                         variant="outline"
