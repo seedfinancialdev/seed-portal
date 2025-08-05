@@ -187,13 +187,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Create session manually without Passport for now
+      // Create session data that works with passport deserialization
+      (req.session as any).passport = { user: user.id };
       (req.session as any).user = user;
+      
       console.log('[Login] Session created for:', user.email);
       console.log('[Login] Session details:', {
         sessionId: req.sessionID,
         hasSession: !!req.session,
         storeType: req.session?.store?.constructor?.name,
+        passportData: (req.session as any).passport,
         cookieConfig: {
           secure: req.session?.cookie?.secure,
           httpOnly: req.session?.cookie?.httpOnly,
@@ -202,10 +205,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         }
       });
       
-      console.log('[Login] Authentication successful for:', user.email);
-      // Don't return the password hash
-      const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Force session save and respond after save completes
+      req.session.save((err) => {
+        if (err) {
+          console.error('[Login] Session save error:', err);
+          return res.status(500).json({ message: "Session save failed" });
+        } else {
+          console.log('[Login] Session saved successfully');
+          console.log('[Login] Authentication successful for:', user.email);
+          // Don't return the password hash
+          const { password: _, ...userWithoutPassword } = user;
+          res.json(userWithoutPassword);
+        }
+      });
 
     } catch (error) {
       console.error('[Login] Error:', error);
