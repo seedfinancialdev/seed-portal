@@ -37,10 +37,10 @@ Phase 3: ✅ Complete - Authentication Testing
   - ✅ All user data retrieved correctly
 
 ## Secret Cleanup Needed
-**Keep (Currently Working):**
-- `VITE_GOOGLE_CLIENT_ID` ← App uses this, works perfectly
+**Keep (Actually Used in Code):**
+- `VITE_GOOGLE_CLIENT_ID` ← Frontend OAuth (App.tsx line 67)
+- `GOOGLE_CLIENT_ID_OS` ← Backend Google Admin API (google-admin.ts line 95)
+- `GOOGLE_CLIENT_SECRET_OS` ← Backend Google Admin API (google-admin.ts line 96)
 
-**Remove (Unnecessary/Duplicates):**
-- `GOOGLE_CLIENT_ID` ← Not used by app
-- `GOOGLE_CLIENT_ID_OS` ← Intended but not used
-- `GOOGLE_CLIENT_SECRET_OS` ← Not needed for OAuth credential flow
+**Remove (Unused Duplicate):**
+- `GOOGLE_CLIENT_ID` ← Only in docs, not used in actual code
