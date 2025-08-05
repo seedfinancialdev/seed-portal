@@ -4,6 +4,20 @@ import { storage } from "./storage";
 import { requireAuth, hashPassword } from "./auth";
 import { scheduleWorkspaceSync } from "./jobs";
 
+// In-memory impersonation store
+const impersonationStore = new Map<string, {
+  adminUserId: number;
+  adminEmail: string;
+  impersonatedUserId: number;
+  impersonatedEmail: string;
+  createdAt: Date;
+}>();
+
+// Helper function to get impersonation data by session ID
+export function getImpersonationData(sessionId: string) {
+  return impersonationStore.get(sessionId);
+}
+
 export async function registerAdminRoutes(app: Express): Promise<void> {
   let googleAdminService: GoogleAdminService | null = null;
   
@@ -413,6 +427,19 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Debug endpoint to check session state
+  app.get('/api/admin/debug-session', requireAuth, requireAdmin, (req, res) => {
+    res.json({
+      sessionID: req.sessionID,
+      sessionKeys: Object.keys(req.session),
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user ? { id: req.user.id, email: req.user.email } : null,
+      sessionPassport: (req.session as any)?.passport,
+      sessionIsImpersonating: (req.session as any)?.isImpersonating,
+      sessionOriginalUser: (req.session as any)?.originalUser
+    });
+  });
+
   // Impersonate user
   app.post('/api/admin/impersonate/:userId', requireAuth, requireAdmin, async (req, res) => {
     try {
@@ -447,53 +474,39 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
       console.log('🎭 Session ID:', req.sessionID);
       console.log('🎭 Session isImpersonating:', req.session.isImpersonating);
 
-      // Create enhanced user object with impersonation data
-      const impersonatedUser = {
-        ...userToImpersonate,
-        isImpersonating: true,
-        originalUser: originalUserData
-      };
+      // Store impersonation data in memory store
+      impersonationStore.set(req.sessionID, {
+        adminUserId: req.user.id,
+        adminEmail: req.user.email,
+        impersonatedUserId: userToImpersonate.id,
+        impersonatedEmail: userToImpersonate.email,
+        createdAt: new Date()
+      });
       
-      // Update session with impersonated user - use passport's login method
-      req.login(impersonatedUser, (err) => {
+      console.log('🎭 Impersonation stored in memory:', req.sessionID);
+      
+      // Login as the impersonated user
+      req.login(userToImpersonate, (err) => {
         if (err) {
           console.error('Error logging in as impersonated user:', err);
+          // Clean up the impersonation store on error
+          impersonationStore.delete(req.sessionID);
           return res.status(500).json({ 
             message: 'Failed to start impersonation: ' + err.message 
           });
         }
         
-        // Set session flags as backup
-        req.session.isImpersonating = true;
-        req.session.originalUser = originalUserData;
+        console.log('🎭 Impersonation successful - logged in as:', userToImpersonate.email);
         
-        console.log('🎭 After login - user object:', {
-          id: req.user.id,
-          email: req.user.email,
-          isImpersonating: (req.user as any).isImpersonating,
-          originalUser: (req.user as any).originalUser?.email
-        });
-        console.log('🎭 Session data:', {
-          isImpersonating: req.session.isImpersonating,
-          originalUser: req.session.originalUser?.email
-        });
-        
-        // Force session save for in-memory store
-        req.session.save((saveErr) => {
-          if (saveErr) {
-            console.error('🎭 Error saving impersonation session:', saveErr);
-            return res.status(500).json({ 
-              message: 'Failed to save impersonation session: ' + saveErr.message 
-            });
-          }
-          
-          console.log('🎭 Session save completed successfully');
-          
-          res.json({
-            message: 'Impersonation started successfully',
-            user: impersonatedUser,
-            isImpersonating: true
-          });
+        // Return success with impersonation data
+        res.json({
+          message: 'Impersonation started successfully',
+          user: {
+            ...userToImpersonate,
+            isImpersonating: true,
+            originalUser: originalUserData
+          },
+          isImpersonating: true
         });
       });
     } catch (error: any) {
@@ -509,24 +522,23 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     try {
       console.log('🛑 STOP IMPERSONATION CALLED:');
       console.log('🛑 Session ID:', req.sessionID);
-      console.log('🛑 Session isImpersonating:', req.session.isImpersonating);
-      console.log('🛑 Session originalUser:', req.session.originalUser);
-      console.log('🛑 Current user:', req.user ? `${req.user.email} (${req.user.id})` : 'None');
       
-      if (!req.session.isImpersonating || !req.session.originalUser) {
+      // Check impersonation store
+      const impersonationData = impersonationStore.get(req.sessionID);
+      if (!impersonationData) {
         console.log('🛑 ERROR: Not currently impersonating');
         return res.status(400).json({ 
           message: 'Not currently impersonating a user' 
         });
       }
 
-      const originalUser = req.session.originalUser;
+      console.log('🛑 Found impersonation data:', impersonationData.adminEmail);
 
-      // Get the full original user data from database
-      const fullOriginalUser = await storage.getUser(originalUser.id);
+      // Get the full original admin user data from database
+      const fullOriginalUser = await storage.getUser(impersonationData.adminUserId);
       if (!fullOriginalUser) {
         return res.status(404).json({ 
-          message: 'Original user not found' 
+          message: 'Original admin user not found' 
         });
       }
 
@@ -557,40 +569,7 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     }
   });
 
-  // Stop impersonation and return to original user
-  app.post('/api/admin/stop-impersonation', requireAuth, async (req, res) => {
-    try {
-      if (!req.session.isImpersonating || !req.session.originalUser) {
-        return res.status(400).json({ message: 'Not currently impersonating' });
-      }
 
-      // Restore original user using passport login
-      const originalUser = req.session.originalUser;
-      req.login(originalUser, (err) => {
-        if (err) {
-          console.error('Error restoring original user:', err);
-          return res.status(500).json({ 
-            message: 'Failed to stop impersonation: ' + err.message 
-          });
-        }
-        
-        // Clean up session and respond
-        delete req.session.originalUser;
-        delete req.session.isImpersonating;
-
-        res.json({
-          message: 'Impersonation stopped successfully',
-          user: originalUser,
-          isImpersonating: false
-        });
-      });
-    } catch (error: any) {
-      console.error('Error stopping impersonation:', error);
-      res.status(500).json({ 
-        message: 'Failed to stop impersonation: ' + error.message 
-      });
-    }
-  });
 }
 
 // Helper function for password hashing (reused from auth.ts)
