@@ -27,7 +27,7 @@ import RequestAccess from "@/pages/request-access";
 import CDNMonitoring from "@/pages/CDNMonitoring";
 import CDNTest from "@/pages/CDNTest";
 import StripeDashboard from "@/pages/stripe-dashboard";
-import OAuthDebug from "@/pages/oauth-debug";
+
 
 function Router() {
   // Automatically scroll to top when route changes

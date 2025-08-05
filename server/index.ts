@@ -22,10 +22,7 @@ const app = express();
 // Initialize Sentry before other middleware
 const sentryInitialized = initializeSentry(app);
 
-// The Sentry request handler must be the first middleware (only if initialized)
-if (sentryInitialized && Sentry.requestHandler) {
-  app.use(Sentry.requestHandler());
-}
+// Sentry integration is handled in the sentry.ts file during init
 
 // Security headers with helmet
 app.use(helmet({
@@ -188,10 +185,7 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     const server = await registerRoutes(app, null);
     console.log('[Server] ✅ Routes registered successfully');
 
-    // The Sentry error handler must be before any other error middleware (only if initialized)
-    if (sentryInitialized && Sentry.errorHandler) {
-      app.use(Sentry.errorHandler());
-    }
+    // Sentry error handling is integrated via expressIntegration
 
     // Enhanced error handler with database error handling
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

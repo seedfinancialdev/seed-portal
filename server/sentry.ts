@@ -16,23 +16,15 @@ export function initializeSentry(app: Express): boolean {
       environment: process.env.NODE_ENV || 'development',
       integrations: [
         // HTTP calls tracing
-        Sentry.httpIntegration({
-          tracing: true,
-        }),
+        Sentry.httpIntegration(),
         // Express middleware
         Sentry.expressIntegration({
           app,
         }),
-        // Capture console errors
-        Sentry.captureConsoleIntegration({
-          levels: ['error', 'warn'],
-        }),
       ],
       // Disable Redis instrumentation to prevent session store conflicts
       instrumenter: 'sentry',
-      registerEsmLoaderHooks: { 
-        exclude: [/redis/]
-      },
+      registerEsmLoaderHooks: false,
       // Performance Monitoring
       tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
       // Release tracking
