@@ -237,29 +237,24 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
     isProduction
   });
 
-  // Enhanced cookie configuration for Replit deployments
+  // Browser-compatible cookie configuration for all environments
   const cookieConfig = {
-    secure: false, // CRITICAL: Start with false for debugging
+    secure: false, // Always false for better browser compatibility
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     domain: undefined, // Let browser determine domain automatically
     path: '/', // Explicitly set path to root
-    sameSite: 'lax' as const, // Always use lax for cross-origin compatibility
+    sameSite: 'lax' as const, // Most browser-compatible setting
   };
 
-  // TEMPORARILY DISABLE secure cookies even in production for debugging
-  if (isProduction) {
-    console.log('[SessionConfig] 🍪 PRODUCTION COOKIE DEBUG MODE - Using insecure cookies for troubleshooting');
-    // For Replit deployments, use 'none' sameSite with secure: false for maximum compatibility
-    cookieConfig.sameSite = 'none' as const;
-    cookieConfig.secure = false; // CRITICAL: Temporarily disable for debugging
-    
-    console.log('[SessionConfig] Production cookie settings applied for Replit deployment');
-  } else {
-    // Development settings
-    cookieConfig.sameSite = 'lax';
-    cookieConfig.secure = false;
-  }
+  console.log('[SessionConfig] 🍪 UNIVERSAL BROWSER-COMPATIBLE COOKIE CONFIG');
+  
+  // Use 'lax' sameSite for ALL environments - most browser compatible
+  // This works for both same-origin and most cross-origin scenarios
+  cookieConfig.sameSite = 'lax';
+  cookieConfig.secure = false; // Never use secure for maximum compatibility
+  
+  console.log('[SessionConfig] Using lax sameSite for maximum browser compatibility');
 
   const sessionConfig = {
     secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
