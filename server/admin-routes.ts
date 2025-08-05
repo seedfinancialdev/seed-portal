@@ -454,10 +454,35 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
           });
         }
         
-        res.json({
-          message: 'Impersonation started successfully',
-          user: userToImpersonate,
-          isImpersonating: true
+        // Ensure impersonation flags are preserved after login
+        req.session.isImpersonating = true;
+        req.session.originalUser = {
+          id: req.session.originalUser.id,
+          email: req.session.originalUser.email,
+          firstName: req.session.originalUser.firstName,
+          lastName: req.session.originalUser.lastName,
+          role: req.session.originalUser.role,
+          defaultDashboard: req.session.originalUser.defaultDashboard
+        };
+        
+        // Save session to ensure persistence
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Error saving impersonation session:', saveErr);
+            return res.status(500).json({ 
+              message: 'Failed to save impersonation session: ' + saveErr.message 
+            });
+          }
+          
+          console.log('🎭 Session saved with impersonation data');
+          console.log('🎭 Final session isImpersonating:', req.session.isImpersonating);
+          console.log('🎭 Final session originalUser:', req.session.originalUser?.email);
+          
+          res.json({
+            message: 'Impersonation started successfully',
+            user: userToImpersonate,
+            isImpersonating: true
+          });
         });
       });
     } catch (error: any) {

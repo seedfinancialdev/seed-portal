@@ -26,9 +26,7 @@ export function UniversalNavbar({
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Debug logging for impersonation - Remove in production
-  console.log('🎭 UniversalNavbar - Current user:', dbUser);
-  console.log('🎭 UniversalNavbar - isImpersonating:', dbUser?.isImpersonating);
+
 
   const handleLogout = () => {
     logoutMutation.mutate();
