@@ -150,6 +150,9 @@ export const users: any = pgTable("users", {
   // HubSpot sync status
   lastHubspotSync: timestamp("last_hubspot_sync"),
   hubspotSyncEnabled: boolean("hubspot_sync_enabled").default(true),
+  // Impersonation tracking
+  isImpersonating: boolean("is_impersonating").default(false),
+  originalAdminId: integer("original_admin_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

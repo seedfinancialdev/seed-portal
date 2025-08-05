@@ -462,6 +462,52 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
     }
   });
 
+  // Stop impersonation and return to original admin user
+  app.post('/api/admin/stop-impersonation', requireAuth, async (req, res) => {
+    try {
+      if (!req.session.isImpersonating || !req.session.originalUser) {
+        return res.status(400).json({ 
+          message: 'Not currently impersonating a user' 
+        });
+      }
+
+      const originalUser = req.session.originalUser;
+
+      // Get the full original user data from database
+      const fullOriginalUser = await storage.getUser(originalUser.id);
+      if (!fullOriginalUser) {
+        return res.status(404).json({ 
+          message: 'Original user not found' 
+        });
+      }
+
+      // Clear impersonation data from session
+      delete req.session.originalUser;
+      delete req.session.isImpersonating;
+
+      // Restore original user session using passport's login method
+      req.login(fullOriginalUser, (err) => {
+        if (err) {
+          console.error('Error restoring original user session:', err);
+          return res.status(500).json({ 
+            message: 'Failed to stop impersonation: ' + err.message 
+          });
+        }
+        
+        res.json({
+          message: 'Impersonation stopped successfully',
+          user: fullOriginalUser,
+          isImpersonating: false
+        });
+      });
+    } catch (error: any) {
+      console.error('Error stopping impersonation:', error);
+      res.status(500).json({ 
+        message: 'Failed to stop impersonation: ' + error.message 
+      });
+    }
+  });
+
   // Stop impersonation and return to original user
   app.post('/api/admin/stop-impersonation', requireAuth, async (req, res) => {
     try {

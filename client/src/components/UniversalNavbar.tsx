@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
-import { ArrowLeft, Bell, User, Settings, LogOut, Shield } from "lucide-react";
+import { ArrowLeft, Bell, User, Settings, LogOut, Shield, UserMinus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BackButton } from "@/components/BackButton";
 import { useBackNavigation } from "@/hooks/use-navigation-history";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
 
 interface UniversalNavbarProps {
@@ -19,10 +22,39 @@ export function UniversalNavbar({
   const { user: dbUser, logoutMutation } = useAuth();
   const [location, setLocation] = useLocation();
   const { canGoBack } = useBackNavigation();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const handleLogout = () => {
     logoutMutation.mutate();
   };
+
+  // Stop impersonation mutation
+  const stopImpersonationMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/admin/stop-impersonation', {});
+    },
+    onSuccess: async () => {
+      // Clear cache and refetch user data
+      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
+      
+      toast({
+        title: "Impersonation Stopped",
+        description: "You have returned to your admin account.",
+      });
+      
+      // Redirect to admin dashboard
+      setLocation('/admin');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to stop impersonation",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Only show back button if there's history or if explicitly requested
   const shouldShowBackButton = showBackButton && (canGoBack || location !== '/');
@@ -68,11 +100,28 @@ export function UniversalNavbar({
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-48">
               <div className="px-3 py-2 border-b">
                 <p className="font-medium text-gray-900 text-sm">{dbUser?.email?.split('@')[0]}</p>
                 <p className="text-xs text-gray-500">{dbUser?.email}</p>
+                {dbUser?.isImpersonating && (
+                  <div className="mt-1 flex items-center gap-1">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <p className="text-xs text-orange-600 font-medium">Admin View</p>
+                  </div>
+                )}
               </div>
+              {dbUser?.isImpersonating && (
+                <DropdownMenuItem 
+                  onClick={() => stopImpersonationMutation.mutate()} 
+                  className="text-sm text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                  disabled={stopImpersonationMutation.isPending}
+                >
+                  <UserMinus className="mr-2 h-3 w-3" />
+                  {stopImpersonationMutation.isPending ? 'Stopping...' : 'Stop Impersonation'}
+                </DropdownMenuItem>
+              )}
+              {dbUser?.isImpersonating && <DropdownMenuSeparator />}
               <DropdownMenuItem onClick={() => setLocation('/profile')} className="text-sm">
                 <User className="mr-2 h-3 w-3" />
                 My Profile

@@ -534,8 +534,7 @@ export default function Profile() {
   // HubSpot sync mutation
   const syncHubSpotMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/user/sync-hubspot', {});
-      return response.json();
+      return await apiRequest('POST', '/api/user/sync-hubspot', {});
     },
     onSuccess: async (data) => {
       toast({

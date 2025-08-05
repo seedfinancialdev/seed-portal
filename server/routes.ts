@@ -218,7 +218,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     const user = req.user || (req.session as any)?.user;
     if (user) {
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      // Add impersonation status from session
+      const userData = {
+        ...userWithoutPassword,
+        isImpersonating: !!(req.session as any)?.isImpersonating
+      };
+      res.json(userData);
     } else {
       res.status(401).json({ message: "Not authenticated" });
     }
