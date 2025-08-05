@@ -32,6 +32,12 @@ export default function AuthPage() {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     console.log('[Google OAuth] Credential response received:', !!credentialResponse.credential);
     
+    if (!credentialResponse?.credential) {
+      console.error('[Google OAuth] No credential received');
+      alert('Google authentication failed - no credential received');
+      return;
+    }
+    
     try {
       console.log('[Auth] Sending credential to backend...');
       const result = await loginMutation.mutateAsync({ 
@@ -40,13 +46,26 @@ export default function AuthPage() {
       console.log('[Auth] Login successful:', result);
     } catch (error) {
       console.error('[Auth] Login failed:', error);
-      alert('Login failed: ' + (error.message || 'Unknown error'));
+      alert('Login failed: ' + (error?.message || 'Unknown error'));
     }
   };
 
-  const handleGoogleError = () => {
-    console.error('[Google OAuth] Authentication failed');
-    alert('Google authentication failed. Please try again.');
+  const handleGoogleError = (error?: any) => {
+    console.error('[Google OAuth] Authentication failed:', error);
+    
+    // Handle specific error types
+    if (error?.error === 'popup_closed_by_user') {
+      console.log('[Google OAuth] User closed popup');
+      return; // Don't show error for user cancellation
+    }
+    
+    if (error?.error === 'access_denied') {
+      alert('Google sign-in was cancelled. Please try again.');
+      return;
+    }
+    
+    // Generic error handling
+    alert('Google authentication failed. Please try again or check your browser settings.');
   };
 
   return (
@@ -84,6 +103,8 @@ export default function AuthPage() {
                 width="100%"
                 text="signin_with"
                 shape="rectangular"
+                auto_select={false}
+                cancel_on_tap_outside={true}
                 data-testid="google-login-button"
               />
             </div>

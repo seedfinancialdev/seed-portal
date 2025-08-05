@@ -20,7 +20,7 @@ type AuthContextType = {
 type LoginData = {
   email?: string;
   password?: string;
-  googleAccessToken?: string;
+  googleCredential?: string;
 };
 
 type RegisterData = {
