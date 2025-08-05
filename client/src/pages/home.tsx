@@ -11,13 +11,7 @@ import { insertQuoteSchema, type Quote } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Import the error handling function
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    console.error('[ApiRequest] ❌ HTTP Error:', res.status, text);
-    throw new Error(`${res.status}: ${text}`);
-  }
-}
+
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1164,15 +1158,14 @@ export default function Home() {
         taasPriorYearsFee: feeCalculation.taas.setupFee.toString()
       };
       
-      const response = await apiRequest("/api/hubspot/update-quote", {
+      const result = await apiRequest("/api/hubspot/update-quote", {
         method: "POST",
         body: JSON.stringify({
           quoteId, 
           currentFormData: enhancedFormData 
         })
       });
-      await throwIfResNotOk(response);
-      return await response.json();
+      return result;
     },
     onSuccess: (data) => {
       if (data.success) {
