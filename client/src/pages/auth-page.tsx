@@ -52,8 +52,24 @@ export default function AuthPage() {
       alert('Google authentication failed: ' + JSON.stringify(error));
     },
     onNonOAuthError: (error) => {
-      console.error('[Google OAuth] Non-OAuth error:', error);
-      alert('Authentication error: ' + (error.message || JSON.stringify(error)));
+      console.error('[Google OAuth] Non-OAuth error details:', error);
+      console.error('[Google OAuth] Error type:', typeof error);
+      console.error('[Google OAuth] Error constructor:', error?.constructor?.name);
+      console.error('[Google OAuth] Error message:', error?.message);
+      console.error('[Google OAuth] Error stack:', error?.stack);
+      console.error('[Google OAuth] Full error object:', JSON.stringify(error, null, 2));
+      
+      // Try to extract meaningful error info
+      let errorMessage = 'Google authentication failed';
+      if (error?.message) {
+        errorMessage += ': ' + error.message;
+      } else if (typeof error === 'string') {
+        errorMessage += ': ' + error;
+      } else {
+        errorMessage += '. Check browser console for details.';
+      }
+      
+      alert(errorMessage);
     },
     flow: 'implicit',
     hosted_domain: 'seedfinancial.io',
@@ -92,10 +108,16 @@ export default function AuthPage() {
             <Button
               onClick={() => {
                 console.log('[AuthPage] Google login button clicked');
-                console.log('[AuthPage] Arc browser detected:', navigator.userAgent.includes('Arc'));
+                console.log('[AuthPage] Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+                console.log('[AuthPage] Current URL:', window.location.href);
+                console.log('[AuthPage] User agent:', navigator.userAgent);
                 
-                // Try popup first
-                googleLogin();
+                try {
+                  googleLogin();
+                } catch (error) {
+                  console.error('[AuthPage] Error calling googleLogin:', error);
+                  alert('Failed to initialize Google login: ' + error.message);
+                }
               }}
               className="w-full bg-[#e24c00] hover:bg-[#c23e00] text-white"
               disabled={loginMutation.isPending}
