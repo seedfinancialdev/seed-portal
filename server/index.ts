@@ -162,24 +162,13 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
   console.log('[Server] ===== SERVER STARTUP BEGIN =====');
   try {
     // Apply session middleware first (essential for authentication)
-    const session = await import('express-session');
-    const MemoryStore = session.default.MemoryStore;
-    
     console.log('[Server] Applying session middleware...');
-    app.use(session.default({
-      secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
-      resave: false,
-      saveUninitialized: false,
-      rolling: true,
-      store: new MemoryStore(),
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      }
-    }));
-    console.log('[Server] ✅ Session middleware applied with memory store');
+    const session = await import('express-session');
+    const { createSessionConfig } = await import('./session-config');
+    
+    const sessionConfig = await createSessionConfig();
+    app.use(session.default(sessionConfig));
+    console.log('[Server] ✅ Session middleware applied with proper production configuration');
 
     // Register routes after session middleware is ready
     const server = await registerRoutes(app, null);
