@@ -171,9 +171,10 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
   global.sessionStoreType = storeType;
   global.sessionStore = sessionStore;
   
-  // Simplified production detection (removing PORT check that was causing issues)
+  // Enhanced production detection for Replit deployments
   const isProduction = process.env.NODE_ENV === 'production' || 
-                      process.env.REPLIT_DEPLOYMENT === '1';
+                      process.env.REPLIT_DEPLOYMENT === '1' ||
+                      (process.env.REPL_ID && process.env.REPL_SLUG && !process.env.REPL_SLUG.includes('workspace'));
   
   console.log('[SessionConfig] Production detection:', {
     NODE_ENV: process.env.NODE_ENV || 'NOT SET',
@@ -186,21 +187,20 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
 
   // Enhanced cookie configuration for Replit deployments
   const cookieConfig = {
-    secure: isProduction, // Enable secure cookies in production
+    secure: false, // CRITICAL: Start with false for debugging
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     domain: undefined, // Let browser determine domain automatically
     path: '/', // Explicitly set path to root
+    sameSite: 'lax' as const, // Always use lax for cross-origin compatibility
   };
 
-  // Replit deployment-specific cookie settings
+  // TEMPORARILY DISABLE secure cookies even in production for debugging
   if (isProduction) {
-    // For Replit deployments, use 'lax' sameSite for better compatibility
-    // This allows cookies to be sent on cross-site top-level navigation
-    cookieConfig.sameSite = 'lax';
-    
-    // Enable secure flag for HTTPS deployments
-    cookieConfig.secure = true;
+    console.log('[SessionConfig] 🍪 PRODUCTION COOKIE DEBUG MODE - Using insecure cookies for troubleshooting');
+    // For Replit deployments, use 'none' sameSite with secure: false for maximum compatibility
+    cookieConfig.sameSite = 'none' as const;
+    cookieConfig.secure = false; // CRITICAL: Temporarily disable for debugging
     
     console.log('[SessionConfig] Production cookie settings applied for Replit deployment');
   } else {
