@@ -1,8 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleLogin } from "@react-oauth/google";
 import { Redirect } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import logoPath from "@assets/Seed Financial Logo (1)_1753043325029.png";
@@ -31,6 +29,7 @@ export default function AuthPage() {
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
     console.log('[Google OAuth] Credential response received:', !!credentialResponse.credential);
+    console.log('[Google OAuth] Full response:', credentialResponse);
     
     if (!credentialResponse?.credential) {
       console.error('[Google OAuth] No credential received');
@@ -54,18 +53,13 @@ export default function AuthPage() {
     console.error('[Google OAuth] Authentication failed:', error);
     
     // Handle specific error types
-    if (error?.error === 'popup_closed_by_user') {
-      console.log('[Google OAuth] User closed popup');
-      return; // Don't show error for user cancellation
-    }
-    
     if (error?.error === 'access_denied') {
       alert('Google sign-in was cancelled. Please try again.');
       return;
     }
     
     // Generic error handling
-    alert('Google authentication failed. Please try again or check your browser settings.');
+    alert('Google authentication failed. Please try again.');
   };
 
   return (
@@ -103,7 +97,8 @@ export default function AuthPage() {
                 text="signin_with"
                 shape="rectangular"
                 auto_select={false}
-                ux_mode="popup"
+                ux_mode="redirect"
+                hosted_domain="seedfinancial.io"
                 data-testid="google-login-button"
               />
             </div>
@@ -119,9 +114,16 @@ export default function AuthPage() {
               <p className="text-center">Requirements:</p>
               <ul className="text-left space-y-1 ml-4">
                 <li>• Use your @seedfinancial.io Google account</li>
-                <li>• Authentication uses secure popup flow</li>
-                <li>• Allow popups if your browser blocks them</li>
+                <li>• You'll be redirected to Google for authentication</li>
+                <li>• After signing in, you'll be brought back to the portal</li>
               </ul>
+            </div>
+
+            <div className="text-xs text-gray-500 mt-4 p-2 bg-gray-50 rounded">
+              <p><strong>Domain Configuration Required:</strong></p>
+              <p>Your deployed domain needs to be added to the Google OAuth console:</p>
+              <p>• Add: <code>{window.location.origin}</code></p>
+              <p>• To the "Authorized JavaScript origins" list</p>
             </div>
           </CardContent>
         </Card>
