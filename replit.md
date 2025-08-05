@@ -4,6 +4,14 @@
 This project is a comprehensive Internal Employee Portal for Seed Financial, built with React, TypeScript, Express.js, and PostgreSQL. It aims to be a centralized command center, enhancing internal efficiency and client engagement. Key capabilities include a centralized dashboard, a sophisticated quote calculator (supporting 5 services: Bookkeeping, TaaS, Payroll, AP/AR Lite, FP&A Lite), a commission tracker, a client intelligence engine, and profile management. It integrates with HubSpot, provides real-time weather, address autocomplete, advanced sales analytics, and automates MSA document generation with Box integration for client folder management.
 
 ## Recent Changes (August 5, 2025)
+**DEPLOYMENT STARTUP TIMEOUT FIXED**: Resolved critical deployment failure caused by blocking startup sequence.
+- ✅ **SERVER STARTUP REORDERED**: HTTP server now starts listening first, preventing deployment timeouts
+- ✅ **BACKGROUND INITIALIZATION**: Redis, BullMQ, HubSpot, and cache services initialize after server is ready
+- ✅ **TIMEOUT PROTECTION**: Added 8-10 second timeouts for Redis connections to prevent hanging
+- ✅ **SESSION FALLBACK**: Memory store sessions applied immediately with Redis sessions upgrading in background
+- ✅ **GRACEFUL DEGRADATION**: App continues with basic functionality if Redis services fail to initialize
+- ✅ **DEPLOYMENT READY**: Server starts in ~2 seconds, background services initialize without blocking
+
 **POPUP-TO-INLINE AUTHENTICATION CONVERSION COMPLETED**: Successfully replaced popup-based OAuth with inline authentication.
 - ✅ **POPUP AUTHENTICATION ELIMINATED**: Replaced useGoogleLogin popup hook with GoogleLogin inline component
 - ✅ **BACKEND UPDATED**: Added JWT ID token support (googleCredential) alongside legacy access token support

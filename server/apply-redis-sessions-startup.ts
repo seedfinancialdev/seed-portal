@@ -18,7 +18,7 @@ export async function applyRedisSessionsAtStartup(app: Express): Promise<void> {
       maxRetriesPerRequest: 2,
       lazyConnect: true,
       connectTimeout: 10000,
-      keepAlive: true,
+      keepAlive: 30000,
       family: 4,
     });
     await redisClient.ping();

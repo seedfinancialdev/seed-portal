@@ -23,8 +23,8 @@ const app = express();
 const sentryInitialized = initializeSentry(app);
 
 // The Sentry request handler must be the first middleware (only if initialized)
-if (sentryInitialized && Sentry.Handlers?.requestHandler) {
-  app.use(Sentry.Handlers.requestHandler());
+if (sentryInitialized && Sentry.requestHandler) {
+  app.use(Sentry.requestHandler());
 }
 
 // Security headers with helmet
@@ -79,129 +79,186 @@ app.use((req, res, next) => {
   next();
 });
 
+// Function to initialize services with timeout protection
+async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error(`Service initialization timeout after ${timeoutMs}ms`)), timeoutMs);
+  });
+
+  const initPromise = async () => {
+    try {
+      // Initialize Redis connections with timeout protection (for workers and cache)
+      console.log('[Server] Initializing Redis connections...');
+      try {
+        const { initRedis } = await import('./redis');
+        await Promise.race([
+          initRedis(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Redis connection timeout')), 8000))
+        ]);
+        console.log('[Server] Redis connections established');
+      } catch (redisError) {
+        console.warn('[Server] Redis connection failed, continuing without Redis features:', redisError);
+        return; // Skip other Redis-dependent services
+      }
+
+      // Initialize BullMQ queue and start workers
+      console.log('[Server] Initializing BullMQ queue system...');
+      const { initializeQueue } = await import('./queue');
+      await initializeQueue();
+      console.log('[Server] Queue initialized, starting workers...');
+
+      const { startAIInsightsWorker } = await import('./workers/ai-insights-worker');
+      const worker = await startAIInsightsWorker();
+
+      // Initialize HubSpot background jobs
+      console.log('[Server] Initializing HubSpot background jobs...');
+      const { initializeHubSpotQueue, scheduleRecurringSync } = await import('./hubspot-background-jobs.js');
+      const { startHubSpotSyncWorker } = await import('./workers/hubspot-sync-worker.js');
+      await initializeHubSpotQueue();
+      const hubspotWorker = await startHubSpotSyncWorker();
+      await scheduleRecurringSync();
+      console.log('[Server] HubSpot background jobs initialized successfully');
+
+      // Initialize cache pre-warming
+      console.log('[Server] Initializing cache pre-warming...');
+      const { initializePreWarmQueue, scheduleNightlyPreWarm } = await import('./cache-prewarming.js');
+      const { initializePreWarmWorker } = await import('./workers/cache-prewarming-worker.js');
+      await initializePreWarmQueue();
+      await initializePreWarmWorker();
+      await scheduleNightlyPreWarm();
+
+      // Initialize CDN and asset optimization
+      console.log('[Server] Initializing CDN and asset optimization...');
+      const { assetOptimization, setCacheHeaders, servePrecompressed } = await import('./middleware/asset-optimization.js');
+      const { cdnService } = await import('./cdn.js');
+
+      // Apply asset optimization middleware
+      app.use(assetOptimization.getCompressionMiddleware());
+      app.use(assetOptimization.trackCompressionStats());
+      app.use(setCacheHeaders);
+      app.use(servePrecompressed);
+
+      // Initialize CDN service
+      await cdnService.initialize();
+      cdnService.setupCDNMiddleware(app);
+
+      console.log('[Server] CDN and asset optimization initialized successfully');
+      console.log('[Server] BullMQ workers and cache pre-warming started successfully');
+    } catch (error) {
+      console.error('[Server] ❌ Service initialization error:', error);
+      // Don't crash - continue with basic functionality
+      console.log('[Server] Continuing with basic functionality - some features may be unavailable');
+    }
+  };
+
+  try {
+    await Promise.race([initPromise(), timeoutPromise]);
+  } catch (error) {
+    console.error('[Server] ❌ Service initialization failed or timed out:', error);
+    console.log('[Server] Continuing with basic functionality - some features may be unavailable');
+  }
+}
+
 (async () => {
   console.log('[Server] ===== SERVER STARTUP BEGIN =====');
   try {
-    // Apply Redis sessions before registering routes
-    redisDebug('Applying Redis sessions at startup...');
-    await applyRedisSessionsAtStartup(app);
-    redisDebug('Redis sessions startup configuration completed');
+    // Apply session middleware first (essential for authentication)
+    const session = await import('express-session');
+    const MemoryStore = session.default.MemoryStore;
     
-    // Initialize Redis connections first
-    console.log('[Server] Initializing Redis connections...');
-    const { initRedis } = await import('./redis');
-    await initRedis();
-    console.log('[Server] Redis connections established');
-    
-    // Initialize BullMQ queue and start workers
-    console.log('[Server] Initializing BullMQ queue system...');
-    const { initializeQueue } = await import('./queue');
-    await initializeQueue();
-    console.log('[Server] Queue initialized, starting workers...');
-    
-    const { startAIInsightsWorker } = await import('./workers/ai-insights-worker');
-    const worker = await startAIInsightsWorker();
-    
-    // Initialize HubSpot background jobs
-    console.log('[Server] Initializing HubSpot background jobs...');
-    const { initializeHubSpotQueue, scheduleRecurringSync } = await import('./hubspot-background-jobs.js');
-    const { startHubSpotSyncWorker } = await import('./workers/hubspot-sync-worker.js');
-    await initializeHubSpotQueue();
-    const hubspotWorker = await startHubSpotSyncWorker();
-    await scheduleRecurringSync();
-    console.log('[Server] HubSpot background jobs initialized successfully');
-    
-    // Initialize cache pre-warming
-    console.log('[Server] Initializing cache pre-warming...');
-    const { initializePreWarmQueue, scheduleNightlyPreWarm } = await import('./cache-prewarming.js');
-    const { initializePreWarmWorker } = await import('./workers/cache-prewarming-worker.js');
-    await initializePreWarmQueue();
-    await initializePreWarmWorker();
-    await scheduleNightlyPreWarm();
-    
-    // Initialize CDN and asset optimization
-    console.log('[Server] Initializing CDN and asset optimization...');
-    const { assetOptimization, setCacheHeaders, servePrecompressed } = await import('./middleware/asset-optimization.js');
-    const { cdnService } = await import('./cdn.js');
-    
-    // Apply asset optimization middleware
-    app.use(assetOptimization.getCompressionMiddleware());
-    app.use(assetOptimization.trackCompressionStats());
-    app.use(setCacheHeaders);
-    app.use(servePrecompressed);
-    
-    // Initialize CDN service
-    await cdnService.initialize();
-    cdnService.setupCDNMiddleware(app);
-    
-    console.log('[Server] CDN and asset optimization initialized successfully');
-    console.log('[Server] BullMQ workers and cache pre-warming started successfully');
-    
+    console.log('[Server] Applying session middleware...');
+    app.use(session.default({
+      secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      store: new MemoryStore(),
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      }
+    }));
+    console.log('[Server] ✅ Session middleware applied with memory store');
+
+    // Register routes after session middleware is ready
     const server = await registerRoutes(app, null);
     console.log('[Server] ✅ Routes registered successfully');
 
     // The Sentry error handler must be before any other error middleware (only if initialized)
-    if (sentryInitialized && Sentry.Handlers?.errorHandler) {
-      app.use(Sentry.Handlers.errorHandler());
+    if (sentryInitialized && Sentry.errorHandler) {
+      app.use(Sentry.errorHandler());
     }
 
-  // Enhanced error handler with database error handling
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    let message = err.message || "Internal Server Error";
+    // Enhanced error handler with database error handling
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      let message = err.message || "Internal Server Error";
 
-    // Handle database connection errors gracefully
-    if (err.code === 'ECONNRESET' || err.code === 'ENOTFOUND' || 
-        err.message?.includes('connection') || err.message?.includes('timeout')) {
-      console.error('Database connection error:', err);
-      message = "Database temporarily unavailable. Please try again.";
-      res.status(503).json({ message });
-      return; // Don't throw - just log and return error response
+      // Handle database connection errors gracefully
+      if (err.code === 'ECONNRESET' || err.code === 'ENOTFOUND' || 
+          err.message?.includes('connection') || err.message?.includes('timeout')) {
+        console.error('Database connection error:', err);
+        message = "Database temporarily unavailable. Please try again.";
+        res.status(503).json({ message });
+        return; // Don't throw - just log and return error response
+      }
+
+      console.error('Server error:', err);
+      res.status(status).json({ message });
+      
+      // Only throw for critical errors that should crash the app
+      if (status >= 500 && !err.message?.includes('connection')) {
+        throw err;
+      }
+    });
+
+    // Add API route protection middleware before Vite setup
+    app.use('/api/*', (req, res, next) => {
+      // Ensure API routes are always handled by Express, never by Vite
+      console.log('🛡️ API Route Protection - Ensuring Express handles:', req.originalUrl);
+      next();
+    });
+
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (app.get("env") === "development") {
+      await setupVite(app, server);
+    } else {
+      serveStatic(app);
     }
 
-    console.error('Server error:', err);
-    res.status(status).json({ message });
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || '5000', 10);
     
-    // Only throw for critical errors that should crash the app
-    if (status >= 500 && !err.message?.includes('connection')) {
-      throw err;
+    // Check database health on startup (lightweight check)
+    const isDbHealthy = await checkDatabaseHealth();
+    if (!isDbHealthy) {
+      console.warn('Database health check failed - continuing with degraded functionality');
     }
-  });
-
-  // Add API route protection middleware before Vite setup
-  app.use('/api/*', (req, res, next) => {
-    // Ensure API routes are always handled by Express, never by Vite
-    console.log('🛡️ API Route Protection - Ensuring Express handles:', req.originalUrl);
-    next();
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  
-  // Check database health on startup
-  const isDbHealthy = await checkDatabaseHealth();
-  if (!isDbHealthy) {
-    console.warn('Database health check failed - continuing with degraded functionality');
-  }
-  
+    
+    // START THE SERVER FIRST - this prevents deployment timeouts
     server.listen({
       port,
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
       log(`serving on port ${port}`);
+      console.log('[Server] 🚀 HTTP server started successfully');
+      
+      // Initialize heavy services AFTER server is listening
+      console.log('[Server] Starting background service initialization...');
+      initializeServicesWithTimeout(30000).then(() => {
+        console.log('[Server] ✅ All background services initialized successfully');
+      }).catch((error) => {
+        console.error('[Server] ❌ Background service initialization failed:', error);
+        console.log('[Server] Application will continue with basic functionality');
+      });
     });
 
   } catch (error) {
