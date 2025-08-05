@@ -29,12 +29,27 @@
           event.preventDefault();
           return false;
         }
+        
+        // Suppress Google Identity Services errors that are expected
+        if (event.message && (
+          event.message.includes('gsi') ||
+          event.message.includes('gapi') ||
+          event.message.includes('accounts.google.com')
+        )) {
+          console.log('[Google OAuth] Suppressed Google Identity Services error (expected)');
+          event.preventDefault();
+          return false;
+        }
       });
 
       // Handle Google OAuth specific errors
       window.addEventListener('unhandledrejection', function(event) {
-        if (event.reason && event.reason.message && event.reason.message.includes('gapi')) {
-          console.log('[Google OAuth] Suppressed GAPI promise rejection (expected)');
+        if (event.reason && event.reason.message && (
+          event.reason.message.includes('gapi') ||
+          event.reason.message.includes('gsi') ||
+          event.reason.message.includes('accounts.google.com')
+        )) {
+          console.log('[Google OAuth] Suppressed Google OAuth promise rejection (expected)');
           event.preventDefault();
         }
       });
