@@ -18,6 +18,8 @@ import AdminDashboard from "@/pages/admin-dashboard"; // Admin dashboard
 import SalesDashboard from "@/pages/sales-dashboard"; // Sales dashboard
 import ServiceDashboard from "@/pages/service-dashboard"; // Service dashboard
 import CommissionTracker from "@/pages/commission-tracker";
+import AdminCommissionTracker from "@/pages/admin-commission-tracker";
+import SalesCommissionTracker from "@/pages/sales-commission-tracker";
 import ClientIntel from "@/pages/client-intel";
 import Profile from "@/pages/profile";
 import KnowledgeBase from "@/pages/knowledge-base";
@@ -43,6 +45,8 @@ function Router() {
         <ProtectedRoute path="/service-dashboard" component={ServiceDashboard} />
         <ProtectedRoute path="/calculator" component={Calculator} />
         <ProtectedRoute path="/commission-tracker" component={CommissionTracker} />
+        <ProtectedRoute path="/admin-commission-tracker" component={AdminCommissionTracker} />
+        <ProtectedRoute path="/sales-commission-tracker" component={SalesCommissionTracker} />
         <ProtectedRoute path="/client-intel" component={ClientIntel} />
         <ProtectedRoute path="/knowledge-base" component={KnowledgeBase} />
         <ProtectedRoute path="/kb-admin" component={KbAdmin} />

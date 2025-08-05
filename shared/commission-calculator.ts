@@ -1,153 +1,111 @@
-// Commission calculation logic for Seed Financial
+// Commission calculation utilities and business logic
 
-export interface DealCommissionData {
-  setupFee: number;
-  monthlyFee: number;
-  serviceType: 'bookkeeping' | 'taas' | 'combined';
-  closedDate: Date;
-}
-
-export interface CommissionEntry {
-  type: 'month_1' | 'residual';
+export interface MonthlyBonusEligibility {
+  eligible: boolean;
   amount: number;
-  monthNumber: number;
-  dateEarned: Date;
-}
-
-/**
- * Calculate commission structure for a deal
- * - 40% of monthly deal value in Month 1
- * - 20% of initial setup fee in Month 1
- * - 10% residual commission for Months 2–12 for collected recurring revenue
- */
-export function calculateCommissions(deal: DealCommissionData): CommissionEntry[] {
-  const { setupFee, monthlyFee, closedDate } = deal;
-  const commissions: CommissionEntry[] = [];
-
-  // Month 1 Commission
-  const month1SetupCommission = setupFee * 0.20;
-  const month1MonthlyCommission = monthlyFee * 0.40;
-  const totalMonth1Commission = month1SetupCommission + month1MonthlyCommission;
-
-  commissions.push({
-    type: 'month_1',
-    amount: totalMonth1Commission,
-    monthNumber: 1,
-    dateEarned: new Date(closedDate)
-  });
-
-  // Residual Commissions (Months 2-12)
-  const residualCommissionAmount = monthlyFee * 0.10;
-  
-  for (let month = 2; month <= 12; month++) {
-    const commissionDate = new Date(closedDate);
-    commissionDate.setMonth(commissionDate.getMonth() + (month - 1));
-    
-    commissions.push({
-      type: 'residual',
-      amount: residualCommissionAmount,
-      monthNumber: month,
-      dateEarned: commissionDate
-    });
-  }
-
-  return commissions;
-}
-
-/**
- * Calculate monthly bonus based on clients closed
- */
-export function calculateMonthlyBonus(clientsClosedCount: number): {
-  amount: number;
-  type: 'cash' | 'airpods' | 'apple_watch' | 'macbook_air';
   description: string;
-} | null {
-  if (clientsClosedCount >= 15) {
-    return {
-      amount: 1500,
-      type: 'cash',
-      description: '15+ Clients: $1,500 cash or MacBook Air'
-    };
-  } else if (clientsClosedCount >= 10) {
-    return {
-      amount: 1000,
-      type: 'cash',
-      description: '10 Clients: $1,000 cash or Apple Watch'
-    };
-  } else if (clientsClosedCount >= 5) {
-    return {
-      amount: 500,
-      type: 'cash',
-      description: '5 Clients: $500 cash or AirPods'
-    };
-  }
-  
-  return null;
+  type: 'cash' | 'product';
 }
 
-/**
- * Calculate milestone bonus based on total clients closed
- */
-export function calculateMilestoneBonus(totalClientsClosedAllTime: number): {
+export interface MilestoneBonusEligibility {
+  eligible: boolean;
   amount: number;
-  milestone: number;
   includesEquity: boolean;
   description: string;
-} | null {
-  if (totalClientsClosedAllTime >= 100) {
-    return {
-      amount: 10000,
-      milestone: 100,
-      includesEquity: true,
-      description: '100 Clients: $10,000 + Equity Offer'
-    };
-  } else if (totalClientsClosedAllTime >= 60) {
-    return {
-      amount: 7500,
-      milestone: 60,
-      includesEquity: false,
-      description: '60 Clients: $7,500'
-    };
-  } else if (totalClientsClosedAllTime >= 40) {
-    return {
-      amount: 5000,
-      milestone: 40,
-      includesEquity: false,
-      description: '40 Clients: $5,000'
-    };
-  } else if (totalClientsClosedAllTime >= 25) {
-    return {
-      amount: 1000,
-      milestone: 25,
-      includesEquity: false,
-      description: '25 Clients: $1,000'
-    };
-  }
-  
-  return null;
 }
 
-/**
- * Get next milestone and progress
- */
-export function getNextMilestone(totalClientsClosedAllTime: number): {
+export interface NextMilestone {
   nextMilestone: number;
   progress: number;
   remaining: number;
-} {
-  const milestones = [25, 40, 60, 100];
+}
+
+export interface TotalEarnings {
+  totalEarnings: number;
+  commissionEarnings: number;
+  monthlyBonusEarnings: number;
+  milestoneBonusEarnings: number;
+}
+
+/**
+ * Calculate monthly bonus eligibility based on clients closed
+ */
+export function calculateMonthlyBonus(clientsClosedThisMonth: number): MonthlyBonusEligibility | null {
+  if (clientsClosedThisMonth >= 15) {
+    return {
+      eligible: true,
+      amount: 1500,
+      description: "15+ clients closed - $1,500 cash or MacBook Air",
+      type: 'cash'
+    };
+  }
+  
+  if (clientsClosedThisMonth >= 10) {
+    return {
+      eligible: true,
+      amount: 1000,
+      description: "10-14 clients closed - $1,000 cash or Apple Watch",
+      type: 'cash'
+    };
+  }
+  
+  if (clientsClosedThisMonth >= 5) {
+    return {
+      eligible: true,
+      amount: 500,
+      description: "5-9 clients closed - $500 cash or AirPods",
+      type: 'cash'
+    };
+  }
+  
+  return null;
+}
+
+/**
+ * Calculate milestone bonus eligibility based on total clients closed
+ */
+export function calculateMilestoneBonus(totalClientsAllTime: number): MilestoneBonusEligibility | null {
+  const milestones = [
+    { threshold: 100, amount: 10000, equity: true, description: "100 Client Milestone - $10,000 + Equity" },
+    { threshold: 60, amount: 7500, equity: false, description: "60 Client Milestone - $7,500" },
+    { threshold: 40, amount: 5000, equity: false, description: "40 Client Milestone - $5,000" },
+    { threshold: 25, amount: 1000, equity: false, description: "25 Client Milestone - $1,000" }
+  ];
   
   for (const milestone of milestones) {
-    if (totalClientsClosedAllTime < milestone) {
+    if (totalClientsAllTime >= milestone.threshold) {
       return {
-        nextMilestone: milestone,
-        progress: (totalClientsClosedAllTime / milestone) * 100,
-        remaining: milestone - totalClientsClosedAllTime
+        eligible: true,
+        amount: milestone.amount,
+        includesEquity: milestone.equity,
+        description: milestone.description
       };
     }
   }
   
-  // Already achieved all milestones
+  return null;
+}
+
+/**
+ * Get next milestone information and progress
+ */
+export function getNextMilestone(totalClientsAllTime: number): NextMilestone {
+  const milestones = [25, 40, 60, 100];
+  
+  for (const milestone of milestones) {
+    if (totalClientsAllTime < milestone) {
+      const progress = (totalClientsAllTime / milestone) * 100;
+      const remaining = milestone - totalClientsAllTime;
+      
+      return {
+        nextMilestone: milestone,
+        progress: Math.min(progress, 100),
+        remaining
+      };
+    }
+  }
+  
+  // If beyond all milestones
   return {
     nextMilestone: 100,
     progress: 100,
@@ -156,40 +114,65 @@ export function getNextMilestone(totalClientsClosedAllTime: number): {
 }
 
 /**
- * Calculate total earnings for a sales rep
+ * Calculate total earnings from all sources
  */
 export function calculateTotalEarnings(
-  commissions: { amount: number; status: string }[],
-  monthlyBonuses: { bonusAmount: number; status: string }[],
-  milestoneBonuses: { bonusAmount: number; status: string }[]
-): {
-  totalEarned: number;
-  totalPaid: number;
-  totalPending: number;
-  totalProcessing: number;
-} {
-  const allEarnings = [
-    ...commissions.map(c => ({ amount: Number(c.amount), status: c.status })),
-    ...monthlyBonuses.map(b => ({ amount: Number(b.bonusAmount), status: b.status })),
-    ...milestoneBonuses.map(b => ({ amount: Number(b.bonusAmount), status: b.status }))
-  ];
-
-  const totalPaid = allEarnings
-    .filter(e => e.status === 'paid')
-    .reduce((sum, e) => sum + e.amount, 0);
-    
-  const totalPending = allEarnings
-    .filter(e => e.status === 'pending')
-    .reduce((sum, e) => sum + e.amount, 0);
-    
-  const totalProcessing = allEarnings
-    .filter(e => e.status === 'processing')
-    .reduce((sum, e) => sum + e.amount, 0);
-
+  commissionEarnings: number,
+  monthlyBonuses: Array<{ bonusAmount: number; status: string }>,
+  milestoneBonuses: Array<{ bonusAmount: number; status: string }>
+): TotalEarnings {
+  const monthlyBonusEarnings = monthlyBonuses
+    .filter(bonus => bonus.status === 'paid' || bonus.status === 'approved')
+    .reduce((sum, bonus) => sum + bonus.bonusAmount, 0);
+  
+  const milestoneBonusEarnings = milestoneBonuses
+    .filter(bonus => bonus.status === 'paid' || bonus.status === 'approved')
+    .reduce((sum, bonus) => sum + bonus.bonusAmount, 0);
+  
+  const totalEarnings = commissionEarnings + monthlyBonusEarnings + milestoneBonusEarnings;
+  
   return {
-    totalEarned: totalPaid + totalPending + totalProcessing,
-    totalPaid,
-    totalPending,
-    totalProcessing
+    totalEarnings,
+    commissionEarnings,
+    monthlyBonusEarnings,
+    milestoneBonusEarnings
+  };
+}
+
+/**
+ * Calculate commission rates based on service type and month
+ */
+export function calculateCommissionRate(serviceType: string, isFirstMonth: boolean): number {
+  const baseRates = {
+    bookkeeping: { first: 0.2, residual: 0.1 },
+    taas: { first: 0.25, residual: 0.15 },
+    payroll: { first: 0.2, residual: 0.1 },
+    ap_ar_lite: { first: 0.15, residual: 0.08 },
+    fpa_lite: { first: 0.18, residual: 0.09 }
+  };
+  
+  const rates = baseRates[serviceType as keyof typeof baseRates] || baseRates.bookkeeping;
+  return isFirstMonth ? rates.first : rates.residual;
+}
+
+/**
+ * Calculate projected commission based on deal value and service type
+ */
+export function calculateProjectedCommission(
+  setupFee: number,
+  monthlyFee: number,
+  serviceType: string
+): { firstMonth: number; monthly: number; total: number } {
+  const setupCommission = setupFee * calculateCommissionRate(serviceType, true);
+  const firstMonthCommission = monthlyFee * 0.4; // First month gets 40% of monthly fee
+  const monthlyCommission = monthlyFee * calculateCommissionRate(serviceType, false);
+  
+  const firstMonth = setupCommission + firstMonthCommission;
+  const total = firstMonth + (monthlyCommission * 11); // Assuming 12 month projection
+  
+  return {
+    firstMonth,
+    monthly: monthlyCommission,
+    total
   };
 }

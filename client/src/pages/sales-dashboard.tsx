@@ -253,7 +253,7 @@ export default function Dashboard() {
               </div>
             </Link>
 
-            <Link href="/commission-tracker">
+            <Link href="/sales-commission-tracker">
               <div className="group w-32 h-32 rounded-full hover:scale-110 transition-all duration-300 cursor-pointer action-card-bounce action-card" style={{"--delay": 2} as React.CSSProperties}>
                 <div className="action-card-content">
                   <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-full mb-3 group-hover:from-green-400 group-hover:to-green-500 transition-all duration-300">

@@ -1338,3 +1338,5 @@ export function AdminCommissionTracker() {
     </div>
   );
 }
+
+export default AdminCommissionTracker;
