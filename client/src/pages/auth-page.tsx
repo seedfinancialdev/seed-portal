@@ -71,7 +71,9 @@ export default function AuthPage() {
       
       alert(errorMessage);
     },
-    flow: 'implicit',
+    flow: 'auth-code',
+    ux_mode: 'redirect',
+    redirect_uri: window.location.origin + '/auth',
     hosted_domain: 'seedfinancial.io',
   });
 
