@@ -1,3 +1,4 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -24,6 +25,10 @@ export function UniversalNavbar({
   const { canGoBack } = useBackNavigation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  // Debug logging for impersonation - Remove in production
+  console.log('🎭 UniversalNavbar - Current user:', dbUser);
+  console.log('🎭 UniversalNavbar - isImpersonating:', dbUser?.isImpersonating);
 
   const handleLogout = () => {
     logoutMutation.mutate();

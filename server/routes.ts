@@ -217,9 +217,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     console.log('🔐 /api/user endpoint called');
     console.log('🔐 Session ID:', req.sessionID);
     console.log('🔐 Session exists:', !!req.session);
+    console.log('🔐 Session store type:', req.session.constructor.name);
+    console.log('🔐 Session data keys:', Object.keys(req.session));
+    console.log('🔐 Authenticated:', req.isAuthenticated());
+    console.log('🔐 User:', req.user ? `${req.user.email} (${req.user.id})` : 'None');
+    console.log('🔐 Session passport:', (req.session as any)?.passport);
     console.log('🔐 Session isImpersonating:', (req.session as any)?.isImpersonating);
     console.log('🔐 Session originalUser:', (req.session as any)?.originalUser);
-    console.log('🔐 User from req.user:', req.user ? `${req.user.email} (${req.user.id})` : 'None');
     
     // Check both passport and manual session
     const user = req.user || (req.session as any)?.user;
@@ -227,15 +231,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const { password: _, ...userWithoutPassword } = user;
       // Add impersonation status from session
       const isImpersonating = !!(req.session as any)?.isImpersonating;
+      const originalUser = (req.session as any)?.originalUser;
       const userData = {
         ...userWithoutPassword,
-        isImpersonating
+        isImpersonating,
+        originalUser
       };
       
       console.log('🔐 Final user data:', {
         id: userData.id,
         email: userData.email,
-        isImpersonating: userData.isImpersonating
+        isImpersonating: userData.isImpersonating,
+        originalUser: userData.originalUser ? userData.originalUser.email : null
       });
       
       res.json(userData);
