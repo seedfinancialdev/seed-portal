@@ -23,7 +23,8 @@ import {
   CheckCircle, 
   AlertTriangle,
   Eye,
-  EyeOff
+  EyeOff,
+  UserCheck
 } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
 
@@ -57,7 +58,9 @@ export default function UserManagement() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserForReset, setSelectedUserForReset] = useState<User | null>(null);
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -239,8 +242,21 @@ export default function UserManagement() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleResetPassword = (userId: number) => {
-    resetPasswordMutation.mutate(userId);
+  const handleImpersonate = (user: User) => {
+    // Implement impersonation logic - this would need backend support
+    toast({
+      title: "Impersonation Feature",
+      description: `Impersonation for ${user.firstName} ${user.lastName} - Feature coming soon`,
+      variant: "default"
+    });
+  };
+
+  const handleConfirmResetPassword = () => {
+    if (selectedUserForReset) {
+      resetPasswordMutation.mutate(selectedUserForReset.id);
+      setIsResetPasswordDialogOpen(false);
+      setSelectedUserForReset(null);
+    }
   };
 
   const copyPasswordToClipboard = () => {
@@ -280,7 +296,7 @@ export default function UserManagement() {
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <BackButton className="text-white hover:text-white/80" />
+          <BackButton className="text-white hover:border-[#e24c00] hover:text-white border border-transparent" />
         </div>
 
         <div className="text-center mb-8">
@@ -483,18 +499,6 @@ export default function UserManagement() {
                     </div>
                     
                     <div className="flex items-center space-x-3">
-                      {/* Role Badge */}
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Role:</div>
-                      <Badge className={`${getRoleBadgeColor(user.role)} border text-xs`}>
-                        {user.role}
-                      </Badge>
-                      
-                      {/* Dashboard Badge */}
-                      <div className="text-xs text-gray-500 dark:text-gray-400">Dashboard:</div>
-                      <Badge className={`${getDashboardBadgeColor(user.defaultDashboard || 'sales')} border text-xs`}>
-                        {getDashboardDisplayName(user.defaultDashboard || 'sales')}
-                      </Badge>
-                      
                       {/* Role Selector */}
                       <div className="flex flex-col">
                         <label className="text-xs text-gray-500 dark:text-gray-400 mb-1">Permission Level</label>
@@ -532,14 +536,31 @@ export default function UserManagement() {
                         </Select>
                       </div>
                       
+                      {/* Impersonate Button */}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleResetPassword(user.id)}
+                        onClick={() => handleImpersonate(user)}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        data-testid={`button-impersonate-${user.id}`}
+                      >
+                        <UserCheck className="h-4 w-4 mr-1" />
+                        Sign In As
+                      </Button>
+                      
+                      {/* Reset Password Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUserForReset(user);
+                          setIsResetPasswordDialogOpen(true);
+                        }}
                         disabled={resetPasswordMutation.isPending}
                         data-testid={`button-reset-password-${user.id}`}
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <RotateCcw className="h-4 w-4 mr-1" />
+                        Reset Password
                       </Button>
                       
                       <Button
@@ -589,6 +610,44 @@ export default function UserManagement() {
                 data-testid="button-confirm-delete"
               >
                 {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Reset Password Confirmation Dialog */}
+        <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center text-orange-600">
+                <RotateCcw className="h-5 w-5 mr-2" />
+                Reset Password
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to reset the password for{" "}
+                <span className="font-medium">
+                  {selectedUserForReset?.firstName && selectedUserForReset?.lastName 
+                    ? `${selectedUserForReset.firstName} ${selectedUserForReset.lastName}` 
+                    : selectedUserForReset?.email
+                  }
+                </span>
+                ? A new password will be generated and you'll need to share it with the user.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsResetPasswordDialogOpen(false);
+                setSelectedUserForReset(null);
+              }}>
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#e24c00] hover:bg-[#c13e00] text-white"
+                onClick={handleConfirmResetPassword}
+                disabled={resetPasswordMutation.isPending}
+                data-testid="button-confirm-reset-password"
+              >
+                {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
               </Button>
             </DialogFooter>
           </DialogContent>
