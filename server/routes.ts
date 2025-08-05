@@ -214,17 +214,33 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Get user endpoint for frontend
   app.get("/api/user", (req, res) => {
+    console.log('🔐 /api/user endpoint called');
+    console.log('🔐 Session ID:', req.sessionID);
+    console.log('🔐 Session exists:', !!req.session);
+    console.log('🔐 Session isImpersonating:', (req.session as any)?.isImpersonating);
+    console.log('🔐 Session originalUser:', (req.session as any)?.originalUser);
+    console.log('🔐 User from req.user:', req.user ? `${req.user.email} (${req.user.id})` : 'None');
+    
     // Check both passport and manual session
     const user = req.user || (req.session as any)?.user;
     if (user) {
       const { password: _, ...userWithoutPassword } = user;
       // Add impersonation status from session
+      const isImpersonating = !!(req.session as any)?.isImpersonating;
       const userData = {
         ...userWithoutPassword,
-        isImpersonating: !!(req.session as any)?.isImpersonating
+        isImpersonating
       };
+      
+      console.log('🔐 Final user data:', {
+        id: userData.id,
+        email: userData.email,
+        isImpersonating: userData.isImpersonating
+      });
+      
       res.json(userData);
     } else {
+      console.log('❌ User not authenticated, returning 401');
       res.status(401).json({ message: "Not authenticated" });
     }
   });

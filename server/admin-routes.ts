@@ -438,6 +438,12 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
         defaultDashboard: req.user.defaultDashboard
       };
       req.session.isImpersonating = true;
+      
+      console.log('🎭 IMPERSONATION STARTED:');
+      console.log('🎭 Original admin:', req.user.email, `(${req.user.id})`);
+      console.log('🎭 Impersonating:', userToImpersonate.email, `(${userToImpersonate.id})`);
+      console.log('🎭 Session ID:', req.sessionID);
+      console.log('🎭 Session isImpersonating:', req.session.isImpersonating);
 
       // Update session with impersonated user - use passport's login method
       req.login(userToImpersonate, (err) => {
@@ -465,7 +471,14 @@ export async function registerAdminRoutes(app: Express): Promise<void> {
   // Stop impersonation and return to original admin user
   app.post('/api/admin/stop-impersonation', requireAuth, async (req, res) => {
     try {
+      console.log('🛑 STOP IMPERSONATION CALLED:');
+      console.log('🛑 Session ID:', req.sessionID);
+      console.log('🛑 Session isImpersonating:', req.session.isImpersonating);
+      console.log('🛑 Session originalUser:', req.session.originalUser);
+      console.log('🛑 Current user:', req.user ? `${req.user.email} (${req.user.id})` : 'None');
+      
       if (!req.session.isImpersonating || !req.session.originalUser) {
+        console.log('🛑 ERROR: Not currently impersonating');
         return res.status(400).json({ 
           message: 'Not currently impersonating a user' 
         });
