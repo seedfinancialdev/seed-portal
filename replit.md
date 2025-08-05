@@ -3,16 +3,15 @@
 ## Overview
 This project is a comprehensive Internal Employee Portal for Seed Financial, built with React, TypeScript, Express.js, and PostgreSQL. It aims to be a centralized command center, enhancing internal efficiency and client engagement. Key capabilities include a centralized dashboard, a sophisticated quote calculator (supporting 5 services: Bookkeeping, TaaS, Payroll, AP/AR Lite, FP&A Lite), a commission tracker, a client intelligence engine, and profile management. It integrates with HubSpot, provides real-time weather, address autocomplete, advanced sales analytics, and automates MSA document generation with Box integration for client folder management.
 
-## Recent Changes (August 4, 2025)
-**AUTHENTICATION SYSTEM FULLY RESOLVED**: Google OAuth redirect loop issue completely fixed.
-- ✅ **AUTHENTICATION WORKING**: Users can successfully log in with Google OAuth
-- ✅ **ROOT CAUSE RESOLVED**: Popup blocker detection and enhanced error handling implemented
-- ✅ **SUCCESSFUL LOGIN CONFIRMED**: User jon@seedfinancial.io (ID: 3, Role: admin) authenticated successfully
-- ✅ **SESSION MANAGEMENT**: Redis sessions working, authentication persists across requests
-- ✅ **PROTECTED ROUTES**: All 79 protected endpoints accessible with proper authentication
-- ✅ **DASHBOARD ACCESS**: Admin dashboard fully functional and accessible
-- ✅ **PRODUCTION READY**: Authentication system ready for deployment and production use
-- 📋 **COMPREHENSIVE LOGGING**: Enhanced debugging and error tracking for future maintenance
+## Recent Changes (August 5, 2025)
+**AUTHENTICATION DOMAIN ISSUE IDENTIFIED**: Root cause of Google OAuth failures discovered and solution provided.
+- 🔍 **ROOT CAUSE FOUND**: Google OAuth failing due to dynamic Replit domain mismatch in Google Cloud Console
+- 📋 **CURRENT DYNAMIC DOMAIN**: `https://0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev` (changes each session)
+- ✅ **PERMANENT DOMAIN IDENTIFIED**: `https://workspace.JonBBF.repl.co` (stable, should be used in Google Cloud Console)
+- 🔧 **SOLUTION**: Add permanent domain to Google Cloud Console OAuth 2.0 Client ID authorized JavaScript origins
+- 📝 **AUTHENTICATION LOGIC CONFIRMED**: Backend `/api/login` endpoint working correctly, no code changes needed
+- 🚨 **LEGACY ENDPOINT IDENTIFIED**: `/api/auth/google/sync` causing 401 errors but not used in current flow
+- 💡 **TEAM LEARNING**: Dynamic domains are common OAuth gotcha - always use permanent domains for OAuth configuration
 
 **QUOTE UPDATE FUNCTIONALITY FIXED**:
 - ✅ **ROOT CAUSE IDENTIFIED**: Same service field mapping issue affected quote updates - database fields (service_bookkeeping=true) vs HubSpot parameters (includesBookkeeping=false)
