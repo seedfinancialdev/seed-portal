@@ -139,7 +139,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         },
         body: new URLSearchParams({
           client_id: process.env.VITE_GOOGLE_CLIENT_ID!,
-          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET_OS!,
           code: authorizationCode,
           grant_type: 'authorization_code',
           redirect_uri: `${req.protocol}://${req.get('host')}/auth`,

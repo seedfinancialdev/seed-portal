@@ -25,7 +25,30 @@ export default function AuthPage() {
     
     if (code && !loginMutation.isPending) {
       console.log('[OAuth] Authorization code received, exchanging for token...');
-      loginMutation.mutate({ authorizationCode: code });
+      
+      // Call the OAuth endpoint directly instead of the login mutation
+      fetch('/api/oauth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ authorizationCode: code }),
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.email) {
+          console.log('[OAuth] Authentication successful, reloading page...');
+          window.location.href = '/';
+        } else {
+          console.error('[OAuth] Authentication failed:', data);
+          alert('Authentication failed: ' + (data.message || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        console.error('[OAuth] Error:', error);
+        alert('Authentication failed: ' + error.message);
+      });
+      
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [loginMutation, loginMutation.isPending]);
