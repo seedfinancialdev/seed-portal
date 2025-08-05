@@ -446,7 +446,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     res.json(result);
   });
 
-  // Redis session status endpoint (removed duplicate session middleware application)
+  // Redis session status endpoint (using shared Redis connections)
   app.get("/api/admin/redis-session-status", async (req, res) => {
     console.log('[RedisStatus] Checking Redis session status...');
     
@@ -458,10 +458,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
     
     try {
-      const Redis = (await import('ioredis')).default;
-      const redisClient = new Redis(process.env.REDIS_URL);
-      await redisClient.ping();
-      await redisClient.quit();
+      // Use shared Redis connection with async initialization
+      const { getRedisAsync } = await import('./redis');
+      const connections = await getRedisAsync();
+      
+      if (!connections?.sessionRedis) {
+        return res.json({ 
+          status: 'redis-not-initialized',
+          message: 'Redis connections failed to initialize'
+        });
+      }
+      
+      await connections.sessionRedis.ping();
       
       res.json({
         status: 'redis-available',
@@ -479,7 +487,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // Test Redis sessions directly
+  // Test Redis sessions directly (using shared connections)
   app.get("/api/test/redis-session", async (req, res) => {
     try {
       console.log('[TestRedis] Testing direct Redis session...');
@@ -488,24 +496,29 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.json({ error: 'REDIS_URL not set' });
       }
       
-      const Redis = (await import('ioredis')).default;
+      // Use shared Redis connection with async initialization
+      const { getRedisAsync } = await import('./redis');
+      const connections = await getRedisAsync();
+      
+      if (!connections?.sessionRedis) {
+        return res.json({ error: 'Redis connections failed to initialize' });
+      }
+      
+      await connections.sessionRedis.ping();
+      console.log('[TestRedis] Redis ping successful using shared connection');
+      
       const RedisStore = (await import('connect-redis')).default;
       
-      // Create a Redis connection
-      const redisClient = new Redis(process.env.REDIS_URL);
-      await redisClient.ping();
-      console.log('[TestRedis] Redis ping successful');
-      
-      // Create a Redis session store
+      // Create a Redis session store using existing connection
       const store = new RedisStore({
-        client: redisClient,
+        client: connections.sessionRedis,
         prefix: 'sess:',  // Use production prefix
         ttl: 24 * 60 * 60, // 24 hours like production
       });
       
       console.log('[TestRedis] RedisStore created:', store.constructor.name);
       
-      // Test session store functionality without applying duplicate middleware
+      // Test session store functionality
       console.log('[TestRedis] Testing Redis session store functionality...');
       
       // Test storing a session
@@ -531,7 +544,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       console.log('[TestRedis] Session retrieved:', retrievedData);
       
-      await redisClient.quit();
+      // No need to quit() - using shared connection
       
       res.json({ 
         success: true, 
@@ -549,30 +562,33 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.get("/api/debug/session-comprehensive", async (req, res) => {
     console.log('[SessionDiag] Comprehensive session diagnostic running...');
     
-    // Check if we can create Redis sessions manually
+    // Check if we can use shared Redis connections
     let manualRedisTest = 'Not tested';
     if (process.env.REDIS_URL) {
       try {
-        console.log('[SessionDiag] Testing manual Redis session creation...');
-        const Redis = (await import('ioredis')).default;
-        const RedisStore = (await import('connect-redis')).default;
+        console.log('[SessionDiag] Testing shared Redis connection...');
+        const { getRedisAsync } = await import('./redis');
+        const connections = await getRedisAsync();
         
-        const testRedis = new Redis(process.env.REDIS_URL);
-        await testRedis.ping();
-        
-        const testStore = new RedisStore({
-          client: testRedis,
-          prefix: 'test:diagnostic:',
-          ttl: 300, // 5 minutes
-        });
-        
-        manualRedisTest = `SUCCESS: ${testStore.constructor.name}`;
-        console.log('[SessionDiag] Manual Redis store creation successful:', testStore.constructor.name);
-        
-        await testRedis.quit();
+        if (!connections?.sessionRedis) {
+          manualRedisTest = 'FAILED: Redis connections failed to initialize';
+        } else {
+          const RedisStore = (await import('connect-redis')).default;
+          
+          await connections.sessionRedis.ping();
+          
+          const testStore = new RedisStore({
+            client: connections.sessionRedis,
+            prefix: 'test:diagnostic:',
+            ttl: 300, // 5 minutes
+          });
+          
+          manualRedisTest = `SUCCESS: ${testStore.constructor.name}`;
+          console.log('[SessionDiag] Shared Redis connection test successful:', testStore.constructor.name);
+        }
       } catch (error) {
         manualRedisTest = `FAILED: ${error.message}`;
-        console.log('[SessionDiag] Manual Redis store creation failed:', error.message);
+        console.log('[SessionDiag] Shared Redis connection test failed:', error.message);
       }
     }
     

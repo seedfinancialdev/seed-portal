@@ -212,6 +212,11 @@ export function getRedis(): RedisConfig | null {
   return redisConnections;
 }
 
+// Export getter for Redis connections (alias)
+export function getRedisConnections(): RedisConfig | null {
+  return redisConnections;
+}
+
 // Export async getter that waits for initialization
 export async function getRedisAsync(): Promise<RedisConfig | null> {
   await initializeRedis();

@@ -27,68 +27,68 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
         enableReadyCheck: true,
         maxRetriesPerRequest: 3,
       });
-      
-      // Wait for Redis to be fully ready
-      console.log('[SessionConfig] Waiting for Redis to be ready...');
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Redis connection timeout after 15 seconds'));
-        }, 15000);
         
-        redisClient.on('ready', () => {
-          clearTimeout(timeout);
-          console.log('[SessionConfig] ✅ Redis ready event received');
-          resolve(true);
-        });
-        
-        redisClient.on('error', (err) => {
-          clearTimeout(timeout);
-          console.error('[SessionConfig] ❌ Redis error during connection:', err);
-          reject(err);
-        });
-      });
-      
-      // Double-check with ping
-      const pingResult = await redisClient.ping();
-      console.log('[SessionConfig] ✅ Redis ping result:', pingResult);
-      
-      // Create Redis store with explicit error handling
-      sessionStore = new RedisStore({
-        client: redisClient,
-        prefix: 'sess:',
-        ttl: 24 * 60 * 60, // 24 hours
-        disableTouch: false,
-        disableTTL: false,
-      });
-      
-      // Verify the store was created correctly
-      const storeName = sessionStore.constructor.name;
-      console.log('[SessionConfig] ✅ Redis session store created successfully');
-      console.log('[SessionConfig] Store constructor name:', storeName);
-      console.log('[SessionConfig] Store type check:', sessionStore instanceof RedisStore);
-      
-      storeType = 'RedisStore';
-      
-      // Test store functionality
-      try {
-        await new Promise((resolve, reject) => {
-          sessionStore.set('test-session-key', { test: true }, (err: any) => {
-            if (err) {
-              console.warn('[SessionConfig] ⚠️ Redis store test failed:', err);
-              reject(err);
-            } else {
-              console.log('[SessionConfig] ✅ Redis store test successful');
-              // Clean up test data
-              sessionStore.destroy('test-session-key', () => {});
+          // Wait for Redis to be fully ready
+          console.log('[SessionConfig] Waiting for Redis to be ready...');
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Redis connection timeout after 15 seconds'));
+            }, 15000);
+            
+            redisClient.on('ready', () => {
+              clearTimeout(timeout);
+              console.log('[SessionConfig] ✅ Redis ready event received');
               resolve(true);
-            }
+            });
+            
+            redisClient.on('error', (err) => {
+              clearTimeout(timeout);
+              console.error('[SessionConfig] ❌ Redis error during connection:', err);
+              reject(err);
+            });
           });
-        });
-      } catch (storeTestError) {
-        console.warn('[SessionConfig] ⚠️ Redis store test failed, but continuing:', storeTestError);
-        // Continue with Redis store even if test fails
-      }
-      
+          
+          // Double-check with ping
+          const pingResult = await redisClient.ping();
+          console.log('[SessionConfig] ✅ Redis ping result:', pingResult);
+          
+          // Create Redis store with explicit error handling
+          sessionStore = new RedisStore({
+            client: redisClient,
+            prefix: 'sess:',
+            ttl: 24 * 60 * 60, // 24 hours
+            disableTouch: false,
+            disableTTL: false,
+          });
+          
+          // Verify the store was created correctly
+          const storeName = sessionStore.constructor.name;
+          console.log('[SessionConfig] ✅ Redis session store created successfully');
+          console.log('[SessionConfig] Store constructor name:', storeName);
+          console.log('[SessionConfig] Store type check:', sessionStore instanceof RedisStore);
+          
+          storeType = 'RedisStore';
+          
+          // Test store functionality
+          try {
+            await new Promise((resolve, reject) => {
+              sessionStore.set('test-session-key', { test: true }, (err: any) => {
+                if (err) {
+                  console.warn('[SessionConfig] ⚠️ Redis store test failed:', err);
+                  reject(err);
+                } else {
+                  console.log('[SessionConfig] ✅ Redis store test successful');
+                  // Clean up test data
+                  sessionStore.destroy('test-session-key', () => {});
+                  resolve(true);
+                }
+              });
+            });
+          } catch (storeTestError) {
+            console.warn('[SessionConfig] ⚠️ Redis store test failed, but continuing:', storeTestError);
+            // Continue with Redis store even if test fails
+          }
+          
     } catch (error) {
       console.error('[SessionConfig] ❌ Redis connection/setup failed:', {
         message: error.message,
@@ -137,19 +137,37 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
     isProduction
   });
 
+  // Enhanced cookie configuration for Replit deployments
+  const cookieConfig = {
+    secure: isProduction, // Enable secure cookies in production
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    domain: undefined // Let browser determine domain automatically
+  };
+
+  // Replit deployment-specific cookie settings
+  if (isProduction) {
+    // For Replit deployments, use 'lax' sameSite for better compatibility
+    // This allows cookies to be sent on cross-site top-level navigation
+    cookieConfig.sameSite = 'lax';
+    
+    // Enable secure flag for HTTPS deployments
+    cookieConfig.secure = true;
+    
+    console.log('[SessionConfig] Production cookie settings applied for Replit deployment');
+  } else {
+    // Development settings
+    cookieConfig.sameSite = 'lax';
+    cookieConfig.secure = false;
+  }
+
   const sessionConfig = {
     secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
     name: 'oseed.sid', // Custom session name to avoid conflicts
-    cookie: {
-      secure: isProduction, // Enable secure cookies in production
-      httpOnly: true,
-      sameSite: isProduction ? 'lax' : 'lax', // Use 'lax' for better compatibility
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      domain: undefined // Let browser determine domain automatically
-    },
+    cookie: cookieConfig,
     storeType // Include storeType in return value
   };
 

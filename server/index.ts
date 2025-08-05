@@ -51,20 +51,28 @@ app.use((req, res, next) => {
                       process.env.REPLIT_DEPLOYMENT === '1' ||
                       (process.env.REPL_ID && !process.env.REPL_SLUG?.includes('workspace'));
   
-  // Allow requests from the same domain in production
+  // Enhanced production CORS for Replit deployments
   if (isProduction) {
-    // For Replit deployments, allow the production domain
+    // Comprehensive allowed origins for Replit deployments
     const allowedOrigins = [
       'https://os.seedfinancial.io',
       'https://osseedfinancial.io',
-      req.headers.host ? `https://${req.headers.host}` : undefined
-    ].filter(Boolean);
+      req.headers.host ? `https://${req.headers.host}` : undefined,
+      // Add potential Replit deployment domains
+      process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',') : []
+    ].flat().filter(Boolean);
     
     if (origin && allowedOrigins.includes(origin)) {
       res.header('Access-Control-Allow-Origin', origin);
+      console.log(`[CORS] Allowed origin: ${origin}`);
     } else if (!origin) {
-      // Same-origin requests (no origin header)
-      res.header('Access-Control-Allow-Origin', `https://${req.headers.host}`);
+      // Same-origin requests (no origin header) - common for Replit deployments
+      const allowedDomain = `https://${req.headers.host}`;
+      res.header('Access-Control-Allow-Origin', allowedDomain);
+      console.log(`[CORS] Same-origin allowed: ${allowedDomain}`);
+    } else {
+      // Log rejected origins for debugging
+      console.warn(`[CORS] Rejected origin: ${origin}, allowed: ${allowedOrigins.join(', ')}`);
     }
   } else {
     // Development: allow all origins
