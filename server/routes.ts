@@ -121,6 +121,87 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   
 
   
+  // OAuth token exchange endpoint
+  app.post("/api/oauth/google", async (req, res) => {
+    console.log('[OAuth] Google OAuth token exchange started');
+    try {
+      const { authorizationCode } = req.body;
+      
+      if (!authorizationCode) {
+        return res.status(400).json({ message: "Authorization code required" });
+      }
+
+      // Exchange authorization code for access token
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          client_id: process.env.VITE_GOOGLE_CLIENT_ID!,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+          code: authorizationCode,
+          grant_type: 'authorization_code',
+          redirect_uri: `${req.protocol}://${req.get('host')}/auth`,
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.text();
+        console.error('[OAuth] Token exchange failed:', errorData);
+        return res.status(400).json({ message: "Failed to exchange authorization code" });
+      }
+
+      const tokens = await tokenResponse.json();
+      
+      // Get user info from Google
+      const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+      });
+
+      if (!userResponse.ok) {
+        console.error('[OAuth] Failed to fetch user info');
+        return res.status(400).json({ message: "Failed to fetch user information" });
+      }
+
+      const googleUser = await userResponse.json();
+      console.log('[OAuth] Google user info:', { email: googleUser.email, verified: googleUser.verified_email });
+
+      // Verify domain restriction
+      if (!googleUser.email?.endsWith('@seedfinancial.io')) {
+        return res.status(403).json({ message: "Access restricted to @seedfinancial.io domain" });
+      }
+
+      // Find or create user
+      let user = await storage.getUserByEmail(googleUser.email);
+      if (!user) {
+        user = await storage.createUser({
+          email: googleUser.email,
+          firstName: googleUser.given_name || '',
+          lastName: googleUser.family_name || '',
+          role: 'service' as const,
+        });
+      }
+
+      // Create session
+      req.login(user, (err) => {
+        if (err) {
+          console.error('[OAuth] Session creation failed:', err);
+          return res.status(500).json({ message: "Session creation failed" });
+        }
+        
+        console.log('[OAuth] Authentication successful for:', user.email);
+        res.json(user);
+      });
+
+    } catch (error) {
+      console.error('[OAuth] Error:', error);
+      res.status(500).json({ message: "OAuth authentication failed" });
+    }
+  });
+
   // Simple test endpoint to verify API routing
   app.get("/api/test/simple", (req, res) => {
     console.log('[SimpleTest] API endpoint hit successfully');
