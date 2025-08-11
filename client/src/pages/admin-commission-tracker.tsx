@@ -130,11 +130,26 @@ export function AdminCommissionTracker() {
   const [location, navigate] = useLocation();
 
   // State for commission period
-  const [currentPeriod, setCurrentPeriod] = useState({
-    periodStart: '2025-01-14',
-    periodEnd: '2025-02-13',
-    paymentDate: '2025-02-15'
-  });
+  // Calculate current commission period dynamically
+  const getCurrentPeriod = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-based (0 = January, 7 = August)
+    const currentYear = now.getFullYear();
+    
+    // Commission period runs from 14th of previous month to 13th of current month
+    // Payment date is 15th of current month
+    const periodStart = new Date(currentYear, currentMonth - 1, 14);
+    const periodEnd = new Date(currentYear, currentMonth, 13);
+    const paymentDate = new Date(currentYear, currentMonth, 15);
+    
+    return {
+      periodStart: periodStart.toISOString().split('T')[0],
+      periodEnd: periodEnd.toISOString().split('T')[0], 
+      paymentDate: paymentDate.toISOString().split('T')[0]
+    };
+  };
+
+  const [currentPeriod, setCurrentPeriod] = useState(getCurrentPeriod());
 
   // State for commissions and data
   const [commissions, setCommissions] = useState<Commission[]>([]);
