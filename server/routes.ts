@@ -23,6 +23,8 @@ import path from "path";
 import { promises as fs } from "fs";
 import express from "express";
 import { cache, CacheTTL, CachePrefix } from "./cache";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -2911,11 +2913,41 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Get sales reps
   app.get("/api/sales-reps", requireAuth, async (req, res) => {
     try {
-      const salesReps = await storage.getAllSalesReps();
+      // Use raw SQL to handle schema mismatch
+      const result = await db.execute(sql`
+        SELECT 
+          sr.id,
+          sr.user_id,
+          sr.first_name,
+          sr.last_name,
+          sr.email,
+          sr.hubspot_user_id,
+          sr.is_active,
+          sr.created_at,
+          sr.updated_at,
+          u.name as user_name
+        FROM sales_reps sr
+        LEFT JOIN users u ON sr.user_id = u.id
+        WHERE sr.is_active = true
+        ORDER BY sr.id ASC
+      `);
+      
+      // Transform to match expected frontend structure
+      const salesReps = result.rows.map((rep: any) => ({
+        id: rep.id,
+        userId: rep.user_id,
+        name: rep.first_name && rep.last_name ? `${rep.first_name} ${rep.last_name}` : rep.user_name || 'Unknown',
+        email: rep.email,
+        hubspotUserId: rep.hubspot_user_id,
+        isActive: rep.is_active,
+        createdAt: rep.created_at,
+        updatedAt: rep.updated_at
+      }));
+      
       res.json(salesReps);
     } catch (error) {
       console.error('Error fetching sales reps:', error);
-      res.status(500).json({ message: "Failed to fetch sales reps" });
+      res.status(500).json({ message: "Failed to fetch sales reps", error: error.message });
     }
   });
 
@@ -2939,11 +2971,80 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.get("/api/deals", requireAuth, async (req, res) => {
     try {
       const { salesRepId } = req.query;
-      const deals = await storage.getAllDeals(salesRepId ? parseInt(salesRepId as string) : undefined);
-      res.json(deals);
+      
+      let dealsData: any[] = [];
+      
+      // Use raw SQL to handle schema mismatch
+      if (salesRepId) {
+        const result = await db.execute(sql`
+          SELECT 
+            id,
+            hubspot_deal_id,
+            deal_name,
+            amount,
+            monthly_value,
+            setup_fee,
+            close_date,
+            deal_stage,
+            deal_owner,
+            sales_rep_id,
+            company_name,
+            service_type,
+            is_collected,
+            created_at,
+            updated_at
+          FROM deals 
+          WHERE sales_rep_id = ${parseInt(salesRepId as string)}
+          ORDER BY updated_at DESC
+        `);
+        dealsData = result.rows;
+      } else {
+        const result = await db.execute(sql`
+          SELECT 
+            id,
+            hubspot_deal_id,
+            deal_name,
+            amount,
+            monthly_value,
+            setup_fee,
+            close_date,
+            deal_stage,
+            deal_owner,
+            sales_rep_id,
+            company_name,
+            service_type,
+            is_collected,
+            created_at,
+            updated_at
+          FROM deals 
+          ORDER BY updated_at DESC
+        `);
+        dealsData = result.rows;
+      }
+      
+      // Transform to match expected frontend structure
+      const transformedDeals = dealsData.map((deal: any) => ({
+        id: deal.id,
+        hubspotDealId: deal.hubspot_deal_id,
+        dealName: deal.deal_name,
+        amount: parseFloat((deal.amount || 0).toString()),
+        monthlyValue: parseFloat((deal.monthly_value || 0).toString()),
+        setupFee: parseFloat((deal.setup_fee || 0).toString()),
+        closeDate: deal.close_date,
+        dealStage: deal.deal_stage,
+        dealOwner: deal.deal_owner,
+        salesRepId: deal.sales_rep_id,
+        companyName: deal.company_name,
+        serviceType: deal.service_type,
+        isCollected: deal.is_collected,
+        createdAt: deal.created_at,
+        updatedAt: deal.updated_at
+      }));
+      
+      res.json(transformedDeals);
     } catch (error) {
       console.error('Error fetching deals:', error);
-      res.status(500).json({ message: "Failed to fetch deals" });
+      res.status(500).json({ message: "Failed to fetch deals", error: error.message });
     }
   });
 
@@ -2952,39 +3053,91 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     try {
       const { salesRepId } = req.query;
       
-      let commissions;
+      let commissionsData: any[] = [];
+      
+      // Use raw SQL to handle schema mismatch
       if (salesRepId) {
-        commissions = await storage.getCommissionsBySalesRep(parseInt(salesRepId as string));
+        const result = await db.execute(sql`
+          SELECT 
+            id,
+            deal_id,
+            sales_rep_id,
+            commission_type,
+            commission_amount,
+            is_paid,
+            paid_at,
+            month_number,
+            created_at,
+            rate,
+            base_amount
+          FROM commissions 
+          WHERE sales_rep_id = ${parseInt(salesRepId as string)}
+          ORDER BY created_at DESC
+        `);
+        commissionsData = result.rows;
       } else if (req.user && req.user.role === 'admin') {
         // Admin users get all commissions
-        commissions = await storage.getAllCommissions();
+        const result = await db.execute(sql`
+          SELECT 
+            id,
+            deal_id,
+            sales_rep_id,
+            commission_type,
+            commission_amount,
+            is_paid,
+            paid_at,
+            month_number,
+            created_at,
+            rate,
+            base_amount
+          FROM commissions 
+          ORDER BY created_at DESC
+        `);
+        commissionsData = result.rows;
       } else {
         // Regular users get their own commissions
-        const salesRep = await storage.getSalesRepByUserId(req.user!.id);
-        if (salesRep) {
-          commissions = await storage.getCommissionsBySalesRep(salesRep.id);
-        } else {
-          commissions = [];
+        const salesRepResult = await db.execute(sql`
+          SELECT id FROM sales_reps WHERE user_id = ${req.user!.id} AND is_active = true LIMIT 1
+        `);
+        
+        if (salesRepResult.rows.length > 0) {
+          const userSalesRepId = (salesRepResult.rows[0] as any).id;
+          const result = await db.execute(sql`
+            SELECT 
+              id,
+              deal_id,
+              sales_rep_id,
+              commission_type,
+              commission_amount,
+              is_paid,
+              paid_at,
+              month_number,
+              created_at,
+              rate,
+              base_amount
+            FROM commissions 
+            WHERE sales_rep_id = ${userSalesRepId}
+            ORDER BY created_at DESC
+          `);
+          commissionsData = result.rows;
         }
       }
       
       // Transform database fields to match frontend expectations
-      const transformedCommissions = commissions.map(comm => ({
+      const transformedCommissions = commissionsData.map((comm: any) => ({
         id: comm.id,
-        deal_id: comm.deal_id || comm.dealId,
+        deal_id: comm.deal_id,
         deal_name: `Commission ${comm.id}`, // Will be enhanced with deal data later
         company_name: 'TBD', // Will be enhanced with company data later
-        sales_rep_id: comm.sales_rep_id || comm.salesRepId,
+        sales_rep_id: comm.sales_rep_id,
         sales_rep_name: 'TBD', // Will be enhanced with sales rep name
         service_type: 'bookkeeping', // Default service type
-        type: comm.commission_type || comm.type || 'month_1',
-        amount: parseFloat((comm.commission_amount || comm.amount || 0).toString()),
+        type: comm.commission_type || 'month_1',
+        amount: parseFloat((comm.commission_amount || 0).toString()),
         status: comm.is_paid ? 'paid' : 'pending',
-        month_number: comm.month_number || comm.monthNumber || 1,
-        date_earned: comm.created_at?.toISOString().split('T')[0],
-        date_paid: comm.paid_at?.toISOString().split('T')[0] || null,
-        hubspot_invoice_id: comm.hubspot_invoice_id || comm.hubspotInvoiceId,
-        hubspot_subscription_id: comm.hubspot_subscription_id || comm.hubspotSubscriptionId,
+        month_number: comm.month_number || 1,
+        date_earned: new Date(comm.created_at).toISOString().split('T')[0],
+        date_paid: comm.paid_at ? new Date(comm.paid_at).toISOString().split('T')[0] : null,
         created_at: comm.created_at,
         updated_at: comm.updated_at
       }));
@@ -2992,7 +3145,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       res.json(transformedCommissions);
     } catch (error) {
       console.error('Error fetching commissions:', error);
-      res.status(500).json({ message: "Failed to fetch commissions" });
+      res.status(500).json({ message: "Failed to fetch commissions", error: error.message });
     }
   });
 
