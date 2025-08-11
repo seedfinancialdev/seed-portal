@@ -313,17 +313,26 @@ export class HubSpotCommissionSync {
   private calculateMonthlyValue(lineItems: any[]): number {
     // Look for recurring services like "Monthly Bookkeeping", "Tax as a Service"
     return lineItems
-      .filter(item => item.name.toLowerCase().includes('monthly') || 
-                     item.name.toLowerCase().includes('tax as a service'))
+      .filter(item => {
+        const name = item.name.toLowerCase();
+        return name.includes('monthly') || 
+               name.includes('bookkeeping') ||
+               name.includes('recurring') ||
+               name.includes('tax as a service');
+      })
       .reduce((sum, item) => sum + item.amount, 0);
   }
   
   private calculateSetupFee(lineItems: any[]): number {
     // Look for one-time services like "Clean-Up"
     return lineItems
-      .filter(item => item.name.toLowerCase().includes('clean') || 
-                     item.name.toLowerCase().includes('setup') ||
-                     item.name.toLowerCase().includes('catch'))
+      .filter(item => {
+        const name = item.name.toLowerCase();
+        return name.includes('clean') || 
+               name.includes('setup') ||
+               name.includes('catch') ||
+               name.includes('prior');
+      })
       .reduce((sum, item) => sum + item.amount, 0);
   }
   
