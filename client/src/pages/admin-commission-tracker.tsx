@@ -172,6 +172,9 @@ export function AdminCommissionTracker() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterSalesRep, setFilterSalesRep] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Sync states
+  const [syncLoading, setSyncLoading] = useState(false);
 
   // Check if user is admin
   if (!user || user.role !== 'admin') {
@@ -478,6 +481,35 @@ export function AdminCommissionTracker() {
     }
   };
 
+  const handleSyncHubSpot = async () => {
+    setSyncLoading(true);
+    try {
+      const response = await fetch('/api/commissions/sync-hubspot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('HubSpot sync completed:', result);
+        
+        // Refresh all data after sync
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        console.error('HubSpot sync failed:', error);
+        alert('Failed to sync HubSpot data: ' + error.message);
+      }
+    } catch (error) {
+      console.error('HubSpot sync error:', error);
+      alert('Failed to sync HubSpot data. Please try again.');
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <UniversalNavbar />
@@ -505,14 +537,20 @@ export function AdminCommissionTracker() {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="text-right">
-              <div className="text-sm text-gray-600 font-medium">
-                Real-time HubSpot Sync
-              </div>
-              <div className="text-xs text-gray-500">
-                Commission data updates automatically
-              </div>
-            </div>
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={handleSyncHubSpot}
+              disabled={syncLoading}
+              data-testid="button-sync-hubspot"
+            >
+              {syncLoading ? (
+                <Clock className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4 mr-2" />
+              )}
+              {syncLoading ? 'Syncing...' : 'Sync HubSpot Data'}
+            </Button>
             <Button variant="outline" size="sm" data-testid="button-export">
               <Download className="h-4 w-4 mr-2" />
               Export Data

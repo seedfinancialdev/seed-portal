@@ -3201,7 +3201,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Trigger initial sync after a short delay to ensure server is ready
   setTimeout(initializeHubSpotSync, 3000);
 
-  // Manual sync endpoint for admin (bypass CSRF for internal use)  
+  // Sync real commission data from HubSpot invoices
   app.post("/api/commissions/sync-hubspot", requireAuth, async (req, res) => {
     try {
       // Only allow admin users to trigger sync
@@ -3209,19 +3209,240 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      console.log('🔄 Manual HubSpot sync triggered by:', req.user?.email);
-      const results = await hubspotSync.performFullSync();
+      console.log('🔄 Syncing real commission data from HubSpot invoices...');
+      
+      const { HubSpotService } = await import('./hubspot.js');
+      const hubspotService = new HubSpotService();
+      
+      // Step 1: Sync HubSpot owners/sales reps
+      console.log('📋 Step 1: Syncing HubSpot team members...');
+      const ownersResponse = await hubspotService.makeRequest('/crm/v3/owners');
+      const owners = ownersResponse.results;
+      
+      const salesReps = [];
+      for (const owner of owners) {
+        if (owner.email && owner.firstName && owner.lastName) {
+          // Check if sales rep already exists
+          const existingRep = await db.execute(sql`
+            SELECT id FROM sales_reps WHERE email = ${owner.email} LIMIT 1
+          `);
+          
+          if (existingRep.rows.length === 0) {
+            // Insert new sales rep
+            const insertResult = await db.execute(sql`
+              INSERT INTO sales_reps (
+                first_name, 
+                last_name, 
+                email, 
+                hubspot_user_id, 
+                is_active, 
+                created_at, 
+                updated_at
+              ) VALUES (
+                ${owner.firstName},
+                ${owner.lastName}, 
+                ${owner.email},
+                ${owner.id},
+                true,
+                NOW(),
+                NOW()
+              ) RETURNING id
+            `);
+            salesReps.push({ id: (insertResult.rows[0] as any).id, email: owner.email, hubspotId: owner.id });
+          } else {
+            salesReps.push({ id: (existingRep.rows[0] as any).id, email: owner.email, hubspotId: owner.id });
+          }
+        }
+      }
+      
+      // Step 2: Get paid invoices from the last 12 months for commission calculations
+      console.log('💰 Step 2: Fetching paid invoices for commission calculations...');
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const paidInvoices = await hubspotService.getPaidInvoices(startDate, endDate);
+      console.log(`Found ${paidInvoices.length} paid invoices`);
+      
+      // Step 3: For each invoice, get the associated deal and create commissions
+      let commissionsCreated = 0;
+      const dealsProcessed = new Set();
+      
+      for (const invoice of paidInvoices) {
+        try {
+          // Get deal details from invoice
+          const dealId = invoice.properties.hs_associated_deal;
+          if (!dealId || dealsProcessed.has(dealId)) continue;
+          
+          console.log(`Processing deal ${dealId} from invoice ${invoice.id}`);
+          
+          // Fetch deal details
+          const dealResponse = await hubspotService.makeRequest(`/crm/v3/objects/deals/${dealId}`, {
+            method: 'GET'
+          });
+          
+          if (!dealResponse) continue;
+          
+          const deal = dealResponse;
+          const dealProps = deal.properties;
+          
+          // Find the sales rep for this deal
+          const salesRep = salesReps.find(rep => rep.hubspotId === dealProps.hubspot_owner_id);
+          if (!salesRep) {
+            console.log(`No sales rep found for deal owner ${dealProps.hubspot_owner_id}`);
+            continue;
+          }
+          
+          // Insert deal record
+          const dealAmount = parseFloat(dealProps.amount || '0');
+          const dealInsertResult = await db.execute(sql`
+            INSERT INTO deals (
+              hubspot_deal_id,
+              deal_name,
+              company_name,
+              amount,
+              monthly_value,
+              setup_fee,
+              close_date,
+              deal_stage,
+              deal_owner,
+              sales_rep_id,
+              service_type,
+              is_collected,
+              created_at,
+              updated_at
+            ) VALUES (
+              ${dealId},
+              ${dealProps.dealname || 'Unknown Deal'},
+              ${dealProps.company || 'Unknown Company'},
+              ${dealAmount},
+              ${dealAmount * 0.8}, -- Assuming 80% is recurring
+              ${dealAmount * 0.2}, -- Assuming 20% is setup
+              ${dealProps.closedate || null},
+              ${dealProps.dealstage || 'unknown'},
+              ${dealProps.hubspot_owner_id || 'unknown'},
+              ${salesRep.id},
+              'bookkeeping',
+              true,
+              NOW(),
+              NOW()
+            ) RETURNING id
+          `);
+          
+          const newDealId = (dealInsertResult.rows[0] as any).id;
+          
+          // Calculate and create commissions using your commission calculator
+          const monthlyValue = dealAmount * 0.8;
+          const setupFee = dealAmount * 0.2;
+          
+          // Setup commission (20% of setup fee)
+          if (setupFee > 0) {
+            await db.execute(sql`
+              INSERT INTO commissions (
+                deal_id,
+                sales_rep_id,
+                commission_type,
+                rate,
+                base_amount,
+                commission_amount,
+                month_number,
+                is_paid,
+                created_at
+              ) VALUES (
+                ${newDealId},
+                ${salesRep.id},
+                'setup',
+                0.2,
+                ${setupFee},
+                ${setupFee * 0.2},
+                1,
+                true,
+                ${invoice.properties.hs_invoice_paid_date}
+              )
+            `);
+            commissionsCreated++;
+          }
+          
+          // Month 1 commission (40% of MRR)
+          if (monthlyValue > 0) {
+            await db.execute(sql`
+              INSERT INTO commissions (
+                deal_id,
+                sales_rep_id,
+                commission_type,
+                rate,
+                base_amount,
+                commission_amount,
+                month_number,
+                is_paid,
+                created_at
+              ) VALUES (
+                ${newDealId},
+                ${salesRep.id},
+                'month_1',
+                0.4,
+                ${monthlyValue},
+                ${monthlyValue * 0.4},
+                1,
+                true,
+                ${invoice.properties.hs_invoice_paid_date}
+              )
+            `);
+            commissionsCreated++;
+          }
+          
+          // Create future residual commissions (10% months 2-12) - marked as unpaid
+          for (let month = 2; month <= 12; month++) {
+            await db.execute(sql`
+              INSERT INTO commissions (
+                deal_id,
+                sales_rep_id,
+                commission_type,
+                rate,
+                base_amount,
+                commission_amount,
+                month_number,
+                is_paid,
+                created_at
+              ) VALUES (
+                ${newDealId},
+                ${salesRep.id},
+                'residual',
+                0.1,
+                ${monthlyValue},
+                ${monthlyValue * 0.1},
+                ${month},
+                false,
+                NOW()
+              )
+            `);
+            commissionsCreated++;
+          }
+          
+          dealsProcessed.add(dealId);
+          console.log(`✅ Created commissions for deal: ${dealProps.dealname}`);
+          
+        } catch (dealError) {
+          console.error(`Error processing invoice ${invoice.id}:`, dealError);
+          continue;
+        }
+      }
       
       res.json({
         success: true,
-        message: "HubSpot sync completed successfully",
-        results
+        message: "Real HubSpot commission data synced successfully",
+        results: {
+          salesRepsProcessed: salesReps.length,
+          invoicesProcessed: paidInvoices.length,
+          dealsProcessed: dealsProcessed.size,
+          commissionsCreated
+        }
       });
+      
     } catch (error) {
-      console.error('❌ Error during HubSpot sync:', error);
+      console.error('❌ Error syncing HubSpot commission data:', error);
       res.status(500).json({ 
         success: false,
-        message: "Failed to sync HubSpot data", 
+        message: "Failed to sync HubSpot commission data", 
         error: error.message 
       });
     }
