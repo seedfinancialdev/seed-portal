@@ -3022,6 +3022,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+
   // Get HubSpot-based commissions for current period
   app.get("/api/commissions/hubspot/current-period", requireAuth, async (req, res) => {
     try {

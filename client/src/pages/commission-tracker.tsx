@@ -353,10 +353,11 @@ export default function CommissionTracker() {
   const currentPeriod = commissionPeriods.find(p => p.status === 'active') || commissionPeriods[0];
   
   // Use HubSpot data for current period if available, otherwise fall back to database data
-  const totalCurrentPeriodCommissions = hubspotCommissionData?.total_commissions || 
-    commissions
-      .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
-      .reduce((sum, c) => sum + c.amount, 0);
+  const totalCurrentPeriodCommissions = hubspotCommissionData !== null 
+    ? hubspotCommissionData.total_commissions 
+    : commissions
+        .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+        .reduce((sum, c) => sum + c.amount, 0);
   
   const totalPendingCommissions = commissions
     .filter(c => c.status === 'pending')
@@ -606,9 +607,16 @@ export default function CommissionTracker() {
                     ${totalCurrentPeriodCommissions.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
                   {hubspotCommissionData && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {hubspotCommissionData.invoice_count} invoices • {hubspotCommissionData.subscription_count} subscriptions • Invoice-based data
-                    </p>
+                    <div className="text-xs text-gray-500 mt-1">
+                      <p>
+                        {hubspotCommissionData.invoice_count} paid invoices • {hubspotCommissionData.subscription_count} active subscriptions
+                      </p>
+                      {hubspotCommissionData.invoice_count === 0 && hubspotCommissionData.subscription_count === 0 && (
+                        <p className="text-blue-600 mt-1 font-medium">
+                          🎯 New: Commissions now based on actual invoice payments
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 <Calendar className="h-8 w-8 text-blue-600" />
