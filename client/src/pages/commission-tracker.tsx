@@ -255,6 +255,21 @@ export default function CommissionTracker() {
     enabled: !!currentSalesRep?.id
   });
 
+  // Fetch HubSpot commission data for current period
+  const { data: hubspotCommissionData = null, isLoading: hubspotLoading } = useQuery({
+    queryKey: ['/api/commissions/hubspot/current-period'],
+    queryFn: async () => {
+      const response = await fetch('/api/commissions/hubspot/current-period');
+      if (!response.ok) {
+        console.error('Failed to fetch HubSpot commission data:', response.status);
+        return null;
+      }
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000 // Refetch every 5 minutes
+  });
+
   // Set the fetched data to state
   useEffect(() => {
     setCommissions(commissionData);
@@ -267,42 +282,81 @@ export default function CommissionTracker() {
     }
   }, [commissionData, dealsData, monthlyBonusData, milestoneBonusData, currentSalesRep]);
 
-  // Sample data for features not yet implemented in backend
+  // Calculate commission periods dynamically (14th to 13th cycle)
   useEffect(() => {
-    // Commission periods (14th to 13th cycle) - placeholder until backend implemented
-    const sampleCommissionPeriods: CommissionPeriod[] = [
+    const getCurrentPeriod = () => {
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      const currentDay = today.getDate();
+      
+      let periodStartMonth, periodStartYear, periodEndMonth, periodEndYear;
+      
+      if (currentDay >= 14) {
+        // We're in the current period (14th of this month to 13th of next month)
+        periodStartMonth = currentMonth;
+        periodStartYear = currentYear;
+        periodEndMonth = currentMonth + 1;
+        periodEndYear = currentYear;
+        
+        // Handle year rollover
+        if (periodEndMonth > 11) {
+          periodEndMonth = 0;
+          periodEndYear = currentYear + 1;
+        }
+      } else {
+        // We're in the previous period (14th of last month to 13th of this month)  
+        periodStartMonth = currentMonth - 1;
+        periodStartYear = currentYear;
+        periodEndMonth = currentMonth;
+        periodEndYear = currentYear;
+        
+        // Handle year rollover
+        if (periodStartMonth < 0) {
+          periodStartMonth = 11;
+          periodStartYear = currentYear - 1;
+        }
+      }
+      
+      const periodStart = new Date(periodStartYear, periodStartMonth, 14);
+      const periodEnd = new Date(periodEndYear, periodEndMonth, 13);
+      const payrollDate = new Date(periodEndYear, periodEndMonth, 15);
+      
+      return {
+        periodStart: periodStart.toISOString().split('T')[0],
+        periodEnd: periodEnd.toISOString().split('T')[0],
+        payrollDate: payrollDate.toISOString().split('T')[0]
+      };
+    };
+
+    const currentPeriodDates = getCurrentPeriod();
+    const currentPeriodCommissions: CommissionPeriod[] = [
       {
         id: '1',
-        periodStart: '2025-01-14',
-        periodEnd: '2025-02-13',
+        periodStart: currentPeriodDates.periodStart,
+        periodEnd: currentPeriodDates.periodEnd,
         status: 'active',
         totalPaid: 0,
-        totalPending: 6020.00,
-        payrollDate: '2025-02-15'
-      },
-      {
-        id: '2',
-        periodStart: '2024-12-14',
-        periodEnd: '2025-01-13',
-        status: 'closed',
-        totalPaid: 11580.00,
-        totalPending: 0,
-        payrollDate: '2025-01-15'
+        totalPending: 0, // Will be calculated from real data
+        payrollDate: currentPeriodDates.payrollDate
       }
     ];
 
     // Adjustment requests placeholder until backend implemented
     const sampleAdjustmentRequests: AdjustmentRequest[] = [];
 
-    setCommissionPeriods(sampleCommissionPeriods);
+    setCommissionPeriods(currentPeriodCommissions);
     setAdjustmentRequests(sampleAdjustmentRequests);
   }, []);
 
   // Calculate key metrics for admin dashboard
   const currentPeriod = commissionPeriods.find(p => p.status === 'active') || commissionPeriods[0];
-  const totalCurrentPeriodCommissions = commissions
-    .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
-    .reduce((sum, c) => sum + c.amount, 0);
+  
+  // Use HubSpot data for current period if available, otherwise fall back to database data
+  const totalCurrentPeriodCommissions = hubspotCommissionData?.total_commissions || 
+    commissions
+      .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+      .reduce((sum, c) => sum + c.amount, 0);
   
   const totalPendingCommissions = commissions
     .filter(c => c.status === 'pending')
@@ -511,8 +565,17 @@ export default function CommissionTracker() {
             <div>
               <h1 className="text-3xl font-bold text-white mb-2" data-testid="page-title">Commission Tracking</h1>
               <p className="text-white/80">
-                Current Period: {new Date(currentPeriod.periodStart).toLocaleDateString()} - {new Date(currentPeriod.periodEnd).toLocaleDateString()}
+                Current Period: {hubspotCommissionData ? 
+                  `${new Date(hubspotCommissionData.period_start).toLocaleDateString()} - ${new Date(hubspotCommissionData.period_end).toLocaleDateString()}` : 
+                  `${new Date(currentPeriod.periodStart).toLocaleDateString()} - ${new Date(currentPeriod.periodEnd).toLocaleDateString()}`
+                }
                 <span className="ml-4">Next Payroll: {new Date(currentPeriod.payrollDate).toLocaleDateString()}</span>
+                {hubspotCommissionData && (
+                  <span className="ml-4 inline-flex items-center gap-1 text-green-200">
+                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                    Live HubSpot Data
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex gap-3">
@@ -534,10 +597,19 @@ export default function CommissionTracker() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Current Period Total</p>
+                  <p className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    Current Period Total
+                    {hubspotLoading && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>}
+                    {hubspotCommissionData && <span className="w-2 h-2 bg-green-500 rounded-full"></span>}
+                  </p>
                   <p className="text-2xl font-bold text-gray-900">
                     ${totalCurrentPeriodCommissions.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </p>
+                  {hubspotCommissionData && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {hubspotCommissionData.deal_count} deals • HubSpot live data
+                    </p>
+                  )}
                 </div>
                 <Calendar className="h-8 w-8 text-blue-600" />
               </div>

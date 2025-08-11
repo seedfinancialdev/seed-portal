@@ -1551,6 +1551,111 @@ Services Include:
     }
   }
 
+  // Get deals closed within a specific period for commission calculations
+  async getDealsClosedInPeriod(startDate: string, endDate: string, salesRepHubspotId?: string): Promise<any[]> {
+    try {
+      console.log(`🔍 Searching for deals closed between ${startDate} and ${endDate}${salesRepHubspotId ? ` for rep ${salesRepHubspotId}` : ''}`);
+      
+      // Build search criteria for deals closed in the specified period
+      const searchBody: any = {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: 'dealstage',
+                operator: 'IN',
+                values: ['closedwon', 'closed_won']
+              },
+              {
+                propertyName: 'closedate',
+                operator: 'GTE',
+                value: new Date(startDate).getTime().toString()
+              },
+              {
+                propertyName: 'closedate',
+                operator: 'LTE', 
+                value: new Date(endDate).getTime().toString()
+              }
+            ]
+          }
+        ],
+        properties: [
+          'dealname',
+          'dealstage', 
+          'amount',
+          'closedate',
+          'hs_deal_stage_probability',
+          'hubspot_owner_id',
+          'deal_type',
+          'description',
+          'hs_object_id'
+        ],
+        limit: 100
+      };
+
+      // Add sales rep filter if provided
+      if (salesRepHubspotId) {
+        searchBody.filterGroups[0].filters.push({
+          propertyName: 'hubspot_owner_id',
+          operator: 'EQ',
+          value: salesRepHubspotId
+        });
+      }
+
+      console.log('Deal search body:', JSON.stringify(searchBody, null, 2));
+      
+      const searchResult = await this.makeRequest('/crm/v3/objects/deals/search', {
+        method: 'POST',
+        body: JSON.stringify(searchBody)
+      });
+
+      console.log(`Found ${searchResult.results?.length || 0} closed deals in period`);
+      
+      const deals = searchResult.results || [];
+      
+      // Transform deal data to include relevant properties for commission calculation
+      const transformedDeals = deals.map((deal: any) => {
+        const props = deal.properties;
+        const dealValue = parseFloat(props.amount || '0');
+        
+        // Determine service type from deal name/description
+        const dealName = (props.dealname || '').toLowerCase();
+        let serviceType = 'recurring'; // default
+        
+        if (dealName.includes('setup') || dealName.includes('implementation')) {
+          serviceType = 'setup';
+        } else if (dealName.includes('cleanup') || dealName.includes('clean up')) {
+          serviceType = 'cleanup';
+        } else if (dealName.includes('prior year') || dealName.includes('catch up')) {
+          serviceType = 'prior_years';
+        }
+        
+        // For recurring services, estimate monthly value
+        // This is a simplified calculation - in practice you might have specific fields for this
+        const monthlyValue = serviceType === 'recurring' ? (dealValue / 12) : 0;
+        const setupFee = serviceType !== 'recurring' ? dealValue : (dealValue * 0.1); // 10% setup fee estimate
+        
+        return {
+          id: deal.id,
+          dealname: props.dealname,
+          amount: dealValue,
+          monthly_value: monthlyValue,
+          setup_fee: setupFee,
+          service_type: serviceType,
+          close_date: props.closedate,
+          hubspot_owner_id: props.hubspot_owner_id,
+          company: '', // You might want to fetch company name separately
+          deal_stage: props.dealstage
+        };
+      });
+      
+      return transformedDeals;
+    } catch (error) {
+      console.error('Error fetching deals closed in period:', error);
+      return [];
+    }
+  }
+
   // Determine services from deal names and types
   determineServicesFromDeals(deals: any[]): string[] {
     const services = new Set<string>();

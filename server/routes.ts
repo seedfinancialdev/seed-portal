@@ -3022,6 +3022,142 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Get HubSpot-based commissions for current period
+  app.get("/api/commissions/hubspot/current-period", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
+      // Get the current user's sales rep profile
+      const salesRep = await storage.getSalesRepByUserId(req.user.id);
+      if (!salesRep) {
+        res.status(404).json({ message: "Sales rep profile not found" });
+        return;
+      }
+
+      // Calculate current period (14th to 13th cycle)
+      const getCurrentPeriod = () => {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const currentDay = today.getDate();
+        
+        let periodStartMonth, periodStartYear, periodEndMonth, periodEndYear;
+        
+        if (currentDay >= 14) {
+          // We're in the current period (14th of this month to 13th of next month)
+          periodStartMonth = currentMonth;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth + 1;
+          periodEndYear = currentYear;
+          
+          // Handle year rollover
+          if (periodEndMonth > 11) {
+            periodEndMonth = 0;
+            periodEndYear = currentYear + 1;
+          }
+        } else {
+          // We're in the previous period (14th of last month to 13th of this month)  
+          periodStartMonth = currentMonth - 1;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth;
+          periodEndYear = currentYear;
+          
+          // Handle year rollover
+          if (periodStartMonth < 0) {
+            periodStartMonth = 11;
+            periodStartYear = currentYear - 1;
+          }
+        }
+        
+        const periodStart = new Date(periodStartYear, periodStartMonth, 14);
+        const periodEnd = new Date(periodEndYear, periodEndMonth, 13);
+        
+        return {
+          periodStart: periodStart.toISOString().split('T')[0],
+          periodEnd: periodEnd.toISOString().split('T')[0]
+        };
+      };
+
+      const currentPeriod = getCurrentPeriod();
+      
+      // Import HubSpot service
+      const { HubSpotService } = await import('./hubspot.js');
+      const hubspotService = new HubSpotService();
+      
+      // Get paid deals from HubSpot for the current period
+      // Filter by sales rep and date range
+      const paidDeals = await hubspotService.getDealsClosedInPeriod(
+        currentPeriod.periodStart, 
+        currentPeriod.periodEnd,
+        salesRep.hubspot_user_id
+      );
+
+      // Calculate commissions based on the deals
+      let totalCommissions = 0;
+      const commissionBreakdown = [];
+      
+      for (const deal of paidDeals) {
+        const dealValue = deal.amount || 0;
+        const setupFee = deal.setup_fee || 0;
+        const monthlyValue = deal.monthly_value || 0;
+        
+        // Apply commission calculations:
+        // - Setup/Prior Years/Clean up = 20%  
+        // - 40% of MRR month 1
+        // - 10% months 2-12
+        
+        let commission = 0;
+        let commissionType = '';
+        
+        // Determine service type and calculate accordingly
+        if (deal.service_type === 'setup' || deal.service_type === 'cleanup' || deal.service_type === 'prior_years') {
+          // 20% commission for setup-related services
+          commission = dealValue * 0.20;
+          commissionType = 'setup_commission';
+        } else {
+          // For recurring services, calculate month 1 at 40% of MRR
+          commission = monthlyValue * 0.40;
+          commissionType = 'month_1_commission';
+          
+          // Note: Months 2-12 at 10% would be calculated separately in a recurring commission job
+        }
+        
+        totalCommissions += commission;
+        commissionBreakdown.push({
+          deal_id: deal.id,
+          deal_name: deal.dealname,
+          company_name: deal.company,
+          amount: dealValue,
+          setup_fee: setupFee,
+          monthly_value: monthlyValue,
+          service_type: deal.service_type,
+          commission_amount: commission,
+          commission_type: commissionType,
+          close_date: deal.close_date
+        });
+      }
+
+      res.json({
+        period_start: currentPeriod.periodStart,
+        period_end: currentPeriod.periodEnd,
+        sales_rep: {
+          id: salesRep.id,
+          name: `${salesRep.first_name} ${salesRep.last_name}`,
+          email: salesRep.email
+        },
+        total_commissions: totalCommissions,
+        deal_count: paidDeals.length,
+        commission_breakdown: commissionBreakdown
+      });
+    } catch (error) {
+      console.error('Error fetching HubSpot commission data:', error);
+      res.status(500).json({ message: "Failed to fetch commission data from HubSpot" });
+    }
+  });
+
   // Update commission status
   app.patch("/api/commissions/:id", requireAuth, async (req, res) => {
     try {
