@@ -25,6 +25,7 @@ import express from "express";
 import { cache, CacheTTL, CachePrefix } from "./cache";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import { hubspotSync } from "./hubspot-sync";
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -3146,6 +3147,57 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     } catch (error) {
       console.error('Error fetching commissions:', error);
       res.status(500).json({ message: "Failed to fetch commissions", error: error.message });
+    }
+  });
+
+  // Initialize HubSpot sync on server startup
+  async function initializeHubSpotSync() {
+    try {
+      console.log('🚀 Starting initial HubSpot commission sync...');
+      
+      // Check if we already have data
+      const existingData = await db.execute(sql`SELECT COUNT(*) as count FROM sales_reps WHERE is_active = true`);
+      const salesRepCount = (existingData.rows[0] as any).count;
+      
+      if (salesRepCount === 0) {
+        console.log('📦 No existing data found. Performing full sync...');
+        const results = await hubspotSync.performFullSync();
+        console.log('✅ Initial HubSpot sync completed:', results);
+      } else {
+        console.log(`📊 Found ${salesRepCount} existing sales reps. Skipping initial sync.`);
+      }
+    } catch (error) {
+      console.error('❌ Initial HubSpot sync failed:', error);
+      // Don't fail server startup if sync fails
+    }
+  }
+
+  // Trigger initial sync after a short delay to ensure server is ready
+  setTimeout(initializeHubSpotSync, 3000);
+
+  // Manual sync endpoint for admin (bypass CSRF for internal use)  
+  app.post("/api/commissions/sync-hubspot", requireAuth, async (req, res) => {
+    try {
+      // Only allow admin users to trigger sync
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      console.log('🔄 Manual HubSpot sync triggered by:', req.user?.email);
+      const results = await hubspotSync.performFullSync();
+      
+      res.json({
+        success: true,
+        message: "HubSpot sync completed successfully",
+        results
+      });
+    } catch (error) {
+      console.error('❌ Error during HubSpot sync:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to sync HubSpot data", 
+        error: error.message 
+      });
     }
   });
 
