@@ -228,17 +228,17 @@ export function AdminCommissionTracker() {
       // Transform API data to match component interface
       const transformedCommissions: Commission[] = liveCommissions.map(comm => ({
         id: comm.id.toString(),
-        dealId: comm.deal_id || comm.id.toString(),
-        dealName: comm.deal_name || 'Commission',
+        dealId: comm.hubspot_invoice_id?.toString() || comm.id.toString(),
+        dealName: comm.company_name || 'Unknown Company',
         companyName: comm.company_name || 'Unknown Company',
         salesRep: comm.sales_rep_name || 'Unknown Rep',
-        serviceType: comm.service_type || 'bookkeeping',
-        type: comm.type || 'monthly',
-        monthNumber: 1, // Default
+        serviceType: comm.service_names || comm.service_type || 'bookkeeping',
+        type: comm.commission_type || comm.type || 'monthly',
+        monthNumber: comm.month_number || 1,
         amount: comm.amount || 0,
-        status: comm.status || 'pending',
-        dateEarned: comm.date_earned || new Date().toISOString().split('T')[0],
-        hubspotDealId: comm.hubspot_deal_id
+        status: comm.status === 'paid' ? 'approved' : 'pending',
+        dateEarned: comm.date_earned ? comm.date_earned.split('T')[0] : new Date().toISOString().split('T')[0],
+        hubspotDealId: comm.hubspot_invoice_id
       }));
       setCommissions(transformedCommissions);
     }
@@ -718,7 +718,7 @@ export function AdminCommissionTracker() {
                   <Table data-testid="table-commissions">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Deal / Company</TableHead>
+                        <TableHead>Company/Contact</TableHead>
                         <TableHead>Sales Rep</TableHead>
                         <TableHead>Service Type</TableHead>
                         <TableHead>Commission Type</TableHead>
@@ -1047,7 +1047,7 @@ export function AdminCommissionTracker() {
                     <Table data-testid="table-pipeline">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Deal / Company</TableHead>
+                          <TableHead>Company/Contact</TableHead>
                           <TableHead>Sales Rep</TableHead>
                           <TableHead>Deal Value</TableHead>
                           <TableHead>Stage / Probability</TableHead>

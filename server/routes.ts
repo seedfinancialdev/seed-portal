@@ -3079,22 +3079,30 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         `);
         commissionsData = result.rows;
       } else if (req.user && req.user.role === 'admin') {
-        // Admin users get all commissions
+        // Admin users get all commissions with proper company/contact info
         const result = await db.execute(sql`
           SELECT 
-            id,
-            deal_id,
-            sales_rep_id,
-            commission_type,
-            commission_amount,
-            is_paid,
-            paid_at,
-            month_number,
-            created_at,
-            rate,
-            base_amount
-          FROM commissions 
-          ORDER BY created_at DESC
+            c.id,
+            c.hubspot_invoice_id,
+            c.sales_rep_id,
+            c.type as commission_type,
+            c.amount,
+            c.status,
+            c.month_number,
+            c.service_type,
+            c.date_earned,
+            c.created_at,
+            hi.company_name,
+            CONCAT(sr.first_name, ' ', sr.last_name) as sales_rep_name,
+            string_agg(DISTINCT hil.name, ', ') as service_names
+          FROM commissions c
+          LEFT JOIN hubspot_invoices hi ON c.hubspot_invoice_id = hi.id
+          LEFT JOIN sales_reps sr ON c.sales_rep_id = sr.id
+          LEFT JOIN hubspot_invoice_line_items hil ON hi.id = hil.invoice_id
+          GROUP BY c.id, c.hubspot_invoice_id, c.sales_rep_id, c.type, c.amount, c.status, 
+                   c.month_number, c.service_type, c.date_earned, c.created_at, 
+                   hi.company_name, sr.first_name, sr.last_name
+          ORDER BY c.created_at DESC
         `);
         commissionsData = result.rows;
       } else {

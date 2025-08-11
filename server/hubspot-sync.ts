@@ -260,7 +260,7 @@ export class HubSpotCommissionSync {
           ${totalAmount}, -- Assuming fully paid since status is paid
           ${invoice.properties.hs_createdate}::date,
           ${invoice.properties.hs_createdate}::date,
-          ${invoice.properties.hs_deal_name || invoice.properties.company_name || `Client for Invoice ${invoice.id}`},
+          ${await this.getInvoiceCompanyName(invoice)},
           false,
           NOW(),
           NOW()
@@ -309,6 +309,68 @@ export class HubSpotCommissionSync {
     }
   }
   
+  /**
+   * Get company name for invoice from HubSpot
+   */
+  private async getInvoiceCompanyName(invoice: any): Promise<string> {
+    try {
+      // Check if invoice has a deal association
+      const dealId = invoice.properties.hs_deal_id;
+      if (dealId) {
+        // Get deal details to find company
+        const dealResponse = await this.hubspotClient.get(`/crm/v3/objects/deals/${dealId}`, {
+          params: {
+            properties: 'dealname,amount,pipeline,dealstage',
+            associations: 'companies,contacts'
+          }
+        });
+        
+        // Get associated company
+        if (dealResponse.data?.associations?.companies?.results?.length > 0) {
+          const companyId = dealResponse.data.associations.companies.results[0].id;
+          const companyResponse = await this.hubspotClient.get(`/crm/v3/objects/companies/${companyId}`, {
+            params: {
+              properties: 'name'
+            }
+          });
+          
+          if (companyResponse.data?.properties?.name) {
+            return companyResponse.data.properties.name;
+          }
+        }
+        
+        // Get associated contact as fallback
+        if (dealResponse.data?.associations?.contacts?.results?.length > 0) {
+          const contactId = dealResponse.data.associations.contacts.results[0].id;
+          const contactResponse = await this.hubspotClient.get(`/crm/v3/objects/contacts/${contactId}`, {
+            params: {
+              properties: 'firstname,lastname,company'
+            }
+          });
+          
+          if (contactResponse.data?.properties) {
+            const contact = contactResponse.data.properties;
+            if (contact.company) {
+              return contact.company;
+            }
+            return `${contact.firstname || ''} ${contact.lastname || ''}`.trim() || 'Unknown Contact';
+          }
+        }
+      }
+      
+      // Fallback to invoice properties
+      return invoice.properties.hs_deal_name || 
+             invoice.properties.company_name || 
+             'Unknown Company';
+             
+    } catch (error) {
+      console.log(`⚠️ Could not fetch company name for invoice ${invoice.id}:`, error.message);
+      return invoice.properties.hs_deal_name || 
+             invoice.properties.company_name || 
+             'Unknown Company';
+    }
+  }
+
   /**
    * Helper methods for invoice processing
    */
