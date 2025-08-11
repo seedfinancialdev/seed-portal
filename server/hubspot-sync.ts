@@ -461,7 +461,7 @@ export class HubSpotCommissionSync {
               'pending',
               ${month},
               'recurring',
-              ${paidDate}::date + INTERVAL '${month - 1} months',
+              (${paidDate}::date + INTERVAL '1 month' * ${month - 1}),
               NOW(),
               NOW()
             )
