@@ -3124,26 +3124,52 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         }
       }
       
-      // Transform database fields to match frontend expectations
-      const transformedCommissions = commissionsData.map((comm: any) => ({
-        id: comm.id,
-        deal_id: comm.deal_id,
-        deal_name: `Commission ${comm.id}`, // Will be enhanced with deal data later
-        company_name: 'TBD', // Will be enhanced with company data later
-        sales_rep_id: comm.sales_rep_id,
-        sales_rep_name: 'TBD', // Will be enhanced with sales rep name
-        service_type: 'bookkeeping', // Default service type
-        type: comm.commission_type || 'month_1',
-        amount: parseFloat((comm.commission_amount || 0).toString()),
-        status: comm.is_paid ? 'paid' : 'pending',
-        month_number: comm.month_number || 1,
-        date_earned: new Date(comm.created_at).toISOString().split('T')[0],
-        date_paid: comm.paid_at ? new Date(comm.paid_at).toISOString().split('T')[0] : null,
-        created_at: comm.created_at,
-        updated_at: comm.updated_at
-      }));
+      // Enhance commission data with deal and sales rep information
+      const commissionsWithDetails = await Promise.all(
+        commissionsData.map(async (comm: any) => {
+          // Get deal information
+          const dealResult = await db.execute(sql`
+            SELECT deal_name, company_name, service_type 
+            FROM deals 
+            WHERE id = ${comm.deal_id} 
+            LIMIT 1
+          `);
+          
+          // Get sales rep information  
+          const salesRepResult = await db.execute(sql`
+            SELECT first_name, last_name 
+            FROM sales_reps 
+            WHERE id = ${comm.sales_rep_id} 
+            LIMIT 1
+          `);
+          
+          const deal = dealResult.rows[0] as any;
+          const salesRep = salesRepResult.rows[0] as any;
+          
+          return {
+            id: comm.id,
+            deal_id: comm.deal_id,
+            deal_name: deal?.deal_name || `Commission ${comm.id}`,
+            company_name: deal?.company_name || 'Unknown Company',
+            sales_rep_id: comm.sales_rep_id,
+            sales_rep_name: salesRep ? `${salesRep.first_name} ${salesRep.last_name}` : 'Unknown Rep',
+            service_type: deal?.service_type || 'bookkeeping',
+            type: comm.commission_type || 'month_1', 
+            amount: parseFloat((comm.commission_amount || 0).toString()),
+            status: comm.is_paid ? 'paid' : 'pending',
+            month_number: comm.month_number || 1,
+            date_earned: new Date(comm.created_at).toISOString().split('T')[0],
+            date_paid: comm.paid_at ? new Date(comm.paid_at).toISOString().split('T')[0] : null,
+            hubspot_deal_id: deal?.hubspot_deal_id || null,
+            commission_type: comm.commission_type,
+            rate: parseFloat((comm.rate || 0).toString()),
+            base_amount: parseFloat((comm.base_amount || 0).toString()),
+            created_at: comm.created_at
+          };
+        })
+      );
       
-      res.json(transformedCommissions);
+      res.json(commissionsWithDetails);
     } catch (error) {
       console.error('Error fetching commissions:', error);
       res.status(500).json({ message: "Failed to fetch commissions", error: error.message });
