@@ -182,6 +182,19 @@ export class HubSpotCommissionSync {
         `);
         
         if (existingInvoice.rows.length === 0) {
+          // Get the first available sales rep ID from database
+          const salesRepResult = await db.execute(sql`
+            SELECT id FROM sales_reps WHERE is_active = true ORDER BY id LIMIT 1
+          `);
+          
+          if (salesRepResult.rows.length === 0) {
+            console.log(`❌ No active sales reps found, skipping invoice ${invoice.id}`);
+            continue;
+          }
+          
+          const salesRepId = (salesRepResult.rows[0] as any).id;
+          console.log(`👤 Using sales rep ID ${salesRepId} for invoice ${invoice.id}`);
+          
           // Create HubSpot invoice record
           const invoiceResult = await db.execute(sql`
             INSERT INTO hubspot_invoices (
@@ -199,7 +212,7 @@ export class HubSpotCommissionSync {
               updated_at
             ) VALUES (
               ${invoice.id},
-              ${1}, -- Default to first sales rep for now
+              ${salesRepId},
               ${`INV-${invoice.id}`},
               ${'paid'},
               ${totalAmount},
@@ -246,7 +259,7 @@ export class HubSpotCommissionSync {
           console.log(`✅ Created invoice ${invoice.id} with ${lineItems.length} line items - $${totalAmount}`);
           
           // Generate commissions based on line items
-          await this.generateCommissionsForInvoice(hubspotInvoiceId, 1, lineItems, invoice.properties.hs_createdate);
+          await this.generateCommissionsForInvoice(hubspotInvoiceId, salesRepId, lineItems, invoice.properties.hs_createdate);
           
           processedInvoices++;
           
