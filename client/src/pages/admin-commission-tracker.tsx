@@ -516,7 +516,7 @@ export function AdminCommissionTracker() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Current Period</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    ${totalCurrentPeriודCommissions.toLocaleString()}
+                    ${totalCurrentPeriodCommissions.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500">
                     {new Date(currentPeriod.periodStart).toLocaleDateString()} - {new Date(currentPeriod.periodEnd).toLocaleDateString()}

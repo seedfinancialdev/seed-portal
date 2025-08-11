@@ -200,50 +200,59 @@ export default function CommissionTracker() {
   const [dealDetailsDialogOpen, setDealDetailsDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
-  // Fetch commission data from API
-  const { data: commissionData = [], isLoading: commissionsLoading } = useQuery({
-    queryKey: ['/api/commissions'],
+  // Fetch user's sales rep profile first
+  const { data: currentSalesRep, isLoading: salesRepLoading } = useQuery({
+    queryKey: ['/api/sales-reps/me'],
     queryFn: async () => {
-      const response = await fetch('/api/commissions');
-      if (!response.ok) throw new Error('Failed to fetch commissions');
+      const response = await fetch('/api/sales-reps/me');
+      if (!response.ok) throw new Error('Failed to fetch current sales rep profile');
       return response.json();
     }
+  });
+
+  // Fetch commission data for current user only
+  const { data: commissionData = [], isLoading: commissionsLoading } = useQuery({
+    queryKey: ['/api/commissions', currentSalesRep?.id],
+    queryFn: async () => {
+      if (!currentSalesRep?.id) return [];
+      const response = await fetch(`/api/commissions?salesRepId=${currentSalesRep.id}`);
+      if (!response.ok) throw new Error('Failed to fetch commissions');
+      return response.json();
+    },
+    enabled: !!currentSalesRep?.id
   });
 
   const { data: dealsData = [], isLoading: dealsLoading } = useQuery({
-    queryKey: ['/api/deals'],
+    queryKey: ['/api/deals', currentSalesRep?.id],
     queryFn: async () => {
-      const response = await fetch('/api/deals');
+      if (!currentSalesRep?.id) return [];
+      const response = await fetch(`/api/deals?salesRepId=${currentSalesRep.id}`);
       if (!response.ok) throw new Error('Failed to fetch deals');
       return response.json();
-    }
+    },
+    enabled: !!currentSalesRep?.id
   });
 
   const { data: monthlyBonusData = [], isLoading: monthlyBonusLoading } = useQuery({
-    queryKey: ['/api/monthly-bonuses'],
+    queryKey: ['/api/monthly-bonuses', currentSalesRep?.id],
     queryFn: async () => {
-      const response = await fetch('/api/monthly-bonuses');
+      if (!currentSalesRep?.id) return [];
+      const response = await fetch(`/api/monthly-bonuses?salesRepId=${currentSalesRep.id}`);
       if (!response.ok) throw new Error('Failed to fetch monthly bonuses');
       return response.json();
-    }
+    },
+    enabled: !!currentSalesRep?.id
   });
 
   const { data: milestoneBonusData = [], isLoading: milestoneBonusLoading } = useQuery({
-    queryKey: ['/api/milestone-bonuses'],
+    queryKey: ['/api/milestone-bonuses', currentSalesRep?.id],
     queryFn: async () => {
-      const response = await fetch('/api/milestone-bonuses');
+      if (!currentSalesRep?.id) return [];
+      const response = await fetch(`/api/milestone-bonuses?salesRepId=${currentSalesRep.id}`);
       if (!response.ok) throw new Error('Failed to fetch milestone bonuses');
       return response.json();
-    }
-  });
-
-  const { data: salesRepData = [], isLoading: salesRepsLoading } = useQuery({
-    queryKey: ['/api/sales-reps'],
-    queryFn: async () => {
-      const response = await fetch('/api/sales-reps');
-      if (!response.ok) throw new Error('Failed to fetch sales reps');
-      return response.json();
-    }
+    },
+    enabled: !!currentSalesRep?.id
   });
 
   // Set the fetched data to state
@@ -252,8 +261,11 @@ export default function CommissionTracker() {
     setDeals(dealsData);
     setMonthlyBonuses(monthlyBonusData);
     setMilestoneBonuses(milestoneBonusData);
-    setSalesReps(salesRepData);
-  }, [commissionData, dealsData, monthlyBonusData, milestoneBonusData, salesRepData]);
+    // Set current sales rep in the sales reps array for compatibility
+    if (currentSalesRep) {
+      setSalesReps([currentSalesRep]);
+    }
+  }, [commissionData, dealsData, monthlyBonusData, milestoneBonusData, currentSalesRep]);
 
   // Sample data for features not yet implemented in backend
   useEffect(() => {
