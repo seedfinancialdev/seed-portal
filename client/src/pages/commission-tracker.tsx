@@ -255,13 +255,13 @@ export default function CommissionTracker() {
     enabled: !!currentSalesRep?.id
   });
 
-  // Fetch HubSpot commission data for current period
+  // Fetch current period commission summary (from centrally processed data)
   const { data: hubspotCommissionData = null, isLoading: hubspotLoading } = useQuery({
-    queryKey: ['/api/commissions/hubspot/current-period'],
+    queryKey: ['/api/commissions/current-period-summary'],
     queryFn: async () => {
-      const response = await fetch('/api/commissions/hubspot/current-period');
+      const response = await fetch('/api/commissions/current-period-summary');
       if (!response.ok) {
-        console.error('Failed to fetch HubSpot commission data:', response.status);
+        console.error('Failed to fetch commission summary:', response.status);
         return null;
       }
       return response.json();

@@ -501,6 +501,31 @@ export function AdminCommissionTracker() {
           </div>
           
           <div className="flex items-center gap-3">
+            <Button 
+              variant="default" 
+              size="sm" 
+              data-testid="button-process-hubspot"
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/commissions/process-hubspot', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                  });
+                  if (response.ok) {
+                    const result = await response.json();
+                    alert(`Processed ${result.processed_invoices} invoices successfully!`);
+                    window.location.reload(); // Refresh to see updated data
+                  } else {
+                    alert('Failed to process HubSpot commissions');
+                  }
+                } catch (error) {
+                  alert('Error processing HubSpot commissions: ' + error.message);
+                }
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Process HubSpot Invoices
+            </Button>
             <Button variant="outline" size="sm" data-testid="button-export">
               <Download className="h-4 w-4 mr-2" />
               Export Data

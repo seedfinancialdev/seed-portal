@@ -3023,7 +3023,228 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
 
 
-  // Get HubSpot-based commissions for current period
+  // Admin endpoint: Process all HubSpot commissions and store in database
+  app.post("/api/admin/commissions/process-hubspot", requireAuth, async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        res.status(403).json({ message: "Admin access required" });
+        return;
+      }
+
+      // Calculate current period (14th to 13th cycle)
+      const getCurrentPeriod = () => {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const currentDay = today.getDate();
+        
+        let periodStartMonth, periodStartYear, periodEndMonth, periodEndYear;
+        
+        if (currentDay >= 14) {
+          periodStartMonth = currentMonth;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth + 1;
+          periodEndYear = currentYear;
+          
+          if (periodEndMonth > 11) {
+            periodEndMonth = 0;
+            periodEndYear = currentYear + 1;
+          }
+        } else {
+          periodStartMonth = currentMonth - 1;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth;
+          periodEndYear = currentYear;
+          
+          if (periodStartMonth < 0) {
+            periodStartMonth = 11;
+            periodStartYear = currentYear - 1;
+          }
+        }
+        
+        const periodStart = new Date(periodStartYear, periodStartMonth, 14);
+        const periodEnd = new Date(periodEndYear, periodEndMonth, 13);
+        
+        return {
+          periodStart: periodStart.toISOString().split('T')[0],
+          periodEnd: periodEnd.toISOString().split('T')[0]
+        };
+      };
+
+      const currentPeriod = getCurrentPeriod();
+      
+      // Import HubSpot service and commission calculator
+      const { HubSpotService } = await import('./hubspot.js');
+      const { calculateCommissionFromInvoice } = await import('../shared/commission-calculator.js');
+      const hubspotService = new HubSpotService();
+      
+      // Get all paid invoices from HubSpot for the current period (all reps)
+      const paidInvoices = await hubspotService.getPaidInvoicesInPeriod(
+        currentPeriod.periodStart, 
+        currentPeriod.periodEnd
+      );
+
+      console.log(`🧾 Admin processing: Found ${paidInvoices.length} total paid invoices for all reps`);
+
+      // Get all sales reps to map invoices to reps
+      const allSalesReps = await storage.getAllSalesReps();
+      const salesRepMap = new Map(allSalesReps.map(rep => [rep.hubspot_user_id, rep]));
+
+      // Process each invoice and store commission records
+      const processedCommissions = [];
+      let totalProcessed = 0;
+
+      for (const invoice of paidInvoices) {
+        // Find the sales rep for this invoice
+        const salesRep = salesRepMap.get(invoice.hubspot_owner_id);
+        if (!salesRep) {
+          console.log(`⚠️ No sales rep found for HubSpot owner ID: ${invoice.hubspot_owner_id}`);
+          continue;
+        }
+
+        // Calculate commission for each line item
+        for (const lineItem of invoice.line_items || []) {
+          const commission = calculateCommissionFromInvoice(lineItem, invoice.total_amount);
+          
+          if (commission.amount > 0) {
+            // Store commission in database
+            const commissionRecord = {
+              salesRepId: salesRep.id,
+              dealId: invoice.deal_id || `invoice-${invoice.id}`,
+              dealName: lineItem.description || `Invoice ${invoice.number}`,
+              companyName: invoice.client_name,
+              amount: commission.amount,
+              type: commission.type,
+              status: 'earned' as const,
+              dateEarned: invoice.payment_date,
+              periodStart: currentPeriod.periodStart,
+              periodEnd: currentPeriod.periodEnd,
+              hubspotInvoiceId: invoice.id
+            };
+
+            const storedCommission = await storage.createCommission(commissionRecord);
+            processedCommissions.push(storedCommission);
+            totalProcessed++;
+          }
+        }
+      }
+
+      console.log(`✅ Admin processing complete: ${totalProcessed} commission records stored`);
+
+      res.json({
+        success: true,
+        period: currentPeriod,
+        invoices_processed: paidInvoices.length,
+        commissions_created: totalProcessed,
+        total_commission_amount: processedCommissions.reduce((sum, c) => sum + c.amount, 0),
+        processed_commissions: processedCommissions
+      });
+
+    } catch (error) {
+      console.error('🚨 Error processing HubSpot commissions:', error);
+      res.status(500).json({ 
+        message: "Failed to process HubSpot commissions", 
+        error: error.message 
+      });
+    }
+  });
+
+  // Get current period commission summary for individual rep (reads from stored data)
+  app.get("/api/commissions/current-period-summary", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
+      // Get the current user's sales rep profile
+      const salesRep = await storage.getSalesRepByUserId(req.user.id);
+      if (!salesRep) {
+        res.status(404).json({ message: "Sales rep profile not found" });
+        return;
+      }
+
+      // Calculate current period (14th to 13th cycle)
+      const getCurrentPeriod = () => {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const currentDay = today.getDate();
+        
+        let periodStartMonth, periodStartYear, periodEndMonth, periodEndYear;
+        
+        if (currentDay >= 14) {
+          periodStartMonth = currentMonth;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth + 1;
+          periodEndYear = currentYear;
+          
+          if (periodEndMonth > 11) {
+            periodEndMonth = 0;
+            periodEndYear = currentYear + 1;
+          }
+        } else {
+          periodStartMonth = currentMonth - 1;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth;
+          periodEndYear = currentYear;
+          
+          if (periodStartMonth < 0) {
+            periodStartMonth = 11;
+            periodStartYear = currentYear - 1;
+          }
+        }
+        
+        const periodStart = new Date(periodStartYear, periodStartMonth, 14);
+        const periodEnd = new Date(periodEndYear, periodEndMonth, 13);
+        
+        return {
+          periodStart: periodStart.toISOString().split('T')[0],
+          periodEnd: periodEnd.toISOString().split('T')[0]
+        };
+      };
+
+      const currentPeriod = getCurrentPeriod();
+
+      // Get stored commissions for this rep in the current period
+      const storedCommissions = await storage.getCommissionsBySalesRep(salesRep.id);
+      const currentPeriodCommissions = storedCommissions.filter(comm => 
+        comm.dateEarned >= currentPeriod.periodStart && 
+        comm.dateEarned <= currentPeriod.periodEnd
+      );
+
+      // Calculate summary metrics
+      const totalCommissions = currentPeriodCommissions.reduce((sum, comm) => sum + comm.amount, 0);
+      const setupCommissions = currentPeriodCommissions
+        .filter(comm => comm.type === 'setup')
+        .reduce((sum, comm) => sum + comm.amount, 0);
+      const monthlyCommissions = currentPeriodCommissions
+        .filter(comm => comm.type === 'monthly')
+        .reduce((sum, comm) => sum + comm.amount, 0);
+
+      const result = {
+        period_start: currentPeriod.periodStart,
+        period_end: currentPeriod.periodEnd,
+        total_commissions: totalCommissions,
+        setup_commissions: setupCommissions,
+        monthly_commissions: monthlyCommissions,
+        invoice_count: currentPeriodCommissions.length,
+        subscription_count: 0, // TODO: Get from HubSpot subscriptions
+        last_processed: new Date().toISOString(),
+        data_source: 'stored_commissions'
+      };
+
+      res.json(result);
+    } catch (error) {
+      console.error('🚨 Error fetching current period commission summary:', error);
+      res.status(500).json({ 
+        message: "Failed to fetch commission summary", 
+        error: error.message 
+      });
+    }
+  });
+
+  // Get HubSpot-based commissions for current period (for individual rep dashboard)
   app.get("/api/commissions/hubspot/current-period", requireAuth, async (req, res) => {
     try {
       if (!req.user) {

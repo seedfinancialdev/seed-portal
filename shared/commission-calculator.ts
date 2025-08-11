@@ -176,3 +176,46 @@ export function calculateProjectedCommission(
     total
   };
 }
+
+/**
+ * Calculate commission from HubSpot invoice line item
+ */
+export function calculateCommissionFromInvoice(
+  lineItem: { description?: string; quantity?: number; price?: number },
+  totalInvoiceAmount: number
+): { amount: number; type: 'setup' | 'monthly' | 'other' } {
+  const description = lineItem.description?.toLowerCase() || '';
+  const amount = (lineItem.quantity || 0) * (lineItem.price || 0);
+  
+  // Determine commission type based on description
+  let commissionRate = 0;
+  let type: 'setup' | 'monthly' | 'other' = 'other';
+  
+  if (description.includes('setup') || description.includes('onboarding') || description.includes('implementation')) {
+    // Setup/onboarding fees get 20% commission
+    commissionRate = 0.2;
+    type = 'setup';
+  } else if (description.includes('monthly') || description.includes('subscription') || description.includes('recurring')) {
+    // Monthly fees - determine if first month (40%) or recurring (10%)
+    // For now, assume 10% for monthly (admin can adjust for first month manually)
+    commissionRate = 0.1;
+    type = 'monthly';
+    
+    // Check if this looks like a first month payment (higher rate)
+    if (description.includes('first') || description.includes('initial') || description.includes('month 1')) {
+      commissionRate = 0.4;
+    }
+  } else if (description.includes('bookkeeping') || description.includes('accounting') || description.includes('taas') || 
+             description.includes('payroll') || description.includes('ap/ar') || description.includes('fp&a')) {
+    // Service-specific rates (default to 10% for ongoing services)
+    commissionRate = 0.1;
+    type = 'monthly';
+  }
+  
+  const commissionAmount = amount * commissionRate;
+  
+  return {
+    amount: commissionAmount,
+    type
+  };
+}
