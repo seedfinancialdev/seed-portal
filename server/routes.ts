@@ -3087,57 +3087,106 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const { HubSpotService } = await import('./hubspot.js');
       const hubspotService = new HubSpotService();
       
-      // Get paid deals from HubSpot for the current period
+      // Get paid invoices from HubSpot for the current period
       // Filter by sales rep and date range
-      const paidDeals = await hubspotService.getDealsClosedInPeriod(
+      const paidInvoices = await hubspotService.getPaidInvoicesInPeriod(
         currentPeriod.periodStart, 
         currentPeriod.periodEnd,
         salesRep.hubspot_user_id
       );
 
-      // Calculate commissions based on the deals
+      console.log(`🧾 Found ${paidInvoices.length} paid invoices for commission calculation`);
+
+      // Calculate commissions based on invoice line items
       let totalCommissions = 0;
       const commissionBreakdown = [];
       
-      for (const deal of paidDeals) {
-        const dealValue = deal.amount || 0;
-        const setupFee = deal.setup_fee || 0;
-        const monthlyValue = deal.monthly_value || 0;
+      for (const invoice of paidInvoices) {
+        const lineItems = await hubspotService.getInvoiceLineItems(invoice.id);
+        console.log(`📋 Processing ${lineItems.length} line items for invoice ${invoice.properties?.hs_invoice_number}`);
         
-        // Apply commission calculations:
-        // - Setup/Prior Years/Clean up = 20%  
-        // - 40% of MRR month 1
-        // - 10% months 2-12
-        
-        let commission = 0;
-        let commissionType = '';
-        
-        // Determine service type and calculate accordingly
-        if (deal.service_type === 'setup' || deal.service_type === 'cleanup' || deal.service_type === 'prior_years') {
-          // 20% commission for setup-related services
-          commission = dealValue * 0.20;
-          commissionType = 'setup_commission';
-        } else {
-          // For recurring services, calculate month 1 at 40% of MRR
-          commission = monthlyValue * 0.40;
-          commissionType = 'month_1_commission';
+        for (const lineItem of lineItems) {
+          const itemName = (lineItem.properties?.name || '').toLowerCase();
+          const itemDescription = (lineItem.properties?.description || '').toLowerCase();
+          const itemAmount = parseFloat(lineItem.properties?.amount || '0');
           
-          // Note: Months 2-12 at 10% would be calculated separately in a recurring commission job
+          // Apply commission calculations based on service type:
+          // - Setup/Prior Years/Clean up = 20%  
+          // - 40% of MRR month 1
+          // - 10% months 2-12 (residual)
+          
+          let commission = 0;
+          let commissionType = '';
+          let serviceType = 'recurring'; // default
+          
+          // Determine service type from line item name/description
+          if (itemName.includes('setup') || itemName.includes('implementation') || itemDescription.includes('setup')) {
+            serviceType = 'setup';
+            commission = itemAmount * 0.20;
+            commissionType = 'setup_commission';
+          } else if (itemName.includes('cleanup') || itemName.includes('clean up') || itemDescription.includes('cleanup')) {
+            serviceType = 'cleanup';
+            commission = itemAmount * 0.20;
+            commissionType = 'cleanup_commission';
+          } else if (itemName.includes('prior year') || itemName.includes('catch up') || itemDescription.includes('prior year')) {
+            serviceType = 'prior_years';
+            commission = itemAmount * 0.20;
+            commissionType = 'prior_years_commission';
+          } else if (lineItem.properties?.hs_recurring_billing_period) {
+            // This is a recurring item - check if it's month 1 or residual
+            serviceType = 'recurring';
+            // For now, assume first payment is month 1 (40%), could enhance this logic
+            commission = itemAmount * 0.40;
+            commissionType = 'month_1_commission';
+          } else {
+            // Default to month 1 recurring for unidentified items
+            serviceType = 'recurring';
+            commission = itemAmount * 0.40;
+            commissionType = 'month_1_commission';
+          }
+          
+          totalCommissions += commission;
+          commissionBreakdown.push({
+            invoice_id: invoice.id,
+            invoice_number: invoice.properties?.hs_invoice_number,
+            line_item_name: lineItem.properties?.name,
+            line_item_amount: itemAmount,
+            service_type: serviceType,
+            commission_amount: commission,
+            commission_type: commissionType,
+            paid_date: invoice.properties?.hs_invoice_paid_date
+          });
         }
+      }
+
+      // Also fetch subscription payments for residual commissions (months 2-12)
+      const activeSubscriptions = await hubspotService.getActiveSubscriptions(salesRep.hubspot_user_id);
+      console.log(`🔄 Found ${activeSubscriptions.length} active subscriptions for residual commission calculation`);
+      
+      for (const subscription of activeSubscriptions) {
+        const payments = await hubspotService.getSubscriptionPaymentsInPeriod(
+          subscription.id,
+          currentPeriod.periodStart,
+          currentPeriod.periodEnd
+        );
         
-        totalCommissions += commission;
-        commissionBreakdown.push({
-          deal_id: deal.id,
-          deal_name: deal.dealname,
-          company_name: deal.company,
-          amount: dealValue,
-          setup_fee: setupFee,
-          monthly_value: monthlyValue,
-          service_type: deal.service_type,
-          commission_amount: commission,
-          commission_type: commissionType,
-          close_date: deal.close_date
-        });
+        for (const payment of payments) {
+          const paymentAmount = parseFloat(payment.properties?.hs_invoice_total_amount || '0');
+          // 10% commission for months 2-12
+          const commission = paymentAmount * 0.10;
+          
+          totalCommissions += commission;
+          commissionBreakdown.push({
+            subscription_id: subscription.id,
+            invoice_number: payment.properties?.hs_invoice_number,
+            line_item_name: 'Subscription Payment (Month 2-12)',
+            line_item_amount: paymentAmount,
+            service_type: 'recurring_residual',
+            commission_amount: commission,
+            commission_type: 'residual_commission',
+            paid_date: payment.properties?.hs_invoice_paid_date
+          });
+        }
       }
 
       res.json({
@@ -3149,8 +3198,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           email: salesRep.email
         },
         total_commissions: totalCommissions,
-        deal_count: paidDeals.length,
-        commission_breakdown: commissionBreakdown
+        invoice_count: paidInvoices.length,
+        subscription_count: activeSubscriptions.length,
+        deal_count: paidInvoices.length + activeSubscriptions.length, // For backward compatibility
+        commission_breakdown: commissionBreakdown,
+        data_source: 'hubspot_invoices_live'
       });
     } catch (error) {
       console.error('Error fetching HubSpot commission data:', error);

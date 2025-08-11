@@ -230,14 +230,72 @@ export const deals = pgTable("deals", {
 });
 
 // Commission Entries
+// HubSpot invoice tracking for commission calculations
+export const hubspotInvoices = pgTable("hubspot_invoices", {
+  id: serial("id").primaryKey(),
+  hubspotInvoiceId: text("hubspot_invoice_id").notNull().unique(),
+  hubspotDealId: text("hubspot_deal_id"), // Link to original deal
+  hubspotContactId: text("hubspot_contact_id"),
+  salesRepId: integer("sales_rep_id").references(() => salesReps.id),
+  invoiceNumber: text("invoice_number"),
+  status: text("status").notNull(), // draft, sent, paid, overdue, cancelled
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  paidAmount: decimal("paid_amount", { precision: 10, scale: 2 }).default("0"),
+  invoiceDate: timestamp("invoice_date").notNull(),
+  dueDate: timestamp("due_date"),
+  paidDate: timestamp("paid_date"),
+  companyName: text("company_name"),
+  isProcessedForCommission: boolean("is_processed_for_commission").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// HubSpot invoice line items for detailed commission calculations
+export const hubspotInvoiceLineItems = pgTable("hubspot_invoice_line_items", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").notNull().references(() => hubspotInvoices.id),
+  hubspotLineItemId: text("hubspot_line_item_id").unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1"),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  serviceType: text("service_type"), // setup, cleanup, prior_years, recurring
+  isRecurring: boolean("is_recurring").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// HubSpot subscription tracking for ongoing commission calculations
+export const hubspotSubscriptions = pgTable("hubspot_subscriptions", {
+  id: serial("id").primaryKey(),
+  hubspotSubscriptionId: text("hubspot_subscription_id").notNull().unique(),
+  hubspotContactId: text("hubspot_contact_id"),
+  hubspotDealId: text("hubspot_deal_id"), // Original deal that created subscription
+  salesRepId: integer("sales_rep_id").references(() => salesReps.id),
+  status: text("status").notNull(), // active, paused, cancelled, past_due
+  monthlyAmount: decimal("monthly_amount", { precision: 10, scale: 2 }).notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  lastInvoiceDate: timestamp("last_invoice_date"),
+  nextInvoiceDate: timestamp("next_invoice_date"),
+  companyName: text("company_name"),
+  serviceDescription: text("service_description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const commissions = pgTable("commissions", {
   id: serial("id").primaryKey(),
-  dealId: integer("deal_id").notNull().references(() => deals.id),
+  // Link to either deal, invoice, or subscription depending on commission source
+  dealId: integer("deal_id").references(() => deals.id),
+  hubspotInvoiceId: integer("hubspot_invoice_id").references(() => hubspotInvoices.id),
+  hubspotSubscriptionId: integer("hubspot_subscription_id").references(() => hubspotSubscriptions.id),
   salesRepId: integer("sales_rep_id").notNull().references(() => salesReps.id),
-  type: text("type").notNull(), // month_1, residual
+  type: text("type").notNull(), // setup, cleanup, prior_years, month_1, residual
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default("pending"), // pending, processing, paid
   monthNumber: integer("month_number").notNull(), // 1, 2, 3, etc.
+  serviceType: text("service_type"), // bookkeeping, tax, payroll, etc.
   dateEarned: timestamp("date_earned").notNull(),
   datePaid: timestamp("date_paid"),
   paymentMethod: text("payment_method"), // direct_deposit, check, etc.
@@ -291,6 +349,23 @@ export const insertDealSchema = createInsertSchema(deals).omit({
   lastSyncedAt: true,
 });
 
+export const insertHubspotInvoiceSchema = createInsertSchema(hubspotInvoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertHubspotInvoiceLineItemSchema = createInsertSchema(hubspotInvoiceLineItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertHubspotSubscriptionSchema = createInsertSchema(hubspotSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertCommissionSchema = createInsertSchema(commissions).omit({
   id: true,
   createdAt: true,
@@ -313,6 +388,12 @@ export type InsertSalesRep = z.infer<typeof insertSalesRepSchema>;
 export type SalesRep = typeof salesReps.$inferSelect;
 export type InsertDeal = z.infer<typeof insertDealSchema>;
 export type Deal = typeof deals.$inferSelect;
+export type InsertHubspotInvoice = z.infer<typeof insertHubspotInvoiceSchema>;
+export type HubspotInvoice = typeof hubspotInvoices.$inferSelect;
+export type InsertHubspotInvoiceLineItem = z.infer<typeof insertHubspotInvoiceLineItemSchema>;
+export type HubspotInvoiceLineItem = typeof hubspotInvoiceLineItems.$inferSelect;
+export type InsertHubspotSubscription = z.infer<typeof insertHubspotSubscriptionSchema>;
+export type HubspotSubscription = typeof hubspotSubscriptions.$inferSelect;
 export type InsertCommission = z.infer<typeof insertCommissionSchema>;
 export type Commission = typeof commissions.$inferSelect;
 export type InsertMonthlyBonus = z.infer<typeof insertMonthlyBonusSchema>;

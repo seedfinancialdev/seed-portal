@@ -607,7 +607,7 @@ export default function CommissionTracker() {
                   </p>
                   {hubspotCommissionData && (
                     <p className="text-xs text-gray-500 mt-1">
-                      {hubspotCommissionData.deal_count} deals • HubSpot live data
+                      {hubspotCommissionData.invoice_count} invoices • {hubspotCommissionData.subscription_count} subscriptions • Invoice-based data
                     </p>
                   )}
                 </div>

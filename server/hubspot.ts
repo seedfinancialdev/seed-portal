@@ -1656,6 +1656,206 @@ Services Include:
     }
   }
 
+  // Get paid invoices within a specific period for commission calculations
+  async getPaidInvoicesInPeriod(startDate: string, endDate: string, salesRepHubspotId?: string): Promise<any[]> {
+    try {
+      console.log(`🧾 Searching for paid invoices between ${startDate} and ${endDate}${salesRepHubspotId ? ` for rep ${salesRepHubspotId}` : ''}`);
+      
+      // Build search criteria for invoices paid in the specified period
+      const searchBody: any = {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: 'hs_invoice_status',
+                operator: 'EQ',
+                value: 'PAID'
+              },
+              {
+                propertyName: 'hs_invoice_paid_date',
+                operator: 'GTE',
+                value: new Date(startDate).getTime().toString()
+              },
+              {
+                propertyName: 'hs_invoice_paid_date',
+                operator: 'LTE', 
+                value: new Date(endDate).getTime().toString()
+              }
+            ]
+          }
+        ],
+        properties: [
+          'hs_invoice_number',
+          'hs_invoice_status',
+          'hs_invoice_total_amount',
+          'hs_invoice_paid_amount',
+          'hs_invoice_paid_date',
+          'hs_invoice_due_date',
+          'hs_object_id'
+        ],
+        limit: 100
+      };
+
+      // Add sales rep filter if provided
+      if (salesRepHubspotId) {
+        searchBody.filterGroups[0].filters.push({
+          propertyName: 'hubspot_owner_id',
+          operator: 'EQ',
+          value: salesRepHubspotId
+        });
+      }
+
+      console.log('Invoice search body:', JSON.stringify(searchBody, null, 2));
+      
+      const searchResult = await this.makeRequest('/crm/v3/objects/invoices/search', {
+        method: 'POST',
+        body: JSON.stringify(searchBody)
+      });
+
+      console.log(`Found ${searchResult.results?.length || 0} paid invoices in period`);
+      return searchResult.results || [];
+    } catch (error) {
+      console.error('Error fetching paid invoices:', error);
+      return [];
+    }
+  }
+
+  // Get invoice line items for detailed commission calculations
+  async getInvoiceLineItems(invoiceId: string): Promise<any[]> {
+    try {
+      console.log(`📋 Fetching line items for invoice ${invoiceId}`);
+      
+      const lineItemsResponse = await this.makeRequest(`/crm/v4/objects/invoices/${invoiceId}/associations/line_items`);
+      
+      if (!lineItemsResponse?.results?.length) {
+        return [];
+      }
+
+      // Get detailed line item information
+      const lineItemIds = lineItemsResponse.results.map((assoc: any) => assoc.toObjectId);
+      const lineItemDetails = await Promise.all(
+        lineItemIds.map(async (lineItemId: string) => {
+          try {
+            const lineItem = await this.makeRequest(`/crm/v3/objects/line_items/${lineItemId}?properties=name,description,price,quantity,amount,hs_recurring_billing_period,hs_product_id`);
+            return lineItem;
+          } catch (error) {
+            console.error(`Error fetching line item ${lineItemId}:`, error);
+            return null;
+          }
+        })
+      );
+
+      return lineItemDetails.filter(item => item !== null);
+    } catch (error) {
+      console.error('Error fetching invoice line items:', error);
+      return [];
+    }
+  }
+
+  // Get active subscriptions for ongoing commission tracking
+  async getActiveSubscriptions(salesRepHubspotId?: string): Promise<any[]> {
+    try {
+      console.log(`🔄 Fetching active subscriptions${salesRepHubspotId ? ` for rep ${salesRepHubspotId}` : ''}`);
+      
+      const searchBody: any = {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: 'hs_subscription_status',
+                operator: 'IN',
+                values: ['ACTIVE', 'PAUSED']
+              }
+            ]
+          }
+        ],
+        properties: [
+          'hs_subscription_status',
+          'hs_subscription_start_date',
+          'hs_subscription_end_date',
+          'hs_subscription_recurring_amount',
+          'hs_subscription_next_billing_date',
+          'hs_object_id'
+        ],
+        limit: 100
+      };
+
+      // Add sales rep filter if provided
+      if (salesRepHubspotId) {
+        searchBody.filterGroups[0].filters.push({
+          propertyName: 'hubspot_owner_id',
+          operator: 'EQ',
+          value: salesRepHubspotId
+        });
+      }
+
+      const searchResult = await this.makeRequest('/crm/v3/objects/subscriptions/search', {
+        method: 'POST',
+        body: JSON.stringify(searchBody)
+      });
+
+      console.log(`Found ${searchResult.results?.length || 0} active subscriptions`);
+      return searchResult.results || [];
+    } catch (error) {
+      console.error('Error fetching active subscriptions:', error);
+      return [];
+    }
+  }
+
+  // Get subscription payments within a period for residual commission calculations
+  async getSubscriptionPaymentsInPeriod(subscriptionId: string, startDate: string, endDate: string): Promise<any[]> {
+    try {
+      console.log(`💰 Fetching subscription payments for ${subscriptionId} between ${startDate} and ${endDate}`);
+      
+      // Get invoices associated with this subscription that were paid in the period
+      const searchBody = {
+        filterGroups: [
+          {
+            filters: [
+              {
+                propertyName: 'hs_subscription_id',
+                operator: 'EQ',
+                value: subscriptionId
+              },
+              {
+                propertyName: 'hs_invoice_status',
+                operator: 'EQ',
+                value: 'PAID'
+              },
+              {
+                propertyName: 'hs_invoice_paid_date',
+                operator: 'GTE',
+                value: new Date(startDate).getTime().toString()
+              },
+              {
+                propertyName: 'hs_invoice_paid_date',
+                operator: 'LTE',
+                value: new Date(endDate).getTime().toString()
+              }
+            ]
+          }
+        ],
+        properties: [
+          'hs_invoice_number',
+          'hs_invoice_total_amount',
+          'hs_invoice_paid_date',
+          'hs_subscription_id'
+        ],
+        limit: 100
+      };
+
+      const searchResult = await this.makeRequest('/crm/v3/objects/invoices/search', {
+        method: 'POST',
+        body: JSON.stringify(searchBody)
+      });
+
+      return searchResult.results || [];
+    } catch (error) {
+      console.error('Error fetching subscription payments:', error);
+      return [];
+    }
+  }
+
   // Determine services from deal names and types
   determineServicesFromDeals(deals: any[]): string[] {
     const services = new Set<string>();
