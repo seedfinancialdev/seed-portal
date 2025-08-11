@@ -1,4 +1,4 @@
-import { hubSpotService } from "./hubspot";
+import { HubSpotService } from "./hubspot";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { calculateCommission } from "@shared/commission-calculator";
@@ -37,6 +37,11 @@ interface HubSpotDeal {
 }
 
 export class HubSpotCommissionSync {
+  private hubspotService: HubSpotService;
+
+  constructor() {
+    this.hubspotService = new HubSpotService();
+  }
   
   /**
    * Sync sales reps from HubSpot users
@@ -45,8 +50,13 @@ export class HubSpotCommissionSync {
     try {
       console.log('🔄 Syncing sales reps from HubSpot...');
       
-      // Get all HubSpot users/owners
-      const response = await hubSpotService.crm.owners.getAll();
+      // Get all HubSpot users/owners using the makeRequest method
+      const response = await this.hubspotService.makeRequest('/crm/v3/owners');
+      
+      if (!response || !response.results) {
+        throw new Error('Failed to fetch HubSpot owners - no results returned');
+      }
+      
       const hubspotUsers = response.results;
       
       for (const hsUser of hubspotUsers) {
@@ -110,13 +120,9 @@ export class HubSpotCommissionSync {
     try {
       console.log('🔄 Syncing invoices from HubSpot...');
       
-      // Get invoices from HubSpot with associations to line items
-      const invoicesResponse = await hubSpotService.crm.objects.basicApi.getPage(
-        'invoices', 
-        100,
-        ['hs_createdate', 'hs_lastmodifieddate', 'hs_object_id'],
-        undefined,
-        ['line_items']
+      // Get invoices from HubSpot with line item associations
+      const invoicesResponse = await this.hubspotService.makeRequest(
+        '/crm/v3/objects/invoices?limit=100&properties=hs_createdate,hs_lastmodifieddate,hs_object_id,hs_invoice_amount,hs_invoice_number,hs_invoice_status&associations=line_items'
       );
       
       console.log(`📋 Found ${invoicesResponse.results.length} invoices in HubSpot`);
@@ -142,9 +148,8 @@ export class HubSpotCommissionSync {
         
         for (const lineItemId of lineItemIds) {
           try {
-            const lineItem = await hubSpotService.crm.lineItems.basicApi.getById(
-              lineItemId,
-              ['name', 'price', 'quantity', 'amount']
+            const lineItem = await this.hubspotService.makeRequest(
+              `/crm/v3/objects/line_items/${lineItemId}?properties=name,price,quantity,amount`
             );
             
             const amount = parseFloat(lineItem.properties.amount || '0');
