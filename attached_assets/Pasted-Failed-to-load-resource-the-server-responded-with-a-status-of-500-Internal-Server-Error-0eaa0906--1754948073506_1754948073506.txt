@@ -1,0 +1,35 @@
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/sales-reps:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/deals:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/commissions:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/sales-reps:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/deals:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/commissions:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/sales-reps:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/deals:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+events.launchdarkly.com/events/diagnostic/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-82806d4c11708165b1c75958e9763ed5.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-82806d4c11708165b1c75958e9763ed5.js:1:219799
+0eaa0906-91da-425d-a7fb-ee8d092a93fb-00-1yrbtgt9gt5c5.janeway.replit.dev/api/commissions/process-hubspot:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+r.stripe.com/b:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+logs.browser-intake-us5-datadoghq.com/api/v2/logs?ddsource=browser&ddtags=sdk_version%3A4.46.0%2Capi%3Abeacon%2Cenv%3Aproduction%2Cservice%3Awebsite%2Cversion%3A8d075696&dd-api-key=pub31a5047a3a4692afb84a423db984dc57&dd-evp-origin-version=4.46.0&dd-evp-origin=browser&dd-request-id=e7dc3061-b253-4ed3-892c-d4816af2ab3a:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+shared-82806d4c11708165b1c75958e9763ed5.js:1  POST https://r.stripe.com/b net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+e @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+c @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+value @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+value @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+value @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+value @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+value @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+(anonymous) @ shared-82806d4c11708165b1c75958e9763ed5.js:1
+shared-82806d4c11708165b1c75958e9763ed5.js:1 Uncaught (in promise) FetchError: Error fetching https://r.stripe.com/b: Failed to fetch
+    at shared-82806d4c11708165b1c75958e9763ed5.js:1:219799

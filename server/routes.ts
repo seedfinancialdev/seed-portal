@@ -3217,6 +3217,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // Step 1: Sync HubSpot owners/sales reps
       console.log('📋 Step 1: Syncing HubSpot team members...');
       const ownersResponse = await hubspotService.makeRequest('/crm/v3/owners');
+      
+      if (!ownersResponse || !ownersResponse.results) {
+        throw new Error('Failed to fetch HubSpot owners - no results returned');
+      }
+      
       const owners = ownersResponse.results;
       
       const salesReps = [];
@@ -3260,7 +3265,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const endDate = new Date().toISOString().split('T')[0];
       const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const paidInvoices = await hubspotService.getPaidInvoices(startDate, endDate);
+      const paidInvoices = await hubspotService.getPaidInvoicesInPeriod(startDate, endDate);
       console.log(`Found ${paidInvoices.length} paid invoices`);
       
       // Step 3: For each invoice, get the associated deal and create commissions
@@ -3269,18 +3274,27 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       
       for (const invoice of paidInvoices) {
         try {
-          // Get deal details from invoice
-          const dealId = invoice.properties.hs_associated_deal;
-          if (!dealId || dealsProcessed.has(dealId)) continue;
+          // Get deal details from invoice - check multiple possible association fields
+          let dealId = invoice.properties.hs_associated_deal || 
+                      invoice.properties.hs_deal_id ||
+                      invoice.properties.associated_deal_id;
+          
+          if (!dealId) {
+            console.log(`No associated deal found for invoice ${invoice.id}`, invoice.properties);
+            continue;
+          }
+          
+          if (dealsProcessed.has(dealId)) continue;
           
           console.log(`Processing deal ${dealId} from invoice ${invoice.id}`);
           
           // Fetch deal details
-          const dealResponse = await hubspotService.makeRequest(`/crm/v3/objects/deals/${dealId}`, {
-            method: 'GET'
-          });
+          const dealResponse = await hubspotService.makeRequest(`/crm/v3/objects/deals/${dealId}?properties=dealname,amount,closedate,dealstage,hubspot_owner_id,pipeline,company`);
           
-          if (!dealResponse) continue;
+          if (!dealResponse) {
+            console.log(`Could not fetch deal details for deal ${dealId}`);
+            continue;
+          }
           
           const deal = dealResponse;
           const dealProps = deal.properties;

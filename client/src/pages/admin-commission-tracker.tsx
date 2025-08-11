@@ -484,16 +484,24 @@ export function AdminCommissionTracker() {
   const handleSyncHubSpot = async () => {
     setSyncLoading(true);
     try {
+      // Get CSRF token first
+      const csrfResponse = await fetch('/api/csrf-token');
+      const { csrfToken } = await csrfResponse.json();
+      
       const response = await fetch('/api/commissions/sync-hubspot', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
         }
       });
 
       if (response.ok) {
         const result = await response.json();
         console.log('HubSpot sync completed:', result);
+        
+        // Show success message
+        alert(`HubSpot sync completed successfully!\n\nResults:\n- Sales reps: ${result.results.salesRepsProcessed}\n- Invoices: ${result.results.invoicesProcessed}\n- Deals: ${result.results.dealsProcessed}\n- Commissions: ${result.results.commissionsCreated}`);
         
         // Refresh all data after sync
         window.location.reload();
