@@ -114,18 +114,22 @@ export class HubSpotCommissionSync {
       const invoicesResponse = await hubSpotService.crm.objects.basicApi.getPage(
         'invoices', 
         100,
-        ['hs_invoice_status', 'hs_invoice_number', 'createdate', 'hs_lastmodifieddate'],
+        ['hs_createdate', 'hs_lastmodifieddate', 'hs_object_id'],
         undefined,
         ['line_items']
       );
       
       console.log(`📋 Found ${invoicesResponse.results.length} invoices in HubSpot`);
       
+      let processedInvoices = 0;
+      
       for (const invoice of invoicesResponse.results) {
         console.log(`🔍 Processing invoice ID: ${invoice.id}`);
+        console.log(`📝 Invoice properties:`, JSON.stringify(invoice.properties, null, 2));
+        console.log(`🔗 Invoice associations:`, JSON.stringify(invoice.associations, null, 2));
         
         // Get line items for this invoice
-        const lineItemIds = invoice.associations?.line_items?.results?.map(li => li.id) || [];
+        const lineItemIds = invoice.associations?.['line items']?.results?.map(li => li.id) || [];
         
         if (lineItemIds.length === 0) {
           console.log(`⚠️ No line items found for invoice ${invoice.id}, skipping`);
@@ -191,12 +195,12 @@ export class HubSpotCommissionSync {
             ) VALUES (
               ${invoice.id},
               ${1}, -- Default to first sales rep for now
-              ${invoice.properties.hs_invoice_number || `INV-${invoice.id}`},
-              ${invoice.properties.hs_invoice_status || 'paid'},
+              ${`INV-${invoice.id}`},
+              ${'paid'},
               ${totalAmount},
               ${totalAmount}, -- Assuming fully paid since status is paid
-              ${invoice.properties.createdate}::date,
-              ${invoice.properties.createdate}::date,
+              ${invoice.properties.hs_createdate}::date,
+              ${invoice.properties.hs_createdate}::date,
               ${`Client for Invoice ${invoice.id}`},
               false,
               NOW(),
@@ -237,14 +241,17 @@ export class HubSpotCommissionSync {
           console.log(`✅ Created invoice ${invoice.id} with ${lineItems.length} line items - $${totalAmount}`);
           
           // Generate commissions based on line items
-          await this.generateCommissionsForInvoice(hubspotInvoiceId, 1, lineItems, invoice.properties.createdate);
+          await this.generateCommissionsForInvoice(hubspotInvoiceId, 1, lineItems, invoice.properties.hs_createdate);
+          
+          processedInvoices++;
           
         } else {
           console.log(`🔄 Invoice ${invoice.id} already exists, skipping`);
         }
       }
       
-      console.log('✅ Invoice sync completed');
+      console.log(`✅ Invoices sync completed - processed ${processedInvoices} invoices`);
+      return processedInvoices;
     } catch (error) {
       console.error('❌ Error syncing invoices:', error);
       throw error;
@@ -421,7 +428,7 @@ export class HubSpotCommissionSync {
       await this.syncSalesReps();
       
       // Then sync invoices and generate commissions
-      await this.syncInvoices();
+      const invoicesProcessed = await this.syncInvoices();
       
       // Count results
       const salesRepsCount = await db.execute(sql`SELECT COUNT(*) as count FROM sales_reps WHERE is_active = true`);
@@ -431,7 +438,8 @@ export class HubSpotCommissionSync {
       const results = {
         salesReps: (salesRepsCount.rows[0] as any).count,
         invoices: (invoicesCount.rows[0] as any).count,
-        commissions: (commissionsCount.rows[0] as any).count
+        commissions: (commissionsCount.rows[0] as any).count,
+        invoicesProcessed
       };
       
       console.log('🎉 Full sync completed:', results);
