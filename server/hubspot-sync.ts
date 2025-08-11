@@ -260,7 +260,7 @@ export class HubSpotCommissionSync {
           ${totalAmount}, -- Assuming fully paid since status is paid
           ${invoice.properties.hs_createdate}::date,
           ${invoice.properties.hs_createdate}::date,
-          ${`Client for Invoice ${invoice.id}`},
+          ${invoice.properties.hs_deal_name || invoice.properties.company_name || `Client for Invoice ${invoice.id}`},
           false,
           NOW(),
           NOW()
