@@ -3204,6 +3204,75 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   // Trigger initial sync after a short delay to ensure server is ready
   setTimeout(initializeHubSpotSync, 3000);
 
+  // Debug endpoint to directly search HubSpot invoices
+  app.get("/api/debug/hubspot-invoices", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const { HubSpotService } = await import('./hubspot.js');
+      const hubspotService = new HubSpotService();
+      
+      console.log('🔍 Searching for all invoices in HubSpot...');
+      
+      // Search for all invoices (multiple approaches)
+      const searches = [
+        // Approach 1: Search invoices object
+        hubspotService.makeRequest('/crm/v3/objects/invoices?limit=100&properties=hs_invoice_amount,hs_invoice_number,hs_invoice_status,hs_createdate,hs_lastmodifieddate,hs_associated_deal,associated_deal_id'),
+        
+        // Approach 2: Search with different properties 
+        hubspotService.makeRequest('/crm/v3/objects/invoices?limit=100&properties=amount,invoice_number,status,createdate,lastmodifieddate,deal_id'),
+        
+        // Approach 3: Search for line items (which might be what you have)
+        hubspotService.makeRequest('/crm/v3/objects/line_items?limit=100&properties=name,price,quantity,amount,createdate,hs_associated_deal'),
+        
+        // Approach 4: Search products 
+        hubspotService.makeRequest('/crm/v3/objects/products?limit=100&properties=name,price,description,createdate'),
+      ];
+      
+      const results = await Promise.allSettled(searches);
+      
+      let foundData = {
+        invoices_approach1: [],
+        invoices_approach2: [], 
+        line_items: [],
+        products: [],
+        summary: {}
+      };
+      
+      // Process each result
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value?.results) {
+          const data = result.value.results;
+          switch(index) {
+            case 0: foundData.invoices_approach1 = data; break;
+            case 1: foundData.invoices_approach2 = data; break;
+            case 2: foundData.line_items = data; break;
+            case 3: foundData.products = data; break;
+          }
+        }
+      });
+      
+      // Create summary
+      foundData.summary = {
+        invoices_count_approach1: foundData.invoices_approach1.length,
+        invoices_count_approach2: foundData.invoices_approach2.length,
+        line_items_count: foundData.line_items.length,
+        products_count: foundData.products.length,
+        total_found: foundData.invoices_approach1.length + foundData.invoices_approach2.length + foundData.line_items.length + foundData.products.length
+      };
+      
+      console.log('📊 HubSpot Invoice Search Results:', foundData.summary);
+      
+      res.json(foundData);
+      
+    } catch (error) {
+      console.error('❌ Error searching HubSpot invoices:', error);
+      res.status(500).json({ message: "Failed to search HubSpot invoices", error: error.message });
+    }
+  });
+
   // Sync real commission data from HubSpot invoices
   app.post("/api/commissions/sync-hubspot", requireAuth, async (req, res) => {
     try {
