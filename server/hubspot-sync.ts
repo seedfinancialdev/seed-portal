@@ -439,35 +439,7 @@ export class HubSpotCommissionSync {
         `);
         console.log(`✅ Month 1 commission: $${monthlyValue * 0.4} (40% of $${monthlyValue})`);
         
-        // Generate residual commissions (10% for months 2-12)
-        for (let month = 2; month <= 12; month++) {
-          await db.execute(sql`
-            INSERT INTO commissions (
-              hubspot_invoice_id,
-              sales_rep_id,
-              type,
-              amount,
-              status,
-              month_number,
-              service_type,
-              date_earned,
-              created_at,
-              updated_at
-            ) VALUES (
-              ${hubspotInvoiceId},
-              ${salesRepId},
-              'residual',
-              ${monthlyValue * 0.1},
-              'pending',
-              ${month},
-              'recurring',
-              (${paidDate}::date + INTERVAL '1 month' * ${month - 1}),
-              NOW(),
-              NOW()
-            )
-          `);
-        }
-        console.log(`✅ Residual commissions: $${monthlyValue * 0.1} x 11 months (10% each)`);
+        // Note: Residual commissions (months 2-12) will be generated when actual subscription payments are received
       }
       
       console.log(`✅ Generated all commissions for invoice ${hubspotInvoiceId}`);
