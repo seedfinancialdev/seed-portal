@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -175,103 +176,96 @@ export function AdminCommissionTracker() {
     );
   }
 
-  // Load sample data
+  // Fetch real commission data from API
+  const { data: liveCommissions = [], isLoading: commissionsLoading } = useQuery({
+    queryKey: ['/api/commissions'],
+    queryFn: async () => {
+      const response = await fetch('/api/commissions');
+      if (!response.ok) throw new Error('Failed to fetch commissions');
+      return response.json();
+    }
+  });
+
+  const { data: liveSalesReps = [], isLoading: salesRepsLoading } = useQuery({
+    queryKey: ['/api/sales-reps'],
+    queryFn: async () => {
+      const response = await fetch('/api/sales-reps');
+      if (!response.ok) throw new Error('Failed to fetch sales reps');
+      return response.json();
+    }
+  });
+
+  const { data: liveDeals = [], isLoading: dealsLoading } = useQuery({
+    queryKey: ['/api/deals'],
+    queryFn: async () => {
+      const response = await fetch('/api/deals');
+      if (!response.ok) throw new Error('Failed to fetch deals');
+      return response.json();
+    }
+  });
+
+  // Update component state when data loads
   useEffect(() => {
-    // Sample commissions data
-    const sampleCommissions: Commission[] = [
-      {
-        id: 'comm-1',
-        dealId: 'deal-1',
-        dealName: 'Bookkeeping Setup',
-        companyName: 'Tech Startup LLC',
-        salesRep: 'Amanda Rodriguez',
-        serviceType: 'bookkeeping',
-        type: 'month_1',
-        monthNumber: 1,
-        amount: 2400,
-        status: 'approved',
-        dateEarned: '2025-01-15',
-        hubspotDealId: 'hs-deal-123'
-      },
-      {
-        id: 'comm-2',
-        dealId: 'deal-2',
-        dealName: 'TaaS Implementation',
-        companyName: 'Growth Co',
-        salesRep: 'Randall Matthews',
-        serviceType: 'taas',
-        type: 'month_1',
-        monthNumber: 1,
-        amount: 3200,
-        status: 'pending',
-        dateEarned: '2025-01-20'
-      },
-      {
-        id: 'comm-3',
-        dealId: 'deal-1',
-        dealName: 'Bookkeeping Setup',
-        companyName: 'Tech Startup LLC',
-        salesRep: 'Amanda Rodriguez',
-        serviceType: 'bookkeeping',
-        type: 'residual',
-        monthNumber: 2,
-        amount: 450,
-        status: 'paid',
-        dateEarned: '2025-02-01',
-        datePaid: '2025-02-15'
-      }
-    ];
+    if (liveCommissions.length > 0) {
+      // Transform API data to match component interface
+      const transformedCommissions: Commission[] = liveCommissions.map(comm => ({
+        id: comm.id.toString(),
+        dealId: comm.deal_id || comm.id.toString(),
+        dealName: comm.deal_name || 'Commission',
+        companyName: comm.company_name || 'Unknown Company',
+        salesRep: comm.sales_rep_name || 'Unknown Rep',
+        serviceType: comm.service_type || 'bookkeeping',
+        type: comm.type || 'monthly',
+        monthNumber: 1, // Default
+        amount: comm.amount || 0,
+        status: comm.status || 'pending',
+        dateEarned: comm.date_earned || new Date().toISOString().split('T')[0],
+        hubspotDealId: comm.hubspot_deal_id
+      }));
+      setCommissions(transformedCommissions);
+    }
+  }, [liveCommissions]);
 
-    const sampleDeals: Deal[] = [
-      {
-        id: 'deal-pipeline-1',
-        dealName: 'Full Service Package',
-        companyName: 'Scale Industries',
-        salesRep: 'Amanda Rodriguez',
-        serviceType: 'bookkeeping',
-        amount: 15000,
-        setupFee: 2500,
-        monthlyFee: 1250,
-        status: 'open',
-        probability: 75,
-        pipelineStage: 'Proposal Sent',
-        hubspotDealId: 'hs-deal-456'
-      },
-      {
-        id: 'deal-pipeline-2',
-        dealName: 'Payroll Setup',
-        companyName: 'Local Restaurant',
-        salesRep: 'Randall Matthews',
-        serviceType: 'payroll',
-        amount: 8000,
-        setupFee: 1500,
-        monthlyFee: 650,
-        status: 'open',
-        probability: 60,
-        pipelineStage: 'Negotiation'
-      }
-    ];
+  useEffect(() => {
+    if (liveSalesReps.length > 0) {
+      // Transform API data to match component interface  
+      const transformedSalesReps: SalesRep[] = liveSalesReps.map(rep => ({
+        id: rep.id.toString(),
+        name: rep.name || `${rep.first_name || ''} ${rep.last_name || ''}`.trim(),
+        email: rep.email || 'unknown@email.com',
+        isActive: rep.is_active !== false,
+        totalCommissions: 0, // Will be calculated
+        projectedCommissions: 0 // Will be calculated
+      }));
+      setSalesReps(transformedSalesReps);
+    }
+  }, [liveSalesReps]);
 
-    const sampleSalesReps: SalesRep[] = [
-      {
-        id: 'rep-1',
-        name: 'Amanda Rodriguez',
-        email: 'amanda@seedfinancial.io',
-        isActive: true,
-        totalCommissions: 12450,
-        projectedCommissions: 8500
-      },
-      {
-        id: 'rep-2',
-        name: 'Randall Matthews',
-        email: 'randall@seedfinancial.io',
-        isActive: true,
-        totalCommissions: 9800,
-        projectedCommissions: 6200
-      }
-    ];
+  useEffect(() => {
+    if (liveDeals.length > 0) {
+      // Transform API data to match component interface
+      const transformedDeals: Deal[] = liveDeals.map(deal => ({
+        id: deal.id.toString(),
+        dealName: deal.deal_name || deal.name || 'Untitled Deal',
+        companyName: deal.company_name || 'Unknown Company',
+        salesRep: deal.sales_rep_name || 'Unknown Rep',
+        serviceType: deal.service_type || 'bookkeeping',
+        amount: deal.amount || 0,
+        setupFee: deal.setup_fee || 0,
+        monthlyFee: deal.monthly_fee || 0,
+        status: deal.status || 'open',
+        probability: deal.probability || 50,
+        closedDate: deal.closed_date,
+        hubspotDealId: deal.hubspot_deal_id
+      }));
+      setDeals(transformedDeals);
+    }
+  }, [liveDeals]);
 
-    const sampleAdjustmentRequests: AdjustmentRequest[] = [
+  // Initialize with empty arrays - data will come from API queries above
+  useEffect(() => {
+    // Set adjustment requests with sample data for now
+    setAdjustmentRequests([
       {
         id: 'adj-1',
         commissionId: 'comm-2',
@@ -282,12 +276,7 @@ export function AdminCommissionTracker() {
         status: 'pending',
         requestedDate: '2025-01-25'
       }
-    ];
-
-    setCommissions(sampleCommissions);
-    setDeals(sampleDeals);
-    setSalesReps(sampleSalesReps);
-    setAdjustmentRequests(sampleAdjustmentRequests);
+    ]);
   }, []);
 
   // Filter commissions based on current filters

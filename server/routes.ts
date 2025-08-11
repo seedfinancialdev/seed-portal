@@ -3022,6 +3022,134 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Process HubSpot invoices endpoint (for admin button)
+  app.post("/api/commissions/process-hubspot", requireAuth, async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        res.status(403).json({ message: "Admin access required" });
+        return;
+      }
+
+      // Calculate current period (14th to 13th cycle)
+      const getCurrentPeriod = () => {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const currentDay = today.getDate();
+        
+        let periodStartMonth, periodStartYear, periodEndMonth, periodEndYear;
+        
+        if (currentDay >= 14) {
+          periodStartMonth = currentMonth;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth + 1;
+          periodEndYear = currentYear;
+          
+          if (periodEndMonth > 11) {
+            periodEndMonth = 0;
+            periodEndYear = currentYear + 1;
+          }
+        } else {
+          periodStartMonth = currentMonth - 1;
+          periodStartYear = currentYear;
+          periodEndMonth = currentMonth;
+          periodEndYear = currentYear;
+          
+          if (periodStartMonth < 0) {
+            periodStartMonth = 11;
+            periodStartYear = currentYear - 1;
+          }
+        }
+        
+        const periodStart = new Date(periodStartYear, periodStartMonth, 14);
+        const periodEnd = new Date(periodEndYear, periodEndMonth, 13);
+        
+        return {
+          periodStart: periodStart.toISOString().split('T')[0],
+          periodEnd: periodEnd.toISOString().split('T')[0]
+        };
+      };
+
+      const currentPeriod = getCurrentPeriod();
+      
+      // Import HubSpot service and commission calculator
+      const { HubSpotService } = await import('./hubspot.js');
+      const { calculateCommissionFromInvoice } = await import('../shared/commission-calculator.js');
+      const hubspotService = new HubSpotService();
+      
+      // Get all paid invoices from HubSpot for the current period (all reps)
+      const paidInvoices = await hubspotService.getPaidInvoicesInPeriod(
+        currentPeriod.periodStart, 
+        currentPeriod.periodEnd
+      );
+
+      console.log(`🧾 Admin processing: Found ${paidInvoices.length} total paid invoices for all reps`);
+
+      // Get all sales reps to map invoices to reps
+      const allSalesReps = await storage.getAllSalesReps();
+      const salesRepMap = new Map(allSalesReps.map(rep => [rep.hubspot_user_id, rep]));
+
+      // Process each invoice and store commission records
+      let processedInvoices = 0;
+      let totalCommissions = 0;
+
+      for (const invoice of paidInvoices) {
+        try {
+          // Find the sales rep for this invoice
+          const salesRep = salesRepMap.get(invoice.owner_id);
+          if (!salesRep) {
+            console.log(`⚠️ No sales rep found for HubSpot user ID: ${invoice.owner_id}`);
+            continue;
+          }
+
+          // Calculate commission for this invoice
+          const commissionResult = calculateCommissionFromInvoice(
+            invoice.amount,
+            invoice.description || invoice.name || 'Invoice payment',
+            invoice.date_paid
+          );
+
+          // Store commission in database
+          const commissionData = {
+            sales_rep_id: salesRep.id,
+            deal_id: invoice.deal_id || null,
+            deal_name: invoice.name || 'Invoice Payment',
+            company_name: invoice.company_name || 'Unknown Company',
+            service_type: 'bookkeeping', // Default, could be parsed from description
+            amount: commissionResult.amount,
+            type: commissionResult.type,
+            status: 'approved',
+            date_earned: invoice.date_paid,
+            hubspot_deal_id: invoice.deal_id,
+            notes: `Processed from HubSpot invoice: ${invoice.id}`
+          };
+
+          await storage.createCommission(commissionData);
+          processedInvoices++;
+          totalCommissions += commissionResult.amount;
+          
+          console.log(`✅ Processed invoice ${invoice.id}: $${commissionResult.amount} commission for ${salesRep.name}`);
+        } catch (error) {
+          console.error(`❌ Error processing invoice ${invoice.id}:`, error);
+        }
+      }
+
+      res.json({
+        success: true,
+        processed_invoices: processedInvoices,
+        total_invoices: paidInvoices.length,
+        total_commissions: totalCommissions,
+        period: currentPeriod
+      });
+
+    } catch (error) {
+      console.error('🚨 Error processing HubSpot commissions:', error);
+      res.status(500).json({ 
+        message: "Failed to process HubSpot commissions", 
+        error: error.message 
+      });
+    }
+  });
 
   // Admin endpoint: Process all HubSpot commissions and store in database
   app.post("/api/admin/commissions/process-hubspot", requireAuth, async (req, res) => {
