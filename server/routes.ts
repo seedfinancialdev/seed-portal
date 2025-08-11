@@ -2955,8 +2955,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       let commissions;
       if (salesRepId) {
         commissions = await storage.getCommissionsBySalesRep(parseInt(salesRepId as string));
+      } else if (req.user && req.user.role === 'admin') {
+        // Admin users get all commissions
+        commissions = await storage.getAllCommissions();
       } else {
-        // If no specific sales rep, try to get for current user
+        // Regular users get their own commissions
         const salesRep = await storage.getSalesRepByUserId(req.user!.id);
         if (salesRep) {
           commissions = await storage.getCommissionsBySalesRep(salesRep.id);
@@ -2965,7 +2968,28 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         }
       }
       
-      res.json(commissions);
+      // Transform database fields to match frontend expectations
+      const transformedCommissions = commissions.map(comm => ({
+        id: comm.id,
+        deal_id: comm.deal_id || comm.dealId,
+        deal_name: `Commission ${comm.id}`, // Will be enhanced with deal data later
+        company_name: 'TBD', // Will be enhanced with company data later
+        sales_rep_id: comm.sales_rep_id || comm.salesRepId,
+        sales_rep_name: 'TBD', // Will be enhanced with sales rep name
+        service_type: 'bookkeeping', // Default service type
+        type: comm.commission_type || comm.type || 'month_1',
+        amount: parseFloat((comm.commission_amount || comm.amount || 0).toString()),
+        status: comm.is_paid ? 'paid' : 'pending',
+        month_number: comm.month_number || comm.monthNumber || 1,
+        date_earned: comm.created_at?.toISOString().split('T')[0],
+        date_paid: comm.paid_at?.toISOString().split('T')[0] || null,
+        hubspot_invoice_id: comm.hubspot_invoice_id || comm.hubspotInvoiceId,
+        hubspot_subscription_id: comm.hubspot_subscription_id || comm.hubspotSubscriptionId,
+        created_at: comm.created_at,
+        updated_at: comm.updated_at
+      }));
+      
+      res.json(transformedCommissions);
     } catch (error) {
       console.error('Error fetching commissions:', error);
       res.status(500).json({ message: "Failed to fetch commissions" });
