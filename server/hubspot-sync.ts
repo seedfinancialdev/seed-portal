@@ -320,7 +320,7 @@ export class HubSpotCommissionSync {
                name.includes('recurring') ||
                name.includes('tax as a service');
       })
-      .reduce((sum, item) => sum + item.amount, 0);
+      .reduce((sum, item) => sum + item.total_price, 0);
   }
   
   private calculateSetupFee(lineItems: any[]): number {
@@ -333,7 +333,7 @@ export class HubSpotCommissionSync {
                name.includes('catch') ||
                name.includes('prior');
       })
-      .reduce((sum, item) => sum + item.amount, 0);
+      .reduce((sum, item) => sum + item.total_price, 0);
   }
   
   private determineServiceType(lineItems: any[]): string {
@@ -374,7 +374,7 @@ export class HubSpotCommissionSync {
       
       console.log(`💼 Processing line items for invoice ${hubspotInvoiceId}:`)
       for (const item of lineItems) {
-        console.log(`  - ${item.name}: $${item.amount}`);
+        console.log(`  - ${item.name}: $${item.total_price}`);
       }
       console.log(`📊 Setup fee: $${setupFee}, Monthly value: $${monthlyValue}`);
       
