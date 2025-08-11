@@ -2906,6 +2906,141 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Commission tracking routes
+  
+  // Get sales reps
+  app.get("/api/sales-reps", requireAuth, async (req, res) => {
+    try {
+      const salesReps = await storage.getAllSalesReps();
+      res.json(salesReps);
+    } catch (error) {
+      console.error('Error fetching sales reps:', error);
+      res.status(500).json({ message: "Failed to fetch sales reps" });
+    }
+  });
+
+  // Get current user's sales rep profile
+  app.get("/api/sales-reps/me", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+      
+      const salesRep = await storage.getSalesRepByUserId(req.user.id);
+      res.json(salesRep || null);
+    } catch (error) {
+      console.error('Error fetching current sales rep:', error);
+      res.status(500).json({ message: "Failed to fetch sales rep profile" });
+    }
+  });
+
+  // Get deals
+  app.get("/api/deals", requireAuth, async (req, res) => {
+    try {
+      const { salesRepId } = req.query;
+      const deals = await storage.getAllDeals(salesRepId ? parseInt(salesRepId as string) : undefined);
+      res.json(deals);
+    } catch (error) {
+      console.error('Error fetching deals:', error);
+      res.status(500).json({ message: "Failed to fetch deals" });
+    }
+  });
+
+  // Get commissions
+  app.get("/api/commissions", requireAuth, async (req, res) => {
+    try {
+      const { salesRepId } = req.query;
+      
+      let commissions;
+      if (salesRepId) {
+        commissions = await storage.getCommissionsBySalesRep(parseInt(salesRepId as string));
+      } else {
+        // If no specific sales rep, try to get for current user
+        const salesRep = await storage.getSalesRepByUserId(req.user!.id);
+        if (salesRep) {
+          commissions = await storage.getCommissionsBySalesRep(salesRep.id);
+        } else {
+          commissions = [];
+        }
+      }
+      
+      res.json(commissions);
+    } catch (error) {
+      console.error('Error fetching commissions:', error);
+      res.status(500).json({ message: "Failed to fetch commissions" });
+    }
+  });
+
+  // Get monthly bonuses
+  app.get("/api/monthly-bonuses", requireAuth, async (req, res) => {
+    try {
+      const { salesRepId } = req.query;
+      
+      let bonuses;
+      if (salesRepId) {
+        bonuses = await storage.getMonthlyBonusesBySalesRep(parseInt(salesRepId as string));
+      } else {
+        // If no specific sales rep, try to get for current user
+        const salesRep = await storage.getSalesRepByUserId(req.user!.id);
+        if (salesRep) {
+          bonuses = await storage.getMonthlyBonusesBySalesRep(salesRep.id);
+        } else {
+          bonuses = [];
+        }
+      }
+      
+      res.json(bonuses);
+    } catch (error) {
+      console.error('Error fetching monthly bonuses:', error);
+      res.status(500).json({ message: "Failed to fetch monthly bonuses" });
+    }
+  });
+
+  // Get milestone bonuses
+  app.get("/api/milestone-bonuses", requireAuth, async (req, res) => {
+    try {
+      const { salesRepId } = req.query;
+      
+      let bonuses;
+      if (salesRepId) {
+        bonuses = await storage.getMilestoneBonusesBySalesRep(parseInt(salesRepId as string));
+      } else {
+        // If no specific sales rep, try to get for current user
+        const salesRep = await storage.getSalesRepByUserId(req.user!.id);
+        if (salesRep) {
+          bonuses = await storage.getMilestoneBonusesBySalesRep(salesRep.id);
+        } else {
+          bonuses = [];
+        }
+      }
+      
+      res.json(bonuses);
+    } catch (error) {
+      console.error('Error fetching milestone bonuses:', error);
+      res.status(500).json({ message: "Failed to fetch milestone bonuses" });
+    }
+  });
+
+  // Update commission status
+  app.patch("/api/commissions/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updateData = req.body;
+      
+      if (isNaN(id)) {
+        res.status(400).json({ message: "Invalid commission ID" });
+        return;
+      }
+      
+      const updatedCommission = await storage.updateCommission(id, updateData);
+      res.json(updatedCommission);
+    } catch (error) {
+      console.error('Error updating commission:', error);
+      res.status(500).json({ message: "Failed to update commission" });
+    }
+  });
+
   // Register admin routes
   await registerAdminRoutes(app);
 

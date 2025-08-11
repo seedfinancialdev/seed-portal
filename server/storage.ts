@@ -1,8 +1,11 @@
 import { 
   users, quotes, approvalCodes, kbCategories, kbArticles, kbBookmarks, kbSearchHistory, workspaceUsers,
+  salesReps, deals, commissions, monthlyBonuses, milestoneBonuses,
   type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, 
   type KbCategory, type InsertKbCategory, type KbArticle, type InsertKbArticle, type KbBookmark, type InsertKbBookmark,
   type KbSearchHistory, type InsertKbSearchHistory, type WorkspaceUser, type InsertWorkspaceUser, 
+  type SalesRep, type InsertSalesRep, type Deal, type InsertDeal, type Commission, type InsertCommission,
+  type MonthlyBonus, type InsertMonthlyBonus, type MilestoneBonus, type InsertMilestoneBonus,
   updateQuoteSchema, type UpdateProfile 
 } from "@shared/schema";
 import { db } from "./db";
@@ -83,6 +86,39 @@ export interface IStorage {
   updateWorkspaceUser(googleId: string, user: Partial<InsertWorkspaceUser>): Promise<WorkspaceUser>;
   deleteInactiveWorkspaceUsers(activeGoogleIds: string[]): Promise<number>; // Returns count of deleted users
   syncWorkspaceUsers(users: InsertWorkspaceUser[]): Promise<{ created: number; updated: number; deleted: number }>;
+  
+  // Commission tracking methods
+  // Sales Representatives
+  getAllSalesReps(): Promise<SalesRep[]>;
+  getSalesRepByUserId(userId: number): Promise<SalesRep | undefined>;
+  createSalesRep(salesRep: InsertSalesRep): Promise<SalesRep>;
+  updateSalesRep(id: number, salesRep: Partial<InsertSalesRep>): Promise<SalesRep>;
+  
+  // Deals
+  getAllDeals(salesRepId?: number): Promise<Deal[]>;
+  getDeal(id: number): Promise<Deal | undefined>;
+  getDealsByHubSpotOwnerId(hubspotOwnerId: string): Promise<Deal[]>;
+  createDeal(deal: InsertDeal): Promise<Deal>;
+  updateDeal(id: number, deal: Partial<InsertDeal>): Promise<Deal>;
+  
+  // Commissions
+  getAllCommissions(salesRepId?: number): Promise<Commission[]>;
+  getCommissionsBySalesRep(salesRepId: number): Promise<Commission[]>;
+  getCommissionsByDeal(dealId: number): Promise<Commission[]>;
+  createCommission(commission: InsertCommission): Promise<Commission>;
+  updateCommission(id: number, commission: Partial<InsertCommission>): Promise<Commission>;
+  
+  // Monthly Bonuses
+  getMonthlyBonuses(salesRepId?: number): Promise<MonthlyBonus[]>;
+  getMonthlyBonusesBySalesRep(salesRepId: number): Promise<MonthlyBonus[]>;
+  createMonthlyBonus(bonus: InsertMonthlyBonus): Promise<MonthlyBonus>;
+  updateMonthlyBonus(id: number, bonus: Partial<InsertMonthlyBonus>): Promise<MonthlyBonus>;
+  
+  // Milestone Bonuses
+  getMilestoneBonuses(salesRepId?: number): Promise<MilestoneBonus[]>;
+  getMilestoneBonusesBySalesRep(salesRepId: number): Promise<MilestoneBonus[]>;
+  createMilestoneBonus(bonus: InsertMilestoneBonus): Promise<MilestoneBonus>;
+  updateMilestoneBonus(id: number, bonus: Partial<InsertMilestoneBonus>): Promise<MilestoneBonus>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -902,6 +938,277 @@ export class DatabaseStorage implements IStorage {
       
       return { created, updated, deleted };
     }, 'syncWorkspaceUsers');
+  }
+
+  // Commission tracking methods
+  // Sales Representatives
+  async getAllSalesReps(): Promise<SalesRep[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(salesReps)
+        .where(eq(salesReps.isActive, true))
+        .orderBy(asc(salesReps.id));
+    }, 'getAllSalesReps');
+  }
+
+  async getSalesRepByUserId(userId: number): Promise<SalesRep | undefined> {
+    return await safeDbQuery(async () => {
+      const [salesRep] = await db.select().from(salesReps)
+        .where(and(eq(salesReps.userId, userId), eq(salesReps.isActive, true)));
+      return salesRep || undefined;
+    }, 'getSalesRepByUserId');
+  }
+
+  async createSalesRep(insertSalesRep: InsertSalesRep): Promise<SalesRep> {
+    return await safeDbQuery(async () => {
+      const [salesRep] = await db.insert(salesReps)
+        .values(insertSalesRep)
+        .returning();
+      
+      if (!salesRep) {
+        throw new Error('Failed to create sales rep');
+      }
+      
+      return salesRep;
+    }, 'createSalesRep');
+  }
+
+  async updateSalesRep(id: number, updateData: Partial<InsertSalesRep>): Promise<SalesRep> {
+    return await safeDbQuery(async () => {
+      const [updatedSalesRep] = await db.update(salesReps)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(salesReps.id, id))
+        .returning();
+      
+      if (!updatedSalesRep) {
+        throw new Error('Failed to update sales rep');
+      }
+      
+      return updatedSalesRep;
+    }, 'updateSalesRep');
+  }
+
+  // Deals
+  async getAllDeals(salesRepId?: number): Promise<Deal[]> {
+    return await safeDbQuery(async () => {
+      if (salesRepId) {
+        // Get deals for specific sales rep by matching user ID through sales rep table
+        const salesRep = await this.getSalesRepByUserId(salesRepId);
+        if (!salesRep) return [];
+        
+        return await db.select().from(deals)
+          .where(eq(deals.ownerId, salesRepId))
+          .orderBy(desc(deals.updatedAt));
+      } else {
+        return await db.select().from(deals)
+          .orderBy(desc(deals.updatedAt));
+      }
+    }, 'getAllDeals');
+  }
+
+  async getDeal(id: number): Promise<Deal | undefined> {
+    return await safeDbQuery(async () => {
+      const [deal] = await db.select().from(deals)
+        .where(eq(deals.id, id));
+      return deal || undefined;
+    }, 'getDeal');
+  }
+
+  async getDealsByHubSpotOwnerId(hubspotOwnerId: string): Promise<Deal[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(deals)
+        .where(eq(deals.hubspotOwnerId, hubspotOwnerId))
+        .orderBy(desc(deals.updatedAt));
+    }, 'getDealsByHubSpotOwnerId');
+  }
+
+  async createDeal(insertDeal: InsertDeal): Promise<Deal> {
+    return await safeDbQuery(async () => {
+      const [deal] = await db.insert(deals)
+        .values(insertDeal)
+        .returning();
+      
+      if (!deal) {
+        throw new Error('Failed to create deal');
+      }
+      
+      return deal;
+    }, 'createDeal');
+  }
+
+  async updateDeal(id: number, updateData: Partial<InsertDeal>): Promise<Deal> {
+    return await safeDbQuery(async () => {
+      const [updatedDeal] = await db.update(deals)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(deals.id, id))
+        .returning();
+      
+      if (!updatedDeal) {
+        throw new Error('Failed to update deal');
+      }
+      
+      return updatedDeal;
+    }, 'updateDeal');
+  }
+
+  // Commissions
+  async getAllCommissions(salesRepId?: number): Promise<Commission[]> {
+    return await safeDbQuery(async () => {
+      if (salesRepId) {
+        return await db.select().from(commissions)
+          .where(eq(commissions.salesRepId, salesRepId))
+          .orderBy(desc(commissions.dateEarned));
+      } else {
+        return await db.select().from(commissions)
+          .orderBy(desc(commissions.dateEarned));
+      }
+    }, 'getAllCommissions');
+  }
+
+  async getCommissionsBySalesRep(salesRepId: number): Promise<Commission[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(commissions)
+        .where(eq(commissions.salesRepId, salesRepId))
+        .orderBy(desc(commissions.dateEarned));
+    }, 'getCommissionsBySalesRep');
+  }
+
+  async getCommissionsByDeal(dealId: number): Promise<Commission[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(commissions)
+        .where(eq(commissions.dealId, dealId))
+        .orderBy(desc(commissions.dateEarned));
+    }, 'getCommissionsByDeal');
+  }
+
+  async createCommission(insertCommission: InsertCommission): Promise<Commission> {
+    return await safeDbQuery(async () => {
+      const [commission] = await db.insert(commissions)
+        .values(insertCommission)
+        .returning();
+      
+      if (!commission) {
+        throw new Error('Failed to create commission');
+      }
+      
+      return commission;
+    }, 'createCommission');
+  }
+
+  async updateCommission(id: number, updateData: Partial<InsertCommission>): Promise<Commission> {
+    return await safeDbQuery(async () => {
+      const [updatedCommission] = await db.update(commissions)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(commissions.id, id))
+        .returning();
+      
+      if (!updatedCommission) {
+        throw new Error('Failed to update commission');
+      }
+      
+      return updatedCommission;
+    }, 'updateCommission');
+  }
+
+  // Monthly Bonuses
+  async getMonthlyBonuses(salesRepId?: number): Promise<MonthlyBonus[]> {
+    return await safeDbQuery(async () => {
+      if (salesRepId) {
+        return await db.select().from(monthlyBonuses)
+          .where(eq(monthlyBonuses.salesRepId, salesRepId))
+          .orderBy(desc(monthlyBonuses.dateEarned));
+      } else {
+        return await db.select().from(monthlyBonuses)
+          .orderBy(desc(monthlyBonuses.dateEarned));
+      }
+    }, 'getMonthlyBonuses');
+  }
+
+  async getMonthlyBonusesBySalesRep(salesRepId: number): Promise<MonthlyBonus[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(monthlyBonuses)
+        .where(eq(monthlyBonuses.salesRepId, salesRepId))
+        .orderBy(desc(monthlyBonuses.dateEarned));
+    }, 'getMonthlyBonusesBySalesRep');
+  }
+
+  async createMonthlyBonus(insertBonus: InsertMonthlyBonus): Promise<MonthlyBonus> {
+    return await safeDbQuery(async () => {
+      const [bonus] = await db.insert(monthlyBonuses)
+        .values(insertBonus)
+        .returning();
+      
+      if (!bonus) {
+        throw new Error('Failed to create monthly bonus');
+      }
+      
+      return bonus;
+    }, 'createMonthlyBonus');
+  }
+
+  async updateMonthlyBonus(id: number, updateData: Partial<InsertMonthlyBonus>): Promise<MonthlyBonus> {
+    return await safeDbQuery(async () => {
+      const [updatedBonus] = await db.update(monthlyBonuses)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(monthlyBonuses.id, id))
+        .returning();
+      
+      if (!updatedBonus) {
+        throw new Error('Failed to update monthly bonus');
+      }
+      
+      return updatedBonus;
+    }, 'updateMonthlyBonus');
+  }
+
+  // Milestone Bonuses
+  async getMilestoneBonuses(salesRepId?: number): Promise<MilestoneBonus[]> {
+    return await safeDbQuery(async () => {
+      if (salesRepId) {
+        return await db.select().from(milestoneBonuses)
+          .where(eq(milestoneBonuses.salesRepId, salesRepId))
+          .orderBy(desc(milestoneBonuses.dateEarned));
+      } else {
+        return await db.select().from(milestoneBonuses)
+          .orderBy(desc(milestoneBonuses.dateEarned));
+      }
+    }, 'getMilestoneBonuses');
+  }
+
+  async getMilestoneBonusesBySalesRep(salesRepId: number): Promise<MilestoneBonus[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(milestoneBonuses)
+        .where(eq(milestoneBonuses.salesRepId, salesRepId))
+        .orderBy(desc(milestoneBonuses.dateEarned));
+    }, 'getMilestoneBonusesBySalesRep');
+  }
+
+  async createMilestoneBonus(insertBonus: InsertMilestoneBonus): Promise<MilestoneBonus> {
+    return await safeDbQuery(async () => {
+      const [bonus] = await db.insert(milestoneBonuses)
+        .values(insertBonus)
+        .returning();
+      
+      if (!bonus) {
+        throw new Error('Failed to create milestone bonus');
+      }
+      
+      return bonus;
+    }, 'createMilestoneBonus');
+  }
+
+  async updateMilestoneBonus(id: number, updateData: Partial<InsertMilestoneBonus>): Promise<MilestoneBonus> {
+    return await safeDbQuery(async () => {
+      const [updatedBonus] = await db.update(milestoneBonuses)
+        .set({ ...updateData, updatedAt: new Date() })
+        .where(eq(milestoneBonuses.id, id))
+        .returning();
+      
+      if (!updatedBonus) {
+        throw new Error('Failed to update milestone bonus');
+      }
+      
+      return updatedBonus;
+    }, 'updateMilestoneBonus');
   }
 }
 

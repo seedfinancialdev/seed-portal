@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -199,43 +200,64 @@ export default function CommissionTracker() {
   const [dealDetailsDialogOpen, setDealDetailsDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
-  // Comprehensive sample data for admin commission tracking
-  useEffect(() => {
-    // Sales reps data
-    const sampleSalesReps: SalesRep[] = [
-      {
-        id: '1',
-        name: 'Sarah Johnson',
-        email: 'sarah@seedfinancial.io',
-        hubspotUserId: 'hs_001',
-        totalCommissions: 12540.00,
-        currentPeriodCommissions: 2840.00,
-        projectedCommissions: 8450.00,
-        isActive: true
-      },
-      {
-        id: '2',
-        name: 'Mike Chen',
-        email: 'mike@seedfinancial.io',
-        hubspotUserId: 'hs_002',
-        totalCommissions: 9820.00,
-        currentPeriodCommissions: 1950.00,
-        projectedCommissions: 6200.00,
-        isActive: true
-      },
-      {
-        id: '3',
-        name: 'Jessica Rodriguez',
-        email: 'jessica@seedfinancial.io',
-        hubspotUserId: 'hs_003',
-        totalCommissions: 8760.00,
-        currentPeriodCommissions: 1230.00,
-        projectedCommissions: 4800.00,
-        isActive: true
-      }
-    ];
+  // Fetch commission data from API
+  const { data: commissionData = [], isLoading: commissionsLoading } = useQuery({
+    queryKey: ['/api/commissions'],
+    queryFn: async () => {
+      const response = await fetch('/api/commissions');
+      if (!response.ok) throw new Error('Failed to fetch commissions');
+      return response.json();
+    }
+  });
 
-    // Commission periods (14th to 13th cycle)
+  const { data: dealsData = [], isLoading: dealsLoading } = useQuery({
+    queryKey: ['/api/deals'],
+    queryFn: async () => {
+      const response = await fetch('/api/deals');
+      if (!response.ok) throw new Error('Failed to fetch deals');
+      return response.json();
+    }
+  });
+
+  const { data: monthlyBonusData = [], isLoading: monthlyBonusLoading } = useQuery({
+    queryKey: ['/api/monthly-bonuses'],
+    queryFn: async () => {
+      const response = await fetch('/api/monthly-bonuses');
+      if (!response.ok) throw new Error('Failed to fetch monthly bonuses');
+      return response.json();
+    }
+  });
+
+  const { data: milestoneBonusData = [], isLoading: milestoneBonusLoading } = useQuery({
+    queryKey: ['/api/milestone-bonuses'],
+    queryFn: async () => {
+      const response = await fetch('/api/milestone-bonuses');
+      if (!response.ok) throw new Error('Failed to fetch milestone bonuses');
+      return response.json();
+    }
+  });
+
+  const { data: salesRepData = [], isLoading: salesRepsLoading } = useQuery({
+    queryKey: ['/api/sales-reps'],
+    queryFn: async () => {
+      const response = await fetch('/api/sales-reps');
+      if (!response.ok) throw new Error('Failed to fetch sales reps');
+      return response.json();
+    }
+  });
+
+  // Set the fetched data to state
+  useEffect(() => {
+    setCommissions(commissionData);
+    setDeals(dealsData);
+    setMonthlyBonuses(monthlyBonusData);
+    setMilestoneBonuses(milestoneBonusData);
+    setSalesReps(salesRepData);
+  }, [commissionData, dealsData, monthlyBonusData, milestoneBonusData, salesRepData]);
+
+  // Sample data for features not yet implemented in backend
+  useEffect(() => {
+    // Commission periods (14th to 13th cycle) - placeholder until backend implemented
     const sampleCommissionPeriods: CommissionPeriod[] = [
       {
         id: '1',
@@ -257,238 +279,11 @@ export default function CommissionTracker() {
       }
     ];
 
-    // Enhanced commission data with sales rep assignments
-    const sampleCommissions: Commission[] = [
-      {
-        id: '1',
-        dealName: 'TechFlow Solutions - Bookkeeping + TaaS',
-        companyName: 'TechFlow Solutions',
-        serviceType: 'combined',
-        type: 'month_1',
-        amount: 840,
-        monthNumber: 1,
-        status: 'paid',
-        dateEarned: '2025-01-15',
-        datePaid: '2025-01-30',
-        salesRep: 'Sarah Johnson',
-        dealId: '1',
-        hubspotDealId: 'hs_deal_001'
-      },
-      {
-        id: '2',
-        dealName: 'Wellness Hub Inc - Bookkeeping',
-        companyName: 'Wellness Hub Inc',
-        serviceType: 'bookkeeping',
-        type: 'month_1',
-        amount: 420,
-        monthNumber: 1,
-        status: 'processing',
-        dateEarned: '2025-01-20',
-        salesRep: 'Mike Chen',
-        dealId: '2',
-        hubspotDealId: 'hs_deal_002'
-      },
-      {
-        id: '3',
-        dealName: 'TechFlow Solutions - Bookkeeping + TaaS',
-        companyName: 'TechFlow Solutions',
-        serviceType: 'combined',
-        type: 'residual',
-        amount: 85,
-        monthNumber: 2,
-        status: 'pending',
-        dateEarned: '2025-02-15',
-        salesRep: 'Sarah Johnson',
-        dealId: '1',
-        hubspotDealId: 'hs_deal_001'
-      },
-      {
-        id: '4',
-        dealName: 'Creative Agency LLC - Bookkeeping',
-        companyName: 'Creative Agency LLC',
-        serviceType: 'bookkeeping',
-        type: 'month_1',
-        amount: 320,
-        monthNumber: 1,
-        status: 'pending',
-        dateEarned: '2025-01-25',
-        salesRep: 'Jessica Rodriguez',
-        dealId: '3',
-        hubspotDealId: 'hs_deal_003'
-      },
-      {
-        id: '5',
-        dealName: 'DataSync Corp - TaaS',
-        companyName: 'DataSync Corp',
-        serviceType: 'taas',
-        type: 'month_1',
-        amount: 600,
-        monthNumber: 1,
-        status: 'pending',
-        dateEarned: '2025-02-01',
-        salesRep: 'Sarah Johnson',
-        dealId: '4',
-        hubspotDealId: 'hs_deal_004'
-      }
-    ];
+    // Adjustment requests placeholder until backend implemented
+    const sampleAdjustmentRequests: AdjustmentRequest[] = [];
 
-    // Enhanced deals with pipeline data
-    const sampleDeals: Deal[] = [
-      {
-        id: '1',
-        dealName: 'TechFlow Solutions - Bookkeeping + TaaS',
-        companyName: 'TechFlow Solutions',
-        amount: 3350,
-        setupFee: 2500,
-        monthlyFee: 850,
-        status: 'closed_won',
-        closedDate: '2025-01-15',
-        serviceType: 'combined',
-        salesRep: 'Sarah Johnson',
-        hubspotDealId: 'hs_deal_001'
-      },
-      {
-        id: '2',
-        dealName: 'Wellness Hub Inc - Bookkeeping',
-        companyName: 'Wellness Hub Inc',
-        amount: 1650,
-        setupFee: 1200,
-        monthlyFee: 450,
-        status: 'closed_won',
-        closedDate: '2025-01-20',
-        serviceType: 'bookkeeping',
-        salesRep: 'Mike Chen',
-        hubspotDealId: 'hs_deal_002'
-      },
-      {
-        id: '3',
-        dealName: 'Creative Agency LLC - Bookkeeping',
-        companyName: 'Creative Agency LLC',
-        amount: 1400,
-        setupFee: 800,
-        monthlyFee: 600,
-        status: 'closed_won',
-        closedDate: '2025-01-25',
-        serviceType: 'bookkeeping',
-        salesRep: 'Jessica Rodriguez',
-        hubspotDealId: 'hs_deal_003'
-      },
-      {
-        id: '4',
-        dealName: 'DataSync Corp - TaaS',
-        companyName: 'DataSync Corp',
-        amount: 2100,
-        setupFee: 1500,
-        monthlyFee: 600,
-        status: 'closed_won',
-        closedDate: '2025-02-01',
-        serviceType: 'taas',
-        salesRep: 'Sarah Johnson',
-        hubspotDealId: 'hs_deal_004'
-      },
-      // Pipeline deals for projections
-      {
-        id: '5',
-        dealName: 'FinTech Startup - Combined',
-        companyName: 'FinTech Startup',
-        amount: 4200,
-        setupFee: 3000,
-        monthlyFee: 1200,
-        status: 'open',
-        serviceType: 'combined',
-        salesRep: 'Sarah Johnson',
-        hubspotDealId: 'hs_deal_005',
-        pipelineStage: 'Proposal Sent',
-        probability: 75
-      },
-      {
-        id: '6',
-        dealName: 'Retail Chain - Bookkeeping',
-        companyName: 'Retail Chain',
-        amount: 2800,
-        setupFee: 2000,
-        monthlyFee: 800,
-        status: 'open',
-        serviceType: 'bookkeeping',
-        salesRep: 'Mike Chen',
-        hubspotDealId: 'hs_deal_006',
-        pipelineStage: 'Contract Review',
-        probability: 90
-      }
-    ];
-
-    // Adjustment requests for admin review
-    const sampleAdjustmentRequests: AdjustmentRequest[] = [
-      {
-        id: '1',
-        commissionId: '2',
-        salesRep: 'Mike Chen',
-        originalAmount: 420,
-        requestedAmount: 480,
-        reason: 'Client negotiated additional services not reflected in original commission calculation. Added premium support package worth $150 monthly.',
-        status: 'pending',
-        requestedDate: '2025-02-01'
-      },
-      {
-        id: '2',
-        commissionId: '4',
-        salesRep: 'Jessica Rodriguez',
-        originalAmount: 320,
-        requestedAmount: 380,
-        reason: 'Deal closed with expedited setup timeline, deserving of bonus commission per company policy.',
-        status: 'approved',
-        requestedDate: '2025-01-28',
-        reviewedBy: 'Jon Seed',
-        reviewedDate: '2025-01-30',
-        reviewNotes: 'Approved - expedited setup justified per policy section 4.2'
-      }
-    ];
-
-    // Enhanced bonuses with sales rep assignments
-    const sampleMonthlyBonuses: MonthlyBonus[] = [
-      {
-        id: '1',
-        month: '2025-01',
-        clientsClosedCount: 8,
-        bonusAmount: 1000,
-        bonusType: 'cash',
-        status: 'processing',
-        dateEarned: '2025-01-31',
-        salesRep: 'Sarah Johnson'
-      },
-      {
-        id: '2',
-        month: '2025-01',
-        clientsClosedCount: 5,
-        bonusAmount: 500,
-        bonusType: 'cash',
-        status: 'processing',
-        dateEarned: '2025-01-31',
-        salesRep: 'Mike Chen'
-      }
-    ];
-
-    const sampleMilestoneBonuses: MilestoneBonus[] = [
-      {
-        id: '1',
-        milestone: 40,
-        bonusAmount: 5000,
-        includesEquity: false,
-        status: 'paid',
-        dateEarned: '2025-01-10',
-        datePaid: '2025-01-25',
-        salesRep: 'Sarah Johnson'
-      }
-    ];
-
-    // Set all data
-    setSalesReps(sampleSalesReps);
     setCommissionPeriods(sampleCommissionPeriods);
-    setCommissions(sampleCommissions);
-    setDeals(sampleDeals);
     setAdjustmentRequests(sampleAdjustmentRequests);
-    setMonthlyBonuses(sampleMonthlyBonuses);
-    setMilestoneBonuses(sampleMilestoneBonuses);
   }, []);
 
   // Calculate key metrics for admin dashboard
