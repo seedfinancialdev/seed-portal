@@ -104,207 +104,308 @@ export class HubSpotCommissionSync {
   }
   
   /**
-   * Sync deals from HubSpot
+   * Sync invoices from HubSpot with real line item data
    */
-  async syncDeals(): Promise<void> {
+  async syncInvoices(): Promise<void> {
     try {
-      console.log('🔄 Syncing deals from HubSpot...');
+      console.log('🔄 Syncing invoices from HubSpot...');
       
-      // Get closed won deals from the last 12 months
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      // Get invoices from HubSpot with associations to line items
+      const invoicesResponse = await hubSpotService.crm.objects.basicApi.getPage(
+        'invoices', 
+        100,
+        ['hs_invoice_status', 'hs_invoice_number', 'createdate', 'hs_lastmodifieddate'],
+        undefined,
+        ['line_items']
+      );
       
-      const deals = await hubSpotService.crm.deals.getAll({
-        properties: [
-          'dealname', 
-          'amount', 
-          'closedate', 
-          'dealstage', 
-          'hubspot_owner_id',
-          'pipeline',
-          'hs_object_id'
-        ],
-        limit: 100
-      });
+      console.log(`📋 Found ${invoicesResponse.results.length} invoices in HubSpot`);
       
-      for (const hsDeal of deals.results) {
-        const props = hsDeal.properties;
+      for (const invoice of invoicesResponse.results) {
+        console.log(`🔍 Processing invoice ID: ${invoice.id}`);
         
-        // Only process closed won deals with valid data
-        if (props.dealstage === 'closedwon' && props.amount && props.closedate && props.hubspot_owner_id) {
-          
-          // Find corresponding sales rep
-          const salesRepResult = await db.execute(sql`
-            SELECT id FROM sales_reps WHERE hubspot_user_id = ${props.hubspot_owner_id} LIMIT 1
+        // Get line items for this invoice
+        const lineItemIds = invoice.associations?.line_items?.results?.map(li => li.id) || [];
+        
+        if (lineItemIds.length === 0) {
+          console.log(`⚠️ No line items found for invoice ${invoice.id}, skipping`);
+          continue;
+        }
+        
+        // Fetch line item details
+        let totalAmount = 0;
+        const lineItems = [];
+        
+        for (const lineItemId of lineItemIds) {
+          try {
+            const lineItem = await hubSpotService.crm.lineItems.basicApi.getById(
+              lineItemId,
+              ['name', 'price', 'quantity', 'amount']
+            );
+            
+            const amount = parseFloat(lineItem.properties.amount || '0');
+            totalAmount += amount;
+            
+            lineItems.push({
+              id: lineItem.id,
+              name: lineItem.properties.name,
+              amount: amount,
+              price: parseFloat(lineItem.properties.price || '0'),
+              quantity: parseInt(lineItem.properties.quantity || '1')
+            });
+            
+            console.log(`  📦 Line item: ${lineItem.properties.name} - $${amount}`);
+          } catch (error) {
+            console.log(`❌ Error fetching line item ${lineItemId}:`, error);
+          }
+        }
+        
+        if (totalAmount === 0) {
+          console.log(`⚠️ Invoice ${invoice.id} has $0 total, skipping`);
+          continue;
+        }
+        
+        console.log(`💰 Invoice ${invoice.id} total: $${totalAmount}`);
+        
+        // Check if invoice already exists in our database
+        const existingInvoice = await db.execute(sql`
+          SELECT id FROM hubspot_invoices WHERE hubspot_invoice_id = ${invoice.id} LIMIT 1
+        `);
+        
+        if (existingInvoice.rows.length === 0) {
+          // Create HubSpot invoice record
+          const invoiceResult = await db.execute(sql`
+            INSERT INTO hubspot_invoices (
+              hubspot_invoice_id,
+              sales_rep_id,
+              invoice_number,
+              status,
+              total_amount,
+              paid_amount,
+              invoice_date,
+              paid_date,
+              company_name,
+              is_processed_for_commission,
+              created_at,
+              updated_at
+            ) VALUES (
+              ${invoice.id},
+              ${1}, -- Default to first sales rep for now
+              ${invoice.properties.hs_invoice_number || `INV-${invoice.id}`},
+              ${invoice.properties.hs_invoice_status || 'paid'},
+              ${totalAmount},
+              ${totalAmount}, -- Assuming fully paid since status is paid
+              ${invoice.properties.createdate}::date,
+              ${invoice.properties.createdate}::date,
+              ${`Client for Invoice ${invoice.id}`},
+              false,
+              NOW(),
+              NOW()
+            )
+            RETURNING id
           `);
           
-          if (salesRepResult.rows.length > 0) {
-            const salesRepId = (salesRepResult.rows[0] as any).id;
-            
-            // Check if deal already exists
-            const existingDeal = await db.execute(sql`
-              SELECT id FROM deals WHERE hubspot_deal_id = ${hsDeal.id} LIMIT 1
+          const hubspotInvoiceId = (invoiceResult.rows[0] as any).id;
+          
+          // Create line item records
+          for (const lineItem of lineItems) {
+            await db.execute(sql`
+              INSERT INTO hubspot_invoice_line_items (
+                invoice_id,
+                hubspot_line_item_id,
+                name,
+                quantity,
+                unit_price,
+                total_price,
+                service_type,
+                is_recurring,
+                created_at
+              ) VALUES (
+                ${hubspotInvoiceId},
+                ${lineItem.id},
+                ${lineItem.name},
+                ${lineItem.quantity},
+                ${lineItem.price},
+                ${lineItem.amount},
+                ${this.determineServiceTypeFromName(lineItem.name)},
+                ${lineItem.name.toLowerCase().includes('monthly') || lineItem.name.toLowerCase().includes('tax as a service')},
+                NOW()
+              )
             `);
-            
-            if (existingDeal.rows.length === 0) {
-              // Insert new deal
-              await db.execute(sql`
-                INSERT INTO deals (
-                  hubspot_deal_id,
-                  deal_name,
-                  amount,
-                  monthly_value,
-                  setup_fee,
-                  close_date,
-                  deal_stage,
-                  sales_rep_id,
-                  company_name,
-                  service_type,
-                  is_collected,
-                  created_at,
-                  updated_at
-                ) VALUES (
-                  ${hsDeal.id},
-                  ${props.dealname || 'Untitled Deal'},
-                  ${parseFloat(props.amount)},
-                  ${parseFloat(props.amount) * 0.8}, -- Estimate monthly recurring
-                  ${parseFloat(props.amount) * 0.2}, -- Estimate setup fee  
-                  ${props.closedate}::date,
-                  ${props.dealstage},
-                  ${salesRepId},
-                  ${props.dealname?.split(' - ')[0] || 'Unknown Company'}, -- Extract company from deal name
-                  'bookkeeping', -- Default service type
-                  true, -- Assume collected since it's closed won
-                  NOW(),
-                  NOW()
-                )
-              `);
-              
-              console.log(`✅ Added deal: ${props.dealname} - $${props.amount}`);
-              
-              // Generate commissions for this deal
-              await this.generateCommissionsForDeal(hsDeal.id, salesRepId, parseFloat(props.amount), props.closedate);
-            }
-          } else {
-            console.log(`⚠️ No sales rep found for HubSpot owner ID: ${props.hubspot_owner_id}`);
           }
+          
+          console.log(`✅ Created invoice ${invoice.id} with ${lineItems.length} line items - $${totalAmount}`);
+          
+          // Generate commissions based on line items
+          await this.generateCommissionsForInvoice(hubspotInvoiceId, 1, lineItems, invoice.properties.createdate);
+          
+        } else {
+          console.log(`🔄 Invoice ${invoice.id} already exists, skipping`);
         }
       }
       
-      console.log('✅ Deals sync completed');
+      console.log('✅ Invoice sync completed');
     } catch (error) {
-      console.error('❌ Error syncing deals:', error);
+      console.error('❌ Error syncing invoices:', error);
       throw error;
     }
   }
   
   /**
-   * Generate commission records for a deal
+   * Helper methods for invoice processing
    */
-  async generateCommissionsForDeal(
-    hubspotDealId: string, 
+  private calculateMonthlyValue(lineItems: any[]): number {
+    // Look for recurring services like "Monthly Bookkeeping", "Tax as a Service"
+    return lineItems
+      .filter(item => item.name.toLowerCase().includes('monthly') || 
+                     item.name.toLowerCase().includes('tax as a service'))
+      .reduce((sum, item) => sum + item.amount, 0);
+  }
+  
+  private calculateSetupFee(lineItems: any[]): number {
+    // Look for one-time services like "Clean-Up"
+    return lineItems
+      .filter(item => item.name.toLowerCase().includes('clean') || 
+                     item.name.toLowerCase().includes('setup') ||
+                     item.name.toLowerCase().includes('catch'))
+      .reduce((sum, item) => sum + item.amount, 0);
+  }
+  
+  private determineServiceType(lineItems: any[]): string {
+    const services = lineItems.map(item => item.name.toLowerCase());
+    
+    if (services.some(s => s.includes('bookkeeping'))) return 'bookkeeping';
+    if (services.some(s => s.includes('tax'))) return 'taas';
+    if (services.some(s => s.includes('payroll'))) return 'payroll';
+    if (services.some(s => s.includes('ap/ar'))) return 'ap_ar_lite';
+    if (services.some(s => s.includes('fp&a') || s.includes('fpa'))) return 'fpa_lite';
+    
+    return 'bookkeeping'; // default
+  }
+  
+  private determineServiceTypeFromName(name: string): string {
+    const serviceName = name.toLowerCase();
+    
+    if (serviceName.includes('clean') || serviceName.includes('catch') || serviceName.includes('setup')) return 'setup';
+    if (serviceName.includes('prior') || serviceName.includes('year')) return 'prior_years';
+    if (serviceName.includes('monthly') || serviceName.includes('recurring') || serviceName.includes('tax as a service')) return 'recurring';
+    
+    return 'setup'; // default
+  }
+
+  /**
+   * Generate commission records for an invoice with line items
+   */
+  async generateCommissionsForInvoice(
+    hubspotInvoiceId: number,
     salesRepId: number, 
-    dealAmount: number, 
-    closeDate: string
+    lineItems: any[],
+    paidDate: string
   ): Promise<void> {
     try {
-      // Get deal from database
-      const dealResult = await db.execute(sql`
-        SELECT id, monthly_value, setup_fee FROM deals WHERE hubspot_deal_id = ${hubspotDealId} LIMIT 1
-      `);
+      // Calculate setup fee and monthly value from line items
+      const setupFee = this.calculateSetupFee(lineItems);
+      const monthlyValue = this.calculateMonthlyValue(lineItems);
       
-      if (dealResult.rows.length === 0) return;
+      console.log(`💼 Processing line items for invoice ${hubspotInvoiceId}:`)
+      for (const item of lineItems) {
+        console.log(`  - ${item.name}: $${item.amount}`);
+      }
+      console.log(`📊 Setup fee: $${setupFee}, Monthly value: $${monthlyValue}`);
       
-      const deal = dealResult.rows[0] as any;
-      const monthlyValue = deal.monthly_value || dealAmount * 0.8;
-      const setupFee = deal.setup_fee || dealAmount * 0.2;
-      
-      // Generate setup/onetime commission (20% of setup fee)
-      await db.execute(sql`
-        INSERT INTO commissions (
-          deal_id,
-          sales_rep_id,
-          commission_type,
-          commission_amount,
-          is_paid,
-          month_number,
-          rate,
-          base_amount,
-          created_at,
-          updated_at
-        ) VALUES (
-          ${deal.id},
-          ${salesRepId},
-          'setup',
-          ${setupFee * 0.2},
-          true, -- Assume paid since deal is closed won
-          1,
-          0.2,
-          ${setupFee},
-          ${closeDate}::date,
-          NOW()
-        )
-      `);
-      
-      // Generate month 1 commission (40% of first month MRR)
-      await db.execute(sql`
-        INSERT INTO commissions (
-          deal_id,
-          sales_rep_id,
-          commission_type,
-          commission_amount,
-          is_paid,
-          month_number,
-          rate,
-          base_amount,
-          created_at,
-          updated_at
-        ) VALUES (
-          ${deal.id},
-          ${salesRepId},
-          'month_1',
-          ${monthlyValue * 0.4},
-          true, -- Assume paid
-          1,
-          0.4,
-          ${monthlyValue},
-          ${closeDate}::date,
-          NOW()
-        )
-      `);
-      
-      // Generate residual commissions (10% for months 2-12)
-      for (let month = 2; month <= 12; month++) {
+      // Generate setup commission (20% of setup fee)
+      if (setupFee > 0) {
         await db.execute(sql`
           INSERT INTO commissions (
-            deal_id,
+            hubspot_invoice_id,
             sales_rep_id,
-            commission_type,
-            commission_amount,
-            is_paid,
+            type,
+            amount,
+            status,
             month_number,
-            rate,
-            base_amount,
+            service_type,
+            date_earned,
             created_at,
             updated_at
           ) VALUES (
-            ${deal.id},
+            ${hubspotInvoiceId},
             ${salesRepId},
-            'residual',
-            ${monthlyValue * 0.1},
-            false, -- Future residuals not yet paid
-            ${month},
-            0.1,
-            ${monthlyValue},
-            ${closeDate}::date + INTERVAL '${month - 1} months',
+            'setup',
+            ${setupFee * 0.2},
+            'paid',
+            1,
+            'setup',
+            ${paidDate}::date,
+            NOW(),
             NOW()
           )
         `);
+        console.log(`✅ Setup commission: $${setupFee * 0.2} (20% of $${setupFee})`);
       }
       
-      console.log(`✅ Generated commissions for deal ${hubspotDealId}`);
+      // Generate month 1 commission (40% of first month MRR)
+      if (monthlyValue > 0) {
+        await db.execute(sql`
+          INSERT INTO commissions (
+            hubspot_invoice_id,
+            sales_rep_id,
+            type,
+            amount,
+            status,
+            month_number,
+            service_type,
+            date_earned,
+            created_at,
+            updated_at
+          ) VALUES (
+            ${hubspotInvoiceId},
+            ${salesRepId},
+            'month_1',
+            ${monthlyValue * 0.4},
+            'paid',
+            1,
+            'recurring',
+            ${paidDate}::date,
+            NOW(),
+            NOW()
+          )
+        `);
+        console.log(`✅ Month 1 commission: $${monthlyValue * 0.4} (40% of $${monthlyValue})`);
+        
+        // Generate residual commissions (10% for months 2-12)
+        for (let month = 2; month <= 12; month++) {
+          await db.execute(sql`
+            INSERT INTO commissions (
+              hubspot_invoice_id,
+              sales_rep_id,
+              type,
+              amount,
+              status,
+              month_number,
+              service_type,
+              date_earned,
+              created_at,
+              updated_at
+            ) VALUES (
+              ${hubspotInvoiceId},
+              ${salesRepId},
+              'residual',
+              ${monthlyValue * 0.1},
+              'pending',
+              ${month},
+              'recurring',
+              ${paidDate}::date + INTERVAL '${month - 1} months',
+              NOW(),
+              NOW()
+            )
+          `);
+        }
+        console.log(`✅ Residual commissions: $${monthlyValue * 0.1} x 11 months (10% each)`);
+      }
+      
+      console.log(`✅ Generated all commissions for invoice ${hubspotInvoiceId}`);
     } catch (error) {
-      console.error(`❌ Error generating commissions for deal ${hubspotDealId}:`, error);
+      console.error(`❌ Error generating commissions for invoice ${hubspotInvoiceId}:`, error);
       throw error;
     }
   }
@@ -312,24 +413,24 @@ export class HubSpotCommissionSync {
   /**
    * Full sync process
    */
-  async performFullSync(): Promise<{ salesReps: number; deals: number; commissions: number }> {
+  async performFullSync(): Promise<{ salesReps: number; invoices: number; commissions: number }> {
     try {
       console.log('🚀 Starting full HubSpot commission sync...');
       
       // Sync sales reps first
       await this.syncSalesReps();
       
-      // Then sync deals and generate commissions
-      await this.syncDeals();
+      // Then sync invoices and generate commissions
+      await this.syncInvoices();
       
       // Count results
       const salesRepsCount = await db.execute(sql`SELECT COUNT(*) as count FROM sales_reps WHERE is_active = true`);
-      const dealsCount = await db.execute(sql`SELECT COUNT(*) as count FROM deals`);
+      const invoicesCount = await db.execute(sql`SELECT COUNT(*) as count FROM hubspot_invoices`);
       const commissionsCount = await db.execute(sql`SELECT COUNT(*) as count FROM commissions`);
       
       const results = {
         salesReps: (salesRepsCount.rows[0] as any).count,
-        deals: (dealsCount.rows[0] as any).count,
+        invoices: (invoicesCount.rows[0] as any).count,
         commissions: (commissionsCount.rows[0] as any).count
       };
       
