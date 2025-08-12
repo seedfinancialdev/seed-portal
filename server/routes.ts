@@ -3423,10 +3423,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           'closedate', 
           'dealstage', 
           'hubspot_owner_id',
-          'associatedcompanyid'
+          'associatedcompanyid',
+          'createdate'
         ], // properties
         undefined, // propertiesWithHistory
-        ['companies', 'quotes'] // associations
+        ['companies', 'contacts', 'quotes'] // associations
       );
 
       console.log(`📊 Found ${dealsResponse.results.length} total deals from HubSpot`);
@@ -3444,18 +3445,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           continue;
         }
 
-        // Get associated company
+        // Get company name from associated contact's company property
         let companyName = 'Unknown Company';
-        if (deal.associations?.companies?.results?.length > 0) {
-          const companyId = deal.associations.companies.results[0].id;
+        if (deal.associations?.contacts?.results?.length > 0) {
+          const contactId = deal.associations.contacts.results[0].id;
           try {
-            const company = await hubspotClient.crm.companies.basicApi.getById(
-              companyId,
-              ['name']
+            const contact = await hubspotClient.crm.contacts.basicApi.getById(
+              contactId,
+              ['company']
             );
-            companyName = company.properties.name || 'Unknown Company';
+            companyName = contact.properties.company || 'Unknown Company';
           } catch (error) {
-            console.log('Could not fetch company for deal:', deal.id);
+            console.log('Could not fetch contact for deal:', deal.id);
           }
         }
 
@@ -3544,6 +3545,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         console.log(`💰 Deal "${properties.dealname}" projected commission: $${projectedCommission}`);
         console.log(`📋 Deal details: ID=${deal.id}, Company=${companyName}, SalesRep=${salesRep}, ServiceType=${serviceType}`);
         
+        // Map deal stage ID to readable name
+        const stageMap = {
+          '1108547148': 'Appointment Scheduled',
+          '1108547149': 'Qualified to Buy',
+          '1108547150': 'Presentation Scheduled',
+          '1108547151': 'Decision Maker Bought-In',
+          '1108547152': 'Contract Sent',
+          '1108547153': 'Closed Won',
+          '1108547154': 'Closed Lost'
+        };
+        const dealStageName = stageMap[properties.dealstage] || properties.dealstage || 'Unknown Stage';
+        
         // For now, include ALL open deals to see what data we have
         // if (projectedCommission > 0) {
         pipelineDeals.push({
@@ -3553,19 +3566,24 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           companyName,
           salesRep,
           serviceType: serviceType === 'Unknown Service' ? 'Mixed Services' : serviceType,
-          dealStage: properties.dealstage || 'Unknown Stage',
+          dealStage: dealStageName,
           dealValue: parseFloat(properties.amount || 0),
           setupCommission: Math.round(setupCommission * 100) / 100,
           monthlyCommission: Math.round(monthlyCommission * 100) / 100,
           projectedCommission: Math.round(projectedCommission * 100) / 100,
           closeDate: properties.closedate ? new Date(properties.closedate).toISOString().split('T')[0] : null,
+          createDate: properties.createdate,
           status: 'projected'
         });
         // }
       }
 
-      // Sort by projected commission descending
-      pipelineDeals.sort((a, b) => b.projectedCommission - a.projectedCommission);
+      // Sort by most recent created date in HubSpot
+      pipelineDeals.sort((a, b) => {
+        const aDate = new Date(a.createDate || 0);
+        const bDate = new Date(b.createDate || 0);
+        return bDate.getTime() - aDate.getTime();
+      });
       
       console.log(`📊 Found ${pipelineDeals.length} pipeline deals with real commission projections`);
       res.json(pipelineDeals);
