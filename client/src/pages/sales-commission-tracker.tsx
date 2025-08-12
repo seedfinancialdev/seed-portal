@@ -267,12 +267,34 @@ export function SalesCommissionTracker() {
       // Count total clients all time (from all commissions for milestone tracking)
       const totalClientsAllTime = new Set(transformedCommissions.map(c => c.companyName)).size;
       
+      // Calculate projected earnings from pipeline (same logic as admin commission tracker)
+      const projectedFromPipeline = liveDeals
+        .filter(deal => {
+          // Filter deals for this user
+          const matchesUser = deal.sales_rep_name === userName || 
+                             deal.sales_rep_name?.toLowerCase().includes(user.firstName?.toLowerCase() || '') ||
+                             deal.sales_rep_name?.toLowerCase().includes(user.lastName?.toLowerCase() || '');
+          return matchesUser && deal.status === 'open';
+        })
+        .reduce((sum, deal) => {
+          // Calculate projected commission: assume standard commission rates
+          // Setup fee: 20% commission, Monthly fee: 40% first month, 10% residual
+          const setupFee = deal.setup_fee || 0;
+          const monthlyFee = deal.monthly_fee || 0;
+          const firstMonthCommission = (setupFee * 0.2) + (monthlyFee * 0.4);
+          
+          // Use deal probability if available, otherwise default to 50%
+          const probability = (deal.probability || 50) / 100;
+          
+          return sum + (firstMonthCommission * probability);
+        }, 0);
+      
       setSalesRepStats({
         totalCommissionsEarned: totalPaidEarnings, // Only previously paid earnings
         totalClientsClosedMonthly: currentPeriodClients,
         totalClientsClosedAllTime: totalClientsAllTime,
         currentPeriodCommissions: currentPeriodCommissions,
-        projectedEarnings: pendingCommissions // Use pending commissions as projected earnings
+        projectedEarnings: projectedFromPipeline // Use pipeline-based projected earnings
       });
     }
   }, [liveCommissions, user, currentPeriod]);
