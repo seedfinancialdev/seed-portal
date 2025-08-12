@@ -206,8 +206,6 @@ export function SalesCommissionTracker() {
       const userEmail = user.email || '';
       const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
       
-      console.log('🔍 Filtering commissions for user:', userName, userEmail);
-      
       // Transform API data to match component interface and filter for current user
       const transformedCommissions: Commission[] = liveCommissions
         .filter(invoice => {
@@ -218,15 +216,6 @@ export function SalesCommissionTracker() {
           const reverseName = `${lastName}, ${firstName}`.trim();
           const salesRepName = invoice.salesRep || '';
           
-          console.log('🔍 User matching debug:', {
-            userEmail: user.email,
-            firstName,
-            lastName, 
-            fullName,
-            salesRepName,
-            invoice: invoice.companyName
-          });
-          
           // Filter by sales rep name - try multiple matching strategies
           const matchesUser = salesRepName === fullName ||
                              salesRepName === userName ||
@@ -234,8 +223,6 @@ export function SalesCommissionTracker() {
                              salesRepName === `${lastName} ${firstName}` ||
                              (firstName && salesRepName.toLowerCase().includes(firstName.toLowerCase())) ||
                              (lastName && salesRepName.toLowerCase().includes(lastName.toLowerCase()));
-          
-          console.log('✅ Match result:', matchesUser, 'for', salesRepName);
           return matchesUser;
         })
         .map(invoice => ({
@@ -254,7 +241,6 @@ export function SalesCommissionTracker() {
           salesRep: invoice.salesRep || userName
         }));
       
-      console.log('📊 Filtered commissions for user:', transformedCommissions);
       setCommissions(transformedCommissions);
       
       // Calculate real metrics based on filtered data
@@ -278,12 +264,8 @@ export function SalesCommissionTracker() {
           .map(c => c.companyName)
       ).size;
       
-      // Count total clients all time (only from approved/paid commissions)
-      const totalClientsAllTime = new Set(
-        transformedCommissions
-          .filter(c => c.status === 'approved' || c.status === 'paid')
-          .map(c => c.companyName)
-      ).size;
+      // Count total clients all time (from all commissions for milestone tracking)
+      const totalClientsAllTime = new Set(transformedCommissions.map(c => c.companyName)).size;
       
       setSalesRepStats({
         totalCommissionsEarned: totalPaidEarnings, // Only previously paid earnings
@@ -320,7 +302,6 @@ export function SalesCommissionTracker() {
           closedDate: deal.closed_date || new Date().toISOString().split('T')[0]
         }));
       
-      console.log('📊 Filtered deals for user:', transformedDeals);
       setDeals(transformedDeals);
     }
   }, [liveDeals, user]);
@@ -409,7 +390,7 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-blue-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-blue-600">
-                      ${(salesRepStats.currentPeriodCommissions || 0).toLocaleString()}
+                      ${(salesRepStats.currentPeriodCommissions || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">
@@ -430,7 +411,7 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-green-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-green-600">
-                      ${(salesRepStats.totalCommissionsEarned || 0).toLocaleString()}
+                      ${(salesRepStats.totalCommissionsEarned || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">All time</p>
@@ -449,7 +430,7 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-orange-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-orange-600">
-                      ${commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString()}
+                      ${commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">
@@ -470,7 +451,7 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-purple-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-purple-600">
-                      ${(salesRepStats.projectedEarnings || 0).toLocaleString()}
+                      ${(salesRepStats.projectedEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">Pending commissions</p>
