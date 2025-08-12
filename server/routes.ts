@@ -3576,16 +3576,19 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
               }
             } else {
               console.log(`⚠️ Quote ${quoteId} has no line items, using deal amount with commission logic`);
-              // Fallback: use deal amount with proper commission calculation logic
+              // Fallback: use deal amount with REALISTIC commission calculation logic
               const dealAmount = parseFloat(properties.amount || 0);
               if (dealAmount > 0) {
                 const itemName = dealName.toLowerCase();
                 
-                // Apply EXACT same commission logic as Commission Tracking table
+                // REALISTIC PROJECTION: Deal amount is likely total contract value, not monthly
+                // Most deals are annual contracts, so estimate monthly amount
+                let estimatedMonthlyAmount = dealAmount / 12; // Assume 12-month contracts
                 let commission = 0;
                 let commissionType = '';
                 
                 if (itemName.includes('setup') || itemName.includes('implementation')) {
+                  // Setup is usually a one-time fee, apply 20% to full amount
                   commission = dealAmount * 0.20;
                   commissionType = 'setup_commission';
                   setupCommission += commission;
@@ -3598,13 +3601,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                   commissionType = 'prior_years_commission';
                   setupCommission += commission;
                 } else {
-                  // Default to month 1 recurring (40% for month 1)
-                  commission = dealAmount * 0.40;
+                  // For recurring services, use realistic monthly amount and apply 40% for first month projection
+                  commission = estimatedMonthlyAmount * 0.40;
                   commissionType = 'month_1_commission';
                   monthlyCommission += commission;
                 }
                 
-                console.log(`💰 Deal fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal)`);
+                console.log(`💰 Deal fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal, monthly: $${estimatedMonthlyAmount})`);
               }
               
               // Set service type from deal name
@@ -3622,12 +3625,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             }
           } catch (quoteError) {
             console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
-            // Fallback: use deal amount with proper commission calculation logic
+            // Fallback: use deal amount with REALISTIC commission calculation logic
             const dealAmount = parseFloat(properties.amount || 0);
             if (dealAmount > 0) {
               const itemName = dealName.toLowerCase();
               
-              // Apply EXACT same commission logic as Commission Tracking table
+              // REALISTIC PROJECTION: Deal amount is likely total contract value, not monthly
+              let estimatedMonthlyAmount = dealAmount / 12;
               let commission = 0;
               let commissionType = '';
               
@@ -3644,13 +3648,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                 commissionType = 'prior_years_commission';
                 setupCommission += commission;
               } else {
-                // Default to month 1 recurring (40% for month 1)
-                commission = dealAmount * 0.40;
+                // For recurring services, use realistic monthly amount
+                commission = estimatedMonthlyAmount * 0.40;
                 commissionType = 'month_1_commission';
                 monthlyCommission += commission;
               }
               
-              console.log(`💰 Quote error fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal)`);
+              console.log(`💰 Quote error fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal, monthly: $${estimatedMonthlyAmount})`);
             }
             
             // Set service type from deal name
@@ -3668,12 +3672,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           }
         } else {
           console.log(`⚠️ Deal ${deal.id} has no quotes, using deal amount fallback`);
-          // Fallback: use deal amount with proper commission calculation logic
+          // Fallback: use deal amount with REALISTIC commission calculation logic
           const dealAmount = parseFloat(properties.amount || 0);
           if (dealAmount > 0) {
             const itemName = dealName.toLowerCase();
             
-            // Apply EXACT same commission logic as Commission Tracking table
+            // REALISTIC PROJECTION: Deal amount is likely total contract value, not monthly
+            let estimatedMonthlyAmount = dealAmount / 12;
             let commission = 0;
             let commissionType = '';
             
@@ -3690,13 +3695,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
               commissionType = 'prior_years_commission';
               setupCommission += commission;
             } else {
-              // Default to month 1 recurring (40% for month 1)
-              commission = dealAmount * 0.40;
+              // For recurring services, use realistic monthly amount
+              commission = estimatedMonthlyAmount * 0.40;
               commissionType = 'month_1_commission';
               monthlyCommission += commission;
             }
             
-            console.log(`💰 No quotes fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal)`);
+            console.log(`💰 No quotes fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal, monthly: $${estimatedMonthlyAmount})`);
           }
           
           // Set service type from deal name
