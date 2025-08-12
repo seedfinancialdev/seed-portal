@@ -238,10 +238,13 @@ export function SalesCommissionTracker() {
       setCommissions(transformedCommissions);
       
       // Calculate real metrics based on filtered data
-      const totalCommissions = transformedCommissions.reduce((sum, c) => sum + c.amount, 0);
-      
       const currentPeriodCommissions = transformedCommissions
         .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+        .reduce((sum, c) => sum + c.amount, 0);
+      
+      // Total earnings should only include approved/paid commissions from previous periods
+      const totalPaidEarnings = transformedCommissions
+        .filter(c => (c.status === 'approved' || c.status === 'paid') && c.dateEarned < currentPeriod.periodStart)
         .reduce((sum, c) => sum + c.amount, 0);
       
       const pendingCommissions = transformedCommissions
@@ -255,11 +258,15 @@ export function SalesCommissionTracker() {
           .map(c => c.companyName)
       ).size;
       
-      // Count total clients all time
-      const totalClientsAllTime = new Set(transformedCommissions.map(c => c.companyName)).size;
+      // Count total clients all time (only from approved/paid commissions)
+      const totalClientsAllTime = new Set(
+        transformedCommissions
+          .filter(c => c.status === 'approved' || c.status === 'paid')
+          .map(c => c.companyName)
+      ).size;
       
       setSalesRepStats({
-        totalCommissionsEarned: totalCommissions,
+        totalCommissionsEarned: totalPaidEarnings, // Only previously paid earnings
         totalClientsClosedMonthly: currentPeriodClients,
         totalClientsClosedAllTime: totalClientsAllTime,
         currentPeriodCommissions: currentPeriodCommissions,
