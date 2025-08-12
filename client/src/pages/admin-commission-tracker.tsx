@@ -84,9 +84,7 @@ interface Commission {
   dateEarned: string;
   datePaid?: string;
   hubspotDealId?: string;
-  contactFirstName?: string;
-  contactLastName?: string;
-  contactEmail?: string;
+
 }
 
 interface Deal {
@@ -731,7 +729,7 @@ export function AdminCommissionTracker() {
                   <Table data-testid="table-commissions">
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Company/Contact</TableHead>
+                        <TableHead>Company</TableHead>
                         <TableHead>Sales Rep</TableHead>
                         <TableHead>Service Type</TableHead>
                         <TableHead>Commission Type</TableHead>
@@ -745,15 +743,7 @@ export function AdminCommissionTracker() {
                       {filteredCommissions.map((commission) => (
                         <TableRow key={commission.id} data-testid={`row-commission-${commission.id}`}>
                           <TableCell className="font-medium">
-                            <div>
-                              <p className="font-semibold text-gray-900">{commission.companyName}</p>
-                              <p className="text-sm text-gray-500">
-                                {commission.contactFirstName && commission.contactLastName
-                                  ? `${commission.contactFirstName} ${commission.contactLastName}`
-                                  : 'Contact: Not Available'
-                                }
-                              </p>
-                            </div>
+                            <p className="font-semibold text-gray-900">{commission.companyName}</p>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -1065,7 +1055,7 @@ export function AdminCommissionTracker() {
                     <Table data-testid="table-pipeline">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Company/Contact</TableHead>
+                          <TableHead>Company</TableHead>
                           <TableHead>Sales Rep</TableHead>
                           <TableHead>Deal Value</TableHead>
                           <TableHead>Stage / Probability</TableHead>
