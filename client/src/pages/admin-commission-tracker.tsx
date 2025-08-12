@@ -346,10 +346,12 @@ export function AdminCommissionTracker() {
   const getServiceTypeIcon = (serviceType: string) => {
     const icons = {
       bookkeeping: <Calculator className="w-4 h-4 text-blue-600" />,
+      'bookkeeping + taas': <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>,
       taas: <Building2 className="w-4 h-4 text-purple-600" />,
       payroll: <CreditCard className="w-4 h-4 text-green-600" />,
-      ap_ar_lite: <FileText className="w-4 h-4 text-orange-600" />,
-      fpa_lite: <BarChart3 className="w-4 h-4 text-red-600" />
+      'ap/ar lite': <FileText className="w-4 h-4 text-orange-600" />,
+      'fp&a lite': <BarChart3 className="w-4 h-4 text-red-600" />,
+      mixed: <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>
     };
     
     return icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;

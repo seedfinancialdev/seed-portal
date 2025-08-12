@@ -3141,13 +3141,44 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         const invoiceId = comm.hubspot_invoice_id;
         
         if (!invoiceGroups.has(invoiceId)) {
+          // Determine service type based on line item names
+          const serviceNames = (comm.service_names || '').toLowerCase();
+          let serviceType = 'bookkeeping'; // default
+          
+          const hasBookkeeping = serviceNames.includes('bookkeeping') || 
+                                 serviceNames.includes('monthly') || 
+                                 serviceNames.includes('clean') || 
+                                 serviceNames.includes('catch');
+          
+          const hasTaas = serviceNames.includes('tax as a service') || 
+                         serviceNames.includes('prior year') || 
+                         serviceNames.includes('tax service');
+          
+          const hasPayroll = serviceNames.includes('payroll');
+          const hasApAr = serviceNames.includes('ap/ar') || serviceNames.includes('accounts payable') || serviceNames.includes('accounts receivable');
+          const hasFpa = serviceNames.includes('fp&a') || serviceNames.includes('fpa') || serviceNames.includes('financial planning');
+          
+          if (hasBookkeeping && hasTaas) {
+            serviceType = 'bookkeeping + taas';
+          } else if (hasTaas) {
+            serviceType = 'taas';
+          } else if (hasPayroll) {
+            serviceType = 'payroll';
+          } else if (hasApAr) {
+            serviceType = 'ap/ar lite';
+          } else if (hasFpa) {
+            serviceType = 'fp&a lite';
+          } else if (hasBookkeeping) {
+            serviceType = 'bookkeeping';
+          }
+          
           invoiceGroups.set(invoiceId, {
             id: invoiceId,
             dealId: invoiceId,
             dealName: comm.service_names || `Invoice ${invoiceId}`,
             companyName: comm.company_name || 'Unknown Company',
             salesRep: comm.sales_rep_name || 'Unknown Rep',
-            serviceType: 'mixed',
+            serviceType: serviceType,
             type: 'total',
             monthNumber: 1,
             amount: 0,
