@@ -293,22 +293,22 @@ export function AdminCommissionTracker() {
     if (liveCommissions.length > 0) {
       // Transform API data to match component interface
       const transformedCommissions: Commission[] = liveCommissions.map(invoice => ({
-        id: invoice.id.toString(),
-        dealId: invoice.dealId?.toString() || invoice.id.toString(),
-        dealName: invoice.companyName,
+        id: invoice.id?.toString() || 'unknown',
+        dealId: invoice.dealId?.toString() || invoice.id?.toString() || 'unknown',
+        dealName: invoice.companyName || 'Unknown',
         companyName: invoice.companyName || 'Unknown Company',
         salesRep: invoice.salesRep || 'Unknown Rep',
         serviceType: invoice.serviceType || 'mixed',
         type: 'total' as any,
-        monthNumber: 1,
-        amount: invoice.amount || 0,
+        monthNumber: invoice.monthNumber || 1,
+        amount: Number(invoice.amount) || 0,
         status: invoice.status || 'pending',
         dateEarned: invoice.dateEarned || new Date().toISOString().split('T')[0],
-        hubspotDealId: invoice.hubspotDealId,
+        hubspotDealId: invoice.hubspotDealId?.toString() || null,
         breakdown: {
-          setup: invoice.setupAmount || 0,
-          month1: invoice.month1Amount || 0,
-          residual: invoice.residualAmount || 0
+          setup: Number(invoice.setupAmount) || 0,
+          month1: Number(invoice.month1Amount) || 0,
+          residual: Number(invoice.residualAmount) || 0
         }
       }));
       setCommissions(transformedCommissions);

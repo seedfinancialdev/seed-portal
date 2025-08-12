@@ -3281,6 +3281,30 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const invoiceGroups = new Map();
       
       commissionsData.forEach((comm: any) => {
+        // Handle bonus records specially (they don't have invoice IDs)
+        if (comm.commission_type === 'monthly_bonus' || comm.commission_type === 'milestone_bonus') {
+          const bonusKey = `bonus_${comm.id}`;
+          invoiceGroups.set(bonusKey, {
+            id: comm.id,
+            dealId: null,
+            dealName: comm.notes || 'Bonus Commission',
+            companyName: comm.notes || 'Bonus Commission',
+            salesRep: comm.sales_rep_name || 'Unknown',
+            serviceType: 'bonus',
+            type: 'total',
+            monthNumber: 1,
+            amount: parseFloat(comm.amount || 0),
+            status: comm.status || 'pending',
+            dateEarned: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : null,
+            datePaid: null,
+            hubspotDealId: null,
+            setupAmount: 0,
+            month1Amount: parseFloat(comm.amount || 0),
+            residualAmount: 0
+          });
+          return;
+        }
+        
         const invoiceId = comm.hubspot_invoice_id;
         
         if (!invoiceGroups.has(invoiceId)) {
