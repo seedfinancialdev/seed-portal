@@ -485,7 +485,9 @@ export function AdminCommissionTracker() {
         companyName: deal.companyName,
         salesRep: deal.salesRep,
         serviceType: deal.serviceType,
-        amount: deal.amount, // Total commission amount
+        // Calculate actual deal amount from commission breakdown
+        // Setup commission is 20% of setup fee, month1 commission is 40% of monthly fee
+        amount: ((deal as any).breakdown?.setup || 0) / 0.20 + ((deal as any).breakdown?.month1 || 0) / 0.40,
         setupFee: (deal as any).breakdown?.setup || 0, // Actual setup commission
         monthlyFee: (deal as any).breakdown?.month1 || 0, // Actual month 1 commission
         status: 'closed_won' as const,
