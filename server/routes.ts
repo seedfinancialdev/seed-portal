@@ -3485,121 +3485,85 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         const dealName = properties.dealname || '';
         console.log(`💼 Processing deal: "${dealName}"`);
 
-        // Get quote line items and process them EXACTLY like Commission Tracking processes invoice line items
-        if (deal.associations?.quotes?.results?.length > 0) {
-          const quoteId = deal.associations.quotes.results[0].id;
-          try {
-            // Fetch quote with line items
-            const quote = await hubspotClient.crm.quotes.basicApi.getById(
-              quoteId,
-              undefined,
-              undefined,
-              ['line_items']
-            );
-
-            console.log(`📝 Quote ${quoteId} has`, quote.associations?.line_items?.results?.length || 0, 'line items');
-
-            if (quote.associations?.line_items?.results?.length > 0) {
-              const lineItems = quote.associations.line_items.results;
-              let services = [];
+        // Get deal line items directly and process them EXACTLY like Commission Tracking processes invoice line items
+        try {
+          console.log(`🔍 Fetching line items directly for deal ${deal.id}...`);
+          
+          // Fetch deal line items directly from HubSpot
+          const dealLineItemsResponse = await hubspotClient.crm.lineItems.basicApi.getPage(
+            100, // limit
+            undefined, // after 
+            ['name', 'price', 'quantity', 'description', 'hs_deal_id'], // properties
+            undefined, // propertiesWithHistory
+            undefined, // associations
+            false // archived
+          );
+          
+          // Filter line items for this specific deal
+          const dealLineItems = dealLineItemsResponse.results.filter(
+            item => item.properties.hs_deal_id === deal.id
+          );
+          
+          console.log(`📝 Deal ${deal.id} has ${dealLineItems.length} line items`);
+          
+          if (dealLineItems.length > 0) {
+            let services = [];
+            
+            for (const lineItem of dealLineItems) {
+              const itemProps = lineItem.properties;
+              const itemName = (itemProps.name || '').toLowerCase();
+              const itemDescription = (itemProps.description || '').toLowerCase();
+              const price = parseFloat(itemProps.price || '0');
+              const quantity = parseFloat(itemProps.quantity || 1);
+              const itemAmount = price * quantity;
               
-              console.log(`📋 Processing ${lineItems.length} line items for quote ${quoteId}`);
+              console.log(`📦 Deal line item: "${itemProps.name}", Amount: $${itemAmount}`);
               
-              for (const lineItemAssoc of lineItems) {
-                try {
-                  const lineItem = await hubspotClient.crm.lineItems.basicApi.getById(
-                    lineItemAssoc.id,
-                    ['name', 'price', 'quantity', 'description']
-                  );
-
-                  const itemProps = lineItem.properties;
-                  const itemName = (itemProps.name || '').toLowerCase();
-                  const itemDescription = (itemProps.description || '').toLowerCase();
-                  const price = parseFloat(itemProps.price || '0');
-                  const quantity = parseFloat(itemProps.quantity || 1);
-                  const itemAmount = price * quantity;
-                  
-                  console.log(`📦 Line item: "${itemProps.name}", Amount: $${itemAmount}`);
-                  
-                  // Create a line item object that matches what Commission Tracking expects
-                  const lineItemForCalculation = {
-                    description: itemProps.description || itemProps.name || '',
-                    quantity: quantity,
-                    price: price
-                  };
-                  
-                  // Use EXACT same function as Commission Tracking
-                  const commission = calculateCommissionFromInvoice(lineItemForCalculation, price * quantity);
-                  
-                  console.log(`💰 Line item commission: $${commission.amount} (${commission.type})`);
-                  
-                  if (commission.type === 'setup') {
-                    setupCommission += commission.amount;
-                  } else {
-                    monthlyCommission += commission.amount;
-                  }
-                  
-                  projectedCommission += commission.amount;
-
-                  // Build service type description
-                  if (itemName.includes('bookkeeping') || itemDescription.includes('bookkeeping')) {
-                    services.push('bookkeeping');
-                  }
-                  if (itemName.includes('payroll') || itemDescription.includes('payroll')) {
-                    services.push('payroll');
-                  }
-                  if (itemName.includes('tax') || itemName.includes('taas') || itemDescription.includes('tax') || itemDescription.includes('taas')) {
-                    services.push('taas');
-                  }
-                  if (itemName.includes('ap/ar') || itemName.includes('ap ar') || itemDescription.includes('ap/ar')) {
-                    services.push('ap/ar');
-                  }
-                  if (itemName.includes('fp&a') || itemName.includes('fpa') || itemDescription.includes('fp&a')) {
-                    services.push('fp&a');
-                  }
-                  
-                } catch (lineItemError) {
-                  console.log('Could not fetch line item:', lineItemAssoc.id, lineItemError.message);
-                }
-              }
+              // Create a line item object that matches what Commission Tracking expects
+              const lineItemForCalculation = {
+                description: itemProps.description || itemProps.name || '',
+                quantity: quantity,
+                price: price
+              };
               
-              // Set service type based on found services
-              if (services.length > 0) {
-                serviceType = [...new Set(services)].join(' + '); // Remove duplicates and join
-              }
-            } else {
-              console.log(`⚠️ Quote ${quoteId} has no line items, using deal amount with EXACT commission logic`);
-              // When quotes have no line items, create a synthetic line item and run it through the EXACT same function
-              const dealAmount = parseFloat(properties.amount || 0);
-              if (dealAmount > 0) {
-                // Create a synthetic line item that represents the entire deal
-                const syntheticLineItem = {
-                  description: dealName,
-                  quantity: 1,
-                  price: dealAmount
-                };
-                
-                // Use EXACT same function as Commission Tracking
-                const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
-                
-                console.log(`💰 Synthetic line item commission: $${commission.amount} (${commission.type})`);
-                
-                if (commission.type === 'setup') {
-                  setupCommission += commission.amount;
-                } else {
-                  monthlyCommission += commission.amount;
-                }
-                
-                projectedCommission = commission.amount;
+              // Use EXACT same function as Commission Tracking
+              const commission = calculateCommissionFromInvoice(lineItemForCalculation, itemAmount);
+              
+              console.log(`💰 Deal line item commission: $${commission.amount} (${commission.type})`);
+              
+              if (commission.type === 'setup') {
+                setupCommission += commission.amount;
               } else {
-                projectedCommission = 0;
-                setupCommission = 0;
-                monthlyCommission = 0;
+                monthlyCommission += commission.amount;
+              }
+              
+              projectedCommission += commission.amount;
+
+              // Build service type description
+              if (itemName.includes('bookkeeping') || itemDescription.includes('bookkeeping')) {
+                services.push('bookkeeping');
+              }
+              if (itemName.includes('payroll') || itemDescription.includes('payroll')) {
+                services.push('payroll');
+              }
+              if (itemName.includes('tax') || itemName.includes('taas') || itemDescription.includes('tax') || itemDescription.includes('taas')) {
+                services.push('taas');
+              }
+              if (itemName.includes('ap/ar') || itemName.includes('ap ar') || itemDescription.includes('ap/ar')) {
+                services.push('ap/ar');
+              }
+              if (itemName.includes('fp&a') || itemName.includes('fpa') || itemDescription.includes('fp&a')) {
+                services.push('fp&a');
               }
             }
-          } catch (quoteError) {
-            console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
-            // Use synthetic line item with EXACT commission function
+            
+            // Set service type based on found services
+            if (services.length > 0) {
+              serviceType = [...new Set(services)].join(' + '); // Remove duplicates and join
+            }
+          } else {
+            console.log(`⚠️ Deal ${deal.id} has no line items, using deal amount with EXACT commission logic`);
+            // When deals have no line items, create a synthetic line item
             const dealAmount = parseFloat(properties.amount || 0);
             if (dealAmount > 0) {
               const syntheticLineItem = {
@@ -3607,9 +3571,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                 quantity: 1,
                 price: dealAmount
               };
+              
               const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
               
-              console.log(`💰 Quote error synthetic commission: $${commission.amount} (${commission.type})`);
+              console.log(`💰 Synthetic line item commission: $${commission.amount} (${commission.type})`);
               
               if (commission.type === 'setup') {
                 setupCommission = commission.amount;
@@ -3623,9 +3588,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
               monthlyCommission = 0;
             }
           }
-        } else {
-          console.log(`⚠️ Deal ${deal.id} has no quotes, using deal amount with EXACT commission logic`);
-          // Use synthetic line item with EXACT commission function
+        } catch (dealLineItemsError) {
+          console.log('Could not fetch line items for deal:', deal.id, dealLineItemsError.message);
+          // Use synthetic line item with EXACT commission function as fallback
           const dealAmount = parseFloat(properties.amount || 0);
           if (dealAmount > 0) {
             const syntheticLineItem = {
@@ -3635,7 +3600,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             };
             const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
             
-            console.log(`💰 No quotes synthetic commission: $${commission.amount} (${commission.type})`);
+            console.log(`💰 Error fallback synthetic commission: $${commission.amount} (${commission.type})`);
             
             if (commission.type === 'setup') {
               setupCommission = commission.amount;
