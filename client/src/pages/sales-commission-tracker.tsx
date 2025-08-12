@@ -339,31 +339,12 @@ export function SalesCommissionTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
       <UniversalNavbar />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/sales-dashboard')}
-              className="flex items-center gap-2"
-              data-testid="button-back-sales"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Sales Dashboard
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Commission Tracking</h1>
-              <p className="text-gray-600">
-                Track your earnings, bonuses, and commission history
-              </p>
-            </div>
-          </div>
-          
+        <div className="flex items-center justify-end mb-8">
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" data-testid="button-export">
               <Download className="h-4 w-4 mr-2" />
