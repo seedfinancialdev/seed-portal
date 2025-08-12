@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -156,7 +157,7 @@ export function AdminCommissionTracker() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [salesReps, setSalesReps] = useState<SalesRep[]>([]);
-  const [adjustmentRequests, setAdjustmentRequests] = useState<AdjustmentRequest[]>([]);
+  // No longer using local state - adjustmentRequests comes from database query below
 
   // State for dialogs and forms
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
@@ -225,6 +226,39 @@ export function AdminCommissionTracker() {
     }
   });
 
+  const queryClient = useQueryClient();
+
+  // Fetch commission adjustments from database
+  const { data: adjustmentRequests = [], refetch: refetchAdjustments } = useQuery({
+    queryKey: ['/api/commission-adjustments'],
+    enabled: !!user?.role && user.role === 'admin'
+  });
+
+  // Mutations for commission adjustments
+  const createAdjustmentMutation = useMutation({
+    mutationFn: (adjustmentData: any) => 
+      apiRequest('/api/commission-adjustments', {
+        method: 'POST',
+        body: JSON.stringify(adjustmentData)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/commission-adjustments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/commissions'] });
+    }
+  });
+
+  const updateAdjustmentMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => 
+      apiRequest(`/api/commission-adjustments/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data)
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/commission-adjustments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/commissions'] });
+    }
+  });
+
   // Update component state when data loads
   useEffect(() => {
     if (liveCommissions.length > 0) {
@@ -289,22 +323,7 @@ export function AdminCommissionTracker() {
     }
   }, [liveDeals]);
 
-  // Initialize with empty arrays - data will come from API queries above
-  useEffect(() => {
-    // Set adjustment requests with sample data for now
-    setAdjustmentRequests([
-      {
-        id: 'adj-1',
-        commissionId: 'comm-2',
-        salesRep: 'Randall Matthews',
-        originalAmount: 3200,
-        requestedAmount: 3500,
-        reason: 'Client upgraded service package after initial setup, should reflect higher commission rate',
-        status: 'pending',
-        requestedDate: '2025-01-25'
-      }
-    ]);
-  }, []);
+  // Data is now fetched via useQuery hooks above
 
   // Filter commissions based on current filters
   const filteredCommissions = commissions.filter(commission => {
@@ -404,18 +423,14 @@ export function AdminCommissionTracker() {
 
   const handleSubmitAdjustment = () => {
     if (selectedCommission && adjustmentReason.trim()) {
-      const newRequest: AdjustmentRequest = {
-        id: `adj-${Date.now()}`,
-        commissionId: selectedCommission.id,
-        salesRep: selectedCommission.salesRep,
+      const adjustmentData = {
+        commissionId: parseInt(selectedCommission.id),
         originalAmount: selectedCommission.amount,
         requestedAmount: adjustmentAmount ? parseFloat(adjustmentAmount) : selectedCommission.amount,
-        reason: adjustmentReason,
-        status: 'pending',
-        requestedDate: new Date().toISOString().split('T')[0]
+        reason: adjustmentReason
       };
       
-      setAdjustmentRequests([...adjustmentRequests, newRequest]);
+      createAdjustmentMutation.mutate(adjustmentData);
       setAdjustmentDialogOpen(false);
       setSelectedCommission(null);
       setAdjustmentAmount('');
@@ -431,18 +446,14 @@ export function AdminCommissionTracker() {
 
   const handleApproveAdjustment = () => {
     if (selectedAdjustmentRequest) {
-      const updatedRequests = adjustmentRequests.map(req => 
-        req.id === selectedAdjustmentRequest.id 
-          ? { 
-              ...req, 
-              status: 'approved' as const, 
-              reviewedBy: user?.firstName + ' ' + user?.lastName,
-              reviewedDate: new Date().toISOString().split('T')[0],
-              reviewNotes: reviewNotes
-            }
-          : req
-      );
-      setAdjustmentRequests(updatedRequests);
+      const updateData = {
+        id: selectedAdjustmentRequest.id,
+        status: 'approved',
+        finalAmount: selectedAdjustmentRequest.requestedAmount,
+        notes: reviewNotes
+      };
+      
+      updateAdjustmentMutation.mutate(updateData);
       setReviewDialogOpen(false);
       setSelectedAdjustmentRequest(null);
       setReviewNotes('');
@@ -451,18 +462,13 @@ export function AdminCommissionTracker() {
 
   const handleRejectAdjustment = () => {
     if (selectedAdjustmentRequest) {
-      const updatedRequests = adjustmentRequests.map(req => 
-        req.id === selectedAdjustmentRequest.id 
-          ? { 
-              ...req, 
-              status: 'rejected' as const, 
-              reviewedBy: user?.firstName + ' ' + user?.lastName,
-              reviewedDate: new Date().toISOString().split('T')[0],
-              reviewNotes: reviewNotes
-            }
-          : req
-      );
-      setAdjustmentRequests(updatedRequests);
+      const updateData = {
+        id: selectedAdjustmentRequest.id,
+        status: 'rejected',
+        notes: reviewNotes
+      };
+      
+      updateAdjustmentMutation.mutate(updateData);
       setReviewDialogOpen(false);
       setSelectedAdjustmentRequest(null);
       setReviewNotes('');

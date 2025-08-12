@@ -1,10 +1,11 @@
 import { 
   users, quotes, approvalCodes, kbCategories, kbArticles, kbBookmarks, kbSearchHistory, workspaceUsers,
-  salesReps, deals, commissions, monthlyBonuses, milestoneBonuses,
+  salesReps, deals, commissions, commissionAdjustments, monthlyBonuses, milestoneBonuses,
   type User, type InsertUser, type Quote, type InsertQuote, type ApprovalCode, type InsertApprovalCode, 
   type KbCategory, type InsertKbCategory, type KbArticle, type InsertKbArticle, type KbBookmark, type InsertKbBookmark,
   type KbSearchHistory, type InsertKbSearchHistory, type WorkspaceUser, type InsertWorkspaceUser, 
   type SalesRep, type InsertSalesRep, type Deal, type InsertDeal, type Commission, type InsertCommission,
+  type CommissionAdjustment, type InsertCommissionAdjustment,
   type MonthlyBonus, type InsertMonthlyBonus, type MilestoneBonus, type InsertMilestoneBonus,
   updateQuoteSchema, type UpdateProfile 
 } from "@shared/schema";
@@ -107,6 +108,12 @@ export interface IStorage {
   getCommissionsByDeal(dealId: number): Promise<Commission[]>;
   createCommission(commission: InsertCommission): Promise<Commission>;
   updateCommission(id: number, commission: Partial<InsertCommission>): Promise<Commission>;
+  
+  // Commission Adjustments
+  getAllCommissionAdjustments(): Promise<CommissionAdjustment[]>;
+  getCommissionAdjustmentsByCommission(commissionId: number): Promise<CommissionAdjustment[]>;
+  createCommissionAdjustment(adjustment: InsertCommissionAdjustment): Promise<CommissionAdjustment>;
+  updateCommissionAdjustmentStatus(id: number, status: string, approvedBy: number, finalAmount?: number, notes?: string): Promise<CommissionAdjustment>;
   
   // Monthly Bonuses
   getMonthlyBonuses(salesRepId?: number): Promise<MonthlyBonus[]>;
@@ -1107,6 +1114,72 @@ export class DatabaseStorage implements IStorage {
       
       return updatedCommission;
     }, 'updateCommission');
+  }
+
+  // Commission Adjustments
+  async getAllCommissionAdjustments(): Promise<CommissionAdjustment[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(commissionAdjustments)
+        .orderBy(desc(commissionAdjustments.requestedDate));
+    }, 'getAllCommissionAdjustments');
+  }
+
+  async getCommissionAdjustmentsByCommission(commissionId: number): Promise<CommissionAdjustment[]> {
+    return await safeDbQuery(async () => {
+      return await db.select().from(commissionAdjustments)
+        .where(eq(commissionAdjustments.commissionId, commissionId))
+        .orderBy(desc(commissionAdjustments.requestedDate));
+    }, 'getCommissionAdjustmentsByCommission');
+  }
+
+  async createCommissionAdjustment(insertAdjustment: InsertCommissionAdjustment): Promise<CommissionAdjustment> {
+    return await safeDbQuery(async () => {
+      const [adjustment] = await db.insert(commissionAdjustments)
+        .values(insertAdjustment)
+        .returning();
+      
+      if (!adjustment) {
+        throw new Error('Failed to create commission adjustment');
+      }
+      
+      return adjustment;
+    }, 'createCommissionAdjustment');
+  }
+
+  async updateCommissionAdjustmentStatus(
+    id: number, 
+    status: string, 
+    approvedBy: number, 
+    finalAmount?: number, 
+    notes?: string
+  ): Promise<CommissionAdjustment> {
+    return await safeDbQuery(async () => {
+      const updateData: any = {
+        status,
+        approvedBy,
+        reviewedDate: new Date(),
+        updatedAt: new Date()
+      };
+      
+      if (finalAmount !== undefined) {
+        updateData.finalAmount = finalAmount;
+      }
+      
+      if (notes !== undefined) {
+        updateData.notes = notes;
+      }
+      
+      const [updatedAdjustment] = await db.update(commissionAdjustments)
+        .set(updateData)
+        .where(eq(commissionAdjustments.id, id))
+        .returning();
+      
+      if (!updatedAdjustment) {
+        throw new Error('Failed to update commission adjustment');
+      }
+      
+      return updatedAdjustment;
+    }, 'updateCommissionAdjustmentStatus');
   }
 
   // Monthly Bonuses

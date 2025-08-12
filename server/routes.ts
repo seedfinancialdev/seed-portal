@@ -4,7 +4,8 @@ import type Redis from "ioredis";
 import { storage } from "./storage";
 import { 
   insertQuoteSchema, updateQuoteSchema, updateProfileSchema, changePasswordSchema,
-  insertKbCategorySchema, insertKbArticleSchema, insertKbBookmarkSchema, insertKbSearchHistorySchema
+  insertKbCategorySchema, insertKbArticleSchema, insertKbBookmarkSchema, insertKbSearchHistorySchema,
+  insertCommissionAdjustmentSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { sendSystemAlert } from "./slack";
@@ -4021,6 +4022,108 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     } catch (error) {
       console.error('Error updating commission:', error);
       res.status(500).json({ message: "Failed to update commission" });
+    }
+  });
+
+  // Commission Adjustments endpoints
+  app.get("/api/commission-adjustments", requireAuth, async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        res.status(403).json({ message: "Admin access required" });
+        return;
+      }
+      
+      const adjustments = await storage.getAllCommissionAdjustments();
+      res.json(adjustments);
+    } catch (error) {
+      console.error('Error fetching commission adjustments:', error);
+      res.status(500).json({ message: "Failed to fetch commission adjustments" });
+    }
+  });
+
+  app.post("/api/commission-adjustments", requireAuth, async (req, res) => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ message: "User not authenticated" });
+        return;
+      }
+
+      const { commissionId, originalAmount, requestedAmount, reason } = req.body;
+      
+      if (!commissionId || !originalAmount || !requestedAmount || !reason) {
+        res.status(400).json({ message: "Missing required fields" });
+        return;
+      }
+
+      // Determine adjustment type based on user role
+      const adjustmentType = req.user.role === 'admin' ? 'direct' : 'request';
+      const status = req.user.role === 'admin' ? 'approved' : 'pending';
+
+      const adjustmentData = {
+        commissionId: parseInt(commissionId),
+        requestedBy: req.user.id,
+        originalAmount: parseFloat(originalAmount),
+        requestedAmount: parseFloat(requestedAmount),
+        reason,
+        type: adjustmentType,
+        status,
+        ...(req.user.role === 'admin' && { 
+          approvedBy: req.user.id, 
+          finalAmount: parseFloat(requestedAmount),
+          reviewedDate: new Date()
+        })
+      };
+
+      const adjustment = await storage.createCommissionAdjustment(adjustmentData);
+      
+      // If admin creates direct adjustment, also update the commission amount
+      if (req.user.role === 'admin') {
+        await storage.updateCommission(parseInt(commissionId), {
+          amount: parseFloat(requestedAmount)
+        });
+      }
+
+      res.json(adjustment);
+    } catch (error) {
+      console.error('Error creating commission adjustment:', error);
+      res.status(500).json({ message: "Failed to create commission adjustment" });
+    }
+  });
+
+  app.patch("/api/commission-adjustments/:id", requireAuth, async (req, res) => {
+    try {
+      if (!req.user || req.user.role !== 'admin') {
+        res.status(403).json({ message: "Admin access required" });
+        return;
+      }
+
+      const id = parseInt(req.params.id);
+      const { status, finalAmount, notes } = req.body;
+      
+      if (isNaN(id)) {
+        res.status(400).json({ message: "Invalid adjustment ID" });
+        return;
+      }
+
+      const adjustment = await storage.updateCommissionAdjustmentStatus(
+        id, 
+        status, 
+        req.user.id, 
+        finalAmount ? parseFloat(finalAmount) : undefined, 
+        notes
+      );
+
+      // If approved, update the actual commission amount
+      if (status === 'approved' && finalAmount) {
+        await storage.updateCommission(adjustment.commissionId, {
+          amount: parseFloat(finalAmount)
+        });
+      }
+
+      res.json(adjustment);
+    } catch (error) {
+      console.error('Error updating commission adjustment:', error);
+      res.status(500).json({ message: "Failed to update commission adjustment" });
     }
   });
 

@@ -366,7 +366,32 @@ export const insertHubspotSubscriptionSchema = createInsertSchema(hubspotSubscri
   updatedAt: true,
 });
 
+// Commission Adjustments - for tracking changes to commission amounts
+export const commissionAdjustments = pgTable("commission_adjustments", {
+  id: serial("id").primaryKey(),
+  commissionId: integer("commission_id").notNull().references(() => commissions.id),
+  requestedBy: integer("requested_by").notNull().references(() => users.id), // User who created the adjustment
+  approvedBy: integer("approved_by").references(() => users.id), // Admin who approved/rejected
+  originalAmount: decimal("original_amount", { precision: 10, scale: 2 }).notNull(),
+  requestedAmount: decimal("requested_amount", { precision: 10, scale: 2 }).notNull(),
+  finalAmount: decimal("final_amount", { precision: 10, scale: 2 }), // Amount after approval/modification
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  type: text("type").notNull().default("request"), // request (by sales rep) or direct (by admin)
+  notes: text("notes"), // Admin notes for approval/rejection
+  requestedDate: timestamp("requested_date").defaultNow().notNull(),
+  reviewedDate: timestamp("reviewed_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertCommissionSchema = createInsertSchema(commissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCommissionAdjustmentSchema = createInsertSchema(commissionAdjustments).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -396,6 +421,8 @@ export type InsertHubspotSubscription = z.infer<typeof insertHubspotSubscription
 export type HubspotSubscription = typeof hubspotSubscriptions.$inferSelect;
 export type InsertCommission = z.infer<typeof insertCommissionSchema>;
 export type Commission = typeof commissions.$inferSelect;
+export type InsertCommissionAdjustment = z.infer<typeof insertCommissionAdjustmentSchema>;
+export type CommissionAdjustment = typeof commissionAdjustments.$inferSelect;
 export type InsertMonthlyBonus = z.infer<typeof insertMonthlyBonusSchema>;
 export type MonthlyBonus = typeof monthlyBonuses.$inferSelect;
 export type InsertMilestoneBonus = z.infer<typeof insertMilestoneBonusSchema>;
