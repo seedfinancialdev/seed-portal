@@ -206,6 +206,20 @@ export class HubSpotCommissionSync {
         console.log(`🔍 DEBUGGING - Invoice ${invoice.id} properties:`, JSON.stringify(invoice.properties, null, 2));
         console.log(`🔍 DEBUGGING - Invoice ${invoice.id} associations:`, JSON.stringify(invoice.associations, null, 2));
         
+        // Store debug data in database temporarily
+        try {
+          await db.execute(sql`
+            INSERT INTO hubspot_debug (invoice_id, properties_json, associations_json, created_at)
+            VALUES (${invoice.id}, ${JSON.stringify(invoice.properties)}, ${JSON.stringify(invoice.associations)}, NOW())
+            ON CONFLICT (invoice_id) DO UPDATE SET
+              properties_json = ${JSON.stringify(invoice.properties)},
+              associations_json = ${JSON.stringify(invoice.associations)},
+              created_at = NOW()
+          `);
+        } catch (debugError) {
+          console.log('Debug table insert failed - table may not exist');
+        }
+        
         await this.processInvoiceWithLineItems(invoice, lineItems, totalAmount);
         processedInvoices++;
       }
