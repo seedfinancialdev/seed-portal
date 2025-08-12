@@ -27,6 +27,7 @@ import { cache, CacheTTL, CachePrefix } from "./cache";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { hubspotSync } from "./hubspot-sync";
+import { Client } from '@hubspot/api-client';
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -3395,54 +3396,174 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
-  // Pipeline projections endpoint - separate from actual commissions
+  // Pipeline projections endpoint - real-time HubSpot data
   app.get("/api/pipeline-projections", requireAuth, async (req, res) => {
     try {
-      console.log('🚀 Pipeline projections API called');
+      console.log('🚀 Pipeline projections API called - fetching real-time HubSpot data');
       
-      const result = await db.execute(sql`
-        SELECT 
-          d.id,
-          d.hubspot_deal_id,
-          d.deal_name,
-          d.company_name,
-          d.amount as deal_value,
-          d.monthly_value,
-          d.setup_fee,
-          d.close_date,
-          d.deal_stage,
-          d.deal_owner as sales_rep,
-          d.service_type,
-          -- Calculate projected commission: 20% setup + 40% first month MRR
-          ROUND((COALESCE(d.setup_fee, 0) * 0.20) + (COALESCE(d.monthly_value, 0) * 0.40), 2) as projected_commission
-        FROM deals d 
-        WHERE d.deal_stage NOT IN ('closedwon', 'closedlost')
-        ORDER BY projected_commission DESC
-      `);
+      if (!process.env.HUBSPOT_ACCESS_TOKEN) {
+        console.error('❌ HubSpot access token not available');
+        return res.status(500).json({ 
+          status: 'error', 
+          message: 'HubSpot integration not configured' 
+        });
+      }
+
+      const hubspotClient = new Client({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
       
-      const projections = result.rows.map((deal: any) => ({
-        id: deal.id,
-        dealId: deal.hubspot_deal_id,
-        dealName: deal.deal_name,
-        companyName: deal.company_name,
-        salesRep: deal.sales_rep,
-        serviceType: deal.service_type,
-        dealStage: deal.deal_stage,
-        dealValue: parseFloat(deal.deal_value || 0),
-        monthlyValue: parseFloat(deal.monthly_value || 0),
-        setupFee: parseFloat(deal.setup_fee || 0),
-        projectedCommission: parseFloat(deal.projected_commission || 0),
-        closeDate: deal.close_date ? new Date(deal.close_date).toISOString().split('T')[0] : null,
-        status: 'projected'
-      }));
+      // Fetch deals that are not closed (won or lost)
+      const dealsResponse = await hubspotClient.crm.deals.basicApi.getPage(
+        100, // limit
+        undefined, // after
+        [
+          'dealname', 
+          'amount', 
+          'closedate', 
+          'dealstage', 
+          'hubspot_owner_id',
+          'associatedcompanyid'
+        ], // properties
+        undefined, // propertiesWithHistory
+        ['companies', 'quotes'] // associations
+      );
+
+      const pipelineDeals = [];
       
-      console.log(`📊 Found ${projections.length} pipeline deals with projections`);
-      res.json(projections);
+      for (const deal of dealsResponse.results) {
+        const properties = deal.properties;
+        
+        // Skip closed deals
+        if (properties.dealstage === 'closedwon' || properties.dealstage === 'closedlost') {
+          continue;
+        }
+
+        // Get associated company
+        let companyName = 'Unknown Company';
+        if (deal.associations?.companies?.results?.length > 0) {
+          const companyId = deal.associations.companies.results[0].id;
+          try {
+            const company = await hubspotClient.crm.companies.basicApi.getById(
+              companyId,
+              ['name']
+            );
+            companyName = company.properties.name || 'Unknown Company';
+          } catch (error) {
+            console.log('Could not fetch company for deal:', deal.id);
+          }
+        }
+
+        // Get owner name
+        let salesRep = 'Unknown Rep';
+        if (properties.hubspot_owner_id) {
+          try {
+            const owner = await hubspotClient.crm.owners.ownersApi.getById(
+              properties.hubspot_owner_id
+            );
+            salesRep = `${owner.firstName} ${owner.lastName}`;
+          } catch (error) {
+            console.log('Could not fetch owner for deal:', deal.id);
+          }
+        }
+
+        // Calculate commission from quotes if available
+        let setupCommission = 0;
+        let monthlyCommission = 0;
+        let projectedCommission = 0;
+        let serviceType = 'Unknown Service';
+
+        if (deal.associations?.quotes?.results?.length > 0) {
+          const quoteId = deal.associations.quotes.results[0].id;
+          try {
+            // Fetch quote with line items
+            const quote = await hubspotClient.crm.quotes.basicApi.getById(
+              quoteId,
+              undefined,
+              undefined,
+              ['line_items']
+            );
+
+            if (quote.associations?.line_items?.results?.length > 0) {
+              const lineItems = quote.associations.line_items.results;
+              
+              for (const lineItemAssoc of lineItems) {
+                try {
+                  const lineItem = await hubspotClient.crm.lineItems.basicApi.getById(
+                    lineItemAssoc.id,
+                    ['name', 'price', 'recurringbillingfrequency', 'quantity']
+                  );
+
+                  const itemProps = lineItem.properties;
+                  const price = parseFloat(itemProps.price || 0);
+                  const quantity = parseFloat(itemProps.quantity || 1);
+                  const totalPrice = price * quantity;
+                  const itemName = itemProps.name || '';
+                  
+                  // Categorize line items
+                  if (itemName.toLowerCase().includes('setup') || 
+                      itemName.toLowerCase().includes('onboarding') ||
+                      itemName.toLowerCase().includes('implementation')) {
+                    setupCommission += totalPrice * 0.20; // 20% setup commission
+                  } else if (itemProps.recurringbillingfrequency === 'monthly' ||
+                           itemName.toLowerCase().includes('monthly') ||
+                           itemName.toLowerCase().includes('subscription')) {
+                    monthlyCommission += totalPrice * 0.40; // 40% first month commission
+                  }
+
+                  // Build service type description
+                  if (itemName.toLowerCase().includes('bookkeeping')) {
+                    serviceType = serviceType === 'Unknown Service' ? 'bookkeeping' : 
+                      serviceType.includes('bookkeeping') ? serviceType : serviceType + ' + bookkeeping';
+                  }
+                  if (itemName.toLowerCase().includes('payroll')) {
+                    serviceType = serviceType === 'Unknown Service' ? 'payroll' :
+                      serviceType.includes('payroll') ? serviceType : serviceType + ' + payroll';
+                  }
+                  if (itemName.toLowerCase().includes('tax')) {
+                    serviceType = serviceType === 'Unknown Service' ? 'taas' :
+                      serviceType.includes('taas') ? serviceType : serviceType + ' + taas';
+                  }
+                } catch (lineItemError) {
+                  console.log('Could not fetch line item:', lineItemAssoc.id);
+                }
+              }
+            }
+          } catch (quoteError) {
+            console.log('Could not fetch quote for deal:', deal.id);
+          }
+        }
+
+        projectedCommission = setupCommission + monthlyCommission;
+
+        // Only include deals with meaningful data
+        if (projectedCommission > 0) {
+          pipelineDeals.push({
+            id: deal.id,
+            dealId: deal.id,
+            dealName: properties.dealname || 'Unnamed Deal',
+            companyName,
+            salesRep,
+            serviceType: serviceType === 'Unknown Service' ? 'Mixed Services' : serviceType,
+            dealStage: properties.dealstage || 'Unknown Stage',
+            dealValue: parseFloat(properties.amount || 0),
+            setupCommission: Math.round(setupCommission * 100) / 100,
+            monthlyCommission: Math.round(monthlyCommission * 100) / 100,
+            projectedCommission: Math.round(projectedCommission * 100) / 100,
+            closeDate: properties.closedate ? new Date(properties.closedate).toISOString().split('T')[0] : null,
+            status: 'projected'
+          });
+        }
+      }
+
+      // Sort by projected commission descending
+      pipelineDeals.sort((a, b) => b.projectedCommission - a.projectedCommission);
+      
+      console.log(`📊 Found ${pipelineDeals.length} pipeline deals with real commission projections`);
+      res.json(pipelineDeals);
     } catch (error: any) {
       console.error('Pipeline projections error:', error);
       res.status(500).json({ 
         status: 'error', 
-        message: 'Failed to fetch pipeline projections',
+        message: 'Failed to fetch pipeline projections from HubSpot',
         error: error.message 
       });
     }

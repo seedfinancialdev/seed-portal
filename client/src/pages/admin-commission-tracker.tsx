@@ -1326,7 +1326,7 @@ export function AdminCommissionTracker() {
                           <TableHead>Deal Value</TableHead>
                           <TableHead>Stage / Probability</TableHead>
                           <TableHead>Projected Commission</TableHead>
-                          <TableHead>Setup Fee Commission</TableHead>
+                          <TableHead>Setup Commission</TableHead>
                           <TableHead>Monthly Commission</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
@@ -1349,10 +1349,6 @@ export function AdminCommissionTracker() {
                           </TableRow>
                         ) : (
                           pipelineDeals.map((deal) => {
-                            const setupCommission = (deal.setupFee || 0) * 0.2;
-                            const monthlyCommission = (deal.monthlyValue || 0) * 0.1;
-                            const month1Commission = (deal.monthlyValue || 0) * 0.4;
-                            
                             return (
                               <TableRow key={deal.id} data-testid={`row-pipeline-${deal.id}`}>
                                 <TableCell className="font-medium">
@@ -1384,14 +1380,14 @@ export function AdminCommissionTracker() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-sm">
-                                    <p className="font-medium">${setupCommission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                    <p className="text-gray-500">20% of ${(deal.setupFee || 0).toLocaleString()}</p>
+                                    <p className="font-medium">${(deal.setupCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-gray-500">20% of setup fees</p>
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-sm">
-                                    <p className="font-medium">${month1Commission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                    <p className="text-gray-500">40% of ${(deal.monthlyValue || 0).toLocaleString()}</p>
+                                    <p className="font-medium">${(deal.monthlyCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-gray-500">40% of first month</p>
                                   </div>
                                 </TableCell>
                                 <TableCell>
