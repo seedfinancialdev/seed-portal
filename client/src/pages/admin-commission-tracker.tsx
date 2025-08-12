@@ -596,7 +596,7 @@ export function AdminCommissionTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-800 to-green-900">
+    <div className="min-h-screen bg-gradient-to-br from-[#253e31] via-emerald-800 to-green-900">
       <UniversalNavbar />
       
       <div className="container mx-auto px-4 py-8">
