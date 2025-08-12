@@ -989,35 +989,125 @@ export function AdminCommissionTracker() {
                         </div>
 
                         {/* Milestone Progress */}
-                        <div className="p-3 rounded-lg bg-gray-50">
+                        <div className="p-3 rounded-lg bg-indigo-50">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-700">Milestone Progress</span>
-                            <span className="text-xs text-gray-500">{metrics.totalClientsAllTime} total clients</span>
+                            <span className="text-sm font-medium flex items-center gap-2">
+                              <span className="text-indigo-700">Milestone Progress</span>
+                              <Badge variant="outline" className="text-indigo-600 border-indigo-300">
+                                {metrics.totalClientsAllTime >= 100 ? '🏆 Elite' : 
+                                 metrics.totalClientsAllTime >= 60 ? '🥇 Master' :
+                                 metrics.totalClientsAllTime >= 40 ? '🥈 Expert' :
+                                 metrics.totalClientsAllTime >= 25 ? '🥉 Pro' : 'Rising Star'}
+                              </Badge>
+                            </span>
+                            <span className="text-sm text-indigo-600">
+                              {metrics.totalClientsAllTime} total clients
+                            </span>
                           </div>
-                          <div className="space-y-1">
+                          
+                          {/* Current milestone progress bar */}
+                          <div className="mb-3">
+                            {metrics.totalClientsAllTime < 25 && (
+                              <>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-indigo-600">Progress to first milestone ($1,000)</span>
+                                  <span className="text-xs text-indigo-500">{Math.round((metrics.totalClientsAllTime / 25) * 100)}%</span>
+                                </div>
+                                <Progress 
+                                  value={Math.min((metrics.totalClientsAllTime / 25) * 100, 100)} 
+                                  className="h-2 bg-indigo-100"
+                                  data-testid={`progress-milestone-${rep.id}`}
+                                />
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-xs text-indigo-400">{metrics.totalClientsAllTime} / 25 clients</span>
+                                  <span className="text-xs text-indigo-500">{25 - metrics.totalClientsAllTime} more to milestone</span>
+                                </div>
+                              </>
+                            )}
+                            {metrics.totalClientsAllTime >= 25 && metrics.totalClientsAllTime < 40 && (
+                              <>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-indigo-600">Progress to $5,000 milestone</span>
+                                  <span className="text-xs text-indigo-500">{Math.round(((metrics.totalClientsAllTime - 25) / 15) * 100)}%</span>
+                                </div>
+                                <Progress 
+                                  value={Math.min(((metrics.totalClientsAllTime - 25) / 15) * 100, 100)} 
+                                  className="h-2 bg-indigo-100"
+                                  data-testid={`progress-milestone-${rep.id}`}
+                                />
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-xs text-indigo-400">{metrics.totalClientsAllTime} / 40 clients</span>
+                                  <span className="text-xs text-indigo-500">{40 - metrics.totalClientsAllTime} more to milestone</span>
+                                </div>
+                              </>
+                            )}
+                            {metrics.totalClientsAllTime >= 40 && metrics.totalClientsAllTime < 60 && (
+                              <>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-indigo-600">Progress to $7,500 milestone</span>
+                                  <span className="text-xs text-indigo-500">{Math.round(((metrics.totalClientsAllTime - 40) / 20) * 100)}%</span>
+                                </div>
+                                <Progress 
+                                  value={Math.min(((metrics.totalClientsAllTime - 40) / 20) * 100, 100)} 
+                                  className="h-2 bg-indigo-100"
+                                  data-testid={`progress-milestone-${rep.id}`}
+                                />
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-xs text-indigo-400">{metrics.totalClientsAllTime} / 60 clients</span>
+                                  <span className="text-xs text-indigo-500">{60 - metrics.totalClientsAllTime} more to milestone</span>
+                                </div>
+                              </>
+                            )}
+                            {metrics.totalClientsAllTime >= 60 && metrics.totalClientsAllTime < 100 && (
+                              <>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-indigo-600">Progress to Elite ($10,000 + Equity)</span>
+                                  <span className="text-xs text-indigo-500">{Math.round(((metrics.totalClientsAllTime - 60) / 40) * 100)}%</span>
+                                </div>
+                                <Progress 
+                                  value={Math.min(((metrics.totalClientsAllTime - 60) / 40) * 100, 100)} 
+                                  className="h-2 bg-indigo-100"
+                                  data-testid={`progress-milestone-${rep.id}`}
+                                />
+                                <div className="flex items-center justify-between mt-1">
+                                  <span className="text-xs text-indigo-400">{metrics.totalClientsAllTime} / 100 clients</span>
+                                  <span className="text-xs text-indigo-500">{100 - metrics.totalClientsAllTime} more to Elite status</span>
+                                </div>
+                              </>
+                            )}
+                            {metrics.totalClientsAllTime >= 100 && (
+                              <div className="text-center py-2">
+                                <span className="text-sm font-medium text-indigo-700">🏆 Elite Status Achieved!</span>
+                                <p className="text-xs text-indigo-600 mt-1">Congratulations on reaching the highest milestone!</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Milestone achievement list */}
+                          <div className="space-y-1 border-t border-indigo-200 pt-2">
                             <div className="flex items-center justify-between text-xs">
-                              <span className={metrics.totalClientsAllTime >= 25 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                              <span className={metrics.totalClientsAllTime >= 25 ? 'text-indigo-700 font-medium' : 'text-indigo-400'}>
                                 25 Clients - $1,000
                               </span>
-                              {metrics.totalClientsAllTime >= 25 && <span className="text-green-600">✓</span>}
+                              {metrics.totalClientsAllTime >= 25 ? <span className="text-indigo-600">✓</span> : <span className="text-indigo-300">○</span>}
                             </div>
                             <div className="flex items-center justify-between text-xs">
-                              <span className={metrics.totalClientsAllTime >= 40 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                              <span className={metrics.totalClientsAllTime >= 40 ? 'text-indigo-700 font-medium' : 'text-indigo-400'}>
                                 40 Clients - $5,000
                               </span>
-                              {metrics.totalClientsAllTime >= 40 && <span className="text-green-600">✓</span>}
+                              {metrics.totalClientsAllTime >= 40 ? <span className="text-indigo-600">✓</span> : <span className="text-indigo-300">○</span>}
                             </div>
                             <div className="flex items-center justify-between text-xs">
-                              <span className={metrics.totalClientsAllTime >= 60 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                              <span className={metrics.totalClientsAllTime >= 60 ? 'text-indigo-700 font-medium' : 'text-indigo-400'}>
                                 60 Clients - $7,500
                               </span>
-                              {metrics.totalClientsAllTime >= 60 && <span className="text-green-600">✓</span>}
+                              {metrics.totalClientsAllTime >= 60 ? <span className="text-indigo-600">✓</span> : <span className="text-indigo-300">○</span>}
                             </div>
                             <div className="flex items-center justify-between text-xs">
-                              <span className={metrics.totalClientsAllTime >= 100 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                              <span className={metrics.totalClientsAllTime >= 100 ? 'text-indigo-700 font-medium' : 'text-indigo-400'}>
                                 100 Clients - $10,000 + Equity
                               </span>
-                              {metrics.totalClientsAllTime >= 100 && <span className="text-green-600">✓</span>}
+                              {metrics.totalClientsAllTime >= 100 ? <span className="text-indigo-600">✓</span> : <span className="text-indigo-300">○</span>}
                             </div>
                           </div>
                         </div>
