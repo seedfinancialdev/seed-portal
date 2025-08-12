@@ -290,8 +290,10 @@ export const commissions = pgTable("commissions", {
   dealId: integer("deal_id").references(() => deals.id),
   hubspotInvoiceId: integer("hubspot_invoice_id").references(() => hubspotInvoices.id),
   hubspotSubscriptionId: integer("hubspot_subscription_id").references(() => hubspotSubscriptions.id),
+  monthlyBonusId: integer("monthly_bonus_id").references(() => monthlyBonuses.id),
+  milestoneBonusId: integer("milestone_bonus_id").references(() => milestoneBonuses.id),
   salesRepId: integer("sales_rep_id").notNull().references(() => salesReps.id),
-  type: text("type").notNull(), // setup, cleanup, prior_years, month_1, residual
+  type: text("type").notNull(), // setup, cleanup, prior_years, month_1, residual, monthly_bonus, milestone_bonus
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   status: text("status").notNull().default("pending"), // pending, processing, paid
   monthNumber: integer("month_number").notNull(), // 1, 2, 3, etc.

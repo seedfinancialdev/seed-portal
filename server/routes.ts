@@ -1838,6 +1838,54 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Test bonus tracking endpoint
+  app.post("/api/test-bonus-tracking", requireAuth, async (req, res) => {
+    try {
+      const { bonusTrackingService } = await import('./services/bonus-tracking.js');
+      const { salesRepId, monthlyClients, totalClients } = req.body;
+      
+      if (!salesRepId) {
+        return res.status(400).json({ message: "salesRepId is required" });
+      }
+      
+      // Get sales rep info
+      const repResult = await db.execute(sql`
+        SELECT id, first_name, last_name 
+        FROM sales_reps 
+        WHERE id = ${salesRepId} AND is_active = true
+      `);
+      
+      if (repResult.rows.length === 0) {
+        return res.status(404).json({ message: "Sales rep not found" });
+      }
+      
+      const rep = repResult.rows[0] as any;
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      
+      const testMetrics = [{
+        salesRepId: rep.id,
+        salesRepName: `${rep.first_name} ${rep.last_name}`,
+        clientsClosedThisMonth: monthlyClients || 0,
+        totalClientsAllTime: totalClients || 0,
+        currentMonth
+      }];
+      
+      // Check and award bonuses
+      await bonusTrackingService.checkAndAwardMonthlyBonuses(testMetrics);
+      await bonusTrackingService.checkAndAwardMilestoneBonuses(testMetrics);
+      
+      res.json({ 
+        message: "Bonus tracking test completed",
+        repName: testMetrics[0].salesRepName,
+        monthlyClients: monthlyClients || 0,
+        totalClients: totalClients || 0
+      });
+    } catch (error) {
+      console.error('Bonus tracking test error:', error);
+      res.status(500).json({ message: "Failed to test bonus tracking", error: error.message });
+    }
+  });
+
   // Sync profile data from HubSpot
   app.post("/api/user/sync-hubspot", requireAuth, async (req, res) => {
     try {
@@ -3010,6 +3058,33 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         email: rep.email,
         isActive: rep.is_active
       }));
+
+      // TODO: Bonus tracking integration temporarily disabled until schema is updated
+      // Check and award bonuses for eligible reps (run in background)
+      // try {
+      //   const { bonusTrackingService } = await import('./services/bonus-tracking.js');
+      //   const currentMonth = new Date().toISOString().slice(0, 7);
+      //   
+      //   // TODO: For now using placeholder values since client count columns need to be added to sales_reps table
+      //   const repMetrics = result.rows.map((rep: any) => ({
+      //     salesRepId: rep.id,
+      //     salesRepName: `${rep.first_name} ${rep.last_name}`,
+      //     clientsClosedThisMonth: 0, // TODO: Calculate from actual commission data
+      //     totalClientsAllTime: 0, // TODO: Calculate from actual commission data
+      //     currentMonth
+      //   }));
+
+      //   // Award bonuses in background (don't wait for completion)
+      //   bonusTrackingService.checkAndAwardMonthlyBonuses(repMetrics).catch(error => {
+      //     console.error('Background bonus tracking error:', error);
+      //   });
+      //   
+      //   bonusTrackingService.checkAndAwardMilestoneBonuses(repMetrics).catch(error => {
+      //     console.error('Background milestone tracking error:', error);
+      //   });
+      // } catch (bonusError) {
+      //   console.error('Bonus service error (non-blocking):', bonusError);
+      // }
       
       console.log('📊 Transformed sales reps:', salesReps);
       console.log('🚨 RETURNING DATA:', JSON.stringify(salesReps));
@@ -3146,11 +3221,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         `);
         commissionsData = result.rows;
       } else if (req.user && req.user.role === 'admin') {
-        // Admin users get all commissions with proper company/contact info
+        // Admin users get all commissions with proper company/contact info (including bonuses)
         const result = await db.execute(sql`
           SELECT 
             c.id,
             c.hubspot_invoice_id,
+            c.monthly_bonus_id,
+            c.milestone_bonus_id,
             c.sales_rep_id,
             c.type as commission_type,
             c.amount,
@@ -3159,17 +3236,25 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             c.service_type,
             c.date_earned,
             c.created_at,
-            hi.company_name,
-
+            CASE 
+              WHEN c.type = 'monthly_bonus' THEN CONCAT('Monthly Bonus - ', mb.bonus_type)
+              WHEN c.type = 'milestone_bonus' THEN CONCAT('Milestone Bonus - ', msb.milestone, ' clients')
+              ELSE hi.company_name
+            END as company_name,
             CONCAT(u.first_name, ' ', u.last_name) as sales_rep_name,
-            string_agg(DISTINCT hil.name, ', ') as service_names
+            CASE 
+              WHEN c.type IN ('monthly_bonus', 'milestone_bonus') THEN c.notes
+              ELSE string_agg(DISTINCT hil.name, ', ')
+            END as service_names
           FROM commissions c
           LEFT JOIN hubspot_invoices hi ON c.hubspot_invoice_id = hi.id
+          LEFT JOIN monthly_bonuses mb ON c.monthly_bonus_id = mb.id
+          LEFT JOIN milestone_bonuses msb ON c.milestone_bonus_id = msb.id
           LEFT JOIN users u ON c.sales_rep_id = u.id
           LEFT JOIN hubspot_invoice_line_items hil ON hi.id = hil.invoice_id
-          GROUP BY c.id, c.hubspot_invoice_id, c.sales_rep_id, c.type, c.amount, c.status, 
-                   c.month_number, c.service_type, c.date_earned, c.created_at, 
-                   hi.company_name, u.first_name, u.last_name
+          GROUP BY c.id, c.hubspot_invoice_id, c.monthly_bonus_id, c.milestone_bonus_id, c.sales_rep_id, 
+                   c.type, c.amount, c.status, c.month_number, c.service_type, c.date_earned, c.created_at, 
+                   hi.company_name, u.first_name, u.last_name, mb.bonus_type, msb.milestone, c.notes
           ORDER BY c.created_at DESC
         `);
         commissionsData = result.rows;
