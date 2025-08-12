@@ -831,6 +831,15 @@ export function AdminCommissionTracker() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewDealDetails(commission.dealId)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                                data-testid={`button-view-deal-${commission.id}`}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
                               {commission.status === 'pending' && (
                                 <>
                                   <Button
@@ -851,35 +860,6 @@ export function AdminCommissionTracker() {
                                     <AlertCircle className="w-4 h-4" />
                                   </Button>
                                 </>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewDealDetails(commission.dealId)}
-                                data-testid={`button-view-deal-${commission.id}`}
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRequestAdjustment(commission)}
-                                disabled={commission.status === 'approved' || commission.status === 'paid'}
-                                data-testid={`button-adjust-${commission.id}`}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              {commission.hubspotDealId && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  asChild
-                                  data-testid={`button-hubspot-${commission.id}`}
-                                >
-                                  <a href={`https://app.hubspot.com/contacts/deal/${commission.hubspotDealId}`} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="w-4 h-4" />
-                                  </a>
-                                </Button>
                               )}
                             </div>
                           </TableCell>
@@ -1464,6 +1444,21 @@ export function AdminCommissionTracker() {
                 data-testid="button-close-deal-details"
               >
                 Close
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const commission = commissions.find(c => c.dealId === selectedDeal?.id);
+                  if (commission) {
+                    handleRequestAdjustment(commission);
+                    setDealDetailsDialogOpen(false);
+                  }
+                }}
+                disabled={selectedDeal && commissions.find(c => c.dealId === selectedDeal.id)?.status === 'approved' || commissions.find(c => c.dealId === selectedDeal?.id)?.status === 'paid'}
+                data-testid="button-request-adjustment"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Request Adjustment
               </Button>
               {selectedDeal?.hubspotDealId && (
                 <Button 
