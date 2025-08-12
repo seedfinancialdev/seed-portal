@@ -3568,22 +3568,86 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                 serviceType = [...new Set(services)].join(' + '); // Remove duplicates and join
               }
             } else {
-              console.log(`⚠️ Quote ${quoteId} has no line items, cannot calculate accurate commission`);
+              console.log(`⚠️ Quote ${quoteId} has no line items, using deal amount with EXACT commission logic`);
+              // When quotes have no line items, create a synthetic line item and run it through the EXACT same function
+              const dealAmount = parseFloat(properties.amount || 0);
+              if (dealAmount > 0) {
+                // Create a synthetic line item that represents the entire deal
+                const syntheticLineItem = {
+                  description: dealName,
+                  quantity: 1,
+                  price: dealAmount
+                };
+                
+                // Use EXACT same function as Commission Tracking
+                const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
+                
+                console.log(`💰 Synthetic line item commission: $${commission.amount} (${commission.type})`);
+                
+                if (commission.type === 'setup') {
+                  setupCommission += commission.amount;
+                } else {
+                  monthlyCommission += commission.amount;
+                }
+                
+                projectedCommission = commission.amount;
+              } else {
+                projectedCommission = 0;
+                setupCommission = 0;
+                monthlyCommission = 0;
+              }
+            }
+          } catch (quoteError) {
+            console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
+            // Use synthetic line item with EXACT commission function
+            const dealAmount = parseFloat(properties.amount || 0);
+            if (dealAmount > 0) {
+              const syntheticLineItem = {
+                description: dealName,
+                quantity: 1,
+                price: dealAmount
+              };
+              const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
+              
+              console.log(`💰 Quote error synthetic commission: $${commission.amount} (${commission.type})`);
+              
+              if (commission.type === 'setup') {
+                setupCommission = commission.amount;
+              } else {
+                monthlyCommission = commission.amount;
+              }
+              projectedCommission = commission.amount;
+            } else {
               projectedCommission = 0;
               setupCommission = 0;
               monthlyCommission = 0;
             }
-          } catch (quoteError) {
-            console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
+          }
+        } else {
+          console.log(`⚠️ Deal ${deal.id} has no quotes, using deal amount with EXACT commission logic`);
+          // Use synthetic line item with EXACT commission function
+          const dealAmount = parseFloat(properties.amount || 0);
+          if (dealAmount > 0) {
+            const syntheticLineItem = {
+              description: dealName,
+              quantity: 1,
+              price: dealAmount
+            };
+            const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
+            
+            console.log(`💰 No quotes synthetic commission: $${commission.amount} (${commission.type})`);
+            
+            if (commission.type === 'setup') {
+              setupCommission = commission.amount;
+            } else {
+              monthlyCommission = commission.amount;
+            }
+            projectedCommission = commission.amount;
+          } else {
             projectedCommission = 0;
             setupCommission = 0;
             monthlyCommission = 0;
           }
-        } else {
-          console.log(`⚠️ Deal ${deal.id} has no quotes, cannot calculate accurate commission`);
-          projectedCommission = 0;
-          setupCommission = 0;
-          monthlyCommission = 0;
         }
         
         // Set service type from deal name if not found from line items
