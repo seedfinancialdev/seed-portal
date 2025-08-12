@@ -476,9 +476,9 @@ export function AdminCommissionTracker() {
         companyName: deal.companyName,
         salesRep: deal.salesRep,
         serviceType: deal.serviceType,
-        amount: deal.amount * 5, // Estimate total deal value
-        setupFee: deal.amount * 0.3, // Estimate
-        monthlyFee: deal.amount * 0.7, // Estimate
+        amount: deal.amount, // Total commission amount
+        setupFee: (deal as any).breakdown?.setup || 0, // Actual setup commission
+        monthlyFee: (deal as any).breakdown?.month1 || 0, // Actual month 1 commission
         status: 'closed_won' as const,
         closedDate: deal.dateEarned,
         hubspotDealId: deal.hubspotDealId
@@ -1343,18 +1343,18 @@ export function AdminCommissionTracker() {
                     <div className="grid grid-cols-2 gap-4 mt-2">
                       <div className="p-3 bg-green-50 rounded-lg">
                         <p className="text-sm text-gray-600">Setup Fee Commission (20%)</p>
-                        <p className="text-lg font-bold text-green-600">${(selectedDeal.setupFee * 0.2).toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">from ${selectedDeal.setupFee.toLocaleString()} setup fee</p>
+                        <p className="text-lg font-bold text-green-600">${selectedDeal.setupFee.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">20% of setup fee</p>
                       </div>
                       <div className="p-3 bg-blue-50 rounded-lg">
                         <p className="text-sm text-gray-600">First Month Commission (40%)</p>
-                        <p className="text-lg font-bold text-blue-600">${(selectedDeal.monthlyFee * 0.4).toLocaleString()}</p>
-                        <p className="text-xs text-gray-500">from ${selectedDeal.monthlyFee.toLocaleString()} monthly fee</p>
+                        <p className="text-lg font-bold text-blue-600">${selectedDeal.monthlyFee.toLocaleString()}</p>
+                        <p className="text-xs text-gray-500">40% of monthly fee</p>
                       </div>
                       <div className="p-3 bg-purple-50 rounded-lg col-span-2">
                         <p className="text-sm text-gray-600">Total First Month Commission</p>
                         <p className="text-xl font-bold text-purple-600">
-                          ${((selectedDeal.setupFee * 0.2) + (selectedDeal.monthlyFee * 0.4)).toLocaleString()}
+                          ${(selectedDeal.setupFee + selectedDeal.monthlyFee).toLocaleString()}
                         </p>
                       </div>
                     </div>
