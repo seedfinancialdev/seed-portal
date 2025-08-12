@@ -3268,10 +3268,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(400).json({ message: "Invalid commission ID" });
       }
 
-      // Update commission status to rejected
+      // Update commission status to rejected and zero out the amount
       const result = await db.execute(sql`
         UPDATE commissions 
         SET status = 'rejected', 
+            amount = 0,
             updated_at = NOW()
         WHERE id = ${commissionId}
       `);
@@ -3280,8 +3281,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(404).json({ message: "Commission not found" });
       }
 
-      console.log(`❌ Commission ${commissionId} rejected by ${req.user.email}`);
-      res.json({ success: true, message: "Commission rejected successfully" });
+      console.log(`❌ Commission ${commissionId} rejected and zeroed out by ${req.user.email}`);
+      res.json({ success: true, message: "Commission rejected and amount zeroed out" });
     } catch (error) {
       console.error('Error rejecting commission:', error);
       res.status(500).json({ message: "Failed to reject commission" });
