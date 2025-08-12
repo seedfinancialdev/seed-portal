@@ -1455,10 +1455,10 @@ export function AdminCommissionTracker() {
                   }
                 }}
                 disabled={selectedDeal && commissions.find(c => c.dealId === selectedDeal.id)?.status === 'approved' || commissions.find(c => c.dealId === selectedDeal?.id)?.status === 'paid'}
-                data-testid="button-request-adjustment"
+                data-testid="button-create-adjustment"
               >
                 <Edit className="w-4 h-4 mr-2" />
-                Request Adjustment
+                Create Adjustment
               </Button>
               {selectedDeal?.hubspotDealId && (
                 <Button 
