@@ -3281,6 +3281,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const invoiceGroups = new Map();
       
       commissionsData.forEach((comm: any) => {
+        // Skip projection records from main commission tracking
+        if (comm.type === 'projection') {
+          return;
+        }
+        
         // Handle bonus records specially (they don't have invoice IDs)
         if (comm.commission_type === 'monthly_bonus' || comm.commission_type === 'milestone_bonus') {
           const bonusKey = `bonus_${comm.id}`;
@@ -3387,6 +3392,59 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.error('Error fetching commissions:', error);
       // Return empty array instead of 500 error to prevent console errors
       res.json([]);
+    }
+  });
+
+  // Pipeline projections endpoint - separate from actual commissions
+  app.get("/api/pipeline-projections", requireAuth, async (req, res) => {
+    try {
+      console.log('🚀 Pipeline projections API called');
+      
+      const result = await db.execute(sql`
+        SELECT 
+          d.id,
+          d.hubspot_deal_id,
+          d.deal_name,
+          d.company_name,
+          d.amount as deal_value,
+          d.monthly_value,
+          d.setup_fee,
+          d.close_date,
+          d.deal_stage,
+          d.deal_owner as sales_rep,
+          d.service_type,
+          -- Calculate projected commission: 20% setup + 40% first month MRR
+          ROUND((COALESCE(d.setup_fee, 0) * 0.20) + (COALESCE(d.monthly_value, 0) * 0.40), 2) as projected_commission
+        FROM deals d 
+        WHERE d.deal_stage NOT IN ('closedwon', 'closedlost')
+        ORDER BY projected_commission DESC
+      `);
+      
+      const projections = result.rows.map((deal: any) => ({
+        id: deal.id,
+        dealId: deal.hubspot_deal_id,
+        dealName: deal.deal_name,
+        companyName: deal.company_name,
+        salesRep: deal.sales_rep,
+        serviceType: deal.service_type,
+        dealStage: deal.deal_stage,
+        dealValue: parseFloat(deal.deal_value || 0),
+        monthlyValue: parseFloat(deal.monthly_value || 0),
+        setupFee: parseFloat(deal.setup_fee || 0),
+        projectedCommission: parseFloat(deal.projected_commission || 0),
+        closeDate: deal.close_date ? new Date(deal.close_date).toISOString().split('T')[0] : null,
+        status: 'projected'
+      }));
+      
+      console.log(`📊 Found ${projections.length} pipeline deals with projections`);
+      res.json(projections);
+    } catch (error: any) {
+      console.error('Pipeline projections error:', error);
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Failed to fetch pipeline projections',
+        error: error.message 
+      });
     }
   });
 

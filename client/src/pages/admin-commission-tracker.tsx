@@ -255,6 +255,32 @@ export function AdminCommissionTracker() {
     }
   });
 
+  const { data: pipelineDeals = [], isLoading: pipelineLoading } = useQuery({
+    queryKey: ['/api/pipeline-projections'],
+    queryFn: async () => {
+      console.log('🔄 Making fresh pipeline projections API call...');
+      const response = await fetch('/api/pipeline-projections?v=' + Date.now(), {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      if (!response.ok) {
+        console.error('Pipeline projections API error:', response.status, response.statusText);
+        throw new Error('Failed to fetch pipeline projections');
+      }
+      const data = await response.json();
+      console.log('📥 Raw pipeline projections API response:', data);
+      return data;
+    },
+    refetchInterval: 15000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
+  });
+
   const queryClient = useQueryClient();
 
   // Fetch commission adjustments from database
@@ -1306,79 +1332,96 @@ export function AdminCommissionTracker() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {deals.filter(deal => deal.status === 'open').map((deal) => {
-                          const firstMonthCommission = (deal.setupFee * 0.2) + (deal.monthlyFee * 0.4);
-                          const monthlyCommission = deal.monthlyFee * 0.1;
-                          const projectedCommission = firstMonthCommission * ((deal.probability || 0) / 100);
-                          
-                          return (
-                            <TableRow key={deal.id} data-testid={`row-pipeline-${deal.id}`}>
-                              <TableCell className="font-medium">
-                                <div>
-                                  <p className="font-semibold text-gray-900">{deal.dealName}</p>
-                                  <p className="text-sm text-gray-500">{deal.companyName}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <User className="w-4 h-4 text-gray-400" />
-                                  <span>{deal.salesRep}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-semibold">
-                                ${deal.amount.toLocaleString()}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {getPriorityIcon(deal.probability)}
+                        {pipelineLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8">
+                              <div className="flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <span className="ml-2">Loading pipeline projections...</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : pipelineDeals.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                              No pipeline deals found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          pipelineDeals.map((deal) => {
+                            const setupCommission = (deal.setupFee || 0) * 0.2;
+                            const monthlyCommission = (deal.monthlyValue || 0) * 0.1;
+                            const month1Commission = (deal.monthlyValue || 0) * 0.4;
+                            
+                            return (
+                              <TableRow key={deal.id} data-testid={`row-pipeline-${deal.id}`}>
+                                <TableCell className="font-medium">
                                   <div>
-                                    <p className="text-sm font-medium">{deal.pipelineStage || 'Unknown'}</p>
-                                    <p className="text-xs text-gray-500">{deal.probability || 0}% probability</p>
+                                    <p className="font-semibold text-gray-900">{deal.dealName}</p>
+                                    <p className="text-sm text-gray-500">{deal.companyName}</p>
                                   </div>
-                                </div>
-                              </TableCell>
-                              <TableCell className="font-semibold text-green-600">
-                                ${projectedCommission.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  <p className="font-medium">${(deal.setupFee * 0.2).toLocaleString()}</p>
-                                  <p className="text-gray-500">20% of ${deal.setupFee.toLocaleString()}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">
-                                  <p className="font-medium">${monthlyCommission.toLocaleString()}</p>
-                                  <p className="text-gray-500">10% of ${deal.monthlyFee.toLocaleString()}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleViewDealDetails(deal.id)}
-                                    data-testid={`button-view-pipeline-${deal.id}`}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  {deal.hubspotDealId && (
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4 text-gray-400" />
+                                    <span>{deal.salesRep}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-semibold">
+                                  ${(deal.dealValue || 0).toLocaleString()}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                    <div>
+                                      <p className="text-sm font-medium">{deal.dealStage || 'Unknown'}</p>
+                                      <p className="text-xs text-gray-500">{deal.serviceType}</p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="font-semibold text-green-600">
+                                  ${(deal.projectedCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    <p className="font-medium">${setupCommission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-gray-500">20% of ${(deal.setupFee || 0).toLocaleString()}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    <p className="font-medium">${month1Commission.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                    <p className="text-gray-500">40% of ${(deal.monthlyValue || 0).toLocaleString()}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      asChild
-                                      data-testid={`button-hubspot-pipeline-${deal.id}`}
+                                      onClick={() => console.log('View deal details:', deal.id)}
+                                      data-testid={`button-view-pipeline-${deal.id}`}
                                     >
-                                      <a href={`https://app.hubspot.com/contacts/deal/${deal.hubspotDealId}`} target="_blank" rel="noopener noreferrer">
-                                        <ExternalLink className="w-4 h-4" />
-                                      </a>
+                                      <Eye className="w-4 h-4" />
                                     </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                                    {deal.dealId && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                        data-testid={`button-hubspot-pipeline-${deal.id}`}
+                                      >
+                                        <a href={`https://app.hubspot.com/contacts/21143099/deal/${deal.dealId}`} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink className="w-4 h-4" />
+                                        </a>
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
                       </TableBody>
                     </Table>
                   </div>
