@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   ArrowLeft, 
   DollarSign, 
@@ -69,7 +70,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { calculateMonthlyBonus, calculateMilestoneBonus, getNextMilestone, calculateTotalEarnings } from "@shared/commission-calculator";
 
 interface Commission {
   id: string;
@@ -78,710 +78,496 @@ interface Commission {
   companyName: string;
   salesRep: string;
   serviceType: string;
-  type: 'setup' | 'month_1' | 'residual' | 'total';
+  type: 'month_1' | 'residual';
   monthNumber: number;
   amount: number;
   status: 'pending' | 'approved' | 'paid' | 'disputed';
   dateEarned: string;
   datePaid?: string;
   hubspotDealId?: string;
-  setupAmount?: number;
-  month1Amount?: number;
-  residualAmount?: number;
-  breakdown?: {
-    setup: number;
-    month1: number;
-    residual: number;
-  };
 }
 
 interface Deal {
   id: string;
-  dealId?: string;
   dealName: string;
   companyName: string;
   salesRep: string;
   serviceType: string;
-  dealValue: number;
-  dealStage: string;
-  setupCommission: number;
-  monthlyCommission: number;
-  projectedCommission: number;
-  closeDate?: string;
-  createDate: string;
-  status: 'projected' | 'closed_won' | 'closed_lost';
+  amount: number;
+  setupFee: number;
+  monthlyFee: number;
+  status: 'open' | 'closed_won' | 'closed_lost';
+  closedDate?: string;
+  hubspotDealId?: string;
+  probability?: number;
+  pipelineStage?: string;
 }
 
-export function SalesCommissionTracker() {
-  const { user } = useAuth();
-  const [location, navigate] = useLocation();
+interface AdjustmentRequest {
+  id: string;
+  commissionId: string;
+  salesRep: string;
+  originalAmount: number;
+  requestedAmount: number;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedDate: string;
+  reviewedBy?: string;
+  reviewedDate?: string;
+  reviewNotes?: string;
+}
 
-  // Calculate current commission period dynamically
-  const getCurrentPeriod = () => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
-    const periodStart = new Date(currentYear, currentMonth - 1, 14);
-    const periodEnd = new Date(currentYear, currentMonth, 13);
-    const paymentDate = new Date(currentYear, currentMonth, 15);
-    
-    return {
-      periodStart: periodStart.toISOString().split('T')[0],
-      periodEnd: periodEnd.toISOString().split('T')[0], 
-      paymentDate: paymentDate.toISOString().split('T')[0]
-    };
+export default function SalesCommissionTracker() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
+  const [selectedSalesRep, setSelectedSalesRep] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
+  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
+  const [adjustmentReason, setAdjustmentReason] = useState("");
+  const [adjustmentAmount, setAdjustmentAmount] = useState("");
+
+  // Fetch commissions data and filter for current user
+  const { data: allCommissions = [], isLoading: commissionsLoading } = useQuery({
+    queryKey: ['/api/commission-tracker'],
+    queryFn: async (): Promise<Commission[]> => {
+      const response = await fetch('/api/commission-tracker');
+      if (!response.ok) {
+        throw new Error('Failed to fetch commissions');
+      }
+      const data = await response.json();
+      
+      // Filter commissions for current user
+      const userFullName = `${user?.firstName} ${user?.lastName}`;
+      return data.filter((commission: Commission) => 
+        commission.salesRep === user?.email || commission.salesRep === userFullName
+      );
+    }
+  });
+
+  // Fetch pipeline projections data and filter for current user  
+  const { data: allPipelineProjections = [], isLoading: pipelineLoading } = useQuery({
+    queryKey: ['/api/pipeline-projections'],
+    queryFn: async (): Promise<Deal[]> => {
+      const response = await fetch('/api/pipeline-projections');
+      if (!response.ok) {
+        throw new Error('Failed to fetch pipeline projections');
+      }
+      const data = await response.json();
+      
+      // Filter pipeline projections for current user
+      const userFullName = `${user?.firstName} ${user?.lastName}`;
+      return data.filter((deal: Deal) => 
+        deal.salesRep === user?.email || deal.salesRep === userFullName
+      );
+    }
+  });
+
+  // Adjustment request mutation
+  const adjustmentMutation = useMutation({
+    mutationFn: async (adjustmentData: {
+      commissionId: string;
+      requestedAmount: number;
+      reason: string;
+    }) => {
+      const response = await apiRequest('/api/adjustment-requests', {
+        method: 'POST',
+        body: JSON.stringify(adjustmentData),
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/commission-tracker'] });
+      setIsAdjustmentDialogOpen(false);
+      setSelectedCommission(null);
+      setAdjustmentReason("");
+      setAdjustmentAmount("");
+    },
+  });
+
+  // Calculate metrics
+  const currentPeriodTotal = allCommissions
+    .filter(c => c.status !== 'disputed')
+    .reduce((sum, c) => sum + c.amount, 0);
+  
+  const projectedCommissions = allPipelineProjections
+    .reduce((sum, deal) => sum + (deal.setupFee * 0.2 + deal.monthlyFee * 0.4), 0);
+
+  const weightedPipeline = allPipelineProjections
+    .reduce((sum, deal) => sum + ((deal.setupFee * 0.2 + deal.monthlyFee * 0.4) * (deal.probability || 50) / 100), 0);
+
+  const handleRequestAdjustment = () => {
+    if (!selectedCommission || !adjustmentAmount || !adjustmentReason) return;
+
+    adjustmentMutation.mutate({
+      commissionId: selectedCommission.id,
+      requestedAmount: parseFloat(adjustmentAmount),
+      reason: adjustmentReason,
+    });
   };
 
-  const [currentPeriod, setCurrentPeriod] = useState(getCurrentPeriod());
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'default';
+      case 'approved':
+        return 'secondary';
+      case 'disputed':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
 
-  // State for dialogs and forms
-  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
-  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
-  const [adjustmentAmount, setAdjustmentAmount] = useState('');
-  const [adjustmentReason, setAdjustmentReason] = useState('');
+  const getServiceTypeIcon = (serviceType: string) => {
+    switch (serviceType.toLowerCase()) {
+      case 'bookkeeping':
+        return <Calculator className="h-4 w-4" />;
+      case 'taas':
+        return <FileText className="h-4 w-4" />;
+      case 'payroll':
+        return <Users className="h-4 w-4" />;
+      default:
+        return <Building2 className="h-4 w-4" />;
+    }
+  };
 
-  // Filter states
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Check if user exists
-  if (!user) {
+  if (commissionsLoading || pipelineLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-            <p className="text-gray-600 mb-4">Please log in to view your commission tracker.</p>
-            <Button onClick={() => navigate('/auth')} variant="outline">
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <UniversalNavbar />
+        <div className="container mx-auto p-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading your commission data...</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Fetch commission data filtered by logged-in user's email
-  const { data: liveCommissions = [], isLoading: commissionsLoading, refetch: refetchCommissions } = useQuery({
-    queryKey: ['/api/commissions', user.email],
-    queryFn: async () => {
-      console.log('🔄 Making fresh commissions API call for:', user.email);
-      const response = await fetch('/api/commissions?v=' + Date.now(), {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      if (!response.ok) {
-        console.error('Commissions API error:', response.status, response.statusText);
-        throw new Error('Failed to fetch commissions');
-      }
-      const data = await response.json();
-      console.log('📥 Raw commissions API response:', data);
-      // Filter commissions to only show current user's commissions
-      // Match by email or by name (since commission data uses full names)
-      const userFullName = `${user.firstName} ${user.lastName}`;
-      const filteredData = data.filter((commission: Commission) => 
-        commission.salesRep === user.email || commission.salesRep === userFullName
-      );
-      console.log('📊 Filtering by email:', user.email, 'or name:', userFullName);
-      console.log('📊 Filtered commissions for user:', filteredData);
-      return filteredData;
-    }
-  });
-
-  // Fetch pipeline projections filtered by logged-in user's email
-  const { data: livePipelineProjections = [], isLoading: pipelineLoading } = useQuery({
-    queryKey: ['/api/pipeline-projections', user.email],
-    queryFn: async () => {
-      console.log('🔄 Making fresh pipeline projections API call for:', user.email);
-      const response = await fetch('/api/pipeline-projections?v=' + Date.now(), {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-      if (!response.ok) {
-        console.error('Pipeline projections API error:', response.status, response.statusText);
-        throw new Error('Failed to fetch pipeline projections');
-      }
-      const data = await response.json();
-      console.log('📥 Raw pipeline projections API response:', data);
-      // Filter pipeline projections to only show current user's deals
-      const filteredData = data.filter((deal: Deal) => deal.salesRep === user.email);
-      console.log('📊 Filtered pipeline projections for user:', filteredData);
-      return filteredData;
-    }
-  });
-
-  // Transform commission data for display
-  const transformedInvoiceCommissions = liveCommissions.map((commission: any) => ({
-    id: commission.id?.toString() || commission.dealId?.toString(),
-    dealId: commission.dealId?.toString() || commission.id?.toString(),
-    dealName: commission.dealName || commission.companyName,
-    companyName: commission.companyName,
-    salesRep: commission.salesRep,
-    serviceType: commission.serviceType,
-    type: commission.type,
-    monthNumber: commission.monthNumber || 1,
-    amount: commission.amount,
-    status: commission.status,
-    dateEarned: commission.dateEarned,
-    hubspotDealId: commission.hubspotDealId?.toString(),
-    breakdown: commission.breakdown || {
-      setup: commission.setupAmount || 0,
-      month1: commission.month1Amount || 0,
-      residual: commission.residualAmount || 0
-    }
-  }));
-
-  // Calculate metrics
-  const totalCurrentPeriodCommissions = transformedInvoiceCommissions
-    .filter(commission => commission.status === 'pending' || commission.status === 'approved' || commission.status === 'paid')
-    .reduce((sum, commission) => sum + commission.amount, 0);
-
-  const projectedCommissions = livePipelineProjections.reduce((sum, deal) => sum + deal.projectedCommission, 0);
-
-  const weightedPipelineValue = projectedCommissions * 0.7; // 70% probability applied
-
-  // Filter commissions based on search and status
-  const filteredCommissions = transformedInvoiceCommissions.filter(commission => {
-    const matchesSearch = searchTerm === '' || 
-      commission.dealName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      commission.companyName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || commission.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  // Filter pipeline projections based on search
-  const filteredPipelineProjections = livePipelineProjections.filter(deal => {
-    const matchesSearch = searchTerm === '' || 
-      deal.dealName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      deal.companyName.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
-  // Calculate bonus tracking (same logic as admin but for current user only)
-  const userDealsThisMonth = livePipelineProjections.filter(deal => {
-    const dealDate = new Date(deal.createDate);
-    const currentDate = new Date();
-    return dealDate.getMonth() === currentDate.getMonth() && 
-           dealDate.getFullYear() === currentDate.getFullYear();
-  }).length;
-
-  const totalClientsAllTime = transformedInvoiceCommissions.length + livePipelineProjections.length;
-
-  const monthlyBonusTracking = calculateMonthlyBonus(userDealsThisMonth) || {
-    eligible: false,
-    amount: 0,
-    description: "No monthly bonus earned yet",
-    type: 'cash' as const,
-    clientsCount: 5,
-    bonusType: 'none',
-    isEarned: false
-  };
-
-  const milestoneBonusTracking = calculateMilestoneBonus(totalClientsAllTime) || {
-    eligible: false,
-    amount: 0,
-    includesEquity: false,
-    description: "No milestone bonus earned yet",
-    clientsCount: totalClientsAllTime,
-    nextMilestone: 25,
-    bonusAmount: 1000,
-    isEarned: false,
-    progress: Math.min((totalClientsAllTime / 25) * 100, 100)
-  };
-
-  // Adjustment request mutation
-  const queryClient = useQueryClient();
-  const adjustmentMutation = useMutation({
-    mutationFn: async (adjustmentData: any) => {
-      return await apiRequest('/api/commission-adjustments', {
-        method: 'POST',
-        body: JSON.stringify(adjustmentData)
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/commission-adjustments'] });
-      setAdjustmentDialogOpen(false);
-      setSelectedCommission(null);
-      setAdjustmentAmount('');
-      setAdjustmentReason('');
-    }
-  });
-
-  const handleRequestAdjustment = (commission: Commission) => {
-    setSelectedCommission(commission);
-    setAdjustmentAmount(commission.amount.toString());
-    setAdjustmentDialogOpen(true);
-  };
-
-  const handleSubmitAdjustment = async () => {
-    if (!selectedCommission || !adjustmentReason.trim()) return;
-
-    try {
-      await adjustmentMutation.mutateAsync({
-        commissionId: selectedCommission.id,
-        originalAmount: selectedCommission.amount,
-        requestedAmount: parseFloat(adjustmentAmount) || selectedCommission.amount,
-        reason: adjustmentReason
-      });
-    } catch (error) {
-      console.error('Error submitting adjustment request:', error);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <UniversalNavbar />
-      
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Commission Tracker</h1>
-            <p className="text-gray-600 mt-1">Track your earnings and performance metrics</p>
-          </div>
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <Button onClick={() => refetchCommissions()} variant="outline" data-testid="button-refresh">
-              <Calculator className="w-4 h-4 mr-2" />
-              Refresh Data
-            </Button>
+            <Link href="/sales-dashboard">
+              <Button variant="outline" size="sm" data-testid="button-back">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900" data-testid="text-page-title">
+                My Commission Tracker
+              </h1>
+              <p className="text-gray-600" data-testid="text-page-description">
+                Track your personal commission earnings and pipeline projections
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Dashboard Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Summary Cards */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
           {/* Current Period */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl" data-testid="card-current-period">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Current Period</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ${totalCurrentPeriodCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Period: {new Date(currentPeriod.periodStart).toLocaleDateString()} - {new Date(currentPeriod.periodEnd).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <DollarSign className="w-6 h-6 text-blue-600" />
-                </div>
+          <Card className="bg-white shadow-lg border-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                <DollarSign className="h-4 w-4 mr-2 text-green-600" />
+                Current Period
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600" data-testid="text-current-period">
+                ${currentPeriodTotal.toFixed(2)}
               </div>
+              <p className="text-sm text-gray-500 mt-1">
+                {allCommissions.length} commission{allCommissions.length !== 1 ? 's' : ''}
+              </p>
             </CardContent>
           </Card>
 
           {/* Projected Commissions */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl" data-testid="card-projected">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Projected Commissions</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ${projectedCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-500">from pipeline</p>
-                </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
-                </div>
+          <Card className="bg-white shadow-lg border-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2 text-blue-600" />
+                Projected Commissions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600" data-testid="text-projected-commissions">
+                ${projectedCommissions.toFixed(2)}
               </div>
+              <p className="text-sm text-gray-500 mt-1">
+                {allPipelineProjections.length} deal{allPipelineProjections.length !== 1 ? 's' : ''} in pipeline
+              </p>
             </CardContent>
           </Card>
 
           {/* Weighted Pipeline */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl" data-testid="card-pipeline-weighted">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Weighted Pipeline</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ${weightedPipelineValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    70% probability applied
-                  </p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <Target className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bonus Tracking Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Monthly Bonus Progress */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Gift className="w-5 h-5 mr-2 text-purple-600" />
-                Monthly Bonus Progress
+          <Card className="bg-white shadow-lg border-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
+                <Target className="h-4 w-4 mr-2 text-purple-600" />
+                Weighted Pipeline
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Clients This Month: {userDealsThisMonth}</span>
-                    <span className="font-semibold">{monthlyBonusTracking.description}</span>
-                  </div>
-                  <Progress 
-                    value={(userDealsThisMonth / (monthlyBonusTracking.clientsCount || 5)) * 100} 
-                    className="h-3"
-                    data-testid="progress-monthly-bonus"
-                  />
-                </div>
-                <div className="text-center">
-                  <Badge 
-                    variant={monthlyBonusTracking.eligible ? "default" : "secondary"}
-                    className="text-sm px-3 py-1"
-                  >
-                    {monthlyBonusTracking.eligible ? "Bonus Earned!" : `${(monthlyBonusTracking.clientsCount || 5) - userDealsThisMonth} more needed`}
-                  </Badge>
-                </div>
+              <div className="text-3xl font-bold text-purple-600" data-testid="text-weighted-pipeline">
+                ${weightedPipeline.toFixed(2)}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Milestone Bonus Progress */}
-          <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Trophy className="w-5 h-5 mr-2 text-yellow-600" />
-                Milestone Bonus Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Total Clients: {totalClientsAllTime}</span>
-                    <span className="font-semibold">{milestoneBonusTracking.description}</span>
-                  </div>
-                  <Progress 
-                    value={milestoneBonusTracking.progress || Math.min((totalClientsAllTime / 25) * 100, 100)} 
-                    className="h-3"
-                    data-testid="progress-milestone-bonus"
-                  />
-                </div>
-                <div className="text-center">
-                  <Badge 
-                    variant={milestoneBonusTracking.eligible ? "default" : "secondary"}
-                    className="text-sm px-3 py-1"
-                  >
-                    {milestoneBonusTracking.eligible ? "Milestone Achieved!" : `${(milestoneBonusTracking.nextMilestone || 25) - totalClientsAllTime} more needed`}
-                  </Badge>
-                </div>
-              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Probability-adjusted projections
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="commissions" className="space-y-6">
-          <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="commissions">My Commissions</TabsTrigger>
-            <TabsTrigger value="pipeline">My Pipeline</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-white shadow-sm">
+            <TabsTrigger value="commissions" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+              Commission History
+            </TabsTrigger>
+            <TabsTrigger value="pipeline" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+              Pipeline Projections
+            </TabsTrigger>
           </TabsList>
 
-          {/* Commissions Tab */}
+          {/* Commission History Tab */}
           <TabsContent value="commissions">
-            <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <Card className="bg-white shadow-lg border-0">
               <CardHeader>
-                <CardTitle>Commission History</CardTitle>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                  Commission History
+                </CardTitle>
                 <CardDescription>
-                  Your earned commissions from closed deals
+                  Your earned commissions and their current status
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Filters */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                  <div className="flex-1">
-                    <Input
-                      placeholder="Search deals or companies..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full"
-                      data-testid="input-search-commissions"
-                    />
+                {allCommissions.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No commissions yet</h3>
+                    <p className="text-gray-500">Your commission history will appear here once deals are closed.</p>
                   </div>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-48" data-testid="select-filter-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                      <SelectItem value="disputed">Disputed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Commissions Table */}
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Deal</TableHead>
-                        <TableHead>Service Type</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date Earned</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {commissionsLoading ? (
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            <div className="flex items-center justify-center">
-                              <Clock className="w-4 h-4 mr-2 animate-spin" />
-                              Loading commissions...
-                            </div>
-                          </TableCell>
+                          <TableHead>Deal</TableHead>
+                          <TableHead>Company</TableHead>
+                          <TableHead>Service</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Date Earned</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ) : filteredCommissions.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                            No commissions found matching your criteria.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredCommissions.map((commission) => (
-                          <TableRow key={commission.id} data-testid={`row-commission-${commission.id}`}>
+                      </TableHeader>
+                      <TableBody>
+                        {allCommissions.map((commission) => (
+                          <TableRow key={commission.id}>
+                            <TableCell className="font-medium">
+                              {commission.dealName}
+                            </TableCell>
+                            <TableCell>{commission.companyName}</TableCell>
                             <TableCell>
-                              <div>
-                                <p className="font-medium">{commission.dealName}</p>
-                                <p className="text-sm text-gray-500">{commission.companyName}</p>
+                              <div className="flex items-center">
+                                {getServiceTypeIcon(commission.serviceType)}
+                                <span className="ml-2 capitalize">{commission.serviceType}</span>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline">
-                                {commission.serviceType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                              <Badge variant="outline" className="capitalize">
+                                {commission.type === 'month_1' ? 'Month 1' : 'Residual'}
                               </Badge>
                             </TableCell>
                             <TableCell className="font-semibold">
-                              ${commission.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ${commission.amount.toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              <Badge 
-                                variant={commission.status === 'paid' ? 'default' : 
-                                        commission.status === 'approved' ? 'secondary' : 
-                                        commission.status === 'disputed' ? 'destructive' : 'outline'}
-                              >
-                                {commission.status.charAt(0).toUpperCase() + commission.status.slice(1)}
+                              <Badge variant={getStatusBadgeVariant(commission.status)} className="capitalize">
+                                {commission.status}
                               </Badge>
                             </TableCell>
                             <TableCell>
                               {new Date(commission.dateEarned).toLocaleDateString()}
                             </TableCell>
                             <TableCell>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleRequestAdjustment(commission)}
-                                data-testid={`button-adjust-commission-${commission.id}`}
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Request Adjustment
-                              </Button>
+                              {commission.status === 'pending' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedCommission(commission);
+                                    setAdjustmentAmount(commission.amount.toString());
+                                    setIsAdjustmentDialogOpen(true);
+                                  }}
+                                  data-testid={`button-request-adjustment-${commission.id}`}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Request Adjustment
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Pipeline Tab */}
+          {/* Pipeline Projections Tab */}
           <TabsContent value="pipeline">
-            <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
+            <Card className="bg-white shadow-lg border-0">
               <CardHeader>
-                <CardTitle>Pipeline Projections</CardTitle>
+                <CardTitle className="flex items-center">
+                  <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
+                  Pipeline Projections
+                </CardTitle>
                 <CardDescription>
-                  Your projected commissions from open deals
+                  Projected commissions from your current sales pipeline
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Deal</TableHead>
-                        <TableHead>Deal Value</TableHead>
-                        <TableHead>Stage</TableHead>
-                        <TableHead>Projected Commission</TableHead>
-                        <TableHead>Setup Commission</TableHead>
-                        <TableHead>Monthly Commission</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pipelineLoading ? (
+                {allPipelineProjections.length === 0 ? (
+                  <div className="text-center py-8">
+                    <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No pipeline deals</h3>
+                    <p className="text-gray-500">Your pipeline projections will appear here as you work deals.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            <div className="flex items-center justify-center">
-                              <Clock className="w-4 h-4 mr-2 animate-spin" />
-                              Loading pipeline...
-                            </div>
-                          </TableCell>
+                          <TableHead>Deal</TableHead>
+                          <TableHead>Company</TableHead>
+                          <TableHead>Service</TableHead>
+                          <TableHead>Stage</TableHead>
+                          <TableHead>Deal Value</TableHead>
+                          <TableHead>Projected Commission</TableHead>
+                          <TableHead>Probability</TableHead>
                         </TableRow>
-                      ) : filteredPipelineProjections.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                            No pipeline deals found.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredPipelineProjections.map((deal) => (
-                          <TableRow key={deal.id} data-testid={`row-pipeline-${deal.id}`}>
+                      </TableHeader>
+                      <TableBody>
+                        {allPipelineProjections.map((deal) => (
+                          <TableRow key={deal.id}>
+                            <TableCell className="font-medium">
+                              {deal.dealName}
+                            </TableCell>
+                            <TableCell>{deal.companyName}</TableCell>
                             <TableCell>
-                              <div>
-                                <p className="font-medium">{deal.dealName}</p>
-                                <p className="text-sm text-gray-500">{deal.companyName}</p>
+                              <div className="flex items-center">
+                                {getServiceTypeIcon(deal.serviceType)}
+                                <span className="ml-2 capitalize">{deal.serviceType}</span>
                               </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {deal.pipelineStage}
+                              </Badge>
                             </TableCell>
                             <TableCell className="font-semibold">
-                              ${(deal.dealValue || 0).toLocaleString()}
+                              ${deal.amount.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="font-semibold text-blue-600">
+                              ${(deal.setupFee * 0.2 + deal.monthlyFee * 0.4).toFixed(2)}
                             </TableCell>
                             <TableCell>
-                              <p className="text-sm font-medium">{deal.dealStage || 'Unknown'}</p>
-                            </TableCell>
-                            <TableCell className="font-semibold text-green-600">
-                              ${(deal.projectedCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                <p className="font-medium">${(deal.setupCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                <p className="text-gray-500">20% of setup fees</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                <p className="font-medium">${(deal.monthlyCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                <p className="text-gray-500">40% of first month</p>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => console.log('View deal details:', deal.id)}
-                                  data-testid={`button-view-pipeline-${deal.id}`}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                {deal.dealId && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    asChild
-                                    data-testid={`button-hubspot-pipeline-${deal.id}`}
-                                  >
-                                    <a href={`https://app.hubspot.com/contacts/21143099/deal/${deal.dealId}`} target="_blank" rel="noopener noreferrer">
-                                      <ExternalLink className="w-4 h-4" />
-                                    </a>
-                                  </Button>
-                                )}
+                              <div className="flex items-center space-x-2">
+                                <Progress value={deal.probability || 50} className="w-16 h-2" />
+                                <span className="text-sm text-gray-500">{deal.probability || 50}%</span>
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
         {/* Adjustment Request Dialog */}
-        <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]" data-testid="dialog-adjustment-request">
+        <Dialog open={isAdjustmentDialogOpen} onOpenChange={setIsAdjustmentDialogOpen}>
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>Request Commission Adjustment</DialogTitle>
               <DialogDescription>
-                {selectedCommission && `Request an adjustment for ${selectedCommission.dealName}`}
+                Request an adjustment to your commission amount. Please provide a detailed reason.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              {selectedCommission && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-600">Current Amount:</span>
-                      <p className="text-lg font-bold">${selectedCommission.amount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-600">Commission Type:</span>
-                      <p>{selectedCommission.type === 'month_1' ? 'First Month' : `Month ${selectedCommission.monthNumber}`}</p>
-                    </div>
-                  </div>
+            
+            {selectedCommission && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Deal</Label>
+                  <p className="text-sm text-gray-600">{selectedCommission.dealName}</p>
                 </div>
-              )}
-              
-              <div>
-                <Label htmlFor="adjustment-amount">Requested Amount</Label>
-                <Input
-                  id="adjustment-amount"
-                  type="text"
-                  value={adjustmentAmount ? `$${parseFloat(adjustmentAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[$,]/g, '');
-                    if (value === '' || !isNaN(parseFloat(value))) {
-                      setAdjustmentAmount(value);
-                    }
-                  }}
-                  placeholder={`$${selectedCommission?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                  data-testid="input-adjustment-amount"
-                />
+                
+                <div>
+                  <Label>Current Amount</Label>
+                  <p className="text-sm text-gray-600">${selectedCommission.amount.toFixed(2)}</p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="adjustment-amount">Requested Amount</Label>
+                  <Input
+                    id="adjustment-amount"
+                    type="number"
+                    step="0.01"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(e.target.value)}
+                    placeholder="Enter requested amount"
+                    data-testid="input-adjustment-amount"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="adjustment-reason">Reason for Adjustment</Label>
+                  <Textarea
+                    id="adjustment-reason"
+                    value={adjustmentReason}
+                    onChange={(e) => setAdjustmentReason(e.target.value)}
+                    placeholder="Please provide a detailed explanation for the adjustment request..."
+                    rows={4}
+                    data-testid="textarea-adjustment-reason"
+                  />
+                </div>
               </div>
-              
-              <div>
-                <Label htmlFor="adjustment-reason">Reason for Adjustment *</Label>
-                <Textarea
-                  id="adjustment-reason"
-                  value={adjustmentReason}
-                  onChange={(e) => setAdjustmentReason(e.target.value)}
-                  placeholder="Please provide a detailed reason for this adjustment request..."
-                  className="min-h-[100px]"
-                  data-testid="textarea-adjustment-reason"
-                />
-              </div>
-            </div>
+            )}
+            
             <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setAdjustmentDialogOpen(false)}
+              <Button
+                variant="outline"
+                onClick={() => setIsAdjustmentDialogOpen(false)}
                 data-testid="button-cancel-adjustment"
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSubmitAdjustment}
-                disabled={!adjustmentReason.trim()}
+              <Button
+                onClick={handleRequestAdjustment}
+                disabled={!adjustmentAmount || !adjustmentReason || adjustmentMutation.isPending}
                 data-testid="button-submit-adjustment"
               >
-                Submit Request
+                {adjustmentMutation.isPending ? 'Submitting...' : 'Submit Request'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -790,5 +576,3 @@ export function SalesCommissionTracker() {
     </div>
   );
 }
-
-export default SalesCommissionTracker;
