@@ -3183,7 +3183,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             type: 'total',
             monthNumber: 1,
             amount: 0,
-            status: comm.status || 'paid',
+            status: comm.status || 'pending',
             dateEarned: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : new Date(comm.created_at).toISOString().split('T')[0],
             datePaid: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : null,
             hubspotDealId: invoiceId,
@@ -3221,6 +3221,69 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.error('Error fetching commissions:', error);
       // Return empty array instead of 500 error to prevent console errors
       res.json([]);
+    }
+  });
+
+  // Commission approval endpoints
+  app.post("/api/commissions/:id/approve", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const commissionId = parseInt(req.params.id);
+      if (!commissionId) {
+        return res.status(400).json({ message: "Invalid commission ID" });
+      }
+
+      // Update commission status to approved
+      const result = await db.execute(sql`
+        UPDATE commissions 
+        SET status = 'approved', 
+            updated_at = NOW()
+        WHERE id = ${commissionId}
+      `);
+
+      if ((result as any).rowCount === 0) {
+        return res.status(404).json({ message: "Commission not found" });
+      }
+
+      console.log(`✅ Commission ${commissionId} approved by ${req.user.email}`);
+      res.json({ success: true, message: "Commission approved successfully" });
+    } catch (error) {
+      console.error('Error approving commission:', error);
+      res.status(500).json({ message: "Failed to approve commission" });
+    }
+  });
+
+  app.post("/api/commissions/:id/reject", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const commissionId = parseInt(req.params.id);
+      if (!commissionId) {
+        return res.status(400).json({ message: "Invalid commission ID" });
+      }
+
+      // Update commission status to rejected
+      const result = await db.execute(sql`
+        UPDATE commissions 
+        SET status = 'rejected', 
+            updated_at = NOW()
+        WHERE id = ${commissionId}
+      `);
+
+      if ((result as any).rowCount === 0) {
+        return res.status(404).json({ message: "Commission not found" });
+      }
+
+      console.log(`❌ Commission ${commissionId} rejected by ${req.user.email}`);
+      res.json({ success: true, message: "Commission rejected successfully" });
+    } catch (error) {
+      console.error('Error rejecting commission:', error);
+      res.status(500).json({ message: "Failed to reject commission" });
     }
   });
 

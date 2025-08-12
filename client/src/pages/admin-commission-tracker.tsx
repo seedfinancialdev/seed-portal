@@ -239,7 +239,7 @@ export function AdminCommissionTracker() {
         type: 'total' as any,
         monthNumber: 1,
         amount: invoice.amount || 0,
-        status: invoice.status === 'paid' ? 'approved' : 'pending',
+        status: invoice.status || 'pending',
         dateEarned: invoice.dateEarned || new Date().toISOString().split('T')[0],
         hubspotDealId: invoice.hubspotDealId,
         breakdown: {
@@ -489,6 +489,64 @@ export function AdminCommissionTracker() {
       
       setSelectedDeal(dealData);
       setDealDetailsDialogOpen(true);
+    }
+  };
+
+  const handleApproveCommission = async (commissionId: string) => {
+    try {
+      // Get CSRF token first
+      const csrfResponse = await fetch('/api/csrf-token');
+      const { csrfToken } = await csrfResponse.json();
+      
+      const response = await fetch(`/api/commissions/${commissionId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        }
+      });
+
+      if (response.ok) {
+        console.log(`Commission ${commissionId} approved`);
+        // Refresh commissions data
+        await refetchCommissions();
+      } else {
+        const error = await response.json();
+        console.error('Failed to approve commission:', error);
+        alert('Failed to approve commission: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Approve commission error:', error);
+      alert('Failed to approve commission. Please try again.');
+    }
+  };
+
+  const handleRejectCommission = async (commissionId: string) => {
+    try {
+      // Get CSRF token first
+      const csrfResponse = await fetch('/api/csrf-token');
+      const { csrfToken } = await csrfResponse.json();
+      
+      const response = await fetch(`/api/commissions/${commissionId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        }
+      });
+
+      if (response.ok) {
+        console.log(`Commission ${commissionId} rejected`);
+        // Refresh commissions data
+        await refetchCommissions();
+      } else {
+        const error = await response.json();
+        console.error('Failed to reject commission:', error);
+        alert('Failed to reject commission: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Reject commission error:', error);
+      alert('Failed to reject commission. Please try again.');
     }
   };
 
@@ -773,6 +831,27 @@ export function AdminCommissionTracker() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
+                              {commission.status === 'pending' && (
+                                <>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => handleApproveCommission(commission.id)}
+                                    className="bg-green-600 hover:bg-green-700"
+                                    data-testid={`button-approve-${commission.id}`}
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleRejectCommission(commission.id)}
+                                    data-testid={`button-reject-${commission.id}`}
+                                  >
+                                    <AlertCircle className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -785,7 +864,7 @@ export function AdminCommissionTracker() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleRequestAdjustment(commission)}
-                                disabled={commission.status === 'paid'}
+                                disabled={commission.status === 'approved' || commission.status === 'paid'}
                                 data-testid={`button-adjust-${commission.id}`}
                               >
                                 <Edit className="w-4 h-4" />
