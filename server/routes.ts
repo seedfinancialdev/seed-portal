@@ -3473,118 +3473,71 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           }
         }
 
-        // Calculate commission from quotes if available
+        // Calculate commission - use same logic as Commission Tracking table
         let setupCommission = 0;
         let monthlyCommission = 0;
         let projectedCommission = 0;
         let serviceType = 'Unknown Service';
+        
+        const dealName = properties.dealname || '';
+        const dealAmount = parseFloat(properties.amount || 0);
 
-        console.log(`🔍 Checking quotes for deal ${deal.id}:`, deal.associations?.quotes?.results?.length || 0, 'quotes found');
-
-        if (deal.associations?.quotes?.results?.length > 0) {
-          const quoteId = deal.associations.quotes.results[0].id;
-          try {
-            // Fetch quote with line items
-            const quote = await hubspotClient.crm.quotes.basicApi.getById(
-              quoteId,
-              undefined,
-              undefined,
-              ['line_items']
-            );
-
-            console.log(`📝 Quote ${quoteId} has`, quote.associations?.line_items?.results?.length || 0, 'line items');
-
-            if (quote.associations?.line_items?.results?.length > 0) {
-              const lineItems = quote.associations.line_items.results;
-              let services = [];
-              
-              for (const lineItemAssoc of lineItems) {
-                try {
-                  const lineItem = await hubspotClient.crm.lineItems.basicApi.getById(
-                    lineItemAssoc.id,
-                    ['name', 'price', 'recurringbillingfrequency', 'quantity']
-                  );
-
-                  const itemProps = lineItem.properties;
-                  const price = parseFloat(itemProps.price || 0);
-                  const quantity = parseFloat(itemProps.quantity || 1);
-                  const totalPrice = price * quantity;
-                  const itemName = itemProps.name || '';
-                  
-                  console.log(`📦 Line item: "${itemName}", Price: $${totalPrice}, Frequency: ${itemProps.recurringbillingfrequency}`);
-                  
-                  // Categorize line items for commissions
-                  if (itemName.toLowerCase().includes('setup') || 
-                      itemName.toLowerCase().includes('onboarding') ||
-                      itemName.toLowerCase().includes('implementation')) {
-                    setupCommission += totalPrice * 0.20; // 20% setup commission
-                    console.log(`💰 Setup commission added: $${totalPrice * 0.20}`);
-                  } else if (itemProps.recurringbillingfrequency === 'monthly' ||
-                           itemName.toLowerCase().includes('monthly') ||
-                           itemName.toLowerCase().includes('subscription')) {
-                    monthlyCommission += totalPrice * 0.40; // 40% first month commission
-                    console.log(`💰 Monthly commission added: $${totalPrice * 0.40}`);
-                  }
-
-                  // Build service type description
-                  if (itemName.toLowerCase().includes('bookkeeping')) {
-                    services.push('bookkeeping');
-                  }
-                  if (itemName.toLowerCase().includes('payroll')) {
-                    services.push('payroll');
-                  }
-                  if (itemName.toLowerCase().includes('tax')) {
-                    services.push('taas');
-                  }
-                } catch (lineItemError) {
-                  console.log('Could not fetch line item:', lineItemAssoc.id, lineItemError.message);
-                }
-              }
-              
-              // Set service type based on found services
-              if (services.length > 0) {
-                serviceType = services.join(' + ');
-              }
-            }
-          } catch (quoteError) {
-            console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
-          }
-        } else {
-          // If no quotes, calculate based on deal amount using standard commission structure
-          const dealName = properties.dealname || '';
-          const dealAmount = parseFloat(properties.amount || 0);
+        console.log(`💼 Processing deal: "${dealName}", amount: $${dealAmount}`);
+        
+        if (dealAmount > 0) {
+          // Use the EXACT same commission calculation logic as Commission Tracking table
+          // Import the shared commission calculator
+          const { calculateCommissionFromInvoice } = await import('../shared/commission-calculator.js');
           
-          console.log(`📋 No quotes found, calculating from deal amount: "${dealName}", amount: $${dealAmount}`);
+          // Create a mock line item to simulate invoice line item processing
+          // This approach matches how the Commission Tracking table works
+          const mockLineItem = {
+            description: dealName,
+            quantity: 1,
+            price: dealAmount
+          };
           
-          if (dealAmount > 0) {
-            // Simple calculation based on standard commission structure
-            // This matches what's used in Commission Tracking table
-            
-            // For pipeline projections, assume the following:
-            // - 20% setup commission on total deal value 
-            // - 40% first month commission on total deal value
-            setupCommission = dealAmount * 0.20; // 20% setup commission
-            monthlyCommission = dealAmount * 0.40; // 40% first month commission
-            
-            console.log(`💰 Calculated setup commission: $${setupCommission} (20% of $${dealAmount})`);
-            console.log(`💰 Calculated monthly commission: $${monthlyCommission} (40% of $${dealAmount})`);
-          }
+          // Calculate commission using the shared function
+          const commission = calculateCommissionFromInvoice(mockLineItem, dealAmount);
+          console.log(`🧮 Commission calculation result:`, commission);
           
-          // Infer service type from deal name
-          let services = [];
-          if (dealName.toLowerCase().includes('bookkeeping')) {
-            services.push('bookkeeping');
+          if (commission.type === 'setup') {
+            setupCommission = commission.amount;
+            console.log(`💰 Setup commission: $${setupCommission}`);
+          } else if (commission.type === 'monthly') {
+            // For pipeline projections, we want first month commission (40%)
+            monthlyCommission = dealAmount * 0.40;
+            console.log(`💰 Monthly commission (40% first month): $${monthlyCommission}`);
+          } else {
+            // Default: split deal into setup (20%) and monthly (40% first month)
+            setupCommission = dealAmount * 0.20;
+            monthlyCommission = dealAmount * 0.40;
+            console.log(`💰 Default split - Setup: $${setupCommission}, Monthly: $${monthlyCommission}`);
           }
-          if (dealName.toLowerCase().includes('payroll')) {
-            services.push('payroll');
-          }
-          if (dealName.toLowerCase().includes('tax') || dealName.toLowerCase().includes('taas')) {
-            services.push('taas');
-          }
-          
-          if (services.length > 0) {
-            serviceType = services.join(' + ');
-          }
+        }
+
+        // Determine service type from deal name (same logic as Commission Tracking)
+        const dealNameLower = dealName.toLowerCase();
+        let services = [];
+        
+        if (dealNameLower.includes('bookkeeping')) {
+          services.push('bookkeeping');
+        }
+        if (dealNameLower.includes('payroll')) {
+          services.push('payroll');
+        }
+        if (dealNameLower.includes('tax') || dealNameLower.includes('taas')) {
+          services.push('taas');
+        }
+        if (dealNameLower.includes('ap/ar') || dealNameLower.includes('ap ar')) {
+          services.push('ap/ar');
+        }
+        if (dealNameLower.includes('fp&a') || dealNameLower.includes('fpa')) {
+          services.push('fp&a');
+        }
+        
+        if (services.length > 0) {
+          serviceType = services.join(' + ');
         }
 
         projectedCommission = setupCommission + monthlyCommission;
