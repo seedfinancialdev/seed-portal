@@ -184,7 +184,12 @@ export function SalesCommissionTracker() {
       const data = await response.json();
       console.log('📥 Raw commissions API response:', data);
       // Filter commissions to only show current user's commissions
-      const filteredData = data.filter((commission: Commission) => commission.salesRep === user.email);
+      // Match by email or by name (since commission data uses full names)
+      const userFullName = `${user.firstName} ${user.lastName}`;
+      const filteredData = data.filter((commission: Commission) => 
+        commission.salesRep === user.email || commission.salesRep === userFullName
+      );
+      console.log('📊 Filtering by email:', user.email, 'or name:', userFullName);
       console.log('📊 Filtered commissions for user:', filteredData);
       return filteredData;
     }
@@ -274,8 +279,27 @@ export function SalesCommissionTracker() {
 
   const totalClientsAllTime = transformedInvoiceCommissions.length + livePipelineProjections.length;
 
-  const monthlyBonusTracking = calculateMonthlyBonus(userDealsThisMonth);
-  const milestoneBonusTracking = calculateMilestoneBonus(totalClientsAllTime);
+  const monthlyBonusTracking = calculateMonthlyBonus(userDealsThisMonth) || {
+    eligible: false,
+    amount: 0,
+    description: "No monthly bonus earned yet",
+    type: 'cash' as const,
+    clientsCount: 5,
+    bonusType: 'none',
+    isEarned: false
+  };
+
+  const milestoneBonusTracking = calculateMilestoneBonus(totalClientsAllTime) || {
+    eligible: false,
+    amount: 0,
+    includesEquity: false,
+    description: "No milestone bonus earned yet",
+    clientsCount: totalClientsAllTime,
+    nextMilestone: 25,
+    bonusAmount: 1000,
+    isEarned: false,
+    progress: Math.min((totalClientsAllTime / 25) * 100, 100)
+  };
 
   // Adjustment request mutation
   const queryClient = useQueryClient();
@@ -414,17 +438,17 @@ export function SalesCommissionTracker() {
                     <span className="font-semibold">{monthlyBonusTracking.description}</span>
                   </div>
                   <Progress 
-                    value={(userDealsThisMonth / (monthlyBonusTracking.clientsCount || 1)) * 100} 
+                    value={(userDealsThisMonth / (monthlyBonusTracking.clientsCount || 5)) * 100} 
                     className="h-3"
                     data-testid="progress-monthly-bonus"
                   />
                 </div>
                 <div className="text-center">
                   <Badge 
-                    variant={monthlyBonusTracking.isEarned ? "default" : "secondary"}
+                    variant={monthlyBonusTracking.eligible ? "default" : "secondary"}
                     className="text-sm px-3 py-1"
                   >
-                    {monthlyBonusTracking.isEarned ? "🎉 Bonus Earned!" : `${monthlyBonusTracking.clientsCount - userDealsThisMonth} more needed`}
+                    {monthlyBonusTracking.eligible ? "Bonus Earned!" : `${(monthlyBonusTracking.clientsCount || 5) - userDealsThisMonth} more needed`}
                   </Badge>
                 </div>
               </div>
@@ -447,17 +471,17 @@ export function SalesCommissionTracker() {
                     <span className="font-semibold">{milestoneBonusTracking.description}</span>
                   </div>
                   <Progress 
-                    value={milestoneBonusTracking.progress} 
+                    value={milestoneBonusTracking.progress || Math.min((totalClientsAllTime / 25) * 100, 100)} 
                     className="h-3"
                     data-testid="progress-milestone-bonus"
                   />
                 </div>
                 <div className="text-center">
                   <Badge 
-                    variant={milestoneBonusTracking.isEarned ? "default" : "secondary"}
+                    variant={milestoneBonusTracking.eligible ? "default" : "secondary"}
                     className="text-sm px-3 py-1"
                   >
-                    {milestoneBonusTracking.isEarned ? "🏆 Milestone Achieved!" : `${milestoneBonusTracking.nextMilestone - totalClientsAllTime} more needed`}
+                    {milestoneBonusTracking.eligible ? "Milestone Achieved!" : `${(milestoneBonusTracking.nextMilestone || 25) - totalClientsAllTime} more needed`}
                   </Badge>
                 </div>
               </div>
