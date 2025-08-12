@@ -200,10 +200,22 @@ export function AdminCommissionTracker() {
   const { data: liveCommissions = [], isLoading: commissionsLoading, refetch: refetchCommissions } = useQuery({
     queryKey: ['/api/commissions'],
     queryFn: async () => {
-      const response = await fetch('/api/commissions');
-      if (!response.ok) throw new Error('Failed to fetch commissions');
+      console.log('🔄 Making fresh commissions API call...');
+      const response = await fetch('/api/commissions?v=' + Date.now(), {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      if (!response.ok) {
+        console.error('Commissions API error:', response.status, response.statusText);
+        throw new Error('Failed to fetch commissions');
+      }
       const data = await response.json();
-      console.log('📥 Raw API response:', data);
+      console.log('📥 Raw commissions API response:', data);
       return data;
     }
   });

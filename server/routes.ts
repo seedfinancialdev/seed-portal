@@ -3221,13 +3221,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         `);
         commissionsData = result.rows;
       } else if (req.user && req.user.role === 'admin') {
-        // Admin users get all commissions with proper company/contact info (including bonuses)
+        // Admin users get all commissions with proper company/contact info
         const result = await db.execute(sql`
           SELECT 
             c.id,
             c.hubspot_invoice_id,
-            c.monthly_bonus_id,
-            c.milestone_bonus_id,
             c.sales_rep_id,
             c.type as commission_type,
             c.amount,
@@ -3236,25 +3234,17 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             c.service_type,
             c.date_earned,
             c.created_at,
-            CASE 
-              WHEN c.type = 'monthly_bonus' THEN CONCAT('Monthly Bonus - ', mb.bonus_type)
-              WHEN c.type = 'milestone_bonus' THEN CONCAT('Milestone Bonus - ', msb.milestone, ' clients')
-              ELSE hi.company_name
-            END as company_name,
+            c.notes,
+            COALESCE(hi.company_name, 'Unknown Company') as company_name,
             CONCAT(u.first_name, ' ', u.last_name) as sales_rep_name,
-            CASE 
-              WHEN c.type IN ('monthly_bonus', 'milestone_bonus') THEN c.notes
-              ELSE string_agg(DISTINCT hil.name, ', ')
-            END as service_names
+            string_agg(DISTINCT hil.name, ', ') as service_names
           FROM commissions c
           LEFT JOIN hubspot_invoices hi ON c.hubspot_invoice_id = hi.id
-          LEFT JOIN monthly_bonuses mb ON c.monthly_bonus_id = mb.id
-          LEFT JOIN milestone_bonuses msb ON c.milestone_bonus_id = msb.id
           LEFT JOIN users u ON c.sales_rep_id = u.id
           LEFT JOIN hubspot_invoice_line_items hil ON hi.id = hil.invoice_id
-          GROUP BY c.id, c.hubspot_invoice_id, c.monthly_bonus_id, c.milestone_bonus_id, c.sales_rep_id, 
-                   c.type, c.amount, c.status, c.month_number, c.service_type, c.date_earned, c.created_at, 
-                   hi.company_name, u.first_name, u.last_name, mb.bonus_type, msb.milestone, c.notes
+          GROUP BY c.id, c.hubspot_invoice_id, c.sales_rep_id, c.type, c.amount, c.status, 
+                   c.month_number, c.service_type, c.date_earned, c.created_at, c.notes,
+                   hi.company_name, u.first_name, u.last_name
           ORDER BY c.created_at DESC
         `);
         commissionsData = result.rows;
