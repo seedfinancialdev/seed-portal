@@ -3473,52 +3473,130 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           }
         }
 
-        // Calculate commission - use EXACT same logic as Commission Tracking table (lines 4292-4315)
+        // Calculate commission using ACTUAL quote line items (like Commission Tracking uses invoice line items)
         let setupCommission = 0;
         let monthlyCommission = 0;
         let projectedCommission = 0;
         let serviceType = 'Unknown Service';
         
         const dealName = properties.dealname || '';
-        const dealAmount = parseFloat(properties.amount || 0);
+        console.log(`💼 Processing deal: "${dealName}"`);
 
-        console.log(`💼 Processing deal: "${dealName}", amount: $${dealAmount}`);
-        
-        if (dealAmount > 0) {
-          // Use EXACT same commission calculation logic as Commission Tracking table
-          const itemName = dealName.toLowerCase();
-          const itemDescription = ''; // No separate description for deals
-          const itemAmount = dealAmount;
-          
-          let commission = 0;
-          let commissionType = '';
-          let calculatedServiceType = 'recurring'; // default
-          
-          // EXACT COPY from Commission Tracking table logic (lines 4292-4315)
-          if (itemName.includes('setup') || itemName.includes('implementation') || itemDescription.includes('setup')) {
-            calculatedServiceType = 'setup';
-            commission = itemAmount * 0.20;
-            commissionType = 'setup_commission';
-            setupCommission = commission;
-          } else if (itemName.includes('cleanup') || itemName.includes('clean up') || itemDescription.includes('cleanup')) {
-            calculatedServiceType = 'cleanup';
-            commission = itemAmount * 0.20;
-            commissionType = 'cleanup_commission';
-            setupCommission = commission;
-          } else if (itemName.includes('prior year') || itemName.includes('catch up') || itemDescription.includes('prior year')) {
-            calculatedServiceType = 'prior_years';
-            commission = itemAmount * 0.20;
-            commissionType = 'prior_years_commission';
-            setupCommission = commission;
-          } else {
-            // Default to month 1 recurring for unidentified items (EXACT match to Commission Tracking)
-            calculatedServiceType = 'recurring';
-            commission = itemAmount * 0.40; // 40% for month 1
-            commissionType = 'month_1_commission';
-            monthlyCommission = commission;
+        // Get quote line items for accurate commission calculation
+        if (deal.associations?.quotes?.results?.length > 0) {
+          const quoteId = deal.associations.quotes.results[0].id;
+          try {
+            // Fetch quote with line items
+            const quote = await hubspotClient.crm.quotes.basicApi.getById(
+              quoteId,
+              undefined,
+              undefined,
+              ['line_items']
+            );
+
+            console.log(`📝 Quote ${quoteId} has`, quote.associations?.line_items?.results?.length || 0, 'line items');
+
+            if (quote.associations?.line_items?.results?.length > 0) {
+              const lineItems = quote.associations.line_items.results;
+              let services = [];
+              
+              console.log(`📋 Processing ${lineItems.length} line items for quote ${quoteId}`);
+              
+              for (const lineItemAssoc of lineItems) {
+                try {
+                  const lineItem = await hubspotClient.crm.lineItems.basicApi.getById(
+                    lineItemAssoc.id,
+                    ['name', 'price', 'quantity', 'description']
+                  );
+
+                  const itemProps = lineItem.properties;
+                  const itemName = (itemProps.name || '').toLowerCase();
+                  const itemDescription = (itemProps.description || '').toLowerCase();
+                  const price = parseFloat(itemProps.price || '0');
+                  const quantity = parseFloat(itemProps.quantity || 1);
+                  const itemAmount = price * quantity;
+                  
+                  console.log(`📦 Line item: "${itemProps.name}", Amount: $${itemAmount}`);
+                  
+                  // Use EXACT same commission logic as Commission Tracking table (lines 4292-4315)
+                  let commission = 0;
+                  let commissionType = '';
+                  let calculatedServiceType = 'recurring'; // default
+                  
+                  if (itemName.includes('setup') || itemName.includes('implementation') || itemDescription.includes('setup')) {
+                    calculatedServiceType = 'setup';
+                    commission = itemAmount * 0.20;
+                    commissionType = 'setup_commission';
+                    setupCommission += commission;
+                  } else if (itemName.includes('cleanup') || itemName.includes('clean up') || itemDescription.includes('cleanup')) {
+                    calculatedServiceType = 'cleanup';
+                    commission = itemAmount * 0.20;
+                    commissionType = 'cleanup_commission';
+                    setupCommission += commission;
+                  } else if (itemName.includes('prior year') || itemName.includes('catch up') || itemDescription.includes('prior year')) {
+                    calculatedServiceType = 'prior_years';
+                    commission = itemAmount * 0.20;
+                    commissionType = 'prior_years_commission';
+                    setupCommission += commission;
+                  } else {
+                    // Default to month 1 recurring for unidentified items (EXACT match to Commission Tracking)
+                    calculatedServiceType = 'recurring';
+                    commission = itemAmount * 0.40; // 40% for month 1
+                    commissionType = 'month_1_commission';
+                    monthlyCommission += commission;
+                  }
+                  
+                  console.log(`💰 Line item commission: ${commissionType} = $${commission} (${calculatedServiceType})`);
+
+                  // Build service type description
+                  if (itemName.includes('bookkeeping') || itemDescription.includes('bookkeeping')) {
+                    services.push('bookkeeping');
+                  }
+                  if (itemName.includes('payroll') || itemDescription.includes('payroll')) {
+                    services.push('payroll');
+                  }
+                  if (itemName.includes('tax') || itemName.includes('taas') || itemDescription.includes('tax') || itemDescription.includes('taas')) {
+                    services.push('taas');
+                  }
+                  if (itemName.includes('ap/ar') || itemName.includes('ap ar') || itemDescription.includes('ap/ar')) {
+                    services.push('ap/ar');
+                  }
+                  if (itemName.includes('fp&a') || itemName.includes('fpa') || itemDescription.includes('fp&a')) {
+                    services.push('fp&a');
+                  }
+                  
+                } catch (lineItemError) {
+                  console.log('Could not fetch line item:', lineItemAssoc.id, lineItemError.message);
+                }
+              }
+              
+              // Set service type based on found services
+              if (services.length > 0) {
+                serviceType = [...new Set(services)].join(' + '); // Remove duplicates and join
+              }
+            } else {
+              console.log(`⚠️ Quote ${quoteId} has no line items, using deal name fallback`);
+              // Fallback to deal name analysis if no line items
+              const dealNameLower = dealName.toLowerCase();
+              if (dealNameLower.includes('bookkeeping')) serviceType = 'bookkeeping';
+              if (dealNameLower.includes('taas')) serviceType = 'taas';
+              if (dealNameLower.includes('payroll')) serviceType = 'payroll';
+            }
+          } catch (quoteError) {
+            console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
+            // Fallback to deal name analysis
+            const dealNameLower = dealName.toLowerCase();
+            if (dealNameLower.includes('bookkeeping')) serviceType = 'bookkeeping';
+            if (dealNameLower.includes('taas')) serviceType = 'taas';
+            if (dealNameLower.includes('payroll')) serviceType = 'payroll';
           }
-          
-          console.log(`💰 Commission calculation: ${commissionType} = $${commission} (${calculatedServiceType})`);
+        } else {
+          console.log(`⚠️ Deal ${deal.id} has no quotes, using deal name fallback`);
+          // Fallback to deal name analysis if no quotes
+          const dealNameLower = dealName.toLowerCase();
+          if (dealNameLower.includes('bookkeeping')) serviceType = 'bookkeeping';
+          if (dealNameLower.includes('taas')) serviceType = 'taas';
+          if (dealNameLower.includes('payroll')) serviceType = 'payroll';
         }
 
         // Determine service type from deal name (same logic as Commission Tracking)
