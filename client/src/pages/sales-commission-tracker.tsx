@@ -211,11 +211,31 @@ export function SalesCommissionTracker() {
       // Transform API data to match component interface and filter for current user
       const transformedCommissions: Commission[] = liveCommissions
         .filter(invoice => {
-          // Filter by sales rep name or email
-          const matchesUser = invoice.salesRep === userName || 
-                             invoice.salesRep === user.firstName + ' ' + user.lastName ||
-                             invoice.salesRep?.toLowerCase().includes(user.firstName?.toLowerCase() || '') ||
-                             invoice.salesRep?.toLowerCase().includes(user.lastName?.toLowerCase() || '');
+          // Build expected user name variations for better matching
+          const firstName = user.firstName || '';
+          const lastName = user.lastName || '';
+          const fullName = `${firstName} ${lastName}`.trim();
+          const reverseName = `${lastName}, ${firstName}`.trim();
+          const salesRepName = invoice.salesRep || '';
+          
+          console.log('🔍 User matching debug:', {
+            userEmail: user.email,
+            firstName,
+            lastName, 
+            fullName,
+            salesRepName,
+            invoice: invoice.companyName
+          });
+          
+          // Filter by sales rep name - try multiple matching strategies
+          const matchesUser = salesRepName === fullName ||
+                             salesRepName === userName ||
+                             salesRepName === `${firstName} ${lastName}` ||
+                             salesRepName === `${lastName} ${firstName}` ||
+                             (firstName && salesRepName.toLowerCase().includes(firstName.toLowerCase())) ||
+                             (lastName && salesRepName.toLowerCase().includes(lastName.toLowerCase()));
+          
+          console.log('✅ Match result:', matchesUser, 'for', salesRepName);
           return matchesUser;
         })
         .map(invoice => ({
