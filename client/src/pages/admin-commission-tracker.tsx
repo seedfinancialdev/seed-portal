@@ -1211,9 +1211,9 @@ export function AdminCommissionTracker() {
         <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
           <DialogContent className="sm:max-w-[500px]" data-testid="dialog-adjustment-request">
             <DialogHeader>
-              <DialogTitle>Request Commission Adjustment</DialogTitle>
+              <DialogTitle>Create Commission Adjustment</DialogTitle>
               <DialogDescription>
-                {selectedCommission && `Requesting adjustment for ${selectedCommission.dealName}`}
+                {selectedCommission && `Creating adjustment for ${selectedCommission.dealName}`}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -1233,14 +1233,18 @@ export function AdminCommissionTracker() {
               )}
               
               <div>
-                <Label htmlFor="adjustment-amount">New Amount (optional)</Label>
+                <Label htmlFor="adjustment-amount">New Amount</Label>
                 <Input
                   id="adjustment-amount"
-                  type="number"
-                  step="0.01"
-                  value={adjustmentAmount}
-                  onChange={(e) => setAdjustmentAmount(e.target.value)}
-                  placeholder={selectedCommission?.amount.toString()}
+                  type="text"
+                  value={adjustmentAmount ? `$${parseFloat(adjustmentAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : ''}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[$,]/g, '');
+                    if (value === '' || !isNaN(parseFloat(value))) {
+                      setAdjustmentAmount(value);
+                    }
+                  }}
+                  placeholder={`$${selectedCommission?.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   data-testid="input-adjustment-amount"
                 />
               </div>
@@ -1270,7 +1274,7 @@ export function AdminCommissionTracker() {
                 disabled={!adjustmentReason.trim()}
                 data-testid="button-submit-adjustment"
               >
-                Submit Request
+                Create Adjustment
               </Button>
             </DialogFooter>
           </DialogContent>
