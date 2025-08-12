@@ -3805,15 +3805,20 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                 }
                 
                 if (estimatedMonthly > 0) {
+                  // For Pipeline Projections, monthly recurring should be treated as FIRST MONTH (40% commission)
+                  // Since these are projections of new deals, not existing recurring payments
                   const monthlyLineItem = {
-                    description: `${dealName} - Monthly Service`,
+                    description: `${dealName} - First Month MRR`,  // Mark as first month for proper commission rate
                     quantity: 1,
                     price: estimatedMonthly
                   };
                   const monthlyComm = calculateCommissionFromInvoice(monthlyLineItem, estimatedMonthly);
-                  monthlyCommission += monthlyComm.amount;
-                  projectedCommission += monthlyComm.amount;
-                  console.log(`💰 Estimated monthly commission: $${monthlyComm.amount} (${monthlyComm.type}) from $${estimatedMonthly} monthly`);
+                  
+                  // Override with 40% first month commission rate for Pipeline Projections
+                  const firstMonthCommission = estimatedMonthly * 0.4;
+                  monthlyCommission += firstMonthCommission;
+                  projectedCommission += firstMonthCommission;
+                  console.log(`💰 Estimated FIRST MONTH commission: $${firstMonthCommission} (40% of $${estimatedMonthly} MRR)`);
                 }
                 
                 console.log(`🎯 INTELLIGENT PARSING RESULT: Setup: $${setupCommission}, Monthly: $${monthlyCommission}, Total: $${projectedCommission}`);
