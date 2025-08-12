@@ -3473,7 +3473,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           }
         }
 
-        // Calculate commission - use same logic as Commission Tracking table
+        // Calculate commission - use EXACT same logic as Commission Tracking table (lines 4292-4315)
         let setupCommission = 0;
         let monthlyCommission = 0;
         let projectedCommission = 0;
@@ -3485,35 +3485,40 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         console.log(`💼 Processing deal: "${dealName}", amount: $${dealAmount}`);
         
         if (dealAmount > 0) {
-          // Use the EXACT same commission calculation logic as Commission Tracking table
-          // Import the shared commission calculator
-          const { calculateCommissionFromInvoice } = await import('../shared/commission-calculator.js');
+          // Use EXACT same commission calculation logic as Commission Tracking table
+          const itemName = dealName.toLowerCase();
+          const itemDescription = ''; // No separate description for deals
+          const itemAmount = dealAmount;
           
-          // Create a mock line item to simulate invoice line item processing
-          // This approach matches how the Commission Tracking table works
-          const mockLineItem = {
-            description: dealName,
-            quantity: 1,
-            price: dealAmount
-          };
+          let commission = 0;
+          let commissionType = '';
+          let calculatedServiceType = 'recurring'; // default
           
-          // Calculate commission using the shared function
-          const commission = calculateCommissionFromInvoice(mockLineItem, dealAmount);
-          console.log(`🧮 Commission calculation result:`, commission);
-          
-          if (commission.type === 'setup') {
-            setupCommission = commission.amount;
-            console.log(`💰 Setup commission: $${setupCommission}`);
-          } else if (commission.type === 'monthly') {
-            // For pipeline projections, we want first month commission (40%)
-            monthlyCommission = dealAmount * 0.40;
-            console.log(`💰 Monthly commission (40% first month): $${monthlyCommission}`);
+          // EXACT COPY from Commission Tracking table logic (lines 4292-4315)
+          if (itemName.includes('setup') || itemName.includes('implementation') || itemDescription.includes('setup')) {
+            calculatedServiceType = 'setup';
+            commission = itemAmount * 0.20;
+            commissionType = 'setup_commission';
+            setupCommission = commission;
+          } else if (itemName.includes('cleanup') || itemName.includes('clean up') || itemDescription.includes('cleanup')) {
+            calculatedServiceType = 'cleanup';
+            commission = itemAmount * 0.20;
+            commissionType = 'cleanup_commission';
+            setupCommission = commission;
+          } else if (itemName.includes('prior year') || itemName.includes('catch up') || itemDescription.includes('prior year')) {
+            calculatedServiceType = 'prior_years';
+            commission = itemAmount * 0.20;
+            commissionType = 'prior_years_commission';
+            setupCommission = commission;
           } else {
-            // Default: split deal into setup (20%) and monthly (40% first month)
-            setupCommission = dealAmount * 0.20;
-            monthlyCommission = dealAmount * 0.40;
-            console.log(`💰 Default split - Setup: $${setupCommission}, Monthly: $${monthlyCommission}`);
+            // Default to month 1 recurring for unidentified items (EXACT match to Commission Tracking)
+            calculatedServiceType = 'recurring';
+            commission = itemAmount * 0.40; // 40% for month 1
+            commissionType = 'month_1_commission';
+            monthlyCommission = commission;
           }
+          
+          console.log(`💰 Commission calculation: ${commissionType} = $${commission} (${calculatedServiceType})`);
         }
 
         // Determine service type from deal name (same logic as Commission Tracking)
