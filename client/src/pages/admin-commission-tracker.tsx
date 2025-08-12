@@ -211,17 +211,27 @@ export function AdminCommissionTracker() {
   const { data: liveSalesReps = [], isLoading: salesRepsLoading } = useQuery({
     queryKey: ['/api/sales-reps'],
     queryFn: async () => {
-      const response = await fetch('/api/sales-reps', {
+      console.log('🔄 Making fresh sales reps API call...');
+      const response = await fetch('/api/sales-reps?v=' + Date.now(), {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
-      if (!response.ok) throw new Error('Failed to fetch sales reps');
+      if (!response.ok) {
+        console.error('Sales reps API error:', response.status, response.statusText);
+        throw new Error(`Failed to fetch sales reps: ${response.status}`);
+      }
       const data = await response.json();
       console.log('📥 Raw sales reps API response:', data);
       return data;
-    }
+    },
+    refetchInterval: 10000, // Poll every 10 seconds for updates
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   const { data: liveDeals = [], isLoading: dealsLoading } = useQuery({

@@ -2912,45 +2912,111 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Commission tracking routes
   
-  // Get sales reps
-  app.get("/api/sales-reps", requireAuth, async (req, res) => {
+  // TEST: Debug sales reps endpoint
+  app.get("/api/debug-sales-reps-test", requireAuth, async (req, res) => {
+    console.log('🚨🚨🚨 DEBUG SALES REPS TEST API CALLED 🚨🚨🚨');
+    
     try {
-      // Use raw SQL to handle schema mismatch
+      const testResult = await db.execute(sql`SELECT COUNT(*) as count FROM sales_reps WHERE is_active = true`);
+      console.log('📊 Sales reps count:', testResult.rows);
+      
       const result = await db.execute(sql`
         SELECT 
           sr.id,
-          sr.user_id,
           sr.first_name,
           sr.last_name,
           sr.email,
-          sr.hubspot_user_id,
-          sr.is_active,
-          sr.created_at,
-          sr.updated_at,
-          u.name as user_name
+          sr.is_active
         FROM sales_reps sr
-        LEFT JOIN users u ON sr.user_id = u.id
         WHERE sr.is_active = true
         ORDER BY sr.id ASC
       `);
       
+      console.log('📊 Raw sales reps from DB:', result.rows);
+      res.json({
+        debug: true,
+        count: testResult.rows[0],
+        salesReps: result.rows
+      });
+    } catch (error) {
+      console.error('🚨 ERROR in debug sales reps API:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // TEST: Debug sales reps endpoint
+  app.get("/api/debug-sales-reps", requireAuth, async (req, res) => {
+    console.log('🚨🚨🚨 DEBUG SALES REPS API CALLED 🚨🚨🚨');
+    
+    try {
+      const testResult = await db.execute(sql`SELECT COUNT(*) as count FROM sales_reps WHERE is_active = true`);
+      console.log('📊 Sales reps count:', testResult.rows);
+      
+      const result = await db.execute(sql`
+        SELECT 
+          sr.id,
+          sr.first_name,
+          sr.last_name,
+          sr.email,
+          sr.is_active
+        FROM sales_reps sr
+        WHERE sr.is_active = true
+        ORDER BY sr.id ASC
+      `);
+      
+      console.log('📊 Raw sales reps from DB:', result.rows);
+      res.json({
+        debug: true,
+        count: testResult.rows[0],
+        salesReps: result.rows
+      });
+    } catch (error) {
+      console.error('🚨 ERROR in debug sales reps API:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get sales reps
+  app.get("/api/sales-reps", requireAuth, async (req, res) => {
+    console.log('🚨 SALES REPS API CALLED - Starting execution');
+    
+    try {
+      console.log('📊 Sales reps API called by user:', req.user?.email);
+      
+      // Test database connection
+      console.log('🔍 Testing database connection...');
+      const testResult = await db.execute(sql`SELECT COUNT(*) as count FROM sales_reps WHERE is_active = true`);
+      console.log('📊 Sales reps count:', testResult.rows);
+      
+      // Use simplified SQL query - the one that worked in our direct test
+      const result = await db.execute(sql`
+        SELECT 
+          sr.id,
+          sr.first_name,
+          sr.last_name,
+          sr.email,
+          sr.is_active
+        FROM sales_reps sr
+        WHERE sr.is_active = true
+        ORDER BY sr.id ASC
+      `);
+      
+      console.log('📊 Raw sales reps from DB:', result.rows);
+      
       // Transform to match expected frontend structure
       const salesReps = result.rows.map((rep: any) => ({
         id: rep.id,
-        userId: rep.user_id,
-        name: rep.first_name && rep.last_name ? `${rep.first_name} ${rep.last_name}` : rep.user_name || 'Unknown',
+        name: `${rep.first_name} ${rep.last_name}`,
         email: rep.email,
-        hubspotUserId: rep.hubspot_user_id,
-        isActive: rep.is_active,
-        createdAt: rep.created_at,
-        updatedAt: rep.updated_at
+        isActive: rep.is_active
       }));
       
+      console.log('📊 Transformed sales reps:', salesReps);
+      console.log('🚨 RETURNING DATA:', JSON.stringify(salesReps));
       res.json(salesReps);
     } catch (error) {
-      console.error('Error fetching sales reps:', error);
-      // Return empty array instead of 500 error to prevent console errors
-      res.json([]);
+      console.error('🚨 ERROR in sales reps API:', error);
+      res.status(500).json({ message: "Failed to fetch sales reps", error: error.message });
     }
   });
 
