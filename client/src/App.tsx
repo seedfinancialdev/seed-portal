@@ -48,7 +48,6 @@ function Router() {
         <ProtectedRoute path="/admin-commission-tracker" component={AdminCommissionTracker} />
         <ProtectedRoute path="/admin/commission-tracker" component={AdminCommissionTracker} />
         <ProtectedRoute path="/sales-commission-tracker" component={SalesCommissionTracker} />
-        <ProtectedRoute path="/sales-dashboard/commission-tracker" component={SalesCommissionTracker} />
         <ProtectedRoute path="/client-intel" component={ClientIntel} />
         <ProtectedRoute path="/knowledge-base" component={KnowledgeBase} />
         <ProtectedRoute path="/kb-admin" component={KbAdmin} />
