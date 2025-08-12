@@ -3093,6 +3093,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             c.date_earned,
             c.created_at,
             hi.company_name,
+            hi.hubspot_contact_id,
             CONCAT(u.first_name, ' ', u.last_name) as sales_rep_name,
             string_agg(DISTINCT hil.name, ', ') as service_names
           FROM commissions c
@@ -3101,7 +3102,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
           LEFT JOIN hubspot_invoice_line_items hil ON hi.id = hil.invoice_id
           GROUP BY c.id, c.hubspot_invoice_id, c.sales_rep_id, c.type, c.amount, c.status, 
                    c.month_number, c.service_type, c.date_earned, c.created_at, 
-                   hi.company_name, u.first_name, u.last_name
+                   hi.company_name, hi.hubspot_contact_id, u.first_name, u.last_name
           ORDER BY c.created_at DESC
         `);
         commissionsData = result.rows;
@@ -3186,6 +3187,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             dateEarned: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : new Date(comm.created_at).toISOString().split('T')[0],
             datePaid: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : null,
             hubspotDealId: invoiceId,
+            hubspotContactId: comm.hubspot_contact_id,
             setupAmount: 0,
             month1Amount: 0,
             residualAmount: 0
@@ -3207,6 +3209,30 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
       
       const commissionsWithDetails = Array.from(invoiceGroups.values());
+      
+      // Enrich with contact information from HubSpot if available
+      try {
+        const hubspotService = new (await import('./hubspot')).HubSpotService();
+        
+        for (const commission of commissionsWithDetails) {
+          if (commission.hubspotContactId) {
+            try {
+              const contactResponse = await hubspotService.makeRequest(`/crm/v3/objects/contacts/${commission.hubspotContactId}?properties=firstname,lastname,email`);
+              if (contactResponse && contactResponse.properties) {
+                commission.contactFirstName = contactResponse.properties.firstname;
+                commission.contactLastName = contactResponse.properties.lastname;
+                commission.contactEmail = contactResponse.properties.email;
+              }
+            } catch (contactError) {
+              console.log(`Could not fetch contact ${commission.hubspotContactId}:`, contactError.message);
+              // Continue without contact info
+            }
+          }
+        }
+      } catch (hubspotError) {
+        console.log('HubSpot service not available for contact enrichment:', hubspotError.message);
+        // Continue without contact enrichment
+      }
       
       console.log(`📊 Returning ${commissionsWithDetails.length} commissions to frontend`);
       console.log('Commission sample:', JSON.stringify(commissionsWithDetails[0], null, 2));

@@ -84,6 +84,9 @@ interface Commission {
   dateEarned: string;
   datePaid?: string;
   hubspotDealId?: string;
+  contactFirstName?: string;
+  contactLastName?: string;
+  contactEmail?: string;
 }
 
 interface Deal {
@@ -744,7 +747,12 @@ export function AdminCommissionTracker() {
                           <TableCell className="font-medium">
                             <div>
                               <p className="font-semibold text-gray-900">{commission.companyName}</p>
-                              <p className="text-sm text-gray-500">Primary Contact: TBD</p>
+                              <p className="text-sm text-gray-500">
+                                {commission.contactFirstName && commission.contactLastName
+                                  ? `${commission.contactFirstName} ${commission.contactLastName}`
+                                  : 'Contact: Not Available'
+                                }
+                              </p>
                             </div>
                           </TableCell>
                           <TableCell>
