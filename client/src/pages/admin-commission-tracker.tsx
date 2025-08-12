@@ -211,9 +211,16 @@ export function AdminCommissionTracker() {
   const { data: liveSalesReps = [], isLoading: salesRepsLoading } = useQuery({
     queryKey: ['/api/sales-reps'],
     queryFn: async () => {
-      const response = await fetch('/api/sales-reps');
+      const response = await fetch('/api/sales-reps', {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch sales reps');
-      return response.json();
+      const data = await response.json();
+      console.log('📥 Raw sales reps API response:', data);
+      return data;
     }
   });
 
@@ -299,6 +306,9 @@ export function AdminCommissionTracker() {
         projectedCommissions: 0 // Will be calculated
       }));
       setSalesReps(transformedSalesReps);
+      console.log('📊 Transformed sales reps:', transformedSalesReps);
+    } else {
+      console.log('⚠️ No sales reps data available:', liveSalesReps);
     }
   }, [liveSalesReps]);
 
