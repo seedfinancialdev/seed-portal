@@ -231,7 +231,7 @@ export function AdminCommissionTracker() {
       const transformedCommissions: Commission[] = liveCommissions.map(invoice => ({
         id: invoice.id.toString(),
         dealId: invoice.dealId?.toString() || invoice.id.toString(),
-        dealName: `${invoice.companyName} - Total Commission`,
+        dealName: invoice.companyName,
         companyName: invoice.companyName || 'Unknown Company',
         salesRep: invoice.salesRep || 'Unknown Rep',
         serviceType: invoice.serviceType || 'mixed',
@@ -743,8 +743,8 @@ export function AdminCommissionTracker() {
                         <TableRow key={commission.id} data-testid={`row-commission-${commission.id}`}>
                           <TableCell className="font-medium">
                             <div>
-                              <p className="font-semibold text-gray-900">{commission.dealName}</p>
-                              <p className="text-sm text-gray-500">{commission.companyName}</p>
+                              <p className="font-semibold text-gray-900">{commission.companyName}</p>
+                              <p className="text-sm text-gray-500">Primary Contact: TBD</p>
                             </div>
                           </TableCell>
                           <TableCell>
