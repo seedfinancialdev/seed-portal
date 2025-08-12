@@ -314,60 +314,76 @@ export class HubSpotCommissionSync {
    */
   private async getInvoiceCompanyName(invoice: any): Promise<string> {
     try {
-      // Check if invoice has a deal association
+      console.log(`🔍 Getting company name for invoice ${invoice.id}...`);
+      console.log(`Invoice properties:`, JSON.stringify(invoice.properties, null, 2));
+      
+      // First try the direct properties
+      if (invoice.properties.hs_deal_name) {
+        console.log(`✅ Found deal name: ${invoice.properties.hs_deal_name}`);
+        return invoice.properties.hs_deal_name;
+      }
+      
+      if (invoice.properties.company_name) {
+        console.log(`✅ Found company name: ${invoice.properties.company_name}`);
+        return invoice.properties.company_name;
+      }
+      
+      // Try to get deal and company info if deal ID exists
       const dealId = invoice.properties.hs_deal_id;
       if (dealId) {
-        // Get deal details to find company
-        const dealResponse = await this.hubspotClient.get(`/crm/v3/objects/deals/${dealId}`, {
-          params: {
-            properties: 'dealname,amount,pipeline,dealstage',
-            associations: 'companies,contacts'
-          }
-        });
+        console.log(`🔗 Found deal ID ${dealId}, fetching deal details...`);
         
-        // Get associated company
-        if (dealResponse.data?.associations?.companies?.results?.length > 0) {
-          const companyId = dealResponse.data.associations.companies.results[0].id;
-          const companyResponse = await this.hubspotClient.get(`/crm/v3/objects/companies/${companyId}`, {
-            params: {
-              properties: 'name'
-            }
-          });
+        try {
+          const dealResponse = await this.hubspotClient.get(`/crm/v3/objects/deals/${dealId}?properties=dealname&associations=companies,contacts`);
+          console.log(`📄 Deal response:`, dealResponse.data);
           
-          if (companyResponse.data?.properties?.name) {
-            return companyResponse.data.properties.name;
+          if (dealResponse.data?.properties?.dealname) {
+            console.log(`✅ Got deal name from API: ${dealResponse.data.properties.dealname}`);
+            return dealResponse.data.properties.dealname;
           }
-        }
-        
-        // Get associated contact as fallback
-        if (dealResponse.data?.associations?.contacts?.results?.length > 0) {
-          const contactId = dealResponse.data.associations.contacts.results[0].id;
-          const contactResponse = await this.hubspotClient.get(`/crm/v3/objects/contacts/${contactId}`, {
-            params: {
-              properties: 'firstname,lastname,company'
-            }
-          });
           
-          if (contactResponse.data?.properties) {
-            const contact = contactResponse.data.properties;
-            if (contact.company) {
-              return contact.company;
+          // Try to get company from associations
+          if (dealResponse.data?.associations?.companies?.results?.length > 0) {
+            const companyId = dealResponse.data.associations.companies.results[0].id;
+            console.log(`🏢 Found company ID ${companyId}, fetching company name...`);
+            
+            const companyResponse = await this.hubspotClient.get(`/crm/v3/objects/companies/${companyId}?properties=name`);
+            if (companyResponse.data?.properties?.name) {
+              console.log(`✅ Got company name: ${companyResponse.data.properties.name}`);
+              return companyResponse.data.properties.name;
             }
-            return `${contact.firstname || ''} ${contact.lastname || ''}`.trim() || 'Unknown Contact';
           }
+          
+          // Try to get contact name from associations
+          if (dealResponse.data?.associations?.contacts?.results?.length > 0) {
+            const contactId = dealResponse.data.associations.contacts.results[0].id;
+            console.log(`👤 Found contact ID ${contactId}, fetching contact name...`);
+            
+            const contactResponse = await this.hubspotClient.get(`/crm/v3/objects/contacts/${contactId}?properties=firstname,lastname,company`);
+            if (contactResponse.data?.properties) {
+              const contact = contactResponse.data.properties;
+              if (contact.company) {
+                console.log(`✅ Got company from contact: ${contact.company}`);
+                return contact.company;
+              }
+              const contactName = `${contact.firstname || ''} ${contact.lastname || ''}`.trim();
+              if (contactName) {
+                console.log(`✅ Got contact name: ${contactName}`);
+                return contactName;
+              }
+            }
+          }
+        } catch (apiError) {
+          console.log(`⚠️ HubSpot API error for deal ${dealId}:`, apiError.message);
         }
       }
       
-      // Fallback to invoice properties
-      return invoice.properties.hs_deal_name || 
-             invoice.properties.company_name || 
-             'Unknown Company';
+      console.log(`⚠️ No company/contact name found, using fallback for invoice ${invoice.id}`);
+      return `Invoice ${invoice.id}`;
              
     } catch (error) {
-      console.log(`⚠️ Could not fetch company name for invoice ${invoice.id}:`, error.message);
-      return invoice.properties.hs_deal_name || 
-             invoice.properties.company_name || 
-             'Unknown Company';
+      console.log(`❌ Error getting company name for invoice ${invoice.id}:`, error.message);
+      return `Invoice ${invoice.id}`;
     }
   }
 
