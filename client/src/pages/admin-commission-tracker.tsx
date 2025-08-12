@@ -404,6 +404,13 @@ export function AdminCommissionTracker() {
     return <TrendingDown className="w-4 h-4 text-red-600" />;
   };
 
+  const getBonusTier = (commissionAmount: number) => {
+    if (commissionAmount >= 5000) return { name: 'MacBook Air', target: 5000, color: 'text-purple-600', bgColor: 'bg-purple-50' };
+    if (commissionAmount >= 3000) return { name: 'Apple Watch', target: 3000, color: 'text-blue-600', bgColor: 'bg-blue-50' };
+    if (commissionAmount >= 1500) return { name: 'AirPods Pro', target: 1500, color: 'text-green-600', bgColor: 'bg-green-50' };
+    return { name: 'Cash Bonus', target: 1000, color: 'text-orange-600', bgColor: 'bg-orange-50' };
+  };
+
   const getSalesRepMetrics = (repName: string) => {
     const repCommissions = commissions.filter(c => c.salesRep === repName);
     const currentPeriodCommissions = repCommissions
@@ -424,12 +431,15 @@ export function AdminCommissionTracker() {
       .filter(d => d.salesRep === repName && d.status === 'open')
       .reduce((sum, d) => sum + d.amount, 0);
 
+    const bonusTier = getBonusTier(currentPeriodCommissions);
+
     return {
       currentPeriodCommissions,
       firstMonthCommissions,
       residualCommissions,
       totalCommissions,
-      pipelineValue
+      pipelineValue,
+      bonusTier
     };
   };
 
@@ -936,20 +946,33 @@ export function AdminCommissionTracker() {
                         </div>
                       </div>
                       
-                      {/* Performance Progress */}
+                      {/* Bonus Progress */}
                       <div className="space-y-3">
-                        <div>
+                        <div className={`p-3 rounded-lg ${metrics.bonusTier.bgColor}`}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium">Commission Progress</span>
+                            <span className="text-sm font-medium flex items-center gap-2">
+                              <span className={metrics.bonusTier.color}>Bonus Progress</span>
+                              <Badge variant="outline" className={`${metrics.bonusTier.color} border-current`}>
+                                {metrics.bonusTier.name}
+                              </Badge>
+                            </span>
                             <span className="text-sm text-gray-500">
-                              {Math.round((metrics.currentPeriodCommissions / 5000) * 100)}%
+                              {Math.round((metrics.currentPeriodCommissions / metrics.bonusTier.target) * 100)}%
                             </span>
                           </div>
                           <Progress 
-                            value={Math.min((metrics.currentPeriodCommissions / 5000) * 100, 100)} 
-                            className="h-2"
-                            data-testid={`progress-commission-${rep.id}`}
+                            value={Math.min((metrics.currentPeriodCommissions / metrics.bonusTier.target) * 100, 100)} 
+                            className="h-3"
+                            data-testid={`progress-bonus-${rep.id}`}
                           />
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-gray-500">
+                              ${metrics.currentPeriodCommissions.toLocaleString()} / ${metrics.bonusTier.target.toLocaleString()}
+                            </span>
+                            <span className={`text-xs font-medium ${metrics.currentPeriodCommissions >= metrics.bonusTier.target ? 'text-green-600' : 'text-gray-500'}`}>
+                              {metrics.currentPeriodCommissions >= metrics.bonusTier.target ? '🎉 Earned!' : `$${(metrics.bonusTier.target - metrics.currentPeriodCommissions).toLocaleString()} to go`}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
