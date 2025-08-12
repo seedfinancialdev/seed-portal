@@ -3502,6 +3502,15 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const allStages = [...new Set(dealsResponse.results.map(deal => deal.properties.dealstage))];
       console.log(`🎯 All deal stages found:`, allStages);
       
+      // Log the count of deals by stage to help with debugging
+      const dealsByStage = {};
+      dealsResponse.results.forEach(deal => {
+        const stageId = deal.properties.dealstage;
+        const stageName = pipelineStages[stageId]?.name || stageId || 'Unknown';
+        dealsByStage[stageName] = (dealsByStage[stageName] || 0) + 1;
+      });
+      console.log('📊 DEAL COUNT BY STAGE:', JSON.stringify(dealsByStage, null, 2));
+      
       // Also get the deal stage names from HubSpot to understand what each stage means
       const stageInfo = dealsResponse.results.map(deal => ({
         stageId: deal.properties.dealstage,
@@ -3517,26 +3526,38 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         
         console.log(`🔍 Processing deal ${deal.id}: "${properties.dealname}", stage: ${properties.dealstage}`);
         
-        // Skip closed deals - HubSpot typically uses specific stage IDs for closed deals
-        // Common patterns: stages ending in high numbers are often closed stages
-        const closedStagePatterns = [
-          'closedwon', 'closedlost', 'closed-won', 'closed-lost',
-          '1108547154', '1108547155', '1108547156', '1108547157', // Common closed stage IDs
-          'contractsent', 'closedwon', 'closed_won', 'closed_lost'
+        // Get the stage name for this deal
+        const stageInfo = pipelineStages[properties.dealstage];
+        const dealStageName = stageInfo ? stageInfo.name : properties.dealstage || 'Unknown Stage';
+        
+        console.log(`🎯 Deal stage analysis: ID=${properties.dealstage}, Name="${dealStageName}", Pipeline="${stageInfo?.pipelineName || 'Unknown'}"`);
+        
+        // Skip only the clearly closed stages (Closed Won, Closed Lost)
+        const closedStageNames = [
+          'closed won', 'closed lost', 'closedwon', 'closedlost',
+          'won', 'lost', 'dead', 'cancelled'
         ];
         
-        // Also check if closedate is set - if deal has a close date, it's likely closed
+        // Check if closedate is set - if deal has a close date, it's likely closed
         const hasCloseDate = properties.closedate && properties.closedate !== null;
-        const stageId = properties.dealstage?.toString().toLowerCase();
+        const stageName = dealStageName?.toLowerCase() || '';
         
-        const isClosedStage = closedStagePatterns.some(pattern => 
-          stageId?.includes(pattern.toLowerCase())
+        const isClosedStage = closedStageNames.some(pattern => 
+          stageName.includes(pattern.toLowerCase())
         );
         
-        if (isClosedStage || hasCloseDate) {
-          console.log(`⏭️ Skipping closed deal (stage: ${properties.dealstage}, closedate: ${properties.closedate}): ${properties.dealname}`);
+        if (isClosedStage && hasCloseDate) {
+          console.log(`⏭️ Skipping closed deal (stage: "${dealStageName}", closedate: ${properties.closedate}): ${properties.dealname}`);
           continue;
         }
+        
+        // Log all open deals to understand what stages we're processing
+        console.log(`✅ Processing OPEN deal: "${properties.dealname}" in stage "${dealStageName}" (ID: ${properties.dealstage})`);
+        
+        // Log all deal stages we encounter to help with filtering debug
+        if (!global.stagesSeen) global.stagesSeen = new Set();
+        global.stagesSeen.add(`${dealStageName} (${properties.dealstage})`);
+        console.log(`📋 All deal stages encountered so far:`, Array.from(global.stagesSeen));
 
         // Get company name from associated contact's company property
         let companyName = 'Unknown Company';
@@ -3994,10 +4015,6 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         console.log(`💰 Deal "${properties.dealname}" projected commission: $${projectedCommission}`);
         console.log(`📋 Deal details: ID=${deal.id}, Company=${companyName}, SalesRep=${salesRep}, ServiceType=${serviceType}`);
         
-        // Use the actual stage name from the fetched pipeline configuration
-        const stageInfo = pipelineStages[properties.dealstage];
-        const dealStageName = stageInfo ? stageInfo.name : properties.dealstage || 'Unknown Stage';
-        
         // For now, include ALL open deals to see what data we have
         // if (projectedCommission > 0) {
         pipelineDeals.push({
@@ -4027,6 +4044,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       });
       
       console.log(`📊 Found ${pipelineDeals.length} pipeline deals with real commission projections`);
+      
+      // Final summary of deals by stage for debugging
+      const finalDealsByStage = {};
+      pipelineDeals.forEach(deal => {
+        const stageName = deal.dealStage;
+        finalDealsByStage[stageName] = (finalDealsByStage[stageName] || 0) + 1;
+      });
+      console.log('🎯 FINAL PIPELINE DEALS BY STAGE:', JSON.stringify(finalDealsByStage, null, 2));
       res.json(pipelineDeals);
     } catch (error: any) {
       console.error('Pipeline projections error:', error);
