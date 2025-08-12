@@ -3485,107 +3485,289 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         const dealName = properties.dealname || '';
         console.log(`💼 Processing deal: "${dealName}"`);
 
-        // Get deal line items directly and process them EXACTLY like Commission Tracking processes invoice line items
+        // Try EVERY possible approach to get line items or product data from deals
         try {
-          console.log(`🔍 Fetching line items directly for deal ${deal.id}...`);
+          console.log(`🔍 Trying ALL approaches to get line items for deal ${deal.id}: "${dealName}"`);
           
-          // Fetch deal line items directly from HubSpot
-          const dealLineItemsResponse = await hubspotClient.crm.lineItems.basicApi.getPage(
-            100, // limit
-            undefined, // after 
-            ['name', 'price', 'quantity', 'description', 'hs_deal_id'], // properties
-            undefined, // propertiesWithHistory
-            undefined, // associations
-            false // archived
+          // Approach 1: Deal with ALL possible properties and associations
+          const dealWithLineItems = await hubspotClient.crm.deals.basicApi.getById(
+            deal.id,
+            [
+              'dealname', 'amount', 'hs_mrr', 'hs_arr', 'hs_tcv', 'dealtype', 'hs_product_id',
+              // Custom service properties that might contain pricing
+              'bookkeeping_price', 'taas_price', 'setup_fee', 'monthly_fee', 'cleanup_fee',
+              'service_details', 'pricing_breakdown', 'line_items_text', 'services_selected',
+              // Standard pricing properties
+              'discount_amount', 'discount_percentage', 'total_contract_value',
+              // Additional pricing fields
+              'recurring_revenue_amount', 'one_time_fee', 'implementation_fee'
+            ],
+            ['line_items', 'products', 'quotes', 'contacts']
           );
           
-          // Filter line items for this specific deal
-          const dealLineItems = dealLineItemsResponse.results.filter(
-            item => item.properties.hs_deal_id === deal.id
-          );
+          console.log(`📝 Deal ${deal.id} ALL associations:`, JSON.stringify(dealWithLineItems.associations, null, 2));
+          console.log(`📝 Deal ${deal.id} ALL properties:`, JSON.stringify(dealWithLineItems.properties, null, 2));
           
-          console.log(`📝 Deal ${deal.id} has ${dealLineItems.length} line items`);
+          const dealLineItems = dealWithLineItems.associations?.line_items?.results || [];
+          const dealProducts = dealWithLineItems.associations?.products?.results || [];
+          
+          console.log(`📝 Deal ${deal.id} has ${dealLineItems.length} line items and ${dealProducts.length} products`);
+          
+          // Try to process line items first, then products, then analyze deal name
+          let services = [];
+          let foundActualItems = false;
           
           if (dealLineItems.length > 0) {
-            let services = [];
+            console.log(`🔍 Processing ${dealLineItems.length} line items...`);
             
-            for (const lineItem of dealLineItems) {
-              const itemProps = lineItem.properties;
-              const itemName = (itemProps.name || '').toLowerCase();
-              const itemDescription = (itemProps.description || '').toLowerCase();
-              const price = parseFloat(itemProps.price || '0');
-              const quantity = parseFloat(itemProps.quantity || 1);
-              const itemAmount = price * quantity;
-              
-              console.log(`📦 Deal line item: "${itemProps.name}", Amount: $${itemAmount}`);
-              
-              // Create a line item object that matches what Commission Tracking expects
-              const lineItemForCalculation = {
-                description: itemProps.description || itemProps.name || '',
-                quantity: quantity,
-                price: price
-              };
-              
-              // Use EXACT same function as Commission Tracking
-              const commission = calculateCommissionFromInvoice(lineItemForCalculation, itemAmount);
-              
-              console.log(`💰 Deal line item commission: $${commission.amount} (${commission.type})`);
-              
-              if (commission.type === 'setup') {
-                setupCommission += commission.amount;
-              } else {
-                monthlyCommission += commission.amount;
-              }
-              
-              projectedCommission += commission.amount;
+            for (const lineItemAssoc of dealLineItems) {
+              try {
+                // Fetch the actual line item data
+                const lineItem = await hubspotClient.crm.lineItems.basicApi.getById(
+                  lineItemAssoc.id,
+                  ['name', 'price', 'quantity', 'description', 'hs_product_id']
+                );
+                
+                const itemProps = lineItem.properties;
+                const itemName = (itemProps.name || '').toLowerCase();
+                const itemDescription = (itemProps.description || '').toLowerCase();
+                const price = parseFloat(itemProps.price || '0');
+                const quantity = parseFloat(itemProps.quantity || 1);
+                const itemAmount = price * quantity;
+                
+                console.log(`📦 Deal line item: "${itemProps.name}", Qty: ${quantity}, Price: $${price}, Total: $${itemAmount}`);
+                
+                // Create a line item object that matches what Commission Tracking expects
+                const lineItemForCalculation = {
+                  description: itemProps.description || itemProps.name || '',
+                  quantity: quantity,
+                  price: price
+                };
+                
+                // Use EXACT same function as Commission Tracking
+                const commission = calculateCommissionFromInvoice(lineItemForCalculation, itemAmount);
+                
+                console.log(`💰 Deal line item commission: $${commission.amount} (${commission.type})`);
+                
+                if (commission.type === 'setup') {
+                  setupCommission += commission.amount;
+                } else {
+                  monthlyCommission += commission.amount;
+                }
+                
+                projectedCommission += commission.amount;
+                foundActualItems = true;
 
-              // Build service type description
-              if (itemName.includes('bookkeeping') || itemDescription.includes('bookkeeping')) {
+                // Build service type description
+                if (itemName.includes('bookkeeping') || itemDescription.includes('bookkeeping')) {
+                  services.push('bookkeeping');
+                }
+                if (itemName.includes('payroll') || itemDescription.includes('payroll')) {
+                  services.push('payroll');
+                }
+                if (itemName.includes('tax') || itemName.includes('taas') || itemDescription.includes('tax') || itemDescription.includes('taas')) {
+                  services.push('taas');
+                }
+                if (itemName.includes('ap/ar') || itemName.includes('ap ar') || itemDescription.includes('ap/ar')) {
+                  services.push('ap/ar');
+                }
+                if (itemName.includes('fp&a') || itemName.includes('fpa') || itemDescription.includes('fp&a')) {
+                  services.push('fp&a');
+                }
+                
+              } catch (lineItemError) {
+                console.log('Could not fetch line item:', lineItemAssoc.id, lineItemError.message);
+              }
+            }
+          }
+          
+          // If no line items, try products
+          if (!foundActualItems && dealProducts.length > 0) {
+            console.log(`🔍 Processing ${dealProducts.length} products as fallback...`);
+            
+            for (const productAssoc of dealProducts) {
+              try {
+                // Fetch the actual product data
+                const product = await hubspotClient.crm.products.basicApi.getById(
+                  productAssoc.id,
+                  ['name', 'price', 'description', 'hs_sku']
+                );
+                
+                const productProps = product.properties;
+                const productName = (productProps.name || '').toLowerCase();
+                const productDescription = (productProps.description || '').toLowerCase();
+                const productPrice = parseFloat(productProps.price || '0');
+                
+                console.log(`🏷️ Deal product: "${productProps.name}", Price: $${productPrice}`);
+                
+                // Create a line item object that matches what Commission Tracking expects
+                const productForCalculation = {
+                  description: productProps.description || productProps.name || '',
+                  quantity: 1,
+                  price: productPrice
+                };
+                
+                // Use EXACT same function as Commission Tracking
+                const commission = calculateCommissionFromInvoice(productForCalculation, productPrice);
+                
+                console.log(`💰 Deal product commission: $${commission.amount} (${commission.type})`);
+                
+                if (commission.type === 'setup') {
+                  setupCommission += commission.amount;
+                } else {
+                  monthlyCommission += commission.amount;
+                }
+                
+                projectedCommission += commission.amount;
+                foundActualItems = true;
+
+                // Build service type description
+                if (productName.includes('bookkeeping') || productDescription.includes('bookkeeping')) {
+                  services.push('bookkeeping');
+                }
+                if (productName.includes('payroll') || productDescription.includes('payroll')) {
+                  services.push('payroll');
+                }
+                if (productName.includes('tax') || productName.includes('taas') || productDescription.includes('tax') || productDescription.includes('taas')) {
+                  services.push('taas');
+                }
+                if (productName.includes('ap/ar') || productName.includes('ap ar') || productDescription.includes('ap/ar')) {
+                  services.push('ap/ar');
+                }
+                if (productName.includes('fp&a') || productName.includes('fpa') || productDescription.includes('fp&a')) {
+                  services.push('fp&a');
+                }
+                
+              } catch (productError) {
+                console.log('Could not fetch product:', productAssoc.id, productError.message);
+              }
+            }
+          }
+          
+          // Set service type based on found services or analyze deal name
+          if (services.length > 0) {
+            serviceType = [...new Set(services)].join(' + '); // Remove duplicates and join
+          } else {
+            // Fallback: analyze deal name for service type
+            const dealNameLower = dealName.toLowerCase();
+            if (dealNameLower.includes('bookkeeping') && dealNameLower.includes('taas')) {
+              serviceType = 'bookkeeping + taas';
+            } else if (dealNameLower.includes('bookkeeping')) {
+              serviceType = 'bookkeeping';
+            } else if (dealNameLower.includes('taas') || dealNameLower.includes('tax')) {
+              serviceType = 'taas';
+            } else if (dealNameLower.includes('payroll')) {
+              serviceType = 'payroll';
+            } else {
+              serviceType = 'Unknown Service';
+            }
+          }
+          
+          console.log(`✅ Found actual items: ${foundActualItems}, Service type: ${serviceType}`);
+          
+          // If we still haven't found actual items, try custom properties before final fallback
+          if (!foundActualItems) {
+            console.log(`🔍 Checking custom properties for pricing data...`);
+            
+            // Check for custom pricing properties that might contain actual service prices
+            const detailedProps = dealWithLineItems.properties;
+            let foundCustomPricing = false;
+            
+            // Extract any custom pricing fields
+            if (detailedProps.setup_fee || detailedProps.monthly_fee || detailedProps.bookkeeping_price || detailedProps.taas_price) {
+              console.log('📊 Found custom pricing properties');
+              
+              const setupFee = parseFloat(detailedProps.setup_fee || '0');
+              const monthlyFee = parseFloat(detailedProps.monthly_fee || '0');
+              const bookkeepingPrice = parseFloat(detailedProps.bookkeeping_price || '0');
+              const taasPrice = parseFloat(detailedProps.taas_price || '0');
+              
+              if (setupFee > 0) {
+                const setupLineItem = {
+                  description: 'Setup Fee',
+                  quantity: 1,
+                  price: setupFee
+                };
+                const setupComm = calculateCommissionFromInvoice(setupLineItem, setupFee);
+                setupCommission += setupComm.amount;
+                projectedCommission += setupComm.amount;
+                foundCustomPricing = true;
+                console.log(`💰 Setup fee commission: $${setupComm.amount}`);
+              }
+              
+              if (monthlyFee > 0) {
+                const monthlyLineItem = {
+                  description: 'Monthly Service',
+                  quantity: 1,
+                  price: monthlyFee
+                };
+                const monthlyComm = calculateCommissionFromInvoice(monthlyLineItem, monthlyFee);
+                monthlyCommission += monthlyComm.amount;
+                projectedCommission += monthlyComm.amount;
+                foundCustomPricing = true;
+                console.log(`💰 Monthly fee commission: $${monthlyComm.amount}`);
+              }
+              
+              if (bookkeepingPrice > 0) {
+                const bookkeepingLineItem = {
+                  description: 'Bookkeeping Service',
+                  quantity: 1,
+                  price: bookkeepingPrice
+                };
+                const bookkeepingComm = calculateCommissionFromInvoice(bookkeepingLineItem, bookkeepingPrice);
+                monthlyCommission += bookkeepingComm.amount;
+                projectedCommission += bookkeepingComm.amount;
+                foundCustomPricing = true;
                 services.push('bookkeeping');
+                console.log(`💰 Bookkeeping commission: $${bookkeepingComm.amount}`);
               }
-              if (itemName.includes('payroll') || itemDescription.includes('payroll')) {
-                services.push('payroll');
-              }
-              if (itemName.includes('tax') || itemName.includes('taas') || itemDescription.includes('tax') || itemDescription.includes('taas')) {
+              
+              if (taasPrice > 0) {
+                const taasLineItem = {
+                  description: 'Tax as a Service',
+                  quantity: 1,
+                  price: taasPrice
+                };
+                const taasComm = calculateCommissionFromInvoice(taasLineItem, taasPrice);
+                monthlyCommission += taasComm.amount;
+                projectedCommission += taasComm.amount;
+                foundCustomPricing = true;
                 services.push('taas');
+                console.log(`💰 TaaS commission: $${taasComm.amount}`);
               }
-              if (itemName.includes('ap/ar') || itemName.includes('ap ar') || itemDescription.includes('ap/ar')) {
-                services.push('ap/ar');
-              }
-              if (itemName.includes('fp&a') || itemName.includes('fpa') || itemDescription.includes('fp&a')) {
-                services.push('fp&a');
+              
+              if (foundCustomPricing) {
+                serviceType = [...new Set(services)].join(' + ') || 'Custom Service';
+                console.log(`✅ Found custom pricing! Service: ${serviceType}, Total: $${projectedCommission}`);
               }
             }
             
-            // Set service type based on found services
-            if (services.length > 0) {
-              serviceType = [...new Set(services)].join(' + '); // Remove duplicates and join
-            }
-          } else {
-            console.log(`⚠️ Deal ${deal.id} has no line items, using deal amount with EXACT commission logic`);
-            // When deals have no line items, create a synthetic line item
-            const dealAmount = parseFloat(properties.amount || 0);
-            if (dealAmount > 0) {
-              const syntheticLineItem = {
-                description: dealName,
-                quantity: 1,
-                price: dealAmount
-              };
-              
-              const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
-              
-              console.log(`💰 Synthetic line item commission: $${commission.amount} (${commission.type})`);
-              
-              if (commission.type === 'setup') {
-                setupCommission = commission.amount;
+            // Final fallback only if no custom pricing found
+            if (!foundCustomPricing) {
+              console.log(`⚠️ Deal ${deal.id} has no line items, products, or custom pricing - using deal amount with EXACT commission logic`);
+              const dealAmount = parseFloat(properties.amount || 0);
+              if (dealAmount > 0) {
+                const syntheticLineItem = {
+                  description: dealName,
+                  quantity: 1,
+                  price: dealAmount
+                };
+                
+                const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
+                
+                console.log(`💰 Synthetic line item commission: $${commission.amount} (${commission.type})`);
+                
+                if (commission.type === 'setup') {
+                  setupCommission = commission.amount;
+                } else {
+                  monthlyCommission = commission.amount;
+                }
+                projectedCommission = commission.amount;
               } else {
-                monthlyCommission = commission.amount;
+                projectedCommission = 0;
+                setupCommission = 0;
+                monthlyCommission = 0;
               }
-              projectedCommission = commission.amount;
-            } else {
-              projectedCommission = 0;
-              setupCommission = 0;
-              monthlyCommission = 0;
             }
           }
         } catch (dealLineItemsError) {
