@@ -3250,32 +3250,34 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         `);
         commissionsData = result.rows;
       } else {
-        // Regular users get their own commissions
-        const salesRepResult = await db.execute(sql`
-          SELECT id FROM sales_reps WHERE user_id = ${req.user!.id} AND is_active = true LIMIT 1
+        // Regular users get their own commissions - query directly by user ID
+        const result = await db.execute(sql`
+          SELECT 
+            c.id,
+            c.hubspot_invoice_id,
+            c.sales_rep_id,
+            c.type as commission_type,
+            c.amount,
+            c.status,
+            c.month_number,
+            c.service_type,
+            c.date_earned,
+            c.created_at,
+            c.notes,
+            COALESCE(hi.company_name, 'Unknown Company') as company_name,
+            CONCAT(u.first_name, ' ', u.last_name) as sales_rep_name,
+            string_agg(DISTINCT hil.name, ', ') as service_names
+          FROM commissions c
+          LEFT JOIN hubspot_invoices hi ON c.hubspot_invoice_id = hi.id
+          LEFT JOIN users u ON c.sales_rep_id = u.id
+          LEFT JOIN hubspot_invoice_line_items hil ON hi.id = hil.invoice_id
+          WHERE c.sales_rep_id = ${req.user!.id}
+          GROUP BY c.id, c.hubspot_invoice_id, c.sales_rep_id, c.type, c.amount, c.status, 
+                   c.month_number, c.service_type, c.date_earned, c.created_at, c.notes,
+                   hi.company_name, u.first_name, u.last_name
+          ORDER BY c.created_at DESC
         `);
-        
-        if (salesRepResult.rows.length > 0) {
-          const userSalesRepId = (salesRepResult.rows[0] as any).id;
-          const result = await db.execute(sql`
-            SELECT 
-              id,
-              deal_id,
-              sales_rep_id,
-              commission_type,
-              commission_amount,
-              is_paid,
-              paid_at,
-              month_number,
-              created_at,
-              rate,
-              base_amount
-            FROM commissions 
-            WHERE sales_rep_id = ${userSalesRepId}
-            ORDER BY created_at DESC
-          `);
-          commissionsData = result.rows;
-        }
+        commissionsData = result.rows;
       }
       
       // Group commissions by invoice and aggregate totals
