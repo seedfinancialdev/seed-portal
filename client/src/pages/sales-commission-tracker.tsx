@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
+import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -126,7 +127,27 @@ export function SalesCommissionTracker() {
   const { user } = useAuth();
   const [location, navigate] = useLocation();
 
+  // Helper function to get current period dates (13th to 12th)
+  const getCurrentPeriod = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-based (0 = January, 7 = August)
+    const currentYear = now.getFullYear();
+    
+    // Commission period runs from 14th of previous month to 13th of current month
+    // Payment date is 15th of current month
+    const periodStart = new Date(currentYear, currentMonth - 1, 14);
+    const periodEnd = new Date(currentYear, currentMonth, 13);
+    const paymentDate = new Date(currentYear, currentMonth, 15);
+    
+    return {
+      periodStart: periodStart.toISOString().split('T')[0],
+      periodEnd: periodEnd.toISOString().split('T')[0], 
+      paymentDate: paymentDate.toISOString().split('T')[0]
+    };
+  };
+
   // State
+  const [currentPeriod] = useState(getCurrentPeriod());
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [monthlyBonuses, setMonthlyBonuses] = useState<MonthlyBonus[]>([]);
@@ -139,6 +160,39 @@ export function SalesCommissionTracker() {
     projectedEarnings: 0
   });
 
+  // Fetch real commission data from API
+  const { data: liveCommissions = [], isLoading: commissionsLoading } = useQuery({
+    queryKey: ['/api/commissions'],
+    queryFn: async () => {
+      console.log('🔄 Fetching commissions for user:', user?.email);
+      const response = await fetch('/api/commissions?v=' + Date.now(), {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      if (!response.ok) {
+        console.error('Commissions API error:', response.status, response.statusText);
+        throw new Error('Failed to fetch commissions');
+      }
+      const data = await response.json();
+      console.log('📥 Raw commissions API response:', data);
+      return data;
+    }
+  });
+
+  const { data: liveDeals = [], isLoading: dealsLoading } = useQuery({
+    queryKey: ['/api/deals'],
+    queryFn: async () => {
+      const response = await fetch('/api/deals');
+      if (!response.ok) throw new Error('Failed to fetch deals');
+      return response.json();
+    }
+  });
+
   // Dialog states
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [commissionHistoryModalOpen, setCommissionHistoryModalOpen] = useState(false);
@@ -146,143 +200,103 @@ export function SalesCommissionTracker() {
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
 
-  // Load sample data
+  // Process real API data
   useEffect(() => {
-    const userEmail = user?.email || '';
-    const userName = user?.firstName + ' ' + user?.lastName || 'Sales Rep';
+    if (liveCommissions.length > 0 && user) {
+      const userEmail = user.email || '';
+      const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      
+      console.log('🔍 Filtering commissions for user:', userName, userEmail);
+      
+      // Transform API data to match component interface and filter for current user
+      const transformedCommissions: Commission[] = liveCommissions
+        .filter(invoice => {
+          // Filter by sales rep name or email
+          const matchesUser = invoice.salesRep === userName || 
+                             invoice.salesRep === user.firstName + ' ' + user.lastName ||
+                             invoice.salesRep?.toLowerCase().includes(user.firstName?.toLowerCase() || '') ||
+                             invoice.salesRep?.toLowerCase().includes(user.lastName?.toLowerCase() || '');
+          return matchesUser;
+        })
+        .map(invoice => ({
+          id: invoice.id?.toString() || 'unknown',
+          dealId: invoice.dealId?.toString() || invoice.id?.toString() || 'unknown',
+          dealName: invoice.companyName || 'Unknown',
+          companyName: invoice.companyName || 'Unknown Company',
+          serviceType: invoice.serviceType || 'bookkeeping',
+          type: invoice.type === 'First Month' ? 'month_1' as const : 'residual' as const,
+          monthNumber: invoice.monthNumber || 1,
+          // Extract amount from the API response structure - use the main amount field which is the total commission
+          amount: parseFloat(invoice.amount?.toString() || '0'),
+          status: (invoice.status || 'pending').toLowerCase() as 'pending' | 'approved' | 'paid' | 'disputed',
+          dateEarned: invoice.dateEarned || invoice.invoiceDate || new Date().toISOString().split('T')[0],
+          datePaid: invoice.datePaid || undefined,
+          salesRep: invoice.salesRep || userName
+        }));
+      
+      console.log('📊 Filtered commissions for user:', transformedCommissions);
+      setCommissions(transformedCommissions);
+      
+      // Calculate real metrics based on filtered data
+      const totalCommissions = transformedCommissions.reduce((sum, c) => sum + c.amount, 0);
+      
+      const currentPeriodCommissions = transformedCommissions
+        .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+        .reduce((sum, c) => sum + c.amount, 0);
+      
+      const pendingCommissions = transformedCommissions
+        .filter(c => c.status === 'pending')
+        .reduce((sum, c) => sum + c.amount, 0);
+      
+      // Count unique clients closed this period for bonuses
+      const currentPeriodClients = new Set(
+        transformedCommissions
+          .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+          .map(c => c.companyName)
+      ).size;
+      
+      // Count total clients all time
+      const totalClientsAllTime = new Set(transformedCommissions.map(c => c.companyName)).size;
+      
+      setSalesRepStats({
+        totalCommissionsEarned: totalCommissions,
+        totalClientsClosedMonthly: currentPeriodClients,
+        totalClientsClosedAllTime: totalClientsAllTime,
+        currentPeriodCommissions: currentPeriodCommissions,
+        projectedEarnings: pendingCommissions // Use pending commissions as projected earnings
+      });
+    }
+  }, [liveCommissions, user, currentPeriod]);
 
-    // Sample data filtered for current user
-    const sampleCommissions: Commission[] = [
-      {
-        id: 'comm-1',
-        dealId: 'deal-1',
-        dealName: 'Bookkeeping Setup',
-        companyName: 'Tech Startup LLC',
-        serviceType: 'bookkeeping',
-        type: 'month_1',
-        monthNumber: 1,
-        amount: 2400,
-        status: 'approved',
-        dateEarned: '2025-01-15'
-      },
-      {
-        id: 'comm-2',
-        dealId: 'deal-2',
-        dealName: 'TaaS Implementation',
-        companyName: 'Growth Co',
-        serviceType: 'taas',
-        type: 'month_1',
-        monthNumber: 1,
-        amount: 3200,
-        status: 'pending',
-        dateEarned: '2025-01-20'
-      },
-      {
-        id: 'comm-3',
-        dealId: 'deal-1',
-        dealName: 'Bookkeeping Setup',
-        companyName: 'Tech Startup LLC',
-        serviceType: 'bookkeeping',
-        type: 'residual',
-        monthNumber: 2,
-        amount: 450,
-        status: 'paid',
-        dateEarned: '2025-02-01',
-        datePaid: '2025-02-15'
-      },
-      {
-        id: 'comm-4',
-        dealId: 'deal-3',
-        dealName: 'Payroll Setup',
-        companyName: 'Local Restaurant',
-        serviceType: 'payroll',
-        type: 'month_1',
-        monthNumber: 1,
-        amount: 1800,
-        status: 'approved',
-        dateEarned: '2025-01-28'
-      }
-    ];
-
-    const sampleDeals: Deal[] = [
-      {
-        id: 'deal-1',
-        dealName: 'Bookkeeping Setup',
-        companyName: 'Tech Startup LLC',
-        serviceType: 'bookkeeping',
-        amount: 12000,
-        setupFee: 2000,
-        monthlyFee: 1000,
-        status: 'closed_won',
-        closedDate: '2025-01-15'
-      },
-      {
-        id: 'deal-2',
-        dealName: 'TaaS Implementation',
-        companyName: 'Growth Co',
-        serviceType: 'taas',
-        amount: 16000,
-        setupFee: 3000,
-        monthlyFee: 1300,
-        status: 'closed_won',
-        closedDate: '2025-01-20'
-      },
-      {
-        id: 'deal-3',
-        dealName: 'Payroll Setup',
-        companyName: 'Local Restaurant',
-        serviceType: 'payroll',
-        amount: 9000,
-        setupFee: 1500,
-        monthlyFee: 750,
-        status: 'closed_won',
-        closedDate: '2025-01-28'
-      }
-    ];
-
-    const sampleMonthlyBonuses: MonthlyBonus[] = [
-      {
-        id: 'mb-1',
-        month: 'January 2025',
-        clientsClosedCount: 12,
-        bonusType: 'cash',
-        bonusAmount: 1000,
-        status: 'approved',
-        dateEarned: '2025-01-31'
-      }
-    ];
-
-    const sampleMilestoneBonuses: MilestoneBonus[] = [
-      {
-        id: 'msb-1',
-        milestone: 40,
-        bonusAmount: 5000,
-        includesEquity: false,
-        status: 'paid',
-        dateEarned: '2024-12-15',
-        datePaid: '2025-01-15'
-      }
-    ];
-
-    setCommissions(sampleCommissions);
-    setDeals(sampleDeals);
-    setMonthlyBonuses(sampleMonthlyBonuses);
-    setMilestoneBonuses(sampleMilestoneBonuses);
-
-    // Calculate stats
-    const totalCommissions = sampleCommissions.reduce((sum, c) => sum + c.amount, 0);
-    const currentPeriodCommissions = sampleCommissions
-      .filter(c => c.dateEarned >= '2025-01-14' && c.dateEarned <= '2025-02-13')
-      .reduce((sum, c) => sum + c.amount, 0);
-    
-    setSalesRepStats({
-      totalCommissionsEarned: totalCommissions,
-      totalClientsClosedMonthly: 12,
-      totalClientsClosedAllTime: 45,
-      currentPeriodCommissions,
-      projectedEarnings: 2500
-    });
-  }, [user]);
+  // Process deals data
+  useEffect(() => {
+    if (liveDeals.length > 0 && user) {
+      const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      
+      // Transform API data to match component interface and filter for current user
+      const transformedDeals: Deal[] = liveDeals
+        .filter(deal => {
+          const matchesUser = deal.sales_rep_name === userName || 
+                             deal.sales_rep_name?.toLowerCase().includes(user.firstName?.toLowerCase() || '') ||
+                             deal.sales_rep_name?.toLowerCase().includes(user.lastName?.toLowerCase() || '');
+          return matchesUser;
+        })
+        .map(deal => ({
+          id: deal.id.toString(),
+          dealName: deal.deal_name || deal.name || 'Untitled Deal',
+          companyName: deal.company_name || 'Unknown Company',
+          serviceType: deal.service_type || 'bookkeeping',
+          amount: deal.amount || 0,
+          setupFee: deal.setup_fee || 0,
+          monthlyFee: deal.monthly_fee || 0,
+          status: deal.status || 'open' as 'closed_won' | 'closed_lost' | 'open',
+          closedDate: deal.closed_date || new Date().toISOString().split('T')[0]
+        }));
+      
+      console.log('📊 Filtered deals for user:', transformedDeals);
+      setDeals(transformedDeals);
+    }
+  }, [liveDeals, user]);
 
   // Helper functions
   const getStatusBadge = (status: string) => {
@@ -364,10 +378,16 @@ export function SalesCommissionTracker() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Current Period</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ${salesRepStats.currentPeriodCommissions.toLocaleString()}
+                  {commissionsLoading ? (
+                    <div className="text-2xl font-bold text-blue-600">Loading...</div>
+                  ) : (
+                    <p className="text-2xl font-bold text-blue-600">
+                      ${(salesRepStats.currentPeriodCommissions || 0).toLocaleString()}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    {new Date(currentPeriod.periodStart).toLocaleDateString()} - {new Date(currentPeriod.periodEnd).toLocaleDateString()}
                   </p>
-                  <p className="text-xs text-gray-500">Jan 14 - Feb 13</p>
                 </div>
                 <Calendar className="h-8 w-8 text-blue-600" />
               </div>
@@ -379,9 +399,13 @@ export function SalesCommissionTracker() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Earnings</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ${totalEarnings.totalEarnings.toLocaleString()}
-                  </p>
+                  {commissionsLoading ? (
+                    <div className="text-2xl font-bold text-green-600">Loading...</div>
+                  ) : (
+                    <p className="text-2xl font-bold text-green-600">
+                      ${(salesRepStats.totalCommissionsEarned || 0).toLocaleString()}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500">All time</p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-600" />
@@ -394,9 +418,13 @@ export function SalesCommissionTracker() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Pending Approval</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    ${commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + c.amount, 0).toLocaleString()}
-                  </p>
+                  {commissionsLoading ? (
+                    <div className="text-2xl font-bold text-orange-600">Loading...</div>
+                  ) : (
+                    <p className="text-2xl font-bold text-orange-600">
+                      ${commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString()}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500">
                     {commissions.filter(c => c.status === 'pending').length} items
                   </p>
@@ -411,10 +439,14 @@ export function SalesCommissionTracker() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Projected Earnings</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    ${salesRepStats.projectedEarnings.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500">Next period</p>
+                  {commissionsLoading ? (
+                    <div className="text-2xl font-bold text-purple-600">Loading...</div>
+                  ) : (
+                    <p className="text-2xl font-bold text-purple-600">
+                      ${(salesRepStats.projectedEarnings || 0).toLocaleString()}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500">Pending commissions</p>
                 </div>
                 <TrendingUp className="h-8 w-8 text-purple-600" />
               </div>
