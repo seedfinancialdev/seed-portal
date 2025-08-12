@@ -3396,6 +3396,46 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  // Pipeline configuration debug endpoint
+  app.get("/api/debug-pipelines", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      console.log('🔍 DEBUG: Fetching pipeline configuration...');
+
+      // Initialize HubSpot client
+      const hubspotClient = new Client({
+        accessToken: process.env.HUBSPOT_ACCESS_TOKEN
+      });
+
+      const pipelinesResponse = await hubspotClient.crm.pipelines.pipelinesApi.getAll('deals');
+      console.log('🔍 DEBUG: Found deal pipelines:', pipelinesResponse.results.length);
+      
+      const pipelineDetails = pipelinesResponse.results.map(pipeline => ({
+        id: pipeline.id,
+        label: pipeline.label,
+        stages: pipeline.stages.map(stage => ({
+          id: stage.id,
+          label: stage.label,
+          displayOrder: stage.displayOrder
+        }))
+      }));
+
+      console.log('🔍 ALL PIPELINE DETAILS:', JSON.stringify(pipelineDetails, null, 2));
+      
+      res.json(pipelineDetails);
+    } catch (error: any) {
+      console.error('Pipeline debug error:', error);
+      res.status(500).json({ 
+        status: 'error', 
+        message: 'Failed to fetch pipeline configuration',
+        error: error.message 
+      });
+    }
+  });
+
   // Pipeline projections endpoint - real-time HubSpot data
   app.get("/api/pipeline-projections", requireAuth, async (req, res) => {
     try {
@@ -3411,6 +3451,32 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       }
 
       const hubspotClient = new Client({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
+      
+      // First, let's get the actual pipeline configuration to understand your deal stages
+      console.log('🏗️ Fetching deal pipelines from HubSpot...');
+      let pipelineStages = {};
+      try {
+        const pipelinesResponse = await hubspotClient.crm.pipelines.pipelinesApi.getAll('deals');
+        console.log('📈 Found deal pipelines:', pipelinesResponse.results.length);
+        
+        // Extract all stages with their names and specifically look for Seel Sales Pipeline
+        pipelinesResponse.results.forEach(pipeline => {
+          console.log(`🔀 Pipeline: ${pipeline.label} (ID: ${pipeline.id})`);
+          pipeline.stages.forEach(stage => {
+            pipelineStages[stage.id] = {
+              name: stage.label,
+              pipelineName: pipeline.label,
+              displayOrder: stage.displayOrder
+            };
+            console.log(`  📍 Stage: ${stage.label} (ID: ${stage.id})`);
+          });
+        });
+        
+        console.log('🎯 ALL PIPELINE STAGES MAPPED:', JSON.stringify(pipelineStages, null, 2));
+      } catch (error) {
+        console.error('⚠️ Could not fetch pipeline stages:', error.message);
+        // Continue with deal fetching even if pipeline fetch fails
+      }
       
       // Fetch deals that are not closed (won or lost)
       console.log('📋 Fetching deals from HubSpot...');
@@ -3928,17 +3994,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         console.log(`💰 Deal "${properties.dealname}" projected commission: $${projectedCommission}`);
         console.log(`📋 Deal details: ID=${deal.id}, Company=${companyName}, SalesRep=${salesRep}, ServiceType=${serviceType}`);
         
-        // Map deal stage ID to readable name
-        const stageMap = {
-          '1108547148': 'Appointment Scheduled',
-          '1108547149': 'Qualified to Buy',
-          '1108547150': 'Presentation Scheduled',
-          '1108547151': 'Decision Maker Bought-In',
-          '1108547152': 'Contract Sent',
-          '1108547153': 'Closed Won',
-          '1108547154': 'Closed Lost'
-        };
-        const dealStageName = stageMap[properties.dealstage] || properties.dealstage || 'Unknown Stage';
+        // Use the actual stage name from the fetched pipeline configuration
+        const stageInfo = pipelineStages[properties.dealstage];
+        const dealStageName = stageInfo ? stageInfo.name : properties.dealstage || 'Unknown Stage';
         
         // For now, include ALL open deals to see what data we have
         // if (projectedCommission > 0) {
