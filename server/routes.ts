@@ -3575,28 +3575,142 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                 serviceType = [...new Set(services)].join(' + '); // Remove duplicates and join
               }
             } else {
-              console.log(`⚠️ Quote ${quoteId} has no line items, using deal name fallback`);
-              // Fallback to deal name analysis if no line items
+              console.log(`⚠️ Quote ${quoteId} has no line items, using deal amount with commission logic`);
+              // Fallback: use deal amount with proper commission calculation logic
+              const dealAmount = parseFloat(properties.amount || 0);
+              if (dealAmount > 0) {
+                const itemName = dealName.toLowerCase();
+                
+                // Apply EXACT same commission logic as Commission Tracking table
+                let commission = 0;
+                let commissionType = '';
+                
+                if (itemName.includes('setup') || itemName.includes('implementation')) {
+                  commission = dealAmount * 0.20;
+                  commissionType = 'setup_commission';
+                  setupCommission += commission;
+                } else if (itemName.includes('cleanup') || itemName.includes('clean up')) {
+                  commission = dealAmount * 0.20;
+                  commissionType = 'cleanup_commission';
+                  setupCommission += commission;
+                } else if (itemName.includes('prior year') || itemName.includes('catch up')) {
+                  commission = dealAmount * 0.20;
+                  commissionType = 'prior_years_commission';
+                  setupCommission += commission;
+                } else {
+                  // Default to month 1 recurring (40% for month 1)
+                  commission = dealAmount * 0.40;
+                  commissionType = 'month_1_commission';
+                  monthlyCommission += commission;
+                }
+                
+                console.log(`💰 Deal fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal)`);
+              }
+              
+              // Set service type from deal name
               const dealNameLower = dealName.toLowerCase();
-              if (dealNameLower.includes('bookkeeping')) serviceType = 'bookkeeping';
-              if (dealNameLower.includes('taas')) serviceType = 'taas';
-              if (dealNameLower.includes('payroll')) serviceType = 'payroll';
+              let services = [];
+              if (dealNameLower.includes('bookkeeping')) services.push('bookkeeping');
+              if (dealNameLower.includes('taas')) services.push('taas');
+              if (dealNameLower.includes('payroll')) services.push('payroll');
+              if (dealNameLower.includes('ap/ar')) services.push('ap/ar');
+              if (dealNameLower.includes('fp&a')) services.push('fp&a');
+              
+              if (services.length > 0) {
+                serviceType = services.join(' + ');
+              }
             }
           } catch (quoteError) {
             console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
-            // Fallback to deal name analysis
+            // Fallback: use deal amount with proper commission calculation logic
+            const dealAmount = parseFloat(properties.amount || 0);
+            if (dealAmount > 0) {
+              const itemName = dealName.toLowerCase();
+              
+              // Apply EXACT same commission logic as Commission Tracking table
+              let commission = 0;
+              let commissionType = '';
+              
+              if (itemName.includes('setup') || itemName.includes('implementation')) {
+                commission = dealAmount * 0.20;
+                commissionType = 'setup_commission';
+                setupCommission += commission;
+              } else if (itemName.includes('cleanup') || itemName.includes('clean up')) {
+                commission = dealAmount * 0.20;
+                commissionType = 'cleanup_commission';
+                setupCommission += commission;
+              } else if (itemName.includes('prior year') || itemName.includes('catch up')) {
+                commission = dealAmount * 0.20;
+                commissionType = 'prior_years_commission';
+                setupCommission += commission;
+              } else {
+                // Default to month 1 recurring (40% for month 1)
+                commission = dealAmount * 0.40;
+                commissionType = 'month_1_commission';
+                monthlyCommission += commission;
+              }
+              
+              console.log(`💰 Quote error fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal)`);
+            }
+            
+            // Set service type from deal name
             const dealNameLower = dealName.toLowerCase();
-            if (dealNameLower.includes('bookkeeping')) serviceType = 'bookkeeping';
-            if (dealNameLower.includes('taas')) serviceType = 'taas';
-            if (dealNameLower.includes('payroll')) serviceType = 'payroll';
+            let services = [];
+            if (dealNameLower.includes('bookkeeping')) services.push('bookkeeping');
+            if (dealNameLower.includes('taas')) services.push('taas');
+            if (dealNameLower.includes('payroll')) services.push('payroll');
+            if (dealNameLower.includes('ap/ar')) services.push('ap/ar');
+            if (dealNameLower.includes('fp&a')) services.push('fp&a');
+            
+            if (services.length > 0) {
+              serviceType = services.join(' + ');
+            }
           }
         } else {
-          console.log(`⚠️ Deal ${deal.id} has no quotes, using deal name fallback`);
-          // Fallback to deal name analysis if no quotes
+          console.log(`⚠️ Deal ${deal.id} has no quotes, using deal amount fallback`);
+          // Fallback: use deal amount with proper commission calculation logic
+          const dealAmount = parseFloat(properties.amount || 0);
+          if (dealAmount > 0) {
+            const itemName = dealName.toLowerCase();
+            
+            // Apply EXACT same commission logic as Commission Tracking table
+            let commission = 0;
+            let commissionType = '';
+            
+            if (itemName.includes('setup') || itemName.includes('implementation')) {
+              commission = dealAmount * 0.20;
+              commissionType = 'setup_commission';
+              setupCommission += commission;
+            } else if (itemName.includes('cleanup') || itemName.includes('clean up')) {
+              commission = dealAmount * 0.20;
+              commissionType = 'cleanup_commission';
+              setupCommission += commission;
+            } else if (itemName.includes('prior year') || itemName.includes('catch up')) {
+              commission = dealAmount * 0.20;
+              commissionType = 'prior_years_commission';
+              setupCommission += commission;
+            } else {
+              // Default to month 1 recurring (40% for month 1)
+              commission = dealAmount * 0.40;
+              commissionType = 'month_1_commission';
+              monthlyCommission += commission;
+            }
+            
+            console.log(`💰 No quotes fallback commission: ${commissionType} = $${commission} (from $${dealAmount} deal)`);
+          }
+          
+          // Set service type from deal name
           const dealNameLower = dealName.toLowerCase();
-          if (dealNameLower.includes('bookkeeping')) serviceType = 'bookkeeping';
-          if (dealNameLower.includes('taas')) serviceType = 'taas';
-          if (dealNameLower.includes('payroll')) serviceType = 'payroll';
+          let services = [];
+          if (dealNameLower.includes('bookkeeping')) services.push('bookkeeping');
+          if (dealNameLower.includes('taas')) services.push('taas');
+          if (dealNameLower.includes('payroll')) services.push('payroll');
+          if (dealNameLower.includes('ap/ar')) services.push('ap/ar');
+          if (dealNameLower.includes('fp&a')) services.push('fp&a');
+          
+          if (services.length > 0) {
+            serviceType = services.join(' + ');
+          }
         }
 
         // Determine service type from deal name (same logic as Commission Tracking)
