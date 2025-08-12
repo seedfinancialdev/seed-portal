@@ -3432,6 +3432,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
       console.log(`📊 Found ${dealsResponse.results.length} total deals from HubSpot`);
 
+      // Log all unique deal stages to identify closed stages
+      const allStages = [...new Set(dealsResponse.results.map(deal => deal.properties.dealstage))];
+      console.log(`🎯 All deal stages found:`, allStages);
+
       const pipelineDeals = [];
       
       for (const deal of dealsResponse.results) {
@@ -3439,9 +3443,13 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         
         console.log(`🔍 Processing deal ${deal.id}: "${properties.dealname}", stage: ${properties.dealstage}`);
         
-        // Skip closed deals
-        if (properties.dealstage === 'closedwon' || properties.dealstage === 'closedlost') {
-          console.log(`⏭️ Skipping closed deal: ${properties.dealname}`);
+        // Skip closed deals - HubSpot uses numeric stage IDs
+        // Need to identify the actual closed won/lost stage IDs from HubSpot
+        const closedWonStages = ['closedwon', '1108547154']; // Common closed won stage IDs
+        const closedLostStages = ['closedlost', '1108547155']; // Common closed lost stage IDs
+        
+        if (closedWonStages.includes(properties.dealstage) || closedLostStages.includes(properties.dealstage)) {
+          console.log(`⏭️ Skipping closed deal (stage: ${properties.dealstage}): ${properties.dealname}`);
           continue;
         }
 
