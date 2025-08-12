@@ -195,13 +195,22 @@ export function AdminCommissionTracker() {
   }
 
   // Fetch real commission data from API
-  const { data: liveCommissions = [], isLoading: commissionsLoading } = useQuery({
-    queryKey: ['/api/commissions'],
+  const { data: liveCommissions = [], isLoading: commissionsLoading, refetch: refetchCommissions } = useQuery({
+    queryKey: ['/api/commissions', Date.now()],
     queryFn: async () => {
-      const response = await fetch('/api/commissions');
+      const response = await fetch('/api/commissions', {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!response.ok) throw new Error('Failed to fetch commissions');
-      return response.json();
-    }
+      const data = await response.json();
+      console.log('📥 Raw API response:', data);
+      return data;
+    },
+    staleTime: 0,
+    cacheTime: 0
   });
 
   const { data: liveSalesReps = [], isLoading: salesRepsLoading } = useQuery({
@@ -228,19 +237,20 @@ export function AdminCommissionTracker() {
       // Transform API data to match component interface
       const transformedCommissions: Commission[] = liveCommissions.map(comm => ({
         id: comm.id.toString(),
-        dealId: comm.hubspot_invoice_id?.toString() || comm.id.toString(),
-        dealName: comm.company_name || 'Unknown Company',
-        companyName: comm.company_name || 'Unknown Company',
-        salesRep: comm.sales_rep_name || 'Unknown Rep',
-        serviceType: comm.service_names || comm.service_type || 'bookkeeping',
-        type: comm.commission_type || comm.type || 'monthly',
-        monthNumber: comm.month_number || 1,
+        dealId: comm.dealId?.toString() || comm.id.toString(),
+        dealName: comm.dealName || comm.companyName || 'Unknown Company',
+        companyName: comm.companyName || 'Unknown Company',
+        salesRep: comm.salesRep || 'Unknown Rep',
+        serviceType: comm.serviceType || 'bookkeeping',
+        type: comm.type === 'setup' ? 'setup' : comm.type === 'month_1' ? 'month_1' : 'residual',
+        monthNumber: comm.monthNumber || 1,
         amount: comm.amount || 0,
         status: comm.status === 'paid' ? 'approved' : 'pending',
-        dateEarned: comm.date_earned ? comm.date_earned.split('T')[0] : new Date().toISOString().split('T')[0],
-        hubspotDealId: comm.hubspot_invoice_id
+        dateEarned: comm.dateEarned || new Date().toISOString().split('T')[0],
+        hubspotDealId: comm.hubspotDealId
       }));
       setCommissions(transformedCommissions);
+      console.log('📊 Transformed commissions:', transformedCommissions);
     }
   }, [liveCommissions]);
 
@@ -504,7 +514,7 @@ export function AdminCommissionTracker() {
         alert(`HubSpot sync completed successfully!\n\nResults:\n- Sales reps: ${result.results.salesRepsProcessed}\n- Invoices: ${result.results.invoicesProcessed}\n- Deals: ${result.results.dealsProcessed}\n- Commissions: ${result.results.commissionsCreated}`);
         
         // Refresh all data after sync
-        window.location.reload();
+        await refetchCommissions();
       } else {
         const error = await response.json();
         console.error('HubSpot sync failed:', error);
