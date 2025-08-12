@@ -3134,24 +3134,48 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         }
       }
       
-      // Transform commission data for frontend
-      const commissionsWithDetails = commissionsData.map((comm: any) => {
-        return {
-          id: comm.id,
-          dealId: comm.hubspot_invoice_id || comm.id,
-          dealName: comm.service_names || `Commission ${comm.id}`,
-          companyName: comm.company_name || 'Unknown Company',
-          salesRep: comm.sales_rep_name || 'Unknown Rep',
-          serviceType: comm.service_type || 'bookkeeping',
-          type: comm.commission_type || 'month_1',
-          monthNumber: comm.month_number || 1,
-          amount: parseFloat((comm.amount || 0).toString()),
-          status: comm.status || 'paid',
-          dateEarned: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : new Date(comm.created_at).toISOString().split('T')[0],
-          datePaid: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : null,
-          hubspotDealId: comm.hubspot_invoice_id
-        };
+      // Group commissions by invoice and aggregate totals
+      const invoiceGroups = new Map();
+      
+      commissionsData.forEach((comm: any) => {
+        const invoiceId = comm.hubspot_invoice_id;
+        
+        if (!invoiceGroups.has(invoiceId)) {
+          invoiceGroups.set(invoiceId, {
+            id: invoiceId,
+            dealId: invoiceId,
+            dealName: comm.service_names || `Invoice ${invoiceId}`,
+            companyName: comm.company_name || 'Unknown Company',
+            salesRep: comm.sales_rep_name || 'Unknown Rep',
+            serviceType: 'mixed',
+            type: 'total',
+            monthNumber: 1,
+            amount: 0,
+            status: comm.status || 'paid',
+            dateEarned: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : new Date(comm.created_at).toISOString().split('T')[0],
+            datePaid: comm.date_earned ? new Date(comm.date_earned).toISOString().split('T')[0] : null,
+            hubspotDealId: invoiceId,
+            setupAmount: 0,
+            month1Amount: 0,
+            residualAmount: 0
+          });
+        }
+        
+        const invoice = invoiceGroups.get(invoiceId);
+        const amount = parseFloat((comm.amount || 0).toString());
+        invoice.amount += amount;
+        
+        // Track breakdown by commission type
+        if (comm.commission_type === 'setup') {
+          invoice.setupAmount += amount;
+        } else if (comm.commission_type === 'month_1') {
+          invoice.month1Amount += amount;
+        } else {
+          invoice.residualAmount += amount;
+        }
       });
+      
+      const commissionsWithDetails = Array.from(invoiceGroups.values());
       
       console.log(`📊 Returning ${commissionsWithDetails.length} commissions to frontend`);
       console.log('Commission sample:', JSON.stringify(commissionsWithDetails[0], null, 2));

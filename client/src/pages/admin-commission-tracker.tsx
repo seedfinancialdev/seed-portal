@@ -196,21 +196,14 @@ export function AdminCommissionTracker() {
 
   // Fetch real commission data from API
   const { data: liveCommissions = [], isLoading: commissionsLoading, refetch: refetchCommissions } = useQuery({
-    queryKey: ['/api/commissions', Date.now()],
+    queryKey: ['/api/commissions'],
     queryFn: async () => {
-      const response = await fetch('/api/commissions', {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
+      const response = await fetch('/api/commissions');
       if (!response.ok) throw new Error('Failed to fetch commissions');
       const data = await response.json();
       console.log('📥 Raw API response:', data);
       return data;
-    },
-    staleTime: 0,
-    cacheTime: 0
+    }
   });
 
   const { data: liveSalesReps = [], isLoading: salesRepsLoading } = useQuery({
@@ -235,22 +228,27 @@ export function AdminCommissionTracker() {
   useEffect(() => {
     if (liveCommissions.length > 0) {
       // Transform API data to match component interface
-      const transformedCommissions: Commission[] = liveCommissions.map(comm => ({
-        id: comm.id.toString(),
-        dealId: comm.dealId?.toString() || comm.id.toString(),
-        dealName: comm.dealName || comm.companyName || 'Unknown Company',
-        companyName: comm.companyName || 'Unknown Company',
-        salesRep: comm.salesRep || 'Unknown Rep',
-        serviceType: comm.serviceType || 'bookkeeping',
-        type: comm.type === 'setup' ? 'setup' : comm.type === 'month_1' ? 'month_1' : 'residual',
-        monthNumber: comm.monthNumber || 1,
-        amount: comm.amount || 0,
-        status: comm.status === 'paid' ? 'approved' : 'pending',
-        dateEarned: comm.dateEarned || new Date().toISOString().split('T')[0],
-        hubspotDealId: comm.hubspotDealId
+      const transformedCommissions: Commission[] = liveCommissions.map(invoice => ({
+        id: invoice.id.toString(),
+        dealId: invoice.dealId?.toString() || invoice.id.toString(),
+        dealName: `${invoice.companyName} - Total Commission`,
+        companyName: invoice.companyName || 'Unknown Company',
+        salesRep: invoice.salesRep || 'Unknown Rep',
+        serviceType: invoice.serviceType || 'mixed',
+        type: 'total' as any,
+        monthNumber: 1,
+        amount: invoice.amount || 0,
+        status: invoice.status === 'paid' ? 'approved' : 'pending',
+        dateEarned: invoice.dateEarned || new Date().toISOString().split('T')[0],
+        hubspotDealId: invoice.hubspotDealId,
+        breakdown: {
+          setup: invoice.setupAmount || 0,
+          month1: invoice.month1Amount || 0,
+          residual: invoice.residualAmount || 0
+        }
       }));
       setCommissions(transformedCommissions);
-      console.log('📊 Transformed commissions:', transformedCommissions);
+      console.log('📊 Transformed invoice commissions:', transformedCommissions);
     }
   }, [liveCommissions]);
 
