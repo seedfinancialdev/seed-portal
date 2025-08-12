@@ -3479,6 +3479,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         let projectedCommission = 0;
         let serviceType = 'Unknown Service';
 
+        console.log(`🔍 Checking quotes for deal ${deal.id}:`, deal.associations?.quotes?.results?.length || 0, 'quotes found');
+
         if (deal.associations?.quotes?.results?.length > 0) {
           const quoteId = deal.associations.quotes.results[0].id;
           try {
@@ -3490,8 +3492,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
               ['line_items']
             );
 
+            console.log(`📝 Quote ${quoteId} has`, quote.associations?.line_items?.results?.length || 0, 'line items');
+
             if (quote.associations?.line_items?.results?.length > 0) {
               const lineItems = quote.associations.line_items.results;
+              let services = [];
               
               for (const lineItemAssoc of lineItems) {
                 try {
@@ -3506,37 +3511,75 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
                   const totalPrice = price * quantity;
                   const itemName = itemProps.name || '';
                   
-                  // Categorize line items
+                  console.log(`📦 Line item: "${itemName}", Price: $${totalPrice}, Frequency: ${itemProps.recurringbillingfrequency}`);
+                  
+                  // Categorize line items for commissions
                   if (itemName.toLowerCase().includes('setup') || 
                       itemName.toLowerCase().includes('onboarding') ||
                       itemName.toLowerCase().includes('implementation')) {
                     setupCommission += totalPrice * 0.20; // 20% setup commission
+                    console.log(`💰 Setup commission added: $${totalPrice * 0.20}`);
                   } else if (itemProps.recurringbillingfrequency === 'monthly' ||
                            itemName.toLowerCase().includes('monthly') ||
                            itemName.toLowerCase().includes('subscription')) {
                     monthlyCommission += totalPrice * 0.40; // 40% first month commission
+                    console.log(`💰 Monthly commission added: $${totalPrice * 0.40}`);
                   }
 
                   // Build service type description
                   if (itemName.toLowerCase().includes('bookkeeping')) {
-                    serviceType = serviceType === 'Unknown Service' ? 'bookkeeping' : 
-                      serviceType.includes('bookkeeping') ? serviceType : serviceType + ' + bookkeeping';
+                    services.push('bookkeeping');
                   }
                   if (itemName.toLowerCase().includes('payroll')) {
-                    serviceType = serviceType === 'Unknown Service' ? 'payroll' :
-                      serviceType.includes('payroll') ? serviceType : serviceType + ' + payroll';
+                    services.push('payroll');
                   }
                   if (itemName.toLowerCase().includes('tax')) {
-                    serviceType = serviceType === 'Unknown Service' ? 'taas' :
-                      serviceType.includes('taas') ? serviceType : serviceType + ' + taas';
+                    services.push('taas');
                   }
                 } catch (lineItemError) {
-                  console.log('Could not fetch line item:', lineItemAssoc.id);
+                  console.log('Could not fetch line item:', lineItemAssoc.id, lineItemError.message);
                 }
+              }
+              
+              // Set service type based on found services
+              if (services.length > 0) {
+                serviceType = services.join(' + ');
               }
             }
           } catch (quoteError) {
-            console.log('Could not fetch quote for deal:', deal.id);
+            console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
+          }
+        } else {
+          // If no quotes, try to infer from deal name and amount
+          const dealName = properties.dealname || '';
+          const dealAmount = parseFloat(properties.amount || 0);
+          
+          console.log(`📋 No quotes found, inferring from deal name: "${dealName}", amount: $${dealAmount}`);
+          
+          if (dealAmount > 0) {
+            // Estimate commissions based on typical deal structure
+            // Assume 20% is setup and 80% is monthly for commission calculation
+            setupCommission = (dealAmount * 0.20) * 0.20; // 20% of 20% of deal
+            monthlyCommission = (dealAmount * 0.80) * 0.40; // 40% of 80% of deal
+            
+            console.log(`💰 Estimated setup commission: $${setupCommission}`);
+            console.log(`💰 Estimated monthly commission: $${monthlyCommission}`);
+          }
+          
+          // Infer service type from deal name
+          let services = [];
+          if (dealName.toLowerCase().includes('bookkeeping')) {
+            services.push('bookkeeping');
+          }
+          if (dealName.toLowerCase().includes('payroll')) {
+            services.push('payroll');
+          }
+          if (dealName.toLowerCase().includes('tax') || dealName.toLowerCase().includes('taas')) {
+            services.push('taas');
+          }
+          
+          if (services.length > 0) {
+            serviceType = services.join(' + ');
           }
         }
 

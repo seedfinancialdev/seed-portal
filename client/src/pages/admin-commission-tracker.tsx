@@ -1324,7 +1324,7 @@ export function AdminCommissionTracker() {
                           <TableHead>Company</TableHead>
                           <TableHead>Sales Rep</TableHead>
                           <TableHead>Deal Value</TableHead>
-                          <TableHead>Stage / Probability</TableHead>
+                          <TableHead>Stage</TableHead>
                           <TableHead>Projected Commission</TableHead>
                           <TableHead>Setup Commission</TableHead>
                           <TableHead>Monthly Commission</TableHead>
@@ -1367,13 +1367,7 @@ export function AdminCommissionTracker() {
                                   ${(deal.dealValue || 0).toLocaleString()}
                                 </TableCell>
                                 <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                    <div>
-                                      <p className="text-sm font-medium">{deal.dealStage || 'Unknown'}</p>
-                                      <p className="text-xs text-gray-500">{deal.serviceType}</p>
-                                    </div>
-                                  </div>
+                                  <p className="text-sm font-medium">{deal.dealStage || 'Unknown'}</p>
                                 </TableCell>
                                 <TableCell className="font-semibold text-green-600">
                                   ${(deal.projectedCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
