@@ -3742,27 +3742,82 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
               }
             }
             
-            // Final fallback only if no custom pricing found
+            // INTELLIGENT SERVICE PARSING - Extract services from deal names and amounts
             if (!foundCustomPricing) {
-              console.log(`⚠️ Deal ${deal.id} has no line items, products, or custom pricing - using deal amount with EXACT commission logic`);
+              console.log(`🧠 Using intelligent service parsing for deal: "${dealName}"`);
               const dealAmount = parseFloat(properties.amount || 0);
+              
               if (dealAmount > 0) {
-                const syntheticLineItem = {
-                  description: dealName,
-                  quantity: 1,
-                  price: dealAmount
-                };
+                // Parse service types and estimate pricing based on deal name patterns and HubSpot MRR data
+                const mrr = parseFloat(detailedProps.hs_mrr || '0');
+                const arr = parseFloat(detailedProps.hs_arr || '0');
+                const tcv = parseFloat(detailedProps.hs_tcv || '0');
                 
-                const commission = calculateCommissionFromInvoice(syntheticLineItem, dealAmount);
+                console.log(`📊 HubSpot data - MRR: $${mrr}, ARR: $${arr}, TCV: $${tcv}, Deal Amount: $${dealAmount}`);
                 
-                console.log(`💰 Synthetic line item commission: $${commission.amount} (${commission.type})`);
+                // Intelligent service breakdown using MRR and patterns
+                let estimatedSetup = 0;
+                let estimatedMonthly = mrr || 0;
                 
-                if (commission.type === 'setup') {
-                  setupCommission = commission.amount;
-                } else {
-                  monthlyCommission = commission.amount;
+                // Calculate likely setup fee (TCV - ARR = setup costs)
+                if (tcv > arr && arr > 0) {
+                  estimatedSetup = tcv - arr;
                 }
-                projectedCommission = commission.amount;
+                
+                // If no MRR data, estimate from patterns in deal name
+                if (estimatedMonthly === 0 && dealAmount > 0) {
+                  const nameLower = dealName.toLowerCase();
+                  
+                  if (nameLower.includes('bookkeeping') && nameLower.includes('taas')) {
+                    // Combo service: estimate 60% of total for monthly recurring
+                    estimatedMonthly = dealAmount * 0.6;
+                    estimatedSetup = dealAmount * 0.4;
+                  } else if (nameLower.includes('bookkeeping') || nameLower.includes('qbo')) {
+                    // Bookkeeping service: estimate 50-70% monthly
+                    estimatedMonthly = dealAmount * 0.65;
+                    estimatedSetup = dealAmount * 0.35;
+                  } else if (nameLower.includes('taas') || nameLower.includes('tax')) {
+                    // Tax service: typically more setup-heavy
+                    estimatedMonthly = dealAmount * 0.4;
+                    estimatedSetup = dealAmount * 0.6;
+                  } else if (nameLower.includes('clean') || nameLower.includes('catch')) {
+                    // Cleanup projects: mostly setup
+                    estimatedMonthly = dealAmount * 0.3;
+                    estimatedSetup = dealAmount * 0.7;
+                  } else {
+                    // Generic service
+                    estimatedMonthly = dealAmount * 0.5;
+                    estimatedSetup = dealAmount * 0.5;
+                  }
+                }
+                
+                // Apply commission calculations to estimated components
+                if (estimatedSetup > 0) {
+                  const setupLineItem = {
+                    description: `${dealName} - Setup/Implementation`,
+                    quantity: 1,
+                    price: estimatedSetup
+                  };
+                  const setupComm = calculateCommissionFromInvoice(setupLineItem, estimatedSetup);
+                  setupCommission += setupComm.amount;
+                  projectedCommission += setupComm.amount;
+                  console.log(`💰 Estimated setup commission: $${setupComm.amount} (${setupComm.type}) from $${estimatedSetup} setup`);
+                }
+                
+                if (estimatedMonthly > 0) {
+                  const monthlyLineItem = {
+                    description: `${dealName} - Monthly Service`,
+                    quantity: 1,
+                    price: estimatedMonthly
+                  };
+                  const monthlyComm = calculateCommissionFromInvoice(monthlyLineItem, estimatedMonthly);
+                  monthlyCommission += monthlyComm.amount;
+                  projectedCommission += monthlyComm.amount;
+                  console.log(`💰 Estimated monthly commission: $${monthlyComm.amount} (${monthlyComm.type}) from $${estimatedMonthly} monthly`);
+                }
+                
+                console.log(`🎯 INTELLIGENT PARSING RESULT: Setup: $${setupCommission}, Monthly: $${monthlyCommission}, Total: $${projectedCommission}`);
+                
               } else {
                 projectedCommission = 0;
                 setupCommission = 0;
