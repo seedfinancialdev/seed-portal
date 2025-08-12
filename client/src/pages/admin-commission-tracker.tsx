@@ -404,11 +404,11 @@ export function AdminCommissionTracker() {
     return <TrendingDown className="w-4 h-4 text-red-600" />;
   };
 
-  const getBonusTier = (commissionAmount: number) => {
-    if (commissionAmount >= 5000) return { name: 'MacBook Air', target: 5000, color: 'text-purple-600', bgColor: 'bg-purple-50' };
-    if (commissionAmount >= 3000) return { name: 'Apple Watch', target: 3000, color: 'text-blue-600', bgColor: 'bg-blue-50' };
-    if (commissionAmount >= 1500) return { name: 'AirPods Pro', target: 1500, color: 'text-green-600', bgColor: 'bg-green-50' };
-    return { name: 'Cash Bonus', target: 1000, color: 'text-orange-600', bgColor: 'bg-orange-50' };
+  const getMonthlyBonusTier = (clientsClosedThisMonth: number) => {
+    if (clientsClosedThisMonth >= 15) return { name: 'MacBook Air', target: 15, reward: '$1,500', color: 'text-purple-600', bgColor: 'bg-purple-50' };
+    if (clientsClosedThisMonth >= 10) return { name: 'Apple Watch', target: 10, reward: '$1,000', color: 'text-blue-600', bgColor: 'bg-blue-50' };
+    if (clientsClosedThisMonth >= 5) return { name: 'AirPods', target: 5, reward: '$500', color: 'text-green-600', bgColor: 'bg-green-50' };
+    return { name: 'Next Bonus', target: 5, reward: '$500', color: 'text-orange-600', bgColor: 'bg-orange-50' };
   };
 
   const getSalesRepMetrics = (repName: string) => {
@@ -431,7 +431,18 @@ export function AdminCommissionTracker() {
       .filter(d => d.salesRep === repName && d.status === 'open')
       .reduce((sum, d) => sum + d.amount, 0);
 
-    const bonusTier = getBonusTier(currentPeriodCommissions);
+    // Count unique clients closed this month (based on commission records)
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+    const clientsClosedThisMonth = new Set(
+      repCommissions
+        .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+        .map(c => c.companyName)
+    ).size;
+
+    // Get current milestone progress (total clients closed all time)
+    const totalClientsAllTime = new Set(repCommissions.map(c => c.companyName)).size;
+
+    const monthlyBonusTier = getMonthlyBonusTier(clientsClosedThisMonth);
 
     return {
       currentPeriodCommissions,
@@ -439,7 +450,9 @@ export function AdminCommissionTracker() {
       residualCommissions,
       totalCommissions,
       pipelineValue,
-      bonusTier
+      clientsClosedThisMonth,
+      totalClientsAllTime,
+      monthlyBonusTier
     };
   };
 
@@ -946,32 +959,66 @@ export function AdminCommissionTracker() {
                         </div>
                       </div>
                       
-                      {/* Bonus Progress */}
+                      {/* Monthly Bonus Progress */}
                       <div className="space-y-3">
-                        <div className={`p-3 rounded-lg ${metrics.bonusTier.bgColor}`}>
+                        <div className={`p-3 rounded-lg ${metrics.monthlyBonusTier.bgColor}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium flex items-center gap-2">
-                              <span className={metrics.bonusTier.color}>Bonus Progress</span>
-                              <Badge variant="outline" className={`${metrics.bonusTier.color} border-current`}>
-                                {metrics.bonusTier.name}
+                              <span className={metrics.monthlyBonusTier.color}>Monthly Bonus</span>
+                              <Badge variant="outline" className={`${metrics.monthlyBonusTier.color} border-current`}>
+                                {metrics.monthlyBonusTier.name} ({metrics.monthlyBonusTier.reward})
                               </Badge>
                             </span>
                             <span className="text-sm text-gray-500">
-                              {Math.round((metrics.currentPeriodCommissions / metrics.bonusTier.target) * 100)}%
+                              {Math.round((metrics.clientsClosedThisMonth / metrics.monthlyBonusTier.target) * 100)}%
                             </span>
                           </div>
                           <Progress 
-                            value={Math.min((metrics.currentPeriodCommissions / metrics.bonusTier.target) * 100, 100)} 
+                            value={Math.min((metrics.clientsClosedThisMonth / metrics.monthlyBonusTier.target) * 100, 100)} 
                             className="h-3"
                             data-testid={`progress-bonus-${rep.id}`}
                           />
                           <div className="flex items-center justify-between mt-2">
                             <span className="text-xs text-gray-500">
-                              ${metrics.currentPeriodCommissions.toLocaleString()} / ${metrics.bonusTier.target.toLocaleString()}
+                              {metrics.clientsClosedThisMonth} / {metrics.monthlyBonusTier.target} clients
                             </span>
-                            <span className={`text-xs font-medium ${metrics.currentPeriodCommissions >= metrics.bonusTier.target ? 'text-green-600' : 'text-gray-500'}`}>
-                              {metrics.currentPeriodCommissions >= metrics.bonusTier.target ? '🎉 Earned!' : `$${(metrics.bonusTier.target - metrics.currentPeriodCommissions).toLocaleString()} to go`}
+                            <span className={`text-xs font-medium ${metrics.clientsClosedThisMonth >= metrics.monthlyBonusTier.target ? 'text-green-600' : 'text-gray-500'}`}>
+                              {metrics.clientsClosedThisMonth >= metrics.monthlyBonusTier.target ? '🎉 Bonus Earned!' : `${metrics.monthlyBonusTier.target - metrics.clientsClosedThisMonth} more to bonus`}
                             </span>
+                          </div>
+                        </div>
+
+                        {/* Milestone Progress */}
+                        <div className="p-3 rounded-lg bg-gray-50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-700">Milestone Progress</span>
+                            <span className="text-xs text-gray-500">{metrics.totalClientsAllTime} total clients</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className={metrics.totalClientsAllTime >= 25 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                                25 Clients - $1,000
+                              </span>
+                              {metrics.totalClientsAllTime >= 25 && <span className="text-green-600">✓</span>}
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className={metrics.totalClientsAllTime >= 40 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                                40 Clients - $5,000
+                              </span>
+                              {metrics.totalClientsAllTime >= 40 && <span className="text-green-600">✓</span>}
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className={metrics.totalClientsAllTime >= 60 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                                60 Clients - $7,500
+                              </span>
+                              {metrics.totalClientsAllTime >= 60 && <span className="text-green-600">✓</span>}
+                            </div>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className={metrics.totalClientsAllTime >= 100 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                                100 Clients - $10,000 + Equity
+                              </span>
+                              {metrics.totalClientsAllTime >= 100 && <span className="text-green-600">✓</span>}
+                            </div>
                           </div>
                         </div>
                       </div>
