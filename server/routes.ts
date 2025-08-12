@@ -3093,15 +3093,15 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             c.date_earned,
             c.created_at,
             hi.company_name,
-            CONCAT(sr.first_name, ' ', sr.last_name) as sales_rep_name,
+            CONCAT(u.first_name, ' ', u.last_name) as sales_rep_name,
             string_agg(DISTINCT hil.name, ', ') as service_names
           FROM commissions c
           LEFT JOIN hubspot_invoices hi ON c.hubspot_invoice_id = hi.id
-          LEFT JOIN sales_reps sr ON c.sales_rep_id = sr.id
+          LEFT JOIN users u ON c.sales_rep_id = u.id
           LEFT JOIN hubspot_invoice_line_items hil ON hi.id = hil.invoice_id
           GROUP BY c.id, c.hubspot_invoice_id, c.sales_rep_id, c.type, c.amount, c.status, 
                    c.month_number, c.service_type, c.date_earned, c.created_at, 
-                   hi.company_name, sr.first_name, sr.last_name
+                   hi.company_name, u.first_name, u.last_name
           ORDER BY c.created_at DESC
         `);
         commissionsData = result.rows;

@@ -242,18 +242,45 @@ export class HubSpotCommissionSync {
     `);
     
     if (existingInvoice.rows.length === 0) {
-      // Get the first available sales rep ID from database
-      const salesRepResult = await db.execute(sql`
-        SELECT id FROM sales_reps WHERE is_active = true ORDER BY id LIMIT 1
-      `);
+      // Get the actual deal owner from HubSpot deal association
+      let salesRepId = 3; // Jon Walls as fallback
+      let salesRepName = 'Jon Walls';
       
-      if (salesRepResult.rows.length === 0) {
-        console.log(`❌ No active sales reps found, skipping invoice ${invoice.id}`);
-        return;
+      if (invoice.associations && invoice.associations.deals && invoice.associations.deals.results.length > 0) {
+        const dealId = invoice.associations.deals.results[0].id;
+        console.log(`🔍 Fetching deal details for ID: ${dealId}`);
+        
+        try {
+          const dealData = await this.hubspotService.makeRequest(
+            `/crm/v3/objects/deals/${dealId}?properties=dealname,hubspot_owner_id,hs_deal_stage_probability`
+          );
+          
+          if (dealData.properties.hubspot_owner_id) {
+            // Get owner details from HubSpot
+            const ownerData = await this.hubspotService.makeRequest(
+              `/crm/v3/owners/${dealData.properties.hubspot_owner_id}`
+            );
+            
+            // Map HubSpot owner to our sales rep
+            const ownerEmail = ownerData.email?.toLowerCase();
+            if (ownerEmail === 'amanda@seedfinancial.io') {
+              salesRepId = 5;
+              salesRepName = 'Amanda Cooper';
+            } else if (ownerEmail === 'randall@seedfinancial.io') {
+              salesRepId = 4;
+              salesRepName = 'Randall Hall';
+            } else {
+              salesRepId = 3;
+              salesRepName = 'Jon Walls';
+            }
+            console.log(`✅ Deal owner: ${salesRepName} (${ownerEmail})`);
+          }
+        } catch (error) {
+          console.log(`❌ Failed to fetch deal/owner details:`, error);
+        }
       }
       
-      const salesRepId = (salesRepResult.rows[0] as any).id;
-      console.log(`👤 Using sales rep ID ${salesRepId} for invoice ${invoice.id}`);
+      console.log(`👤 Using sales rep: ${salesRepName} (ID: ${salesRepId})`);
       
       // Get real company name from HubSpot associations
       let companyName = `Invoice ${invoice.id}`;  // Default fallback
@@ -339,7 +366,7 @@ export class HubSpotCommissionSync {
       console.log(`✅ Created invoice ${invoice.id} with ${lineItems.length} line items - $${totalAmount}`);
       
       // Generate commissions based on line items
-      await this.generateCommissionsForInvoice(hubspotInvoiceId, salesRepId, lineItems, invoice.properties.hs_createdate);
+      await this.generateCommissionsForInvoice(hubspotInvoiceId, salesRepId, salesRepName, lineItems, invoice.properties.hs_createdate);
       
     } else {
       console.log(`🔄 Invoice ${invoice.id} already exists, skipping`);
@@ -416,11 +443,22 @@ export class HubSpotCommissionSync {
   private determineServiceType(lineItems: any[]): string {
     const services = lineItems.map(item => item.name.toLowerCase());
     
-    if (services.some(s => s.includes('bookkeeping'))) return 'bookkeeping';
-    if (services.some(s => s.includes('tax'))) return 'taas';
-    if (services.some(s => s.includes('payroll'))) return 'payroll';
-    if (services.some(s => s.includes('ap/ar'))) return 'ap_ar_lite';
-    if (services.some(s => s.includes('fp&a') || s.includes('fpa'))) return 'fpa_lite';
+    const hasBookkeeping = services.some(s => 
+      s.includes('bookkeeping') || 
+      s.includes('monthly') || 
+      s.includes('clean') || 
+      s.includes('catch')
+    );
+    
+    const hasTaas = services.some(s => 
+      s.includes('tax as a service') || 
+      s.includes('prior year') || 
+      s.includes('tax service')
+    );
+    
+    if (hasBookkeeping && hasTaas) return 'bookkeeping, taas';
+    if (hasTaas) return 'taas';
+    if (hasBookkeeping) return 'bookkeeping';
     
     return 'bookkeeping'; // default
   }
@@ -440,7 +478,8 @@ export class HubSpotCommissionSync {
    */
   async generateCommissionsForInvoice(
     hubspotInvoiceId: number,
-    salesRepId: number, 
+    salesRepId: number,
+    salesRepName: string,
     lineItems: any[],
     paidDate: string
   ): Promise<void> {
