@@ -3435,6 +3435,14 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       // Log all unique deal stages to identify closed stages
       const allStages = [...new Set(dealsResponse.results.map(deal => deal.properties.dealstage))];
       console.log(`🎯 All deal stages found:`, allStages);
+      
+      // Also get the deal stage names from HubSpot to understand what each stage means
+      const stageInfo = dealsResponse.results.map(deal => ({
+        stageId: deal.properties.dealstage,
+        dealName: deal.properties.dealname,
+        amount: deal.properties.amount
+      }));
+      console.log(`📋 Deal stages with context:`, JSON.stringify(stageInfo.slice(0, 10), null, 2));
 
       const pipelineDeals = [];
       
@@ -3443,13 +3451,24 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         
         console.log(`🔍 Processing deal ${deal.id}: "${properties.dealname}", stage: ${properties.dealstage}`);
         
-        // Skip closed deals - HubSpot uses numeric stage IDs
-        // Need to identify the actual closed won/lost stage IDs from HubSpot
-        const closedWonStages = ['closedwon', '1108547154']; // Common closed won stage IDs
-        const closedLostStages = ['closedlost', '1108547155']; // Common closed lost stage IDs
+        // Skip closed deals - HubSpot typically uses specific stage IDs for closed deals
+        // Common patterns: stages ending in high numbers are often closed stages
+        const closedStagePatterns = [
+          'closedwon', 'closedlost', 'closed-won', 'closed-lost',
+          '1108547154', '1108547155', '1108547156', '1108547157', // Common closed stage IDs
+          'contractsent', 'closedwon', 'closed_won', 'closed_lost'
+        ];
         
-        if (closedWonStages.includes(properties.dealstage) || closedLostStages.includes(properties.dealstage)) {
-          console.log(`⏭️ Skipping closed deal (stage: ${properties.dealstage}): ${properties.dealname}`);
+        // Also check if closedate is set - if deal has a close date, it's likely closed
+        const hasCloseDate = properties.closedate && properties.closedate !== null;
+        const stageId = properties.dealstage?.toString().toLowerCase();
+        
+        const isClosedStage = closedStagePatterns.some(pattern => 
+          stageId?.includes(pattern.toLowerCase())
+        );
+        
+        if (isClosedStage || hasCloseDate) {
+          console.log(`⏭️ Skipping closed deal (stage: ${properties.dealstage}, closedate: ${properties.closedate}): ${properties.dealname}`);
           continue;
         }
 
