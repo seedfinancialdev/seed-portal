@@ -3550,20 +3550,24 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
             console.log('Could not fetch quote for deal:', deal.id, quoteError.message);
           }
         } else {
-          // If no quotes, try to infer from deal name and amount
+          // If no quotes, calculate based on deal amount using standard commission structure
           const dealName = properties.dealname || '';
           const dealAmount = parseFloat(properties.amount || 0);
           
-          console.log(`📋 No quotes found, inferring from deal name: "${dealName}", amount: $${dealAmount}`);
+          console.log(`📋 No quotes found, calculating from deal amount: "${dealName}", amount: $${dealAmount}`);
           
           if (dealAmount > 0) {
-            // Estimate commissions based on typical deal structure
-            // Assume 20% is setup and 80% is monthly for commission calculation
-            setupCommission = (dealAmount * 0.20) * 0.20; // 20% of 20% of deal
-            monthlyCommission = (dealAmount * 0.80) * 0.40; // 40% of 80% of deal
+            // Simple calculation based on standard commission structure
+            // This matches what's used in Commission Tracking table
             
-            console.log(`💰 Estimated setup commission: $${setupCommission}`);
-            console.log(`💰 Estimated monthly commission: $${monthlyCommission}`);
+            // For pipeline projections, assume the following:
+            // - 20% setup commission on total deal value 
+            // - 40% first month commission on total deal value
+            setupCommission = dealAmount * 0.20; // 20% setup commission
+            monthlyCommission = dealAmount * 0.40; // 40% first month commission
+            
+            console.log(`💰 Calculated setup commission: $${setupCommission} (20% of $${dealAmount})`);
+            console.log(`💰 Calculated monthly commission: $${monthlyCommission} (40% of $${dealAmount})`);
           }
           
           // Infer service type from deal name
