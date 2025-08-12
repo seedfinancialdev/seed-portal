@@ -201,6 +201,11 @@ export class HubSpotCommissionSync {
         }
         
         console.log(`💰 Invoice ${invoice.id} total: $${totalAmount}`);
+        
+        // Debug: Log what HubSpot actually gave us
+        console.log(`🔍 DEBUGGING - Invoice ${invoice.id} properties:`, JSON.stringify(invoice.properties, null, 2));
+        console.log(`🔍 DEBUGGING - Invoice ${invoice.id} associations:`, JSON.stringify(invoice.associations, null, 2));
+        
         await this.processInvoiceWithLineItems(invoice, lineItems, totalAmount);
         processedInvoices++;
       }
