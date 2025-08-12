@@ -3400,6 +3400,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.get("/api/pipeline-projections", requireAuth, async (req, res) => {
     try {
       console.log('🚀 Pipeline projections API called - fetching real-time HubSpot data');
+      console.log('🔍 HubSpot token available:', !!process.env.HUBSPOT_ACCESS_TOKEN);
       
       if (!process.env.HUBSPOT_ACCESS_TOKEN) {
         console.error('❌ HubSpot access token not available');
@@ -3412,6 +3413,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       const hubspotClient = new Client({ accessToken: process.env.HUBSPOT_ACCESS_TOKEN });
       
       // Fetch deals that are not closed (won or lost)
+      console.log('📋 Fetching deals from HubSpot...');
       const dealsResponse = await hubspotClient.crm.deals.basicApi.getPage(
         100, // limit
         undefined, // after
@@ -3427,13 +3429,18 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         ['companies', 'quotes'] // associations
       );
 
+      console.log(`📊 Found ${dealsResponse.results.length} total deals from HubSpot`);
+
       const pipelineDeals = [];
       
       for (const deal of dealsResponse.results) {
         const properties = deal.properties;
         
+        console.log(`🔍 Processing deal ${deal.id}: "${properties.dealname}", stage: ${properties.dealstage}`);
+        
         // Skip closed deals
         if (properties.dealstage === 'closedwon' || properties.dealstage === 'closedlost') {
+          console.log(`⏭️ Skipping closed deal: ${properties.dealname}`);
           continue;
         }
 
@@ -3534,24 +3541,27 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
         projectedCommission = setupCommission + monthlyCommission;
 
-        // Only include deals with meaningful data
-        if (projectedCommission > 0) {
-          pipelineDeals.push({
-            id: deal.id,
-            dealId: deal.id,
-            dealName: properties.dealname || 'Unnamed Deal',
-            companyName,
-            salesRep,
-            serviceType: serviceType === 'Unknown Service' ? 'Mixed Services' : serviceType,
-            dealStage: properties.dealstage || 'Unknown Stage',
-            dealValue: parseFloat(properties.amount || 0),
-            setupCommission: Math.round(setupCommission * 100) / 100,
-            monthlyCommission: Math.round(monthlyCommission * 100) / 100,
-            projectedCommission: Math.round(projectedCommission * 100) / 100,
-            closeDate: properties.closedate ? new Date(properties.closedate).toISOString().split('T')[0] : null,
-            status: 'projected'
-          });
-        }
+        console.log(`💰 Deal "${properties.dealname}" projected commission: $${projectedCommission}`);
+        console.log(`📋 Deal details: ID=${deal.id}, Company=${companyName}, SalesRep=${salesRep}, ServiceType=${serviceType}`);
+        
+        // For now, include ALL open deals to see what data we have
+        // if (projectedCommission > 0) {
+        pipelineDeals.push({
+          id: deal.id,
+          dealId: deal.id,
+          dealName: properties.dealname || 'Unnamed Deal',
+          companyName,
+          salesRep,
+          serviceType: serviceType === 'Unknown Service' ? 'Mixed Services' : serviceType,
+          dealStage: properties.dealstage || 'Unknown Stage',
+          dealValue: parseFloat(properties.amount || 0),
+          setupCommission: Math.round(setupCommission * 100) / 100,
+          monthlyCommission: Math.round(monthlyCommission * 100) / 100,
+          projectedCommission: Math.round(projectedCommission * 100) / 100,
+          closeDate: properties.closedate ? new Date(properties.closedate).toISOString().split('T')[0] : null,
+          status: 'projected'
+        });
+        // }
       }
 
       // Sort by projected commission descending
