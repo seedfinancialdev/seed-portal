@@ -120,9 +120,9 @@ export class HubSpotCommissionSync {
     try {
       console.log('🔄 Syncing invoices from HubSpot...');
       
-      // Get invoices from HubSpot with line item associations
+      // Get invoices from HubSpot with ALL needed data
       const invoicesResponse = await this.hubspotService.makeRequest(
-        '/crm/v3/objects/invoices?limit=100&properties=hs_createdate,hs_lastmodifieddate,hs_object_id,hs_invoice_amount,hs_invoice_number,hs_invoice_status&associations=line_items'
+        '/crm/v3/objects/invoices?limit=100&properties=hs_createdate,hs_lastmodifieddate,hs_object_id,hs_invoice_amount,hs_invoice_number,hs_invoice_status,hs_deal_id,hs_deal_name,company_name,hs_company_name,recipient_company_name,billing_contact_name&associations=line_items,deals,companies,contacts'
       );
       
       console.log(`📋 Found ${invoicesResponse.results.length} invoices in HubSpot`);
@@ -310,81 +310,41 @@ export class HubSpotCommissionSync {
   }
   
   /**
-   * Get company name for invoice from HubSpot
+   * Get company name from invoice data (associations or properties)
    */
-  private async getInvoiceCompanyName(invoice: any): Promise<string> {
-    try {
-      console.log(`🔍 Getting company name for invoice ${invoice.id}...`);
-      console.log(`Invoice properties:`, JSON.stringify(invoice.properties, null, 2));
-      
-      // First try the direct properties
-      if (invoice.properties.hs_deal_name) {
-        console.log(`✅ Found deal name: ${invoice.properties.hs_deal_name}`);
-        return invoice.properties.hs_deal_name;
-      }
-      
-      if (invoice.properties.company_name) {
-        console.log(`✅ Found company name: ${invoice.properties.company_name}`);
-        return invoice.properties.company_name;
-      }
-      
-      // Try to get deal and company info if deal ID exists
-      const dealId = invoice.properties.hs_deal_id;
-      if (dealId) {
-        console.log(`🔗 Found deal ID ${dealId}, fetching deal details...`);
-        
-        try {
-          const dealResponse = await this.hubspotClient.get(`/crm/v3/objects/deals/${dealId}?properties=dealname&associations=companies,contacts`);
-          console.log(`📄 Deal response:`, dealResponse.data);
-          
-          if (dealResponse.data?.properties?.dealname) {
-            console.log(`✅ Got deal name from API: ${dealResponse.data.properties.dealname}`);
-            return dealResponse.data.properties.dealname;
-          }
-          
-          // Try to get company from associations
-          if (dealResponse.data?.associations?.companies?.results?.length > 0) {
-            const companyId = dealResponse.data.associations.companies.results[0].id;
-            console.log(`🏢 Found company ID ${companyId}, fetching company name...`);
-            
-            const companyResponse = await this.hubspotClient.get(`/crm/v3/objects/companies/${companyId}?properties=name`);
-            if (companyResponse.data?.properties?.name) {
-              console.log(`✅ Got company name: ${companyResponse.data.properties.name}`);
-              return companyResponse.data.properties.name;
-            }
-          }
-          
-          // Try to get contact name from associations
-          if (dealResponse.data?.associations?.contacts?.results?.length > 0) {
-            const contactId = dealResponse.data.associations.contacts.results[0].id;
-            console.log(`👤 Found contact ID ${contactId}, fetching contact name...`);
-            
-            const contactResponse = await this.hubspotClient.get(`/crm/v3/objects/contacts/${contactId}?properties=firstname,lastname,company`);
-            if (contactResponse.data?.properties) {
-              const contact = contactResponse.data.properties;
-              if (contact.company) {
-                console.log(`✅ Got company from contact: ${contact.company}`);
-                return contact.company;
-              }
-              const contactName = `${contact.firstname || ''} ${contact.lastname || ''}`.trim();
-              if (contactName) {
-                console.log(`✅ Got contact name: ${contactName}`);
-                return contactName;
-              }
-            }
-          }
-        } catch (apiError) {
-          console.log(`⚠️ HubSpot API error for deal ${dealId}:`, apiError.message);
-        }
-      }
-      
-      console.log(`⚠️ No company/contact name found, using fallback for invoice ${invoice.id}`);
-      return `Invoice ${invoice.id}`;
-             
-    } catch (error) {
-      console.log(`❌ Error getting company name for invoice ${invoice.id}:`, error.message);
-      return `Invoice ${invoice.id}`;
+  private getInvoiceCompanyName(invoice: any): string {
+    console.log(`🔍 Getting company name for invoice ${invoice.id}...`);
+    console.log(`Invoice properties:`, JSON.stringify(invoice.properties, null, 2));
+    console.log(`Invoice associations:`, JSON.stringify(invoice.associations, null, 2));
+    
+    // Try direct properties first
+    if (invoice.properties.hs_deal_name) {
+      console.log(`✅ Found deal name: ${invoice.properties.hs_deal_name}`);
+      return invoice.properties.hs_deal_name;
     }
+    
+    if (invoice.properties.company_name) {
+      console.log(`✅ Found company name: ${invoice.properties.company_name}`);
+      return invoice.properties.company_name;
+    }
+    
+    if (invoice.properties.hs_company_name) {
+      console.log(`✅ Found hs_company_name: ${invoice.properties.hs_company_name}`);
+      return invoice.properties.hs_company_name;
+    }
+    
+    if (invoice.properties.recipient_company_name) {
+      console.log(`✅ Found recipient_company_name: ${invoice.properties.recipient_company_name}`);
+      return invoice.properties.recipient_company_name;
+    }
+    
+    if (invoice.properties.billing_contact_name) {
+      console.log(`✅ Found billing_contact_name: ${invoice.properties.billing_contact_name}`);
+      return invoice.properties.billing_contact_name;
+    }
+    
+    console.log(`⚠️ No company/contact name found in properties or associations for invoice ${invoice.id}`);
+    return `Invoice ${invoice.id}`;
   }
 
   /**
