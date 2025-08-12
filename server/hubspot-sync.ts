@@ -255,6 +255,24 @@ export class HubSpotCommissionSync {
       const salesRepId = (salesRepResult.rows[0] as any).id;
       console.log(`👤 Using sales rep ID ${salesRepId} for invoice ${invoice.id}`);
       
+      // Get real company name from HubSpot associations
+      let companyName = `Invoice ${invoice.id}`;  // Default fallback
+      
+      if (invoice.associations && invoice.associations.companies && invoice.associations.companies.results.length > 0) {
+        const companyId = invoice.associations.companies.results[0].id;
+        console.log(`🏢 Fetching company details for ID: ${companyId}`);
+        
+        try {
+          const companyData = await this.hubspotService.makeRequest(
+            `/crm/v3/objects/companies/${companyId}?properties=name,domain`
+          );
+          companyName = companyData.properties.name || companyName;
+          console.log(`✅ Retrieved company name: ${companyName}`);
+        } catch (error) {
+          console.log(`❌ Failed to fetch company ${companyId}:`, error);
+        }
+      }
+      
       // Create HubSpot invoice record
       const invoiceResult = await db.execute(sql`
         INSERT INTO hubspot_invoices (
@@ -279,7 +297,7 @@ export class HubSpotCommissionSync {
           ${totalAmount}, -- Assuming fully paid since status is paid
           ${invoice.properties.hs_createdate}::date,
           ${invoice.properties.hs_createdate}::date,
-          ${await this.getInvoiceCompanyName(invoice)},
+          ${companyName},
           false,
           NOW(),
           NOW()

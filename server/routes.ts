@@ -3182,6 +3182,7 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       console.log(`📊 Returning ${commissionsWithDetails.length} commissions to frontend`);
       console.log('Commission sample:', JSON.stringify(commissionsWithDetails[0], null, 2));
       res.set('Cache-Control', 'no-cache');
+      res.set('ETag', Date.now().toString());
       res.json(commissionsWithDetails);
     } catch (error) {
       console.error('Error fetching commissions:', error);
