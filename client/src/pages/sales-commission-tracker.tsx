@@ -1,65 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { UniversalNavbar } from "@/components/UniversalNavbar";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { 
   ArrowLeft, 
   DollarSign, 
   TrendingUp, 
-  Calendar,
   Target,
-  Users,
   Award,
-  Zap,
   Trophy,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   BarChart3,
-  Star,
-  Gift,
-  PlusCircle,
-  Eye,
-  Bell,
-  User,
-  Settings,
-  LogOut,
-  Filter,
-  Download,
-  Search,
-  ExternalLink,
-  Edit,
-  FileText,
-  Calculator,
-  Building2,
-  CreditCard,
-  TrendingDown,
-  AlertTriangle
+  Gift
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -71,141 +28,60 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface Commission {
-  id: string;
-  dealId: string;
-  dealName: string;
-  companyName: string;
-  salesRep: string;
-  serviceType: string;
-  type: 'month_1' | 'residual';
-  monthNumber: number;
-  amount: number;
-  status: 'pending' | 'approved' | 'paid' | 'disputed';
-  dateEarned: string;
-  datePaid?: string;
-  hubspotDealId?: string;
-}
+// Mock data for the individual sales rep
+const mockCommissions = [
+  {
+    id: "1",
+    dealName: "Louisiana Senior Advisors - Bookkeeping",
+    companyName: "Louisiana Senior Advisors", 
+    serviceType: "Bookkeeping",
+    amount: 220,
+    status: "pending",
+    dateEarned: "2025-07-18",
+    type: "Month 1"
+  },
+  {
+    id: "2", 
+    dealName: "Power 3 Financial - Bookkeeping + TaaS",
+    companyName: "Power 3 Financial",
+    serviceType: "Bookkeeping + TaaS", 
+    amount: 298.40,
+    status: "pending",
+    dateEarned: "2025-08-04",
+    type: "Month 1"
+  }
+];
 
-interface Deal {
-  id: string;
-  dealName: string;
-  companyName: string;
-  salesRep: string;
-  serviceType: string;
-  amount: number;
-  setupFee: number;
-  monthlyFee: number;
-  status: 'open' | 'closed_won' | 'closed_lost';
-  closedDate?: string;
-  hubspotDealId?: string;
-  probability?: number;
-  pipelineStage?: string;
-}
-
-interface AdjustmentRequest {
-  id: string;
-  commissionId: string;
-  salesRep: string;
-  originalAmount: number;
-  requestedAmount: number;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  requestedDate: string;
-  reviewedBy?: string;
-  reviewedDate?: string;
-  reviewNotes?: string;
-}
+const mockPipeline = [
+  {
+    id: "1",
+    dealName: "Tech Solutions Inc - Bookkeeping",
+    companyName: "Tech Solutions Inc",
+    serviceType: "Bookkeeping",
+    stage: "Qualified",
+    dealValue: 2400,
+    projectedCommission: 180,
+    probability: 75
+  },
+  {
+    id: "2", 
+    dealName: "Green Energy Co - TaaS",
+    companyName: "Green Energy Co",
+    serviceType: "TaaS",
+    stage: "Proposal Sent",
+    dealValue: 1800,
+    projectedCommission: 140,
+    probability: 50
+  }
+];
 
 export default function SalesCommissionTracker() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const [location, setLocation] = useLocation();
-  const [selectedSalesRep, setSelectedSalesRep] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false);
-  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
-  const [adjustmentReason, setAdjustmentReason] = useState("");
-  const [adjustmentAmount, setAdjustmentAmount] = useState("");
 
-  // Fetch commissions data and filter for current user
-  const { data: allCommissions = [], isLoading: commissionsLoading } = useQuery({
-    queryKey: ['/api/commission-tracker'],
-    queryFn: async (): Promise<Commission[]> => {
-      const response = await fetch('/api/commission-tracker');
-      if (!response.ok) {
-        throw new Error('Failed to fetch commissions');
-      }
-      const data = await response.json();
-      
-      // Filter commissions for current user
-      const userFullName = `${user?.firstName} ${user?.lastName}`;
-      return data.filter((commission: Commission) => 
-        commission.salesRep === user?.email || commission.salesRep === userFullName
-      );
-    }
-  });
-
-  // Fetch pipeline projections data and filter for current user  
-  const { data: allPipelineProjections = [], isLoading: pipelineLoading } = useQuery({
-    queryKey: ['/api/pipeline-projections'],
-    queryFn: async (): Promise<Deal[]> => {
-      const response = await fetch('/api/pipeline-projections');
-      if (!response.ok) {
-        throw new Error('Failed to fetch pipeline projections');
-      }
-      const data = await response.json();
-      
-      // Filter pipeline projections for current user
-      const userFullName = `${user?.firstName} ${user?.lastName}`;
-      return data.filter((deal: Deal) => 
-        deal.salesRep === user?.email || deal.salesRep === userFullName
-      );
-    }
-  });
-
-  // Adjustment request mutation
-  const adjustmentMutation = useMutation({
-    mutationFn: async (adjustmentData: {
-      commissionId: string;
-      requestedAmount: number;
-      reason: string;
-    }) => {
-      const response = await apiRequest('/api/adjustment-requests', {
-        method: 'POST',
-        body: JSON.stringify(adjustmentData),
-      });
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/commission-tracker'] });
-      setIsAdjustmentDialogOpen(false);
-      setSelectedCommission(null);
-      setAdjustmentReason("");
-      setAdjustmentAmount("");
-    },
-  });
-
-  // Calculate metrics
-  const currentPeriodTotal = allCommissions
-    .filter(c => c.status !== 'disputed')
-    .reduce((sum, c) => sum + c.amount, 0);
-  
-  const projectedCommissions = allPipelineProjections
-    .reduce((sum, deal) => sum + (deal.setupFee * 0.2 + deal.monthlyFee * 0.4), 0);
-
-  const weightedPipeline = allPipelineProjections
-    .reduce((sum, deal) => sum + ((deal.setupFee * 0.2 + deal.monthlyFee * 0.4) * (deal.probability || 50) / 100), 0);
-
-  const handleRequestAdjustment = () => {
-    if (!selectedCommission || !adjustmentAmount || !adjustmentReason) return;
-
-    adjustmentMutation.mutate({
-      commissionId: selectedCommission.id,
-      requestedAmount: parseFloat(adjustmentAmount),
-      reason: adjustmentReason,
-    });
-  };
+  // Calculate metrics from mock data
+  const currentPeriodTotal = mockCommissions.reduce((sum, c) => sum + c.amount, 0);
+  const projectedCommissions = mockPipeline.reduce((sum, deal) => sum + deal.projectedCommission, 0);
+  const weightedPipeline = mockPipeline.reduce((sum, deal) => sum + (deal.projectedCommission * deal.probability / 100), 0);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -219,35 +95,6 @@ export default function SalesCommissionTracker() {
         return 'outline';
     }
   };
-
-  const getServiceTypeIcon = (serviceType: string) => {
-    switch (serviceType.toLowerCase()) {
-      case 'bookkeeping':
-        return <Calculator className="h-4 w-4" />;
-      case 'taas':
-        return <FileText className="h-4 w-4" />;
-      case 'payroll':
-        return <Users className="h-4 w-4" />;
-      default:
-        return <Building2 className="h-4 w-4" />;
-    }
-  };
-
-  if (commissionsLoading || pipelineLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <UniversalNavbar />
-        <div className="container mx-auto p-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading your commission data...</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -288,7 +135,7 @@ export default function SalesCommissionTracker() {
                 ${currentPeriodTotal.toFixed(2)}
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {allCommissions.length} commission{allCommissions.length !== 1 ? 's' : ''}
+                {mockCommissions.length} commission{mockCommissions.length !== 1 ? 's' : ''}
               </p>
             </CardContent>
           </Card>
@@ -306,7 +153,7 @@ export default function SalesCommissionTracker() {
                 ${projectedCommissions.toFixed(2)}
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {allPipelineProjections.length} deal{allPipelineProjections.length !== 1 ? 's' : ''} in pipeline
+                {mockPipeline.length} deal{mockPipeline.length !== 1 ? 's' : ''} in pipeline
               </p>
             </CardContent>
           </Card>
@@ -326,6 +173,61 @@ export default function SalesCommissionTracker() {
               <p className="text-sm text-gray-500 mt-1">
                 Probability-adjusted projections
               </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bonus Tracking Section */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Monthly Bonus */}
+          <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-orange-800 flex items-center">
+                <Gift className="h-5 w-5 mr-2" />
+                Monthly Bonus Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Clients This Month: 2</span>
+                    <span className="font-semibold">5 clients = $500 (AirPods)</span>
+                  </div>
+                  <Progress value={40} className="h-3" data-testid="progress-monthly-bonus" />
+                </div>
+                <div className="text-center">
+                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                    3 more clients needed
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Milestone Bonus */}
+          <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-purple-800 flex items-center">
+                <Trophy className="h-5 w-5 mr-2" />
+                Milestone Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span>Total Clients: 8</span>
+                    <span className="font-semibold">25 clients = $1,000 bonus</span>
+                  </div>
+                  <Progress value={32} className="h-3" data-testid="progress-milestone-bonus" />
+                </div>
+                <div className="text-center">
+                  <Badge variant="secondary" className="text-sm px-3 py-1">
+                    17 more clients needed
+                  </Badge>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -354,79 +256,50 @@ export default function SalesCommissionTracker() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {allCommissions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No commissions yet</h3>
-                    <p className="text-gray-500">Your commission history will appear here once deals are closed.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Deal</TableHead>
-                          <TableHead>Company</TableHead>
-                          <TableHead>Service</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date Earned</TableHead>
-                          <TableHead>Actions</TableHead>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Deal</TableHead>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date Earned</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {mockCommissions.map((commission) => (
+                        <TableRow key={commission.id}>
+                          <TableCell className="font-medium">
+                            {commission.dealName}
+                          </TableCell>
+                          <TableCell>{commission.companyName}</TableCell>
+                          <TableCell>
+                            <span className="capitalize">{commission.serviceType}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {commission.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            ${commission.amount.toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusBadgeVariant(commission.status)} className="capitalize">
+                              {commission.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(commission.dateEarned).toLocaleDateString()}
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {allCommissions.map((commission) => (
-                          <TableRow key={commission.id}>
-                            <TableCell className="font-medium">
-                              {commission.dealName}
-                            </TableCell>
-                            <TableCell>{commission.companyName}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                {getServiceTypeIcon(commission.serviceType)}
-                                <span className="ml-2 capitalize">{commission.serviceType}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="capitalize">
-                                {commission.type === 'month_1' ? 'Month 1' : 'Residual'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-semibold">
-                              ${commission.amount.toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={getStatusBadgeVariant(commission.status)} className="capitalize">
-                                {commission.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {new Date(commission.dateEarned).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              {commission.status === 'pending' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedCommission(commission);
-                                    setAdjustmentAmount(commission.amount.toString());
-                                    setIsAdjustmentDialogOpen(true);
-                                  }}
-                                  data-testid={`button-request-adjustment-${commission.id}`}
-                                >
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  Request Adjustment
-                                </Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -444,134 +317,55 @@ export default function SalesCommissionTracker() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {allPipelineProjections.length === 0 ? (
-                  <div className="text-center py-8">
-                    <TrendingUp className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No pipeline deals</h3>
-                    <p className="text-gray-500">Your pipeline projections will appear here as you work deals.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Deal</TableHead>
-                          <TableHead>Company</TableHead>
-                          <TableHead>Service</TableHead>
-                          <TableHead>Stage</TableHead>
-                          <TableHead>Deal Value</TableHead>
-                          <TableHead>Projected Commission</TableHead>
-                          <TableHead>Probability</TableHead>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Deal</TableHead>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Stage</TableHead>
+                        <TableHead>Deal Value</TableHead>
+                        <TableHead>Projected Commission</TableHead>
+                        <TableHead>Probability</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {mockPipeline.map((deal) => (
+                        <TableRow key={deal.id}>
+                          <TableCell className="font-medium">
+                            {deal.dealName}
+                          </TableCell>
+                          <TableCell>{deal.companyName}</TableCell>
+                          <TableCell>
+                            <span className="capitalize">{deal.serviceType}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {deal.stage}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold">
+                            ${deal.dealValue.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="font-semibold text-blue-600">
+                            ${deal.projectedCommission.toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Progress value={deal.probability} className="w-16 h-2" />
+                              <span className="text-sm text-gray-500">{deal.probability}%</span>
+                            </div>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {allPipelineProjections.map((deal) => (
-                          <TableRow key={deal.id}>
-                            <TableCell className="font-medium">
-                              {deal.dealName}
-                            </TableCell>
-                            <TableCell>{deal.companyName}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                {getServiceTypeIcon(deal.serviceType)}
-                                <span className="ml-2 capitalize">{deal.serviceType}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {deal.pipelineStage}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-semibold">
-                              ${deal.amount.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="font-semibold text-blue-600">
-                              ${(deal.setupFee * 0.2 + deal.monthlyFee * 0.4).toFixed(2)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-2">
-                                <Progress value={deal.probability || 50} className="w-16 h-2" />
-                                <span className="text-sm text-gray-500">{deal.probability || 50}%</span>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Adjustment Request Dialog */}
-        <Dialog open={isAdjustmentDialogOpen} onOpenChange={setIsAdjustmentDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Request Commission Adjustment</DialogTitle>
-              <DialogDescription>
-                Request an adjustment to your commission amount. Please provide a detailed reason.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedCommission && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Deal</Label>
-                  <p className="text-sm text-gray-600">{selectedCommission.dealName}</p>
-                </div>
-                
-                <div>
-                  <Label>Current Amount</Label>
-                  <p className="text-sm text-gray-600">${selectedCommission.amount.toFixed(2)}</p>
-                </div>
-                
-                <div>
-                  <Label htmlFor="adjustment-amount">Requested Amount</Label>
-                  <Input
-                    id="adjustment-amount"
-                    type="number"
-                    step="0.01"
-                    value={adjustmentAmount}
-                    onChange={(e) => setAdjustmentAmount(e.target.value)}
-                    placeholder="Enter requested amount"
-                    data-testid="input-adjustment-amount"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="adjustment-reason">Reason for Adjustment</Label>
-                  <Textarea
-                    id="adjustment-reason"
-                    value={adjustmentReason}
-                    onChange={(e) => setAdjustmentReason(e.target.value)}
-                    placeholder="Please provide a detailed explanation for the adjustment request..."
-                    rows={4}
-                    data-testid="textarea-adjustment-reason"
-                  />
-                </div>
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsAdjustmentDialogOpen(false)}
-                data-testid="button-cancel-adjustment"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleRequestAdjustment}
-                disabled={!adjustmentAmount || !adjustmentReason || adjustmentMutation.isPending}
-                data-testid="button-submit-adjustment"
-              >
-                {adjustmentMutation.isPending ? 'Submitting...' : 'Submit Request'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </div>
   );
