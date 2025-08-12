@@ -721,7 +721,7 @@ export function AdminCommissionTracker() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Current Period</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    ${totalCurrentPeriodCommissions.toLocaleString()}
+                    ${totalCurrentPeriodCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-gray-500">
                     {new Date(currentPeriod.periodStart).toLocaleDateString()} - {new Date(currentPeriod.periodEnd).toLocaleDateString()}
@@ -770,7 +770,7 @@ export function AdminCommissionTracker() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Projected Commissions</p>
                   <p className="text-2xl font-bold text-green-600">
-                    ${projectedCommissions.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                    ${projectedCommissions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                   <p className="text-xs text-gray-500">from pipeline</p>
                 </div>
@@ -1290,7 +1290,7 @@ export function AdminCommissionTracker() {
                       <div>
                         <p className="text-sm font-medium text-gray-600">Weighted Pipeline</p>
                         <p className="text-2xl font-bold text-blue-600">
-                          ${weightedPipelineValue.toLocaleString()}
+                          ${weightedPipelineValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           70% probability applied
