@@ -596,31 +596,12 @@ export function AdminCommissionTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-900 via-emerald-800 to-green-900">
       <UniversalNavbar />
       
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/admin')}
-              className="flex items-center gap-2"
-              data-testid="button-back-admin"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Admin Dashboard
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Commission Management</h1>
-              <p className="text-gray-600">
-                Manage commission tracking, approvals, and sales rep performance
-              </p>
-            </div>
-          </div>
-          
+        <div className="flex items-center justify-end mb-8">
           <div className="flex items-center gap-3">
             <Button 
               variant="default" 
