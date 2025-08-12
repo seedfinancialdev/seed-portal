@@ -1255,7 +1255,7 @@ export function AdminCommissionTracker() {
                   id="adjustment-reason"
                   value={adjustmentReason}
                   onChange={(e) => setAdjustmentReason(e.target.value)}
-                  placeholder="Please provide a detailed reason for this adjustment request..."
+                  placeholder="Please provide a detailed reason for this adjustment..."
                   className="min-h-[100px]"
                   data-testid="textarea-adjustment-reason"
                 />
