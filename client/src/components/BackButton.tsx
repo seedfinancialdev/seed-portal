@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useBackNavigation } from '@/hooks/use-navigation-history';
+// import { useBackNavigation } from '@/hooks/use-navigation-history';
 import { cn } from '@/lib/utils';
 
 interface BackButtonProps {
@@ -21,13 +21,16 @@ export function BackButton({
   showText = true,
   customText = 'Back'
 }: BackButtonProps) {
-  const { goBack, canGoBack, previousPage } = useBackNavigation();
+  // const { goBack, canGoBack, previousPage } = useBackNavigation();
+  // Temporarily disabled navigation history
+  const canGoBack = false;
+  const previousPage = null;
 
   const handleClick = () => {
-    if (canGoBack) {
-      goBack();
+    // Simple back using browser history or fallback
+    if (window.history.length > 1) {
+      window.history.back();
     } else if (fallbackPath) {
-      // If no history, navigate to fallback path
       window.location.href = fallbackPath;
     }
   };

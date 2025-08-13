@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { ArrowLeft, Bell, User, Settings, LogOut, Shield, UserMinus } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BackButton } from "@/components/BackButton";
-import { useBackNavigation } from "@/hooks/use-navigation-history";
+// import { useBackNavigation } from "@/hooks/use-navigation-history";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +22,8 @@ export function UniversalNavbar({
 }: UniversalNavbarProps) {
   const { user: dbUser, logoutMutation } = useAuth();
   const [location, setLocation] = useLocation();
-  const { canGoBack } = useBackNavigation();
+  // const { canGoBack } = useBackNavigation();
+  const canGoBack = false; // Temporarily disabled
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
