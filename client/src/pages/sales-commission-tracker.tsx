@@ -191,8 +191,8 @@ export function SalesCommissionTracker() {
   
   const { toast } = useToast();
 
-  // Service type icon function - memoized to prevent re-creation on every render
-  const getServiceTypeIcon = useMemo(() => {
+  // Service type icon function - properly memoized as a direct function
+  const getServiceTypeIcon = useCallback((serviceType: string) => {
     const icons = {
       bookkeeping: <Calculator className="w-4 h-4 text-blue-600" />,
       'bookkeeping + taas': <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>,
@@ -203,7 +203,7 @@ export function SalesCommissionTracker() {
       mixed: <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>
     };
     
-    return (serviceType: string) => icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
+    return icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
   }, []);
 
   // Process real API data - memoized userName to prevent infinite loops
@@ -248,10 +248,10 @@ export function SalesCommissionTracker() {
       }));
   }, [liveCommissions, user?.firstName, user?.lastName, userName]);
 
-  // Set commissions when processed data changes
-  useEffect(() => {
-    setCommissions(processedCommissions);
-  }, [processedCommissions]);
+  // Directly use processed commissions instead of causing cascading state updates
+  // Remove the useEffect that was causing infinite loops
+  // setCommissions is now only used by user actions, not automatic updates
+  const displayCommissions = processedCommissions;
 
   // Memoized stats calculation
   const calculatedStats = useMemo(() => {
@@ -313,15 +313,13 @@ export function SalesCommissionTracker() {
     };
   }, [processedCommissions, pipelineDeals, user?.firstName, user?.lastName, userName, currentPeriod]);
 
-  // Update stats when calculated values change
-  useEffect(() => {
-    setSalesRepStats(calculatedStats);
-  }, [calculatedStats]);
+  // Directly use calculated stats instead of causing cascading state updates
+  const displayStats = calculatedStats;
 
   // Removed unused deals processing logic
 
-  // Helper functions - memoized to prevent re-creation on every render
-  const getStatusBadge = useMemo(() => {
+  // Helper function - properly memoized as a direct function
+  const getStatusBadge = useCallback((status: string) => {
     const variants = {
       pending: <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>,
       approved: <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Approved</Badge>,
@@ -329,16 +327,16 @@ export function SalesCommissionTracker() {
       disputed: <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Disputed</Badge>
     };
     
-    return (status: string) => variants[status as keyof typeof variants] || <Badge variant="outline">{status}</Badge>;
+    return variants[status as keyof typeof variants] || <Badge variant="outline">{status}</Badge>;
   }, []);
 
 
 
-  // Calculate bonus eligibility
-  const monthlyBonusEligibility = calculateMonthlyBonus(salesRepStats.totalClientsClosedMonthly);
-  const milestoneBonusEligibility = calculateMilestoneBonus(salesRepStats.totalClientsClosedAllTime);
-  const nextMilestone = getNextMilestone(salesRepStats.totalClientsClosedAllTime);
-  const totalEarnings = calculateTotalEarnings(salesRepStats.totalCommissionsEarned, [], []);
+  // Calculate bonus eligibility using display stats
+  const monthlyBonusEligibility = calculateMonthlyBonus(displayStats.totalClientsClosedMonthly);
+  const milestoneBonusEligibility = calculateMilestoneBonus(displayStats.totalClientsClosedAllTime);
+  const nextMilestone = getNextMilestone(displayStats.totalClientsClosedAllTime);
+  const totalEarnings = calculateTotalEarnings(displayStats.totalCommissionsEarned, [], []);
 
   // Event handlers - memoized to prevent infinite re-renders
   const handleRequestAdjustment = useCallback((commission: Commission) => {
@@ -428,7 +426,7 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-blue-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-blue-600">
-                      ${(salesRepStats.currentPeriodCommissions || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(displayStats.currentPeriodCommissions || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">
@@ -449,7 +447,7 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-green-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-green-600">
-                      ${(salesRepStats.totalCommissionsEarned || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(displayStats.totalCommissionsEarned || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">All time</p>
@@ -468,11 +466,11 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-orange-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-orange-600">
-                      ${commissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${displayCommissions.filter(c => c.status === 'pending').reduce((sum, c) => sum + (c.amount || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">
-                    {commissions.filter(c => c.status === 'pending').length} items
+                    {displayCommissions.filter(c => c.status === 'pending').length} items
                   </p>
                 </div>
                 <Clock className="h-8 w-8 text-orange-600" />
@@ -489,7 +487,7 @@ export function SalesCommissionTracker() {
                     <div className="text-2xl font-bold text-purple-600">Loading...</div>
                   ) : (
                     <p className="text-2xl font-bold text-purple-600">
-                      ${(salesRepStats.projectedEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${(displayStats.projectedEarnings || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   )}
                   <p className="text-xs text-gray-500">Pending commissions</p>
@@ -540,7 +538,7 @@ export function SalesCommissionTracker() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {commissions.slice(0, 5).map((commission) => (
+                  {displayCommissions.slice(0, 5).map((commission) => (
                     <TableRow key={commission.id}>
                       <TableCell className="font-medium">
                         <div>
@@ -597,10 +595,10 @@ export function SalesCommissionTracker() {
                 </TableBody>
               </Table>
             </div>
-            {commissions.length > 5 && (
+            {displayCommissions.length > 5 && (
               <div className="mt-4 text-center">
                 <p className="text-sm text-gray-500">
-                  Showing {Math.min(5, commissions.length)} of {commissions.length} commissions
+                  Showing {Math.min(5, displayCommissions.length)} of {displayCommissions.length} commissions
                 </p>
               </div>
             )}
@@ -624,9 +622,9 @@ export function SalesCommissionTracker() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Clients Closed This Month</span>
-                  <span className="font-medium">{salesRepStats.totalClientsClosedMonthly}</span>
+                  <span className="font-medium">{displayStats.totalClientsClosedMonthly}</span>
                 </div>
-                <Progress value={(salesRepStats.totalClientsClosedMonthly / 15) * 100} className="h-2" />
+                <Progress value={(displayStats.totalClientsClosedMonthly / 15) * 100} className="h-2" />
               </div>
               
               {monthlyBonusEligibility && (
@@ -672,7 +670,7 @@ export function SalesCommissionTracker() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Progress to {nextMilestone.nextMilestone} Clients</span>
-                  <span className="font-medium">{salesRepStats.totalClientsClosedAllTime}/{nextMilestone.nextMilestone}</span>
+                  <span className="font-medium">{displayStats.totalClientsClosedAllTime}/{nextMilestone.nextMilestone}</span>
                 </div>
                 <Progress value={nextMilestone.progress} className="h-2" />
                 <p className="text-xs text-gray-500">{nextMilestone.remaining} clients remaining</p>
