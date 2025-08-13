@@ -59,17 +59,18 @@ export function UniversalNavbar({
   }, [logoutMutation]);
 
   // Memoize navigation handlers to prevent infinite re-renders
+  // setLocation from wouter is stable, no need to include in deps
   const handleGoToProfile = useCallback(() => {
     setLocation('/profile');
-  }, [setLocation]);
+  }, []);
 
   const handleGoToKbAdmin = useCallback(() => {
     setLocation('/kb-admin');
-  }, [setLocation]);
+  }, []);
 
   const handleGoToAdmin = useCallback(() => {
     setLocation('/admin');
-  }, [setLocation]);
+  }, []);
 
   // Stop impersonation mutation
   const stopImpersonationMutation = useMutation({
