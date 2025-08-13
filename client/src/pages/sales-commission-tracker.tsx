@@ -205,11 +205,14 @@ export function SalesCommissionTracker() {
     return icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
   };
 
-  // Process real API data
+  // Process real API data - memoized userName to prevent infinite loops
+  const userName = useMemo(() => {
+    return `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+  }, [user?.firstName, user?.lastName]);
+
   useEffect(() => {
     if (liveCommissions.length > 0 && user) {
       const userEmail = user.email || '';
-      const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
       
       // Transform API data to match component interface and filter for current user
       const transformedCommissions: Commission[] = liveCommissions
@@ -331,6 +334,11 @@ export function SalesCommissionTracker() {
     setAdjustmentDialogOpen(true);
   };
 
+  const handleViewCommissionDetails = (commission: Commission) => {
+    setSelectedCommission(commission);
+    setCommissionDetailsModalOpen(true);
+  };
+
   const handleSubmitAdjustment = async () => {
     if (!selectedCommission || !adjustmentReason.trim()) return;
     
@@ -374,11 +382,6 @@ export function SalesCommissionTracker() {
     } finally {
       setSubmittingAdjustment(false);
     }
-  };
-
-  const handleViewCommissionDetails = (commission: Commission) => {
-    setSelectedCommission(commission);
-    setCommissionDetailsModalOpen(true);
   };
 
   return (
