@@ -133,55 +133,16 @@ export function UniversalNavbar({
             <Bell className="h-4 w-4" />
             <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-orange-500 rounded-full"></span>
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
-                {avatarContent}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <div className="px-3 py-2 border-b">
-                <p className="font-medium text-gray-900 text-sm">{userInfo.displayName}</p>
-                <p className="text-xs text-gray-500">{userInfo.email}</p>
-                {userInfo.isImpersonating && (
-                  <div className="mt-1 flex items-center gap-1">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <p className="text-xs text-orange-600 font-medium">Admin View</p>
-                  </div>
-                )}
-              </div>
-              {userInfo.isImpersonating && (
-                <DropdownMenuItem 
-                  onClick={handleStopImpersonation} 
-                  className="text-sm text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                  disabled={stopImpersonationMutation.isPending}
-                >
-                  <UserMinus className="mr-2 h-3 w-3" />
-                  {stopImpersonationMutation.isPending ? 'Stopping...' : 'Stop Impersonation'}
-                </DropdownMenuItem>
-              )}
-              {userInfo.isImpersonating && <DropdownMenuSeparator />}
-              <DropdownMenuItem onClick={handleGoToProfile} className="text-sm">
-                <User className="mr-2 h-3 w-3" />
-                My Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleGoToKbAdmin} className="text-sm">
-                <Settings className="mr-2 h-3 w-3" />
-                Knowledge Base Admin
-              </DropdownMenuItem>
-              {(userInfo.email === 'jon@seedfinancial.io' || userInfo.email === 'anthony@seedfinancial.io' || dbUser?.role === 'admin') && (
-                <DropdownMenuItem onClick={handleGoToAdmin} className="text-sm">
-                  <Shield className="mr-2 h-3 w-3" />
-                  SEEDOS Dashboard
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 text-sm">
-                <LogOut className="mr-2 h-3 w-3" />
-                Sign Out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Temporary simplified profile button to test infinite render fix */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="flex items-center gap-2 p-2 hover:bg-white/10 text-white"
+            onClick={handleLogout}
+          >
+            {avatarContent}
+            <LogOut className="h-3 w-3 ml-1" />
+          </Button>
         </div>
       </div>
     </header>
