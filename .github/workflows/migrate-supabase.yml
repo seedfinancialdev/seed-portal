@@ -1,0 +1,38 @@
+name: Migrate to Supabase
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Show psql version
+        run: psql --version
+
+      - name: Create expected SQL filename symlinks
+        run: |
+          ln -sf "Neon Schema.sql" neon_schema.sql || true
+          ln -sf "Neon Data.sql" neon_data.sql || true
+          ln -sf "Neon Full Backup.sql" neon_full_backup.sql || true
+
+      - name: Test DB connection
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: psql "$SUPABASE_DB_URL" -c "SELECT version();"
+
+      - name: Run migration script
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bash "./Migrate to Supabase.sh"
