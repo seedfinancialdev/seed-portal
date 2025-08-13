@@ -523,22 +523,28 @@ export function SalesCommissionTracker() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Deal</TableHead>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Month</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date Earned</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayCommissions.slice(0, 5).map((commission) => (
+            {commissionsLoading ? (
+              <div className="flex justify-center items-center h-48">
+                <div className="animate-pulse text-gray-400">Loading commissions...</div>
+              </div>
+            ) : (
+              <>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Deal</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Month</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date Earned</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {displayCommissions.slice(0, 5).map((commission) => (
                     <TableRow key={commission.id}>
                       <TableCell className="font-medium">
                         <div>
@@ -594,13 +600,15 @@ export function SalesCommissionTracker() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-            {displayCommissions.length > 5 && (
-              <div className="mt-4 text-center">
-                <p className="text-sm text-gray-500">
-                  Showing {Math.min(5, displayCommissions.length)} of {displayCommissions.length} commissions
-                </p>
-              </div>
+                </div>
+                {displayCommissions.length > 5 && (
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-500">
+                      Showing {Math.min(5, displayCommissions.length)} of {displayCommissions.length} commissions
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -619,39 +627,47 @@ export function SalesCommissionTracker() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Clients Closed This Month</span>
-                  <span className="font-medium">{displayStats.totalClientsClosedMonthly}</span>
+              {monthlyBonusesLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-pulse text-gray-400">Loading bonus data...</div>
                 </div>
-                <Progress value={(displayStats.totalClientsClosedMonthly / 15) * 100} className="h-2" />
-              </div>
-              
-              {monthlyBonusEligibility && (
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-green-800">Bonus Eligible!</span>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Clients Closed This Month</span>
+                      <span className="font-medium">{displayStats.totalClientsClosedMonthly}</span>
+                    </div>
+                    <Progress value={(displayStats.totalClientsClosedMonthly / 15) * 100} className="h-2" />
                   </div>
-                  <p className="text-sm text-green-700">{monthlyBonusEligibility.description}</p>
-                  <p className="text-lg font-bold text-green-800">${monthlyBonusEligibility.amount}</p>
-                </div>
-              )}
+              
+                  {monthlyBonusEligibility && (
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <span className="font-medium text-green-800">Bonus Eligible!</span>
+                      </div>
+                      <p className="text-sm text-green-700">{monthlyBonusEligibility.description}</p>
+                      <p className="text-lg font-bold text-green-800">${monthlyBonusEligibility.amount}</p>
+                    </div>
+                  )}
 
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>5 Clients</span>
-                  <span>$500 or AirPods</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>10 Clients</span>
-                  <span>$1,000 or Apple Watch</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>15+ Clients</span>
-                  <span>$1,500 or MacBook Air</span>
-                </div>
-              </div>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex justify-between">
+                      <span>5 Clients</span>
+                      <span>$500 or AirPods</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>10 Clients</span>
+                      <span>$1,000 or Apple Watch</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>15+ Clients</span>
+                      <span>$1,500 or MacBook Air</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
@@ -667,45 +683,53 @@ export function SalesCommissionTracker() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Progress to {nextMilestone.nextMilestone} Clients</span>
-                  <span className="font-medium">{displayStats.totalClientsClosedAllTime}/{nextMilestone.nextMilestone}</span>
+              {milestoneBonusesLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <div className="animate-pulse text-gray-400">Loading milestone data...</div>
                 </div>
-                <Progress value={nextMilestone.progress} className="h-2" />
-                <p className="text-xs text-gray-500">{nextMilestone.remaining} clients remaining</p>
-              </div>
-
-              {/* Show last achievement if user has reached a milestone */}
-              {salesRepStats.totalClientsClosedAllTime >= 25 && (
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Award className="w-5 h-5 text-yellow-600" />
-                    <span className="font-medium text-yellow-800">Last Achievement</span>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progress to {nextMilestone.nextMilestone} Clients</span>
+                      <span className="font-medium">{displayStats.totalClientsClosedAllTime}/{nextMilestone.nextMilestone}</span>
+                    </div>
+                    <Progress value={nextMilestone.progress} className="h-2" />
+                    <p className="text-xs text-gray-500">{nextMilestone.remaining} clients remaining</p>
                   </div>
-                  <p className="text-sm text-yellow-700">25 Client Milestone</p>
-                  <p className="text-lg font-bold text-yellow-800">$1,000 Bonus</p>
-                </div>
-              )}
 
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>25 Clients</span>
-                  <span>$1,000</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>40 Clients</span>
-                  <span>$5,000</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>60 Clients</span>
-                  <span>$7,500</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>100 Clients</span>
-                  <span>$10,000 + Equity</span>
-                </div>
-              </div>
+                  {/* Show last achievement if user has reached a milestone */}
+                  {salesRepStats.totalClientsClosedAllTime >= 25 && (
+                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Award className="w-5 h-5 text-yellow-600" />
+                        <span className="font-medium text-yellow-800">Last Achievement</span>
+                      </div>
+                      <p className="text-sm text-yellow-700">25 Client Milestone</p>
+                      <p className="text-lg font-bold text-yellow-800">$1,000 Bonus</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex justify-between">
+                      <span>25 Clients</span>
+                      <span>$1,000</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>40 Clients</span>
+                      <span>$5,000</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>60 Clients</span>
+                      <span>$7,500</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>100 Clients</span>
+                      <span>$10,000 + Equity</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

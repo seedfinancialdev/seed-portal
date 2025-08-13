@@ -75,7 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       console.log('[useAuth] 🧹 Clearing user data cache...');
       // Only invalidate user-specific queries to prevent cascading re-renders
-      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      // Use exact:true to prevent invalidating related queries that might cause performance issues
+      await queryClient.invalidateQueries({ 
+        queryKey: ["/api/user"],
+        exact: true  // Only invalidate this exact query, not child queries
+      });
       
       console.log('[useAuth] ⏳ Allowing natural refetch cycle...');
       // Let React Query handle the refetch naturally instead of forcing it
@@ -136,8 +140,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
     onSuccess: () => {
-      // Clear ALL cached data on logout to prevent any cross-user data leakage
-      queryClient.clear();
+      // Clear user-specific cached data on logout to prevent any cross-user data leakage
+      // Using removeQueries with predicate for better performance
+      queryClient.removeQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key && (
+            key.startsWith('/api/user') ||
+            key.startsWith('/api/commissions') ||
+            key.startsWith('/api/sales') ||
+            key.startsWith('/api/admin')
+          );
+        }
+      });
       
       toast({
         title: "Logged out",
