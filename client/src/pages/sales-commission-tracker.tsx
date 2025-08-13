@@ -57,7 +57,6 @@ import {
   Building2,
   CreditCard
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -82,37 +81,7 @@ interface Commission {
   datePaid?: string;
 }
 
-interface Deal {
-  id: string;
-  dealName: string;
-  companyName: string;
-  serviceType: string;
-  amount: number;
-  setupFee: number;
-  monthlyFee: number;
-  status: 'closed_won' | 'closed_lost';
-  closedDate: string;
-}
-
-interface MonthlyBonus {
-  id: string;
-  clientsClosedThisMonth: number;
-  bonusType: string;
-  bonusAmount: number;
-  status: 'pending' | 'approved' | 'paid';
-  dateEarned: string;
-  datePaid?: string;
-}
-
-interface MilestoneBonus {
-  id: string;
-  milestone: number;
-  bonusAmount: number;
-  includesEquity: boolean;
-  status: 'pending' | 'approved' | 'paid';
-  dateEarned: string;
-  datePaid?: string;
-}
+// Removed unused interfaces
 
 interface SalesRepStats {
   totalCommissionsEarned: number;
@@ -147,9 +116,6 @@ export function SalesCommissionTracker() {
 
   // State
   const [commissions, setCommissions] = useState<Commission[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [monthlyBonuses, setMonthlyBonuses] = useState<MonthlyBonus[]>([]);
-  const [milestoneBonuses, setMilestoneBonuses] = useState<MilestoneBonus[]>([]);
   const [salesRepStats, setSalesRepStats] = useState<SalesRepStats>({
     totalCommissionsEarned: 0,
     totalClientsClosedMonthly: 0,
@@ -314,65 +280,7 @@ export function SalesCommissionTracker() {
     }
   }, [liveCommissions, pipelineDeals, user, currentPeriod]);
 
-  // Process deals data - populate with CLOSED deals from commissions data
-  useEffect(() => {
-    if (liveCommissions.length > 0 && user) {
-      // Create deals from commissions data (these are closed deals that generated commissions)
-      const closedDealsFromCommissions: Deal[] = liveCommissions
-        .filter(commission => commission.status === 'paid' || commission.status === 'approved')
-        .map(commission => ({
-          id: commission.dealId.toString(),
-          dealName: commission.dealName,
-          companyName: commission.companyName,
-          serviceType: commission.serviceType,
-          amount: commission.setupAmount + commission.month1Amount + (commission.residualAmount || 0),
-          setupFee: commission.setupAmount || 0,
-          monthlyFee: commission.month1Amount || 0,
-          status: 'closed_won' as const,
-          closedDate: commission.dateEarned
-        }));
-      
-      setDeals(closedDealsFromCommissions);
-      
-      // Generate sample monthly bonuses based on current period clients
-      const currentPeriodCommissions = liveCommissions.filter(c => 
-        c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd
-      );
-      const currentPeriodClients = new Set(currentPeriodCommissions.map(c => c.companyName)).size;
-      
-      const sampleMonthlyBonuses: MonthlyBonus[] = [];
-      if (currentPeriodClients >= 5) {
-        sampleMonthlyBonuses.push({
-          id: '1',
-          clientsClosedThisMonth: currentPeriodClients,
-          bonusAmount: currentPeriodClients >= 15 ? 1500 : currentPeriodClients >= 10 ? 1000 : 500,
-          bonusType: currentPeriodClients >= 15 ? 'MacBook Air' : currentPeriodClients >= 10 ? 'Apple Watch' : 'AirPods',
-          status: 'pending',
-          dateEarned: currentPeriod.periodEnd,
-          datePaid: currentPeriod.paymentDate
-        });
-      }
-      setMonthlyBonuses(sampleMonthlyBonuses);
-      
-      // Generate milestone bonuses
-      const totalClientsAllTime = new Set(liveCommissions.map(c => c.companyName)).size;
-      const sampleMilestoneBonuses: MilestoneBonus[] = [];
-      
-      if (totalClientsAllTime >= 25) {
-        sampleMilestoneBonuses.push({
-          id: '1',
-          milestone: 25,
-          bonusAmount: 1000,
-          includesEquity: false,
-          status: totalClientsAllTime >= 25 ? 'paid' : 'pending',
-          dateEarned: '2025-08-01',
-          datePaid: totalClientsAllTime >= 25 ? '2025-08-15' : undefined
-        });
-      }
-      
-      setMilestoneBonuses(sampleMilestoneBonuses);
-    }
-  }, [liveCommissions, user, currentPeriod]);
+  // Removed unused deals processing logic
 
   // Helper functions
   const getStatusBadge = (status: string) => {
@@ -402,7 +310,7 @@ export function SalesCommissionTracker() {
   const monthlyBonusEligibility = calculateMonthlyBonus(salesRepStats.totalClientsClosedMonthly);
   const milestoneBonusEligibility = calculateMilestoneBonus(salesRepStats.totalClientsClosedAllTime);
   const nextMilestone = getNextMilestone(salesRepStats.totalClientsClosedAllTime);
-  const totalEarnings = calculateTotalEarnings(salesRepStats.totalCommissionsEarned, monthlyBonuses, milestoneBonuses);
+  const totalEarnings = calculateTotalEarnings(salesRepStats.totalCommissionsEarned, [], []);
 
   // Event handlers
   const handleRequestAdjustment = (commission: Commission) => {
@@ -697,14 +605,15 @@ export function SalesCommissionTracker() {
                 <p className="text-xs text-gray-500">{nextMilestone.remaining} clients remaining</p>
               </div>
 
-              {milestoneBonuses.length > 0 && (
+              {/* Show last achievement if user has reached a milestone */}
+              {salesRepStats.totalClientsClosedAllTime >= 25 && (
                 <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Award className="w-5 h-5 text-yellow-600" />
                     <span className="font-medium text-yellow-800">Last Achievement</span>
                   </div>
-                  <p className="text-sm text-yellow-700">40 Client Milestone</p>
-                  <p className="text-lg font-bold text-yellow-800">$5,000 Bonus</p>
+                  <p className="text-sm text-yellow-700">25 Client Milestone</p>
+                  <p className="text-lg font-bold text-yellow-800">$1,000 Bonus</p>
                 </div>
               )}
 
@@ -730,160 +639,7 @@ export function SalesCommissionTracker() {
           </Card>
         </div>
 
-        {/* Additional Content Tabs */}
-        <Card className="bg-white/95 backdrop-blur border-0 shadow-xl">
-          <CardContent className="p-6">
-            <Tabs defaultValue="deals" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="deals">Recent Deals</TabsTrigger>
-                <TabsTrigger value="monthly-bonuses">Monthly Bonuses</TabsTrigger>
-                <TabsTrigger value="milestone-bonuses">Milestone Bonuses</TabsTrigger>
-              </TabsList>
 
-              <TabsContent value="deals" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Recent Closed Deals</h3>
-                    <Badge variant="outline">{deals.length} deals</Badge>
-                  </div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Company</TableHead>
-                          <TableHead>Service</TableHead>
-                          <TableHead>Setup Fee</TableHead>
-                          <TableHead>Monthly Fee</TableHead>
-                          <TableHead>Total Value</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Closed Date</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {deals.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                              No closed deals found for this period
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          deals.map((deal) => (
-                            <TableRow key={deal.id}>
-                              <TableCell className="font-medium">{deal.companyName}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {getServiceTypeIcon(deal.serviceType)}
-                                  <span className="capitalize">{deal.serviceType}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>${deal.setupFee.toFixed(2)}</TableCell>
-                              <TableCell>${deal.monthlyFee.toFixed(2)}</TableCell>
-                              <TableCell className="font-medium">${deal.amount.toFixed(2)}</TableCell>
-                              <TableCell>
-                                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                  {deal.status.replace('_', ' ').toUpperCase()}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {deal.closedDate ? new Date(deal.closedDate).toLocaleDateString() : '-'}
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="monthly-bonuses" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Monthly Bonuses</h3>
-                    <Badge variant="outline">{monthlyBonuses.length} bonuses</Badge>
-                  </div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Month</TableHead>
-                          <TableHead>Clients Closed</TableHead>
-                          <TableHead>Bonus Type</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date Earned</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {monthlyBonuses.map((bonus) => (
-                          <TableRow key={bonus.id}>
-                            <TableCell className="font-medium">
-                              {new Date(bonus.dateEarned).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                            </TableCell>
-                            <TableCell>{bonus.clientsClosedThisMonth}</TableCell>
-                            <TableCell className="capitalize">{bonus.bonusType.replace('_', ' ')}</TableCell>
-                            <TableCell className="font-medium">
-                              ${bonus.bonusAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(bonus.status)}</TableCell>
-                            <TableCell>{new Date(bonus.dateEarned).toLocaleDateString()}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="milestone-bonuses" className="mt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Milestone Bonuses</h3>
-                    <Badge variant="outline">{milestoneBonuses.length} achievements</Badge>
-                  </div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Milestone</TableHead>
-                          <TableHead>Bonus Amount</TableHead>
-                          <TableHead>Includes Equity</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Date Earned</TableHead>
-                          <TableHead>Date Paid</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {milestoneBonuses.map((bonus) => (
-                          <TableRow key={bonus.id}>
-                            <TableCell className="font-medium">{bonus.milestone} Clients</TableCell>
-                            <TableCell className="font-medium">
-                              ${bonus.bonusAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell>
-                              {bonus.includesEquity ? (
-                                <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
-                                  Yes
-                                </Badge>
-                              ) : (
-                                <span className="text-gray-500">No</span>
-                              )}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(bonus.status)}</TableCell>
-                            <TableCell>{new Date(bonus.dateEarned).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              {bonus.datePaid ? new Date(bonus.datePaid).toLocaleDateString() : '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
 
         {/* Commission History Modal */}
         <Dialog open={commissionHistoryModalOpen} onOpenChange={setCommissionHistoryModalOpen}>
