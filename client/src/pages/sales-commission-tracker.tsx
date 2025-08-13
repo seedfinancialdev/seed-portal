@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -96,9 +96,8 @@ interface Deal {
 
 interface MonthlyBonus {
   id: string;
-  month: string;
-  clientsClosedCount: number;
-  bonusType: 'cash' | 'product';
+  clientsClosedThisMonth: number;
+  bonusType: string;
   bonusAmount: number;
   status: 'pending' | 'approved' | 'paid';
   dateEarned: string;
@@ -127,8 +126,8 @@ export function SalesCommissionTracker() {
   const { user } = useAuth();
   const [location, navigate] = useLocation();
 
-  // Helper function to get current period dates (13th to 12th)
-  const getCurrentPeriod = () => {
+  // Helper function to get current period dates (13th to 12th) - memoized to prevent infinite loops
+  const currentPeriod = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth(); // 0-based (0 = January, 7 = August)
     const currentYear = now.getFullYear();
@@ -144,10 +143,9 @@ export function SalesCommissionTracker() {
       periodEnd: periodEnd.toISOString().split('T')[0], 
       paymentDate: paymentDate.toISOString().split('T')[0]
     };
-  };
+  }, []);
 
   // State
-  const [currentPeriod] = useState(getCurrentPeriod());
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [monthlyBonuses, setMonthlyBonuses] = useState<MonthlyBonus[]>([]);
@@ -316,34 +314,65 @@ export function SalesCommissionTracker() {
     }
   }, [liveCommissions, pipelineDeals, user, currentPeriod]);
 
-  // Process deals data
+  // Process deals data - populate with CLOSED deals from commissions data
   useEffect(() => {
-    if (liveDeals.length > 0 && user) {
-      const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-      
-      // Transform API data to match component interface and filter for current user
-      const transformedDeals: Deal[] = liveDeals
-        .filter(deal => {
-          const matchesUser = deal.sales_rep_name === userName || 
-                             deal.sales_rep_name?.toLowerCase().includes(user.firstName?.toLowerCase() || '') ||
-                             deal.sales_rep_name?.toLowerCase().includes(user.lastName?.toLowerCase() || '');
-          return matchesUser;
-        })
-        .map(deal => ({
-          id: deal.id.toString(),
-          dealName: deal.deal_name || deal.name || 'Untitled Deal',
-          companyName: deal.company_name || 'Unknown Company',
-          serviceType: deal.service_type || 'bookkeeping',
-          amount: deal.amount || 0,
-          setupFee: deal.setup_fee || 0,
-          monthlyFee: deal.monthly_fee || 0,
-          status: deal.status || 'open' as 'closed_won' | 'closed_lost' | 'open',
-          closedDate: deal.closed_date || new Date().toISOString().split('T')[0]
+    if (liveCommissions.length > 0 && user) {
+      // Create deals from commissions data (these are closed deals that generated commissions)
+      const closedDealsFromCommissions: Deal[] = liveCommissions
+        .filter(commission => commission.status === 'paid' || commission.status === 'approved')
+        .map(commission => ({
+          id: commission.dealId.toString(),
+          dealName: commission.dealName,
+          companyName: commission.companyName,
+          serviceType: commission.serviceType,
+          amount: commission.setupAmount + commission.month1Amount + (commission.residualAmount || 0),
+          setupFee: commission.setupAmount || 0,
+          monthlyFee: commission.month1Amount || 0,
+          status: 'closed_won' as const,
+          closedDate: commission.dateEarned
         }));
       
-      setDeals(transformedDeals);
+      setDeals(closedDealsFromCommissions);
+      
+      // Generate sample monthly bonuses based on current period clients
+      const currentPeriodCommissions = liveCommissions.filter(c => 
+        c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd
+      );
+      const currentPeriodClients = new Set(currentPeriodCommissions.map(c => c.companyName)).size;
+      
+      const sampleMonthlyBonuses: MonthlyBonus[] = [];
+      if (currentPeriodClients >= 5) {
+        sampleMonthlyBonuses.push({
+          id: '1',
+          clientsClosedThisMonth: currentPeriodClients,
+          bonusAmount: currentPeriodClients >= 15 ? 1500 : currentPeriodClients >= 10 ? 1000 : 500,
+          bonusType: currentPeriodClients >= 15 ? 'MacBook Air' : currentPeriodClients >= 10 ? 'Apple Watch' : 'AirPods',
+          status: 'pending',
+          dateEarned: currentPeriod.periodEnd,
+          datePaid: currentPeriod.paymentDate
+        });
+      }
+      setMonthlyBonuses(sampleMonthlyBonuses);
+      
+      // Generate milestone bonuses
+      const totalClientsAllTime = new Set(liveCommissions.map(c => c.companyName)).size;
+      const sampleMilestoneBonuses: MilestoneBonus[] = [];
+      
+      if (totalClientsAllTime >= 25) {
+        sampleMilestoneBonuses.push({
+          id: '1',
+          milestone: 25,
+          bonusAmount: 1000,
+          includesEquity: false,
+          status: totalClientsAllTime >= 25 ? 'paid' : 'pending',
+          dateEarned: '2025-08-01',
+          datePaid: totalClientsAllTime >= 25 ? '2025-08-15' : undefined
+        });
+      }
+      
+      setMilestoneBonuses(sampleMilestoneBonuses);
     }
-  }, [liveDeals, user]);
+  }, [liveCommissions, user, currentPeriod]);
 
   // Helper functions
   const getStatusBadge = (status: string) => {
@@ -731,28 +760,36 @@ export function SalesCommissionTracker() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {deals.map((deal) => (
-                          <TableRow key={deal.id}>
-                            <TableCell className="font-medium">{deal.companyName}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {getServiceTypeIcon(deal.serviceType)}
-                                <span className="capitalize">{deal.serviceType}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>${deal.setupFee.toLocaleString()}</TableCell>
-                            <TableCell>${deal.monthlyFee.toLocaleString()}</TableCell>
-                            <TableCell className="font-medium">${deal.amount.toLocaleString()}</TableCell>
-                            <TableCell>
-                              <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                {deal.status.replace('_', ' ').toUpperCase()}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {deal.closedDate ? new Date(deal.closedDate).toLocaleDateString() : '-'}
+                        {deals.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                              No closed deals found for this period
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          deals.map((deal) => (
+                            <TableRow key={deal.id}>
+                              <TableCell className="font-medium">{deal.companyName}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {getServiceTypeIcon(deal.serviceType)}
+                                  <span className="capitalize">{deal.serviceType}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>${deal.setupFee.toFixed(2)}</TableCell>
+                              <TableCell>${deal.monthlyFee.toFixed(2)}</TableCell>
+                              <TableCell className="font-medium">${deal.amount.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                                  {deal.status.replace('_', ' ').toUpperCase()}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {deal.closedDate ? new Date(deal.closedDate).toLocaleDateString() : '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -780,8 +817,10 @@ export function SalesCommissionTracker() {
                       <TableBody>
                         {monthlyBonuses.map((bonus) => (
                           <TableRow key={bonus.id}>
-                            <TableCell className="font-medium">{bonus.month}</TableCell>
-                            <TableCell>{bonus.clientsClosedCount}</TableCell>
+                            <TableCell className="font-medium">
+                              {new Date(bonus.dateEarned).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </TableCell>
+                            <TableCell>{bonus.clientsClosedThisMonth}</TableCell>
                             <TableCell className="capitalize">{bonus.bonusType.replace('_', ' ')}</TableCell>
                             <TableCell className="font-medium">
                               ${bonus.bonusAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
