@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -564,10 +564,10 @@ export function AdminCommissionTracker() {
     }
   };
 
-  const handleViewDealDetails = (dealId: string) => {
+  const handleViewDealDetails = useCallback((dealId: string) => {
     const deal = deals.find(d => d.id === dealId) || commissions.find(c => c.dealId === dealId);
     if (deal) {
-      // Convert commission to deal format if needed
+      // Convert commission to deal format if needed - memoized to prevent infinite re-renders
       const dealData = 'setupFee' in deal ? deal : {
         id: deal.dealId,
         dealName: deal.dealName,
@@ -587,7 +587,7 @@ export function AdminCommissionTracker() {
       setSelectedDeal(dealData);
       setDealDetailsDialogOpen(true);
     }
-  };
+  }, [deals, commissions]); // Dependencies: only recreate if deals or commissions change
 
   const handleApproveCommission = async (commissionId: string) => {
     try {
