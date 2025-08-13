@@ -210,99 +210,112 @@ export function SalesCommissionTracker() {
     return `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
   }, [user?.firstName, user?.lastName]);
 
+  // Memoized commission processing to prevent infinite loops
+  const processedCommissions = useMemo(() => {
+    if (liveCommissions.length === 0 || !user) return [];
+    
+    return liveCommissions
+      .filter(invoice => {
+        // Build expected user name variations for better matching
+        const firstName = user.firstName || '';
+        const lastName = user.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        const salesRepName = invoice.salesRep || '';
+        
+        // Filter by sales rep name - try multiple matching strategies
+        const matchesUser = salesRepName === fullName ||
+                           salesRepName === userName ||
+                           salesRepName === `${firstName} ${lastName}` ||
+                           salesRepName === `${lastName} ${firstName}` ||
+                           (firstName && salesRepName.toLowerCase().includes(firstName.toLowerCase())) ||
+                           (lastName && salesRepName.toLowerCase().includes(lastName.toLowerCase()));
+        return matchesUser;
+      })
+      .map(invoice => ({
+        id: invoice.id?.toString() || 'unknown',
+        dealId: invoice.dealId?.toString() || invoice.id?.toString() || 'unknown',
+        dealName: invoice.companyName || 'Unknown',
+        companyName: invoice.companyName || 'Unknown Company',
+        serviceType: invoice.serviceType || 'bookkeeping',
+        type: invoice.type === 'First Month' ? 'month_1' as const : 'residual' as const,
+        monthNumber: invoice.monthNumber || 1,
+        amount: parseFloat(invoice.amount?.toString() || '0'),
+        status: (invoice.status || 'pending').toLowerCase() as 'pending' | 'approved' | 'paid' | 'disputed',
+        dateEarned: invoice.dateEarned || invoice.invoiceDate || new Date().toISOString().split('T')[0],
+        datePaid: invoice.datePaid || undefined,
+        salesRep: invoice.salesRep || userName
+      }));
+  }, [liveCommissions, user?.firstName, user?.lastName, userName]);
+
+  // Set commissions when processed data changes
   useEffect(() => {
-    if (liveCommissions.length > 0 && user) {
-      const userEmail = user.email || '';
-      
-      // Transform API data to match component interface and filter for current user
-      const transformedCommissions: Commission[] = liveCommissions
-        .filter(invoice => {
-          // Build expected user name variations for better matching
-          const firstName = user.firstName || '';
-          const lastName = user.lastName || '';
-          const fullName = `${firstName} ${lastName}`.trim();
-          const reverseName = `${lastName}, ${firstName}`.trim();
-          const salesRepName = invoice.salesRep || '';
-          
-          // Filter by sales rep name - try multiple matching strategies
-          const matchesUser = salesRepName === fullName ||
-                             salesRepName === userName ||
-                             salesRepName === `${firstName} ${lastName}` ||
-                             salesRepName === `${lastName} ${firstName}` ||
-                             (firstName && salesRepName.toLowerCase().includes(firstName.toLowerCase())) ||
-                             (lastName && salesRepName.toLowerCase().includes(lastName.toLowerCase()));
-          return matchesUser;
-        })
-        .map(invoice => ({
-          id: invoice.id?.toString() || 'unknown',
-          dealId: invoice.dealId?.toString() || invoice.id?.toString() || 'unknown',
-          dealName: invoice.companyName || 'Unknown',
-          companyName: invoice.companyName || 'Unknown Company',
-          serviceType: invoice.serviceType || 'bookkeeping',
-          type: invoice.type === 'First Month' ? 'month_1' as const : 'residual' as const,
-          monthNumber: invoice.monthNumber || 1,
-          // Extract amount from the API response structure - use the main amount field which is the total commission
-          amount: parseFloat(invoice.amount?.toString() || '0'),
-          status: (invoice.status || 'pending').toLowerCase() as 'pending' | 'approved' | 'paid' | 'disputed',
-          dateEarned: invoice.dateEarned || invoice.invoiceDate || new Date().toISOString().split('T')[0],
-          datePaid: invoice.datePaid || undefined,
-          salesRep: invoice.salesRep || userName
-        }));
-      
-      setCommissions(transformedCommissions);
-      
-      // Calculate real metrics based on filtered data
-      const currentPeriodCommissions = transformedCommissions
-        .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
-        .reduce((sum, c) => sum + c.amount, 0);
-      
-      // Total earnings should only include approved/paid commissions from previous periods
-      const totalPaidEarnings = transformedCommissions
-        .filter(c => (c.status === 'approved' || c.status === 'paid') && c.dateEarned < currentPeriod.periodStart)
-        .reduce((sum, c) => sum + c.amount, 0);
-      
-      const pendingCommissions = transformedCommissions
-        .filter(c => c.status === 'pending')
-        .reduce((sum, c) => sum + c.amount, 0);
-      
-      // Count unique clients closed this period for bonuses
-      const currentPeriodClients = new Set(
-        transformedCommissions
-          .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
-          .map(c => c.companyName)
-      ).size;
-      
-      // Count total clients all time (from all commissions for milestone tracking)
-      const totalClientsAllTime = new Set(transformedCommissions.map(c => c.companyName)).size;
-      
-      // Calculate projected earnings from pipeline projections (same data as admin commission tracker)
-      const projectedFromPipeline = pipelineDeals
-        .filter(deal => {
-          // Filter deals for this user using same matching logic as commissions
-          const salesRepName = deal.salesRep || '';
-          const firstName = user.firstName || '';
-          const lastName = user.lastName || '';
-          const fullName = `${firstName} ${lastName}`.trim();
-          
-          const matchesUser = salesRepName === fullName ||
-                             salesRepName === userName ||
-                             salesRepName === `${firstName} ${lastName}` ||
-                             salesRepName === `${lastName} ${firstName}` ||
-                             (firstName && salesRepName.toLowerCase().includes(firstName.toLowerCase())) ||
-                             (lastName && salesRepName.toLowerCase().includes(lastName.toLowerCase()));
-          return matchesUser;
-        })
-        .reduce((sum, deal) => sum + (deal.projectedCommission || 0), 0);
-      
-      setSalesRepStats({
-        totalCommissionsEarned: totalPaidEarnings, // Only previously paid earnings
-        totalClientsClosedMonthly: currentPeriodClients,
-        totalClientsClosedAllTime: totalClientsAllTime,
-        currentPeriodCommissions: currentPeriodCommissions,
-        projectedEarnings: projectedFromPipeline // Use pipeline-based projected earnings
-      });
+    setCommissions(processedCommissions);
+  }, [processedCommissions]);
+
+  // Memoized stats calculation
+  const calculatedStats = useMemo(() => {
+    if (processedCommissions.length === 0) {
+      return {
+        totalCommissionsEarned: 0,
+        totalClientsClosedMonthly: 0,
+        totalClientsClosedAllTime: 0,
+        currentPeriodCommissions: 0,
+        projectedEarnings: 0
+      };
     }
-  }, [liveCommissions, pipelineDeals, user, currentPeriod]);
+
+    // Calculate real metrics based on filtered data
+    const currentPeriodCommissions = processedCommissions
+      .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+      .reduce((sum, c) => sum + c.amount, 0);
+    
+    // Total earnings should only include approved/paid commissions from previous periods
+    const totalPaidEarnings = processedCommissions
+      .filter(c => (c.status === 'approved' || c.status === 'paid') && c.dateEarned < currentPeriod.periodStart)
+      .reduce((sum, c) => sum + c.amount, 0);
+    
+    // Count unique clients closed this period for bonuses
+    const currentPeriodClients = new Set(
+      processedCommissions
+        .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+        .map(c => c.companyName)
+    ).size;
+    
+    // Count total clients all time (from all commissions for milestone tracking)
+    const totalClientsAllTime = new Set(processedCommissions.map(c => c.companyName)).size;
+    
+    // Calculate projected earnings from pipeline projections
+    const projectedFromPipeline = pipelineDeals
+      .filter(deal => {
+        if (!user) return false;
+        const salesRepName = deal.salesRep || '';
+        const firstName = user.firstName || '';
+        const lastName = user.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim();
+        
+        const matchesUser = salesRepName === fullName ||
+                           salesRepName === userName ||
+                           salesRepName === `${firstName} ${lastName}` ||
+                           salesRepName === `${lastName} ${firstName}` ||
+                           (firstName && salesRepName.toLowerCase().includes(firstName.toLowerCase())) ||
+                           (lastName && salesRepName.toLowerCase().includes(lastName.toLowerCase()));
+        return matchesUser;
+      })
+      .reduce((sum, deal) => sum + (deal.projectedCommission || 0), 0);
+    
+    return {
+      totalCommissionsEarned: totalPaidEarnings,
+      totalClientsClosedMonthly: currentPeriodClients,
+      totalClientsClosedAllTime: totalClientsAllTime,
+      currentPeriodCommissions: currentPeriodCommissions,
+      projectedEarnings: projectedFromPipeline
+    };
+  }, [processedCommissions, pipelineDeals, user?.firstName, user?.lastName, userName, currentPeriod]);
+
+  // Update stats when calculated values change
+  useEffect(() => {
+    setSalesRepStats(calculatedStats);
+  }, [calculatedStats]);
 
   // Removed unused deals processing logic
 
