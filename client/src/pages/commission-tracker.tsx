@@ -272,15 +272,34 @@ export default function CommissionTracker() {
 
   // Set the fetched data to state
   useEffect(() => {
-    setCommissions(commissionData);
-    setDeals(dealsData);
-    setMonthlyBonuses(monthlyBonusData);
-    setMilestoneBonuses(milestoneBonusData);
-    // Set current sales rep in the sales reps array for compatibility
+    if (commissionData) {
+      setCommissions(commissionData);
+    }
+  }, [commissionData]);
+
+  useEffect(() => {
+    if (dealsData) {
+      setDeals(dealsData);
+    }
+  }, [dealsData]);
+
+  useEffect(() => {
+    if (monthlyBonusData) {
+      setMonthlyBonuses(monthlyBonusData);
+    }
+  }, [monthlyBonusData]);
+
+  useEffect(() => {
+    if (milestoneBonusData) {
+      setMilestoneBonuses(milestoneBonusData);
+    }
+  }, [milestoneBonusData]);
+
+  useEffect(() => {
     if (currentSalesRep) {
       setSalesReps([currentSalesRep]);
     }
-  }, [commissionData, dealsData, monthlyBonusData, milestoneBonusData, currentSalesRep]);
+  }, [currentSalesRep]);
 
   // Calculate commission periods dynamically (14th to 13th cycle)
   useEffect(() => {
