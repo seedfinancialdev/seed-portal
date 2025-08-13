@@ -58,6 +58,19 @@ export function UniversalNavbar({
     logoutMutation.mutate();
   }, [logoutMutation]);
 
+  // Memoize navigation handlers to prevent infinite re-renders
+  const handleGoToProfile = useCallback(() => {
+    setLocation('/profile');
+  }, [setLocation]);
+
+  const handleGoToKbAdmin = useCallback(() => {
+    setLocation('/kb-admin');
+  }, [setLocation]);
+
+  const handleGoToAdmin = useCallback(() => {
+    setLocation('/admin');
+  }, [setLocation]);
+
   // Stop impersonation mutation
   const stopImpersonationMutation = useMutation({
     mutationFn: async () => {
@@ -85,6 +98,11 @@ export function UniversalNavbar({
       });
     },
   });
+
+  // Memoize impersonation handler (defined after mutation)
+  const handleStopImpersonation = useCallback(() => {
+    stopImpersonationMutation.mutate();
+  }, [stopImpersonationMutation]);
 
   // Only show back button if there's history or if explicitly requested
   const shouldShowBackButton = showBackButton && (canGoBack || location !== '/');
@@ -133,7 +151,7 @@ export function UniversalNavbar({
               </div>
               {userInfo.isImpersonating && (
                 <DropdownMenuItem 
-                  onClick={() => stopImpersonationMutation.mutate()} 
+                  onClick={handleStopImpersonation} 
                   className="text-sm text-orange-600 hover:text-orange-700 hover:bg-orange-50"
                   disabled={stopImpersonationMutation.isPending}
                 >
@@ -142,16 +160,16 @@ export function UniversalNavbar({
                 </DropdownMenuItem>
               )}
               {userInfo.isImpersonating && <DropdownMenuSeparator />}
-              <DropdownMenuItem onClick={() => setLocation('/profile')} className="text-sm">
+              <DropdownMenuItem onClick={handleGoToProfile} className="text-sm">
                 <User className="mr-2 h-3 w-3" />
                 My Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLocation('/kb-admin')} className="text-sm">
+              <DropdownMenuItem onClick={handleGoToKbAdmin} className="text-sm">
                 <Settings className="mr-2 h-3 w-3" />
                 Knowledge Base Admin
               </DropdownMenuItem>
               {(userInfo.email === 'jon@seedfinancial.io' || userInfo.email === 'anthony@seedfinancial.io' || dbUser?.role === 'admin') && (
-                <DropdownMenuItem onClick={() => setLocation('/admin')} className="text-sm">
+                <DropdownMenuItem onClick={handleGoToAdmin} className="text-sm">
                   <Shield className="mr-2 h-3 w-3" />
                   SEEDOS Dashboard
                 </DropdownMenuItem>
