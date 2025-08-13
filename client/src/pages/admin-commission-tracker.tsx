@@ -569,22 +569,6 @@ export function AdminCommissionTracker() {
   };
 
   // Memoize commission action handlers to prevent infinite re-renders  
-  const handleViewDealDetailsClick = useCallback((dealId: string) => {
-    handleViewDealDetails(dealId);
-  }, [handleViewDealDetails]);
-
-  const handleApproveCommissionClick = useCallback((commissionId: string) => {
-    handleApproveCommission(commissionId);
-  }, []);
-
-  const handleRejectCommissionClick = useCallback((commissionId: string) => {
-    handleRejectCommission(commissionId);
-  }, []);
-
-  const handleReviewAdjustmentClick = useCallback((request: any) => {
-    handleReviewAdjustment(request);
-  }, []);
-
   const handleViewDealDetails = useCallback((dealId: string) => {
     const deal = deals.find(d => d.id === dealId) || commissions.find(c => c.dealId === dealId);
     if (deal) {
@@ -609,6 +593,22 @@ export function AdminCommissionTracker() {
       setDealDetailsDialogOpen(true);
     }
   }, [deals, commissions]); // Dependencies: only recreate if deals or commissions change
+
+  const handleViewDealDetailsClick = useCallback((dealId: string) => {
+    handleViewDealDetails(dealId);
+  }, [handleViewDealDetails]);
+
+  const handleApproveCommissionClick = useCallback((commissionId: string) => {
+    handleApproveCommission(commissionId);
+  }, []);
+
+  const handleRejectCommissionClick = useCallback((commissionId: string) => {
+    handleRejectCommission(commissionId);
+  }, []);
+
+  const handleReviewAdjustmentClick = useCallback((request: any) => {
+    handleReviewAdjustment(request);
+  }, []);
 
   const handleApproveCommission = async (commissionId: string) => {
     try {
