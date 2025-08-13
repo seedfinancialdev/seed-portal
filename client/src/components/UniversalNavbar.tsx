@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -59,8 +59,25 @@ export function UniversalNavbar({
     },
   });
 
-  // Only show back button if there's history or if explicitly requested
-  const shouldShowBackButton = showBackButton && (canGoBack || location !== '/');
+  // Memoize calculations to prevent infinite loops in child components
+  const shouldShowBackButton = useMemo(() => {
+    return showBackButton && (canGoBack || location !== '/');
+  }, [showBackButton, canGoBack, location]);
+
+  const userDisplayData = useMemo(() => {
+    if (!dbUser) return null;
+    
+    return {
+      email: dbUser.email,
+      firstName: dbUser.firstName,
+      profilePhoto: dbUser.profilePhoto,
+      isImpersonating: dbUser.isImpersonating,
+      role: dbUser.role,
+      displayName: dbUser.email?.split('@')[0],
+      initials: dbUser.firstName?.charAt(0)?.toUpperCase() || dbUser.email?.charAt(0).toUpperCase(),
+      isAdmin: dbUser.email === 'jon@seedfinancial.io' || dbUser.email === 'anthony@seedfinancial.io' || dbUser.role === 'admin'
+    };
+  }, [dbUser?.email, dbUser?.firstName, dbUser?.profilePhoto, dbUser?.isImpersonating, dbUser?.role]);
 
   return (
     <header className="bg-transparent z-50 py-4 relative">
@@ -90,31 +107,31 @@ export function UniversalNavbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="flex items-center gap-2 p-2 hover:bg-white/10 text-white">
-                {dbUser?.profilePhoto ? (
+                {userDisplayData?.profilePhoto ? (
                   <img 
-                    src={dbUser.profilePhoto} 
+                    src={userDisplayData.profilePhoto} 
                     alt="Profile" 
                     className="w-7 h-7 rounded-full object-cover border border-white/20"
                   />
                 ) : (
                   <div className="w-7 h-7 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-medium">
-                    {dbUser?.firstName?.charAt(0)?.toUpperCase() || dbUser?.email?.charAt(0).toUpperCase()}
+                    {userDisplayData?.initials}
                   </div>
                 )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <div className="px-3 py-2 border-b">
-                <p className="font-medium text-gray-900 text-sm">{dbUser?.email?.split('@')[0]}</p>
-                <p className="text-xs text-gray-500">{dbUser?.email}</p>
-                {dbUser?.isImpersonating && (
+                <p className="font-medium text-gray-900 text-sm">{userDisplayData?.displayName}</p>
+                <p className="text-xs text-gray-500">{userDisplayData?.email}</p>
+                {userDisplayData?.isImpersonating && (
                   <div className="mt-1 flex items-center gap-1">
                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                     <p className="text-xs text-orange-600 font-medium">Admin View</p>
                   </div>
                 )}
               </div>
-              {dbUser?.isImpersonating && (
+              {userDisplayData?.isImpersonating && (
                 <DropdownMenuItem 
                   onClick={() => stopImpersonationMutation.mutate()} 
                   className="text-sm text-orange-600 hover:text-orange-700 hover:bg-orange-50"
@@ -124,7 +141,7 @@ export function UniversalNavbar({
                   {stopImpersonationMutation.isPending ? 'Stopping...' : 'Stop Impersonation'}
                 </DropdownMenuItem>
               )}
-              {dbUser?.isImpersonating && <DropdownMenuSeparator />}
+              {userDisplayData?.isImpersonating && <DropdownMenuSeparator />}
               <DropdownMenuItem onClick={() => setLocation('/profile')} className="text-sm">
                 <User className="mr-2 h-3 w-3" />
                 My Profile
@@ -133,7 +150,7 @@ export function UniversalNavbar({
                 <Settings className="mr-2 h-3 w-3" />
                 Knowledge Base Admin
               </DropdownMenuItem>
-              {(dbUser?.email === 'jon@seedfinancial.io' || dbUser?.email === 'anthony@seedfinancial.io' || dbUser?.role === 'admin') && (
+              {userDisplayData?.isAdmin && (
                 <DropdownMenuItem onClick={() => setLocation('/admin')} className="text-sm">
                   <Shield className="mr-2 h-3 w-3" />
                   SEEDOS Dashboard
