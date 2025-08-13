@@ -368,43 +368,61 @@ export default function CommissionTracker() {
     setAdjustmentRequests(sampleAdjustmentRequests);
   }, []);
 
-  // Calculate key metrics for admin dashboard
-  const currentPeriod = commissionPeriods.find(p => p.status === 'active') || commissionPeriods[0];
+  // Calculate key metrics for admin dashboard - memoized to prevent infinite re-renders
+  const currentPeriod = useMemo(() => {
+    return commissionPeriods.find(p => p.status === 'active') || commissionPeriods[0];
+  }, [commissionPeriods]);
   
   // Use HubSpot data for current period if available, otherwise fall back to database data
-  const totalCurrentPeriodCommissions = hubspotCommissionData !== null 
-    ? hubspotCommissionData.total_commissions 
-    : commissions
-        .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
-        .reduce((sum, c) => sum + c.amount, 0);
+  const totalCurrentPeriodCommissions = useMemo(() => {
+    if (hubspotCommissionData !== null) {
+      return hubspotCommissionData.total_commissions;
+    }
+    
+    if (!currentPeriod || !currentPeriod.periodStart || !currentPeriod.periodEnd) {
+      return 0;
+    }
+    
+    return commissions
+      .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
+      .reduce((sum, c) => sum + c.amount, 0);
+  }, [hubspotCommissionData, commissions, currentPeriod]);
   
-  const totalPendingCommissions = commissions
-    .filter(c => c.status === 'pending')
-    .reduce((sum, c) => sum + c.amount, 0);
+  const totalPendingCommissions = useMemo(() => {
+    return commissions
+      .filter(c => c.status === 'pending')
+      .reduce((sum, c) => sum + c.amount, 0);
+  }, [commissions]);
   
-  const totalProcessingCommissions = commissions
-    .filter(c => c.status === 'processing')
-    .reduce((sum, c) => sum + c.amount, 0);
+  const totalProcessingCommissions = useMemo(() => {
+    return commissions
+      .filter(c => c.status === 'processing')
+      .reduce((sum, c) => sum + c.amount, 0);
+  }, [commissions]);
 
   // Calculate projected commissions based on pipeline
-  const projectedCommissions = deals
-    .filter(d => d.status === 'open' && d.probability)
-    .reduce((sum, d) => {
-      const firstMonthCommission = (d.setupFee * 0.2) + (d.monthlyFee * 0.4);
-      return sum + (firstMonthCommission * (d.probability! / 100));
-    }, 0);
+  const projectedCommissions = useMemo(() => {
+    return deals
+      .filter(d => d.status === 'open' && d.probability)
+      .reduce((sum, d) => {
+        const firstMonthCommission = (d.setupFee * 0.2) + (d.monthlyFee * 0.4);
+        return sum + (firstMonthCommission * (d.probability! / 100));
+      }, 0);
+  }, [deals]);
 
-  // Filter commissions based on current filters
-  const filteredCommissions = commissions.filter(commission => {
-    const matchesRep = selectedSalesRep === 'all' || commission.salesRep === selectedSalesRep;
-    const matchesStatus = statusFilter === 'all' || commission.status === statusFilter;
-    const matchesSearch = searchTerm === '' || 
-      commission.dealName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      commission.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      commission.salesRep.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesRep && matchesStatus && matchesSearch;
-  });
+  // Filter commissions based on current filters - memoized to prevent infinite re-renders
+  const filteredCommissions = useMemo(() => {
+    return commissions.filter(commission => {
+      const matchesRep = selectedSalesRep === 'all' || commission.salesRep === selectedSalesRep;
+      const matchesStatus = statusFilter === 'all' || commission.status === statusFilter;
+      const matchesSearch = searchTerm === '' || 
+        commission.dealName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        commission.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        commission.salesRep.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      return matchesRep && matchesStatus && matchesSearch;
+    });
+  }, [commissions, selectedSalesRep, statusFilter, searchTerm]);
 
   // Calculate sales rep performance metrics 
   const getSalesRepMetrics = (repName: string) => {
