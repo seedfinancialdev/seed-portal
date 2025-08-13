@@ -138,6 +138,8 @@ export default function Dashboard() {
 
   // Fetch live weather data based on user's location - defer until after initial load
   useEffect(() => {
+    if (!user) return;
+
     // Defer weather fetch by 500ms to prioritize core UI loading
     const timeoutId = setTimeout(() => {
       const fetchWeather = async () => {
@@ -199,20 +201,20 @@ export default function Dashboard() {
       }
     };
 
-      // Only fetch weather if user data exists
-      if (user) {
-        fetchWeather();
-        // Refresh weather every 30 minutes
-        const interval = setInterval(fetchWeather, 30 * 60 * 1000);
-        return () => {
-          clearTimeout(timeoutId);
-          clearInterval(interval);
-        };
-      }
+      // Fetch weather immediately then set up interval
+      fetchWeather();
+      // Refresh weather every 30 minutes
+      const interval = setInterval(fetchWeather, 30 * 60 * 1000);
+      
+      return () => {
+        clearInterval(interval);
+      };
     }, 500); // 500ms delay for initial load performance
 
-    return () => clearTimeout(timeoutId);
-  }, [user?.latitude, user?.longitude, user?.city, user?.state, user?.id]); // Add user.id to prevent duplicate calls
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [user?.latitude, user?.longitude, user?.city, user?.state]); // Removed user.id to prevent unnecessary re-runs
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">

@@ -39,13 +39,17 @@ export function NavigationHistoryProvider({ children }: NavigationHistoryProvide
       // Only add to history if it's a different location
       if (location !== lastLocation) {
         // Remove any forward history when navigating to a new location
-        const newHistory = history.slice(0, currentIndex + 1);
-        newHistory.push(location);
-        setHistory(newHistory);
-        setCurrentIndex(newHistory.length - 1);
+        setHistory(prevHistory => {
+          const newHistory = prevHistory.slice(0, currentIndex + 1);
+          newHistory.push(location);
+          return newHistory;
+        });
+        setCurrentIndex(prevIndex => {
+          return currentIndex + 1; // Set to the new last position
+        });
       }
     }
-  }, [location, history, currentIndex]);
+  }, [location, currentIndex]); // Removed history from dependencies to prevent infinite loop
 
   // Handle browser back/forward buttons
   useEffect(() => {
