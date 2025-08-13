@@ -412,8 +412,8 @@ export function AdminCommissionTracker() {
     return sum + ((deal.dealValue || 0) * stageProbability);
   }, 0);
 
-  // Helper functions
-  const getStatusBadge = (status: string) => {
+  // Memoize helper functions to prevent re-calculations
+  const getStatusBadge = useCallback((status: string) => {
     const variants = {
       pending: 'bg-yellow-100 text-yellow-800',
       approved: 'bg-blue-100 text-blue-800',
@@ -427,9 +427,10 @@ export function AdminCommissionTracker() {
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </Badge>
     );
-  };
+  }, []);
 
-  const getServiceTypeIcon = (serviceType: string) => {
+  // Memoize getServiceTypeIcon to prevent re-calculations  
+  const getServiceTypeIcon = useCallback((serviceType: string) => {
     const icons = {
       bookkeeping: <Calculator className="w-4 h-4 text-blue-600" />,
       'bookkeeping + taas': <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>,
@@ -441,23 +442,26 @@ export function AdminCommissionTracker() {
     };
     
     return icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
-  };
+  }, []);
 
-  const getPriorityIcon = (probability?: number) => {
+  // Memoize getPriorityIcon to prevent re-calculations
+  const getPriorityIcon = useCallback((probability?: number) => {
     if (!probability) return <Clock className="w-4 h-4 text-gray-400" />;
     if (probability >= 75) return <TrendingUp className="w-4 h-4 text-green-600" />;
     if (probability >= 50) return <Target className="w-4 h-4 text-yellow-600" />;
     return <TrendingDown className="w-4 h-4 text-red-600" />;
-  };
+  }, []);
 
-  const getMonthlyBonusTier = (clientsClosedThisMonth: number) => {
+  // Memoize getMonthlyBonusTier to prevent re-calculations
+  const getMonthlyBonusTier = useCallback((clientsClosedThisMonth: number) => {
     if (clientsClosedThisMonth >= 15) return { name: 'MacBook Air', target: 15, reward: '$1,500', color: 'text-purple-600', bgColor: 'bg-purple-50' };
     if (clientsClosedThisMonth >= 10) return { name: 'Apple Watch', target: 10, reward: '$1,000', color: 'text-blue-600', bgColor: 'bg-blue-50' };
     if (clientsClosedThisMonth >= 5) return { name: 'AirPods', target: 5, reward: '$500', color: 'text-green-600', bgColor: 'bg-green-50' };
     return { name: 'Next Bonus', target: 5, reward: '$500', color: 'text-orange-600', bgColor: 'bg-orange-50' };
-  };
+  }, []);
 
-  const getSalesRepMetrics = (repName: string) => {
+  // Memoize getSalesRepMetrics to prevent infinite re-renders
+  const getSalesRepMetrics = useCallback((repName: string) => {
     const repCommissions = commissions.filter(c => c.salesRep === repName);
     const currentPeriodCommissions = repCommissions
       .filter(c => c.dateEarned >= currentPeriod.periodStart && c.dateEarned <= currentPeriod.periodEnd)
@@ -500,7 +504,7 @@ export function AdminCommissionTracker() {
       totalClientsAllTime,
       monthlyBonusTier
     };
-  };
+  }, [commissions, deals, currentPeriod]);
 
   // Event handlers
   const handleRequestAdjustment = (commission: Commission) => {
