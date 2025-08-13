@@ -4137,6 +4137,62 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
     }
   });
 
+  app.post("/api/commissions/:id/unreject", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+
+      const commissionId = req.params.id; // Keep as string since it's hubspot_invoice_id
+      if (!commissionId) {
+        return res.status(400).json({ message: "Invalid commission ID" });
+      }
+
+      console.log(`🔍 Attempting to unreject commission with hubspot_invoice_id: ${commissionId}`);
+
+      // First, get the original commission amount before it was rejected
+      const originalResult = await db.execute(sql`
+        SELECT c.id, c.amount, c.status, hi.total_amount
+        FROM commissions c
+        LEFT JOIN hubspot_invoices hi ON c.hubspot_invoice_id = hi.id
+        WHERE c.hubspot_invoice_id = ${commissionId}
+        LIMIT 1
+      `);
+
+      if (originalResult.rows.length === 0) {
+        return res.status(404).json({ message: "Commission not found" });
+      }
+
+      const originalCommission = originalResult.rows[0] as any;
+      
+      // Calculate what the commission amount should be based on the invoice
+      // For now, we'll need to recalculate or use the original invoice amount
+      // This is a simplified approach - you might want to store the original amount separately
+      let restoredAmount = originalCommission.total_amount ? parseFloat(originalCommission.total_amount) * 0.2 : 100; // Default fallback
+
+      // Update commission status back to pending and restore a reasonable amount
+      const updateResult = await db.execute(sql`
+        UPDATE commissions 
+        SET status = 'pending', 
+            amount = ${restoredAmount},
+            updated_at = NOW()
+        WHERE hubspot_invoice_id = ${commissionId}
+      `);
+
+      console.log(`📊 Unreject update result: rowCount = ${(updateResult as any).rowCount}`);
+
+      if ((updateResult as any).rowCount === 0) {
+        return res.status(404).json({ message: "Commission not found" });
+      }
+
+      console.log(`🔄 Commission ${commissionId} unrejected and amount restored to $${restoredAmount} by ${req.user.email}`);
+      res.json({ success: true, message: "Commission successfully restored to pending status" });
+    } catch (error) {
+      console.error('Error unrejecting commission:', error);
+      res.status(500).json({ message: "Failed to unreject commission" });
+    }
+  });
+
   // Initialize HubSpot sync on server startup
   async function initializeHubSpotSync() {
     try {

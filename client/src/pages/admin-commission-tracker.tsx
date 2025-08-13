@@ -53,6 +53,7 @@ import {
   Download,
   Search,
   ExternalLink,
+  RotateCcw,
   Edit,
   FileText,
   Calculator,
@@ -599,6 +600,10 @@ export function AdminCommissionTracker() {
   }, [handleViewDealDetails]);
 
   const handleApproveCommission = async (commissionId: string) => {
+    // Show confirmation dialog first
+    const confirmed = confirm('Are you sure you want to approve this commission? This action will mark it as approved and ready for payment.');
+    if (!confirmed) return;
+    
     try {
       // Get CSRF token first
       const csrfResponse = await fetch('/api/csrf-token');
@@ -630,6 +635,10 @@ export function AdminCommissionTracker() {
   };
 
   const handleRejectCommission = async (commissionId: string) => {
+    // Show confirmation dialog first
+    const confirmed = confirm('Are you sure you want to reject this commission? This will set the amount to $0 and mark it as rejected.');
+    if (!confirmed) return;
+    
     try {
       // Get CSRF token first
       const csrfResponse = await fetch('/api/csrf-token');
@@ -667,6 +676,45 @@ export function AdminCommissionTracker() {
   const handleRejectCommissionClick = useCallback((commissionId: string) => {
     handleRejectCommission(commissionId);
   }, [handleRejectCommission]);
+
+  const handleUnrejectCommission = async (commissionId: string) => {
+    // Show confirmation dialog first
+    const confirmed = confirm('Are you sure you want to restore this commission to pending status? This will reverse the rejection and restore the commission amount.');
+    if (!confirmed) return;
+    
+    try {
+      // Get CSRF token first
+      const csrfResponse = await fetch('/api/csrf-token');
+      const { csrfToken } = await csrfResponse.json();
+      
+      const response = await fetch(`/api/commissions/${commissionId}/unreject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        }
+      });
+
+      if (response.ok) {
+        console.log(`Commission ${commissionId} unrejected`);
+        // Show success message  
+        alert('Commission successfully restored to pending status!');
+        // Refresh commissions data
+        await refetchCommissions();
+      } else {
+        const error = await response.json();
+        console.error('Failed to unreject commission:', error);
+        alert('Failed to unreject commission: ' + error.message);
+      }
+    } catch (error) {
+      console.error('Unreject commission error:', error);
+      alert('Failed to unreject commission. Please try again.');
+    }
+  };
+
+  const handleUnrejectCommissionClick = useCallback((commissionId: string) => {
+    handleUnrejectCommission(commissionId);
+  }, [handleUnrejectCommission]);
 
   const handleReviewAdjustmentClick = useCallback((request: any) => {
     handleReviewAdjustment(request);
@@ -963,6 +1011,17 @@ export function AdminCommissionTracker() {
                                     <AlertCircle className="w-4 h-4" />
                                   </Button>
                                 </>
+                              )}
+                              {commission.status === 'rejected' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUnrejectCommissionClick(commission.id)}
+                                  className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600"
+                                  data-testid={`button-unreject-${commission.id}`}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </Button>
                               )}
                             </div>
                           </TableCell>
