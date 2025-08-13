@@ -66,6 +66,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { calculateMonthlyBonus, calculateMilestoneBonus, getNextMilestone, calculateTotalEarnings } from "@shared/commission-calculator";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Commission {
   id: string;
@@ -183,6 +185,9 @@ export function SalesCommissionTracker() {
   const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
+  const [submittingAdjustment, setSubmittingAdjustment] = useState(false);
+  
+  const { toast } = useToast();
 
   // Process real API data
   useEffect(() => {
@@ -320,19 +325,48 @@ export function SalesCommissionTracker() {
     setAdjustmentDialogOpen(true);
   };
 
-  const handleSubmitAdjustment = () => {
-    if (selectedCommission && adjustmentReason.trim()) {
-      // In real app, would submit to API
-      console.log('Adjustment request submitted:', {
+  const handleSubmitAdjustment = async () => {
+    if (!selectedCommission || !adjustmentReason.trim()) return;
+    
+    setSubmittingAdjustment(true);
+    
+    try {
+      const adjustmentData = {
         commissionId: selectedCommission.id,
-        requestedAmount: adjustmentAmount || selectedCommission.amount,
+        originalAmount: selectedCommission.amount,
+        requestedAmount: adjustmentAmount ? parseFloat(adjustmentAmount) : selectedCommission.amount,
         reason: adjustmentReason
+      };
+
+      await apiRequest('/api/commission-adjustments', {
+        method: 'POST',
+        body: JSON.stringify(adjustmentData)
+      });
+
+      // Show success message
+      toast({
+        title: "Adjustment Request Submitted",
+        description: "Your commission adjustment request has been submitted for review.",
       });
       
+      // Close dialog and reset form
       setAdjustmentDialogOpen(false);
       setSelectedCommission(null);
       setAdjustmentAmount('');
       setAdjustmentReason('');
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/commissions'] });
+      
+    } catch (error) {
+      console.error('Error submitting adjustment request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit adjustment request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingAdjustment(false);
     }
   };
 
@@ -779,9 +813,10 @@ export function SalesCommissionTracker() {
               </Button>
               <Button
                 onClick={handleSubmitAdjustment}
-                disabled={!adjustmentReason.trim()}
+                disabled={!adjustmentReason.trim() || submittingAdjustment}
+                data-testid="button-submit-adjustment"
               >
-                Submit Request
+                {submittingAdjustment ? "Submitting..." : "Submit Request"}
               </Button>
             </DialogFooter>
           </DialogContent>
