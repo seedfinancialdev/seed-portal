@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
 import { useLocation } from 'wouter';
 
 interface NavigationHistoryState {
@@ -18,80 +18,133 @@ interface NavigationHistoryProviderProps {
   children: ReactNode;
 }
 
+type NavigationState = {
+  history: string[];
+  currentIndex: number;
+};
+
+type NavigationAction = 
+  | { type: 'INITIALIZE'; location: string }
+  | { type: 'NAVIGATE'; location: string }
+  | { type: 'GO_BACK' }
+  | { type: 'GO_FORWARD' }
+  | { type: 'SET_INDEX'; index: number }
+  | { type: 'CLEAR' };
+
+function navigationReducer(state: NavigationState, action: NavigationAction): NavigationState {
+  switch (action.type) {
+    case 'INITIALIZE':
+      return {
+        history: [action.location],
+        currentIndex: 0
+      };
+    
+    case 'NAVIGATE':
+      if (state.history.length === 0) {
+        return {
+          history: [action.location],
+          currentIndex: 0
+        };
+      }
+      
+      const lastLocation = state.history[state.currentIndex];
+      if (action.location === lastLocation) {
+        return state; // No change
+      }
+      
+      // Remove forward history and add new location
+      const newHistory = state.history.slice(0, state.currentIndex + 1);
+      newHistory.push(action.location);
+      
+      return {
+        history: newHistory,
+        currentIndex: newHistory.length - 1
+      };
+    
+    case 'GO_BACK':
+      if (state.currentIndex > 0) {
+        return {
+          ...state,
+          currentIndex: state.currentIndex - 1
+        };
+      }
+      return state;
+    
+    case 'GO_FORWARD':
+      if (state.currentIndex < state.history.length - 1) {
+        return {
+          ...state,
+          currentIndex: state.currentIndex + 1
+        };
+      }
+      return state;
+    
+    case 'SET_INDEX':
+      return {
+        ...state,
+        currentIndex: action.index
+      };
+    
+    case 'CLEAR':
+      return {
+        history: [],
+        currentIndex: -1
+      };
+    
+    default:
+      return state;
+  }
+}
+
 export function NavigationHistoryProvider({ children }: NavigationHistoryProviderProps) {
   const [location, setLocation] = useLocation();
-  const [history, setHistory] = useState<string[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [state, dispatch] = useReducer(navigationReducer, {
+    history: [],
+    currentIndex: -1
+  });
 
-  // Initialize history with current location only once
-  useEffect(() => {
-    if (history.length === 0 && location) {
-      setHistory([location]);
-      setCurrentIndex(0);
-    }
-  }, [location]);
-
-  // Track location changes and update history
+  // Track location changes
   useEffect(() => {
     if (!location) return;
     
-    // Initialize history if empty
-    if (history.length === 0) {
-      setHistory([location]);
-      setCurrentIndex(0);
-      return;
+    if (state.history.length === 0) {
+      dispatch({ type: 'INITIALIZE', location });
+    } else {
+      dispatch({ type: 'NAVIGATE', location });
     }
-    
-    const lastLocation = history[currentIndex];
-    
-    // Only add to history if it's a different location
-    if (location !== lastLocation) {
-      // Remove any forward history when navigating to a new location
-      setHistory(prevHistory => {
-        const newHistory = prevHistory.slice(0, currentIndex + 1);
-        newHistory.push(location);
-        return newHistory;
-      });
-      setCurrentIndex(currentIndex + 1);
-    }
-  }, [location]); // Only depend on location
+  }, [location]);
 
   // Handle browser back/forward buttons
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      // Browser back/forward was used - sync our history
       const currentPath = window.location.pathname;
-      const historyIndex = history.indexOf(currentPath);
+      const historyIndex = state.history.indexOf(currentPath);
       
       if (historyIndex !== -1) {
-        setCurrentIndex(historyIndex);
+        dispatch({ type: 'SET_INDEX', index: historyIndex });
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [history]);
+  }, [state.history]);
 
-  const canGoBack = currentIndex > 0;
-  const canGoForward = currentIndex < history.length - 1;
+  const canGoBack = state.currentIndex > 0;
+  const canGoForward = state.currentIndex < state.history.length - 1;
 
   const goBack = () => {
     if (canGoBack) {
-      const newIndex = currentIndex - 1;
-      const previousPath = history[newIndex];
-      setCurrentIndex(newIndex);
+      const previousPath = state.history[state.currentIndex - 1];
+      dispatch({ type: 'GO_BACK' });
       setLocation(previousPath);
-      
-      // Update browser history
       window.history.pushState(null, '', previousPath);
     }
   };
 
   const goForward = () => {
     if (canGoForward) {
-      const newIndex = currentIndex + 1;
-      const nextPath = history[newIndex];
-      setCurrentIndex(newIndex);
+      const nextPath = state.history[state.currentIndex + 1];
+      dispatch({ type: 'GO_FORWARD' });
       setLocation(nextPath);
       
       // Update browser history
@@ -105,13 +158,12 @@ export function NavigationHistoryProvider({ children }: NavigationHistoryProvide
   };
 
   const clearHistory = () => {
-    setHistory([location]);
-    setCurrentIndex(0);
+    dispatch({ type: 'CLEAR' });
   };
 
   const value: NavigationHistoryState = {
-    history,
-    currentIndex,
+    history: state.history,
+    currentIndex: state.currentIndex,
     canGoBack,
     canGoForward,
     goBack,
