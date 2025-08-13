@@ -190,6 +190,10 @@ export function SalesCommissionTracker() {
   const [submittingAdjustment, setSubmittingAdjustment] = useState(false);
   
   const { toast } = useToast();
+  
+  // Define loading states for bonus tracking sections
+  const monthlyBonusesLoading = commissionsLoading || dealsLoading;
+  const milestoneBonusesLoading = commissionsLoading || pipelineLoading;
 
   // Service type icon function - properly memoized as a direct function
   const getServiceTypeIcon = useCallback((serviceType: string) => {
