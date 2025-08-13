@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 
 import { AuthProvider } from "@/hooks/use-auth";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
-// import { NavigationHistoryProvider } from "@/hooks/use-navigation-history";
+import { NavigationHistoryProvider } from "@/hooks/use-navigation-history";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { RoleBasedRedirect } from "@/components/RoleBasedRedirect";
@@ -70,10 +70,10 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          {/* <NavigationHistoryProvider> */}
+          <NavigationHistoryProvider>
             <Toaster />
             <Router />
-          {/* </NavigationHistoryProvider> */}
+          </NavigationHistoryProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
