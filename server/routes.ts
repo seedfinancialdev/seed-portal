@@ -4072,18 +4072,22 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const commissionId = parseInt(req.params.id);
+      const commissionId = req.params.id; // Keep as string since it's hubspot_invoice_id
       if (!commissionId) {
         return res.status(400).json({ message: "Invalid commission ID" });
       }
 
-      // Update commission status to approved
+      console.log(`🔍 Attempting to approve commission with hubspot_invoice_id: ${commissionId}`);
+
+      // Update commission status to approved using hubspot_invoice_id
       const result = await db.execute(sql`
         UPDATE commissions 
         SET status = 'approved', 
             updated_at = NOW()
-        WHERE id = ${commissionId}
+        WHERE hubspot_invoice_id = ${commissionId}
       `);
+
+      console.log(`📊 Approve update result: rowCount = ${(result as any).rowCount}`);
 
       if ((result as any).rowCount === 0) {
         return res.status(404).json({ message: "Commission not found" });
@@ -4103,19 +4107,23 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(403).json({ message: "Admin access required" });
       }
 
-      const commissionId = parseInt(req.params.id);
+      const commissionId = req.params.id; // Keep as string since it's hubspot_invoice_id
       if (!commissionId) {
         return res.status(400).json({ message: "Invalid commission ID" });
       }
 
-      // Update commission status to rejected and zero out the amount
+      console.log(`🔍 Attempting to reject commission with hubspot_invoice_id: ${commissionId}`);
+
+      // Update commission status to rejected and zero out the amount using hubspot_invoice_id
       const result = await db.execute(sql`
         UPDATE commissions 
         SET status = 'rejected', 
             amount = 0,
             updated_at = NOW()
-        WHERE id = ${commissionId}
+        WHERE hubspot_invoice_id = ${commissionId}
       `);
+
+      console.log(`📊 Reject update result: rowCount = ${(result as any).rowCount}`);
 
       if ((result as any).rowCount === 0) {
         return res.status(404).json({ message: "Commission not found" });
