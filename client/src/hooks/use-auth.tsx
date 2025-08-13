@@ -73,16 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Wait a moment for session to propagate
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('[useAuth] 🧹 Clearing query cache...');
-      // Clear all user-specific data to prevent cross-user data leakage
-      await queryClient.invalidateQueries();
+      console.log('[useAuth] 🧹 Clearing user data cache...');
+      // Only invalidate user-specific queries to prevent cascading re-renders
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       
-      console.log('[useAuth] ⏳ Additional delay before refetch...');
-      // Force fresh fetch of user profile with a small delay
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      console.log('[useAuth] 🔄 Refetching user data...');
-      await queryClient.refetchQueries({ queryKey: ["/api/user"] });
+      console.log('[useAuth] ⏳ Allowing natural refetch cycle...');
+      // Let React Query handle the refetch naturally instead of forcing it
       
       console.log('[useAuth] 🍞 Showing success toast...');
       toast({

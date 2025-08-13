@@ -37,17 +37,18 @@ export function UniversalNavbar({
       return await apiRequest('POST', '/api/admin/stop-impersonation', {});
     },
     onSuccess: async () => {
-      // Clear cache and refetch user data
-      await queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      await queryClient.refetchQueries({ queryKey: ['/api/user'] });
-      
       toast({
         title: "Impersonation Stopped",
         description: "You have returned to your admin account.",
       });
       
-      // Redirect to admin dashboard
+      // Redirect to admin dashboard first, then refresh
       setLocation('/admin');
+      
+      // Delay the cache operations to prevent cascading re-renders
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      }, 100);
     },
     onError: (error: any) => {
       toast({

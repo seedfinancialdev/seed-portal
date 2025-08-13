@@ -176,7 +176,8 @@ export function SalesCommissionTracker() {
       return await response.json();
     },
     enabled: !!user,
-    refetchInterval: 15000
+    refetchInterval: false, // Disabled aggressive auto-refetch to prevent infinite re-renders
+    staleTime: 30000 // Cache for 30 seconds
   });
 
   // Dialog states
