@@ -564,6 +564,23 @@ export function AdminCommissionTracker() {
     }
   };
 
+  // Memoize commission action handlers to prevent infinite re-renders  
+  const handleViewDealDetailsClick = useCallback((dealId: string) => {
+    handleViewDealDetails(dealId);
+  }, [handleViewDealDetails]);
+
+  const handleApproveCommissionClick = useCallback((commissionId: string) => {
+    handleApproveCommission(commissionId);
+  }, []);
+
+  const handleRejectCommissionClick = useCallback((commissionId: string) => {
+    handleRejectCommission(commissionId);
+  }, []);
+
+  const handleReviewAdjustmentClick = useCallback((request: any) => {
+    handleReviewAdjustment(request);
+  }, []);
+
   const handleViewDealDetails = useCallback((dealId: string) => {
     const deal = deals.find(d => d.id === dealId) || commissions.find(c => c.dealId === dealId);
     if (deal) {
@@ -912,7 +929,7 @@ export function AdminCommissionTracker() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleViewDealDetails(commission.dealId)}
+                                onClick={() => handleViewDealDetailsClick(commission.dealId)}
                                 className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
                                 data-testid={`button-view-deal-${commission.id}`}
                               >
@@ -923,7 +940,7 @@ export function AdminCommissionTracker() {
                                   <Button
                                     variant="default"
                                     size="sm"
-                                    onClick={() => handleApproveCommission(commission.id)}
+                                    onClick={() => handleApproveCommissionClick(commission.id)}
                                     className="bg-green-600 hover:bg-green-700"
                                     data-testid={`button-approve-${commission.id}`}
                                   >
@@ -932,7 +949,7 @@ export function AdminCommissionTracker() {
                                   <Button
                                     variant="destructive"
                                     size="sm"
-                                    onClick={() => handleRejectCommission(commission.id)}
+                                    onClick={() => handleRejectCommissionClick(commission.id)}
                                     data-testid={`button-reject-${commission.id}`}
                                   >
                                     <AlertCircle className="w-4 h-4" />
@@ -1240,7 +1257,7 @@ export function AdminCommissionTracker() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleReviewAdjustment(request)}
+                                  onClick={() => handleReviewAdjustmentClick(request)}
                                   data-testid={`button-review-${request.id}`}
                                 >
                                   <Eye className="w-4 h-4 mr-1" />
