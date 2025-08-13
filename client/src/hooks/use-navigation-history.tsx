@@ -23,33 +23,38 @@ export function NavigationHistoryProvider({ children }: NavigationHistoryProvide
   const [history, setHistory] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
 
-  // Initialize history with current location
+  // Initialize history with current location only once
   useEffect(() => {
     if (history.length === 0 && location) {
       setHistory([location]);
       setCurrentIndex(0);
     }
-  }, [location, history.length]);
+  }, [location]);
 
   // Track location changes and update history
   useEffect(() => {
-    if (location && history.length > 0) {
-      const lastLocation = history[currentIndex];
-      
-      // Only add to history if it's a different location
-      if (location !== lastLocation) {
-        // Remove any forward history when navigating to a new location
-        setHistory(prevHistory => {
-          const newHistory = prevHistory.slice(0, currentIndex + 1);
-          newHistory.push(location);
-          return newHistory;
-        });
-        setCurrentIndex(prevIndex => {
-          return currentIndex + 1; // Set to the new last position
-        });
-      }
+    if (!location) return;
+    
+    // Initialize history if empty
+    if (history.length === 0) {
+      setHistory([location]);
+      setCurrentIndex(0);
+      return;
     }
-  }, [location, currentIndex]); // Removed history from dependencies to prevent infinite loop
+    
+    const lastLocation = history[currentIndex];
+    
+    // Only add to history if it's a different location
+    if (location !== lastLocation) {
+      // Remove any forward history when navigating to a new location
+      setHistory(prevHistory => {
+        const newHistory = prevHistory.slice(0, currentIndex + 1);
+        newHistory.push(location);
+        return newHistory;
+      });
+      setCurrentIndex(currentIndex + 1);
+    }
+  }, [location]); // Only depend on location
 
   // Handle browser back/forward buttons
   useEffect(() => {
