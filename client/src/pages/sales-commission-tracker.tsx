@@ -193,6 +193,26 @@ export function SalesCommissionTracker() {
     }
   });
 
+  // Fetch pipeline projections (same data as admin commission tracker)
+  const { data: pipelineDeals = [], isLoading: pipelineLoading } = useQuery({
+    queryKey: ['/api/pipeline-projections'],
+    queryFn: async () => {
+      const response = await fetch('/api/pipeline-projections?v=' + Date.now(), {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch pipeline projections');
+      return await response.json();
+    },
+    enabled: !!user,
+    refetchInterval: 15000
+  });
+
   // Dialog states
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [commissionHistoryModalOpen, setCommissionHistoryModalOpen] = useState(false);
@@ -267,27 +287,24 @@ export function SalesCommissionTracker() {
       // Count total clients all time (from all commissions for milestone tracking)
       const totalClientsAllTime = new Set(transformedCommissions.map(c => c.companyName)).size;
       
-      // Calculate projected earnings from pipeline (same logic as admin commission tracker)
-      const projectedFromPipeline = liveDeals
+      // Calculate projected earnings from pipeline projections (same data as admin commission tracker)
+      const projectedFromPipeline = pipelineDeals
         .filter(deal => {
-          // Filter deals for this user
-          const matchesUser = deal.sales_rep_name === userName || 
-                             deal.sales_rep_name?.toLowerCase().includes(user.firstName?.toLowerCase() || '') ||
-                             deal.sales_rep_name?.toLowerCase().includes(user.lastName?.toLowerCase() || '');
-          return matchesUser && deal.status === 'open';
+          // Filter deals for this user using same matching logic as commissions
+          const salesRepName = deal.salesRep || '';
+          const firstName = user.firstName || '';
+          const lastName = user.lastName || '';
+          const fullName = `${firstName} ${lastName}`.trim();
+          
+          const matchesUser = salesRepName === fullName ||
+                             salesRepName === userName ||
+                             salesRepName === `${firstName} ${lastName}` ||
+                             salesRepName === `${lastName} ${firstName}` ||
+                             (firstName && salesRepName.toLowerCase().includes(firstName.toLowerCase())) ||
+                             (lastName && salesRepName.toLowerCase().includes(lastName.toLowerCase()));
+          return matchesUser;
         })
-        .reduce((sum, deal) => {
-          // Calculate projected commission: assume standard commission rates
-          // Setup fee: 20% commission, Monthly fee: 40% first month, 10% residual
-          const setupFee = deal.setup_fee || 0;
-          const monthlyFee = deal.monthly_fee || 0;
-          const firstMonthCommission = (setupFee * 0.2) + (monthlyFee * 0.4);
-          
-          // Use deal probability if available, otherwise default to 50%
-          const probability = (deal.probability || 50) / 100;
-          
-          return sum + (firstMonthCommission * probability);
-        }, 0);
+        .reduce((sum, deal) => sum + (deal.projectedCommission || 0), 0);
       
       setSalesRepStats({
         totalCommissionsEarned: totalPaidEarnings, // Only previously paid earnings
@@ -297,7 +314,7 @@ export function SalesCommissionTracker() {
         projectedEarnings: projectedFromPipeline // Use pipeline-based projected earnings
       });
     }
-  }, [liveCommissions, user, currentPeriod]);
+  }, [liveCommissions, pipelineDeals, user, currentPeriod]);
 
   // Process deals data
   useEffect(() => {
