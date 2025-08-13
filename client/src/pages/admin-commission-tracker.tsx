@@ -598,18 +598,6 @@ export function AdminCommissionTracker() {
     handleViewDealDetails(dealId);
   }, [handleViewDealDetails]);
 
-  const handleApproveCommissionClick = useCallback((commissionId: string) => {
-    handleApproveCommission(commissionId);
-  }, []);
-
-  const handleRejectCommissionClick = useCallback((commissionId: string) => {
-    handleRejectCommission(commissionId);
-  }, []);
-
-  const handleReviewAdjustmentClick = useCallback((request: any) => {
-    handleReviewAdjustment(request);
-  }, []);
-
   const handleApproveCommission = async (commissionId: string) => {
     try {
       // Get CSRF token first
@@ -667,6 +655,18 @@ export function AdminCommissionTracker() {
       alert('Failed to reject commission. Please try again.');
     }
   };
+
+  const handleApproveCommissionClick = useCallback((commissionId: string) => {
+    handleApproveCommission(commissionId);
+  }, [handleApproveCommission]);
+
+  const handleRejectCommissionClick = useCallback((commissionId: string) => {
+    handleRejectCommission(commissionId);
+  }, [handleRejectCommission]);
+
+  const handleReviewAdjustmentClick = useCallback((request: any) => {
+    handleReviewAdjustment(request);
+  }, []);
 
   const handleSyncHubSpot = async () => {
     setSyncLoading(true);
