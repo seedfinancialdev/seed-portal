@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -340,20 +340,20 @@ export function SalesCommissionTracker() {
   const nextMilestone = getNextMilestone(salesRepStats.totalClientsClosedAllTime);
   const totalEarnings = calculateTotalEarnings(salesRepStats.totalCommissionsEarned, [], []);
 
-  // Event handlers
-  const handleRequestAdjustment = (commission: Commission) => {
+  // Event handlers - memoized to prevent infinite re-renders
+  const handleRequestAdjustment = useCallback((commission: Commission) => {
     setSelectedCommission(commission);
     setAdjustmentAmount('');
     setAdjustmentReason('');
     setAdjustmentDialogOpen(true);
-  };
+  }, []); // No dependencies needed as it only sets state
 
-  const handleViewCommissionDetails = (commission: Commission) => {
+  const handleViewCommissionDetails = useCallback((commission: Commission) => {
     setSelectedCommission(commission);
     setCommissionDetailsModalOpen(true);
-  };
+  }, []); // No dependencies needed as it only sets state
 
-  const handleSubmitAdjustment = async () => {
+  const handleSubmitAdjustment = useCallback(async () => {
     if (!selectedCommission || !adjustmentReason.trim()) return;
     
     setSubmittingAdjustment(true);
@@ -396,7 +396,7 @@ export function SalesCommissionTracker() {
     } finally {
       setSubmittingAdjustment(false);
     }
-  };
+  }, [selectedCommission, adjustmentAmount, adjustmentReason, toast, queryClient]); // Dependencies for async function
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#253e31] to-[#75c29a]">
