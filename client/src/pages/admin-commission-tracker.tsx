@@ -614,6 +614,8 @@ export function AdminCommissionTracker() {
 
       if (response.ok) {
         console.log(`Commission ${commissionId} approved`);
+        // Show success message
+        alert('Commission approved successfully!');
         // Refresh commissions data
         await refetchCommissions();
       } else {
@@ -643,6 +645,8 @@ export function AdminCommissionTracker() {
 
       if (response.ok) {
         console.log(`Commission ${commissionId} rejected`);
+        // Show success message  
+        alert('Commission rejected successfully!');
         // Refresh commissions data
         await refetchCommissions();
       } else {
