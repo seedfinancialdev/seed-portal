@@ -7,6 +7,11 @@ vite.config.ts.*
 
 # Environment variables
 .env
+.env.local
+.env.*.local
+.env.production
+.env.development
+!.env.example
 
 # Google Cloud credentials - NEVER commit these
 gcloud/application_default_credentials.json
@@ -15,3 +20,68 @@ gcloud/*.json
 
 # Uploads directory
 uploads/
+
+# Replit-specific files (for migration)
+.replit
+replit.nix
+.replit.workspace
+.cache/
+.config/
+.upm/
+.pythonlibs/
+
+# Supabase
+.supabase/
+supabase/.branches
+supabase/.temp/
+supabase/functions/*/node_modules
+**/supabase/.env
+
+# Doppler
+.doppler/
+.doppler.yaml.bak
+# Note: doppler.yaml is usually kept in version control for project config
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.windsurf/
+.windsurf-context/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+postgres-data/
+
+# Build artifacts & logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.eslintcache
+
+# TypeScript
+*.tsbuildinfo
+.tscache
+
+# Testing
+coverage/
+.nyc_output
+
+# OS files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+.temp/
