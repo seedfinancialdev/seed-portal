@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
@@ -54,9 +54,9 @@ export function UniversalNavbar({
     isImpersonating: dbUser?.isImpersonating || false
   }), [dbUser?.email, dbUser?.isImpersonating]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logoutMutation.mutate();
-  };
+  }, [logoutMutation]);
 
   // Stop impersonation mutation
   const stopImpersonationMutation = useMutation({
