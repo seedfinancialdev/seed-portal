@@ -190,8 +190,8 @@ export function SalesCommissionTracker() {
   
   const { toast } = useToast();
 
-  // Service type icon function (duplicated from admin tracker)
-  const getServiceTypeIcon = (serviceType: string) => {
+  // Service type icon function - memoized to prevent re-creation on every render
+  const getServiceTypeIcon = useMemo(() => {
     const icons = {
       bookkeeping: <Calculator className="w-4 h-4 text-blue-600" />,
       'bookkeeping + taas': <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>,
@@ -202,8 +202,8 @@ export function SalesCommissionTracker() {
       mixed: <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>
     };
     
-    return icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
-  };
+    return (serviceType: string) => icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
+  }, []);
 
   // Process real API data - memoized userName to prevent infinite loops
   const userName = useMemo(() => {
@@ -319,8 +319,8 @@ export function SalesCommissionTracker() {
 
   // Removed unused deals processing logic
 
-  // Helper functions
-  const getStatusBadge = (status: string) => {
+  // Helper functions - memoized to prevent re-creation on every render
+  const getStatusBadge = useMemo(() => {
     const variants = {
       pending: <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>,
       approved: <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Approved</Badge>,
@@ -328,8 +328,8 @@ export function SalesCommissionTracker() {
       disputed: <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Disputed</Badge>
     };
     
-    return variants[status as keyof typeof variants] || <Badge variant="outline">{status}</Badge>;
-  };
+    return (status: string) => variants[status as keyof typeof variants] || <Badge variant="outline">{status}</Badge>;
+  }, []);
 
 
 
