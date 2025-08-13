@@ -182,12 +182,28 @@ export function SalesCommissionTracker() {
   // Dialog states
   const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
   const [commissionHistoryModalOpen, setCommissionHistoryModalOpen] = useState(false);
+  const [commissionDetailsModalOpen, setCommissionDetailsModalOpen] = useState(false);
   const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [submittingAdjustment, setSubmittingAdjustment] = useState(false);
   
   const { toast } = useToast();
+
+  // Service type icon function (duplicated from admin tracker)
+  const getServiceTypeIcon = (serviceType: string) => {
+    const icons = {
+      bookkeeping: <Calculator className="w-4 h-4 text-blue-600" />,
+      'bookkeeping + taas': <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>,
+      taas: <Building2 className="w-4 h-4 text-purple-600" />,
+      payroll: <CreditCard className="w-4 h-4 text-green-600" />,
+      'ap/ar lite': <FileText className="w-4 h-4 text-orange-600" />,
+      'fp&a lite': <BarChart3 className="w-4 h-4 text-red-600" />,
+      mixed: <div className="flex gap-1"><Calculator className="w-3 h-3 text-blue-600" /><Building2 className="w-3 h-3 text-purple-600" /></div>
+    };
+    
+    return icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
+  };
 
   // Process real API data
   useEffect(() => {
@@ -299,17 +315,7 @@ export function SalesCommissionTracker() {
     return variants[status as keyof typeof variants] || <Badge variant="outline">{status}</Badge>;
   };
 
-  const getServiceTypeIcon = (serviceType: string) => {
-    const icons = {
-      bookkeeping: <Calculator className="w-4 h-4 text-blue-600" />,
-      taas: <Building2 className="w-4 h-4 text-purple-600" />,
-      payroll: <CreditCard className="w-4 h-4 text-green-600" />,
-      ap_ar_lite: <FileText className="w-4 h-4 text-orange-600" />,
-      fpa_lite: <BarChart3 className="w-4 h-4 text-red-600" />
-    };
-    
-    return icons[serviceType as keyof typeof icons] || <Calculator className="w-4 h-4 text-gray-600" />;
-  };
+
 
   // Calculate bonus eligibility
   const monthlyBonusEligibility = calculateMonthlyBonus(salesRepStats.totalClientsClosedMonthly);
@@ -368,6 +374,11 @@ export function SalesCommissionTracker() {
     } finally {
       setSubmittingAdjustment(false);
     }
+  };
+
+  const handleViewCommissionDetails = (commission: Commission) => {
+    setSelectedCommission(commission);
+    setCommissionDetailsModalOpen(true);
   };
 
   return (
@@ -544,14 +555,25 @@ export function SalesCommissionTracker() {
                         {new Date(commission.dateEarned).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          className="text-xs"
-                          onClick={() => handleRequestAdjustment(commission)}
-                        >
-                          Request Adjustment
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => handleViewCommissionDetails(commission)}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            Details
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => handleRequestAdjustment(commission)}
+                          >
+                            Request Adjustment
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -755,6 +777,116 @@ export function SalesCommissionTracker() {
                   Close
                 </Button>
               </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Commission Details Modal */}
+        <Dialog open={commissionDetailsModalOpen} onOpenChange={setCommissionDetailsModalOpen}>
+          <DialogContent className="sm:max-w-[700px]" data-testid="dialog-commission-details">
+            <DialogHeader>
+              <DialogTitle>Commission Details</DialogTitle>
+              <DialogDescription>
+                {selectedCommission && `Details for ${selectedCommission.dealName}`}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedCommission && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Company</Label>
+                        <p className="text-lg font-semibold">{selectedCommission.companyName}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Deal Name</Label>
+                        <p className="text-lg font-semibold">{selectedCommission.dealName}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Service Type</Label>
+                        <div className="flex items-center gap-2">
+                          {getServiceTypeIcon(selectedCommission.serviceType)}
+                          <span className="capitalize">{selectedCommission.serviceType.replace('_', ' ')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Commission Type</Label>
+                        <Badge variant={selectedCommission.type === 'month_1' ? 'default' : 'secondary'}>
+                          {selectedCommission.type === 'month_1' ? 'First Month' : `Month ${selectedCommission.monthNumber}`}
+                        </Badge>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Status</Label>
+                        {getStatusBadge(selectedCommission.status)}
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600">Date Earned</Label>
+                        <p>{new Date(selectedCommission.dateEarned).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <Label className="text-sm font-medium text-gray-600">Commission Breakdown</Label>
+                    <div className="grid grid-cols-1 gap-4 mt-2">
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-gray-600">Commission Amount</p>
+                        <p className="text-xl font-bold text-blue-600">
+                          ${selectedCommission.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {selectedCommission.type === 'month_1' ? 'First month commission (40% of monthly fee)' : 'Residual commission (2% of monthly fee)'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {selectedCommission.datePaid && (
+                    <div className="border-t pt-4">
+                      <Label className="text-sm font-medium text-gray-600">Payment Information</Label>
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-600">Date Paid</p>
+                        <p className="font-semibold">{new Date(selectedCommission.datePaid).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setCommissionDetailsModalOpen(false)}
+                data-testid="button-close-commission-details"
+              >
+                Close
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCommissionDetailsModalOpen(false);
+                  handleRequestAdjustment(selectedCommission!);
+                }}
+                disabled={selectedCommission?.status === 'paid'}
+                data-testid="button-create-adjustment-from-details"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Request Adjustment
+              </Button>
+              {selectedCommission && (
+                <Button 
+                  asChild
+                  data-testid="button-view-hubspot-deal"
+                >
+                  <a href={`https://app.hubspot.com/contacts/deal/${selectedCommission.dealId}`} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View in HubSpot
+                  </a>
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
