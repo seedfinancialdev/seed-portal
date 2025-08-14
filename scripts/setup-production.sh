@@ -10,14 +10,17 @@ if [ ! -z "$REDIS_URL" ]; then
     # Test Redis connection
     echo "Testing Redis connection..."
     node -e "
-    import { createClient } from 'redis';
-    const client = createClient({ url: process.env.REDIS_URL });
-    client.connect().then(() => {
+    (async () => {
+      try {
+        const Redis = (await import('ioredis')).default;
+        const client = new Redis(process.env.REDIS_URL);
+        await client.ping();
         console.log('✅ Redis connection successful');
-        client.disconnect();
-    }).catch(err => {
-        console.log('❌ Redis connection failed:', err.message);
-    });
+        await client.quit();
+      } catch (err) {
+        console.log('❌ Redis connection failed:', err?.message || err);
+      }
+    })();
     "
 else
     echo "❌ REDIS_URL not configured"
@@ -25,19 +28,47 @@ fi
 
 # 2. Database Configuration Check  
 echo "📊 Database Configuration:"
-if [ ! -z "$DATABASE_URL" ]; then
-    echo "✅ Database URL configured (Neon PostgreSQL)"
-    echo "ℹ️  Neon includes automatic backups and PITR"
+# Prefer DIRECT_URL -> SUPABASE_DB_URL -> DATABASE_URL
+DB_URL="${DIRECT_URL:-${SUPABASE_DB_URL:-${DATABASE_URL}}}"
+if [ ! -z "$DB_URL" ]; then
+    echo "✅ Database URL configured"
+    if [ ! -z "$DIRECT_URL" ]; then
+        echo "   Source: DIRECT_URL"
+    elif [ ! -z "$SUPABASE_DB_URL" ]; then
+        echo "   Source: SUPABASE_DB_URL"
+    else
+        echo "   Source: DATABASE_URL"
+    fi
+    if [[ "$DB_URL" == *"supabase.co"* ]] || [ "$PG_SSL" = "1" ]; then
+        echo "   SSL: ENABLED"
+    else
+        echo "   SSL: default"
+    fi
 else
-    echo "❌ DATABASE_URL not configured"
+    echo "❌ No database URL configured (set DIRECT_URL or SUPABASE_DB_URL or DATABASE_URL)"
 fi
 
 # 3. Google Admin API Check
 echo "📊 Google Admin API Configuration:"
-if [ ! -z "$GOOGLE_CLIENT_ID_OS" ] && [ ! -z "$GOOGLE_CLIENT_SECRET_OS" ] && [ ! -z "$GOOGLE_REFRESH_TOKEN" ]; then
-    echo "✅ Google OAuth credentials configured"
+if [ ! -z "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
+    if [ -z "$GOOGLE_ADMIN_EMAIL" ]; then
+        echo "⚠️  Service account found but GOOGLE_ADMIN_EMAIL not set (code fallback will be used)"
+    else
+        # Validate email format and avoid echoing the raw value (prevent accidental secret output)
+        if [[ "$GOOGLE_ADMIN_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; then
+            echo "✅ Service account (DWD) configured with valid admin subject"
+        else
+            echo "❌ GOOGLE_ADMIN_EMAIL value doesn't look like an email. Set a Workspace admin email (e.g., admin@your-domain.com)."
+        fi
+    fi
 else
-    echo "❌ Missing Google OAuth credentials"
+    if [ ! -z "$GOOGLE_CLIENT_ID_OS" ] && [ ! -z "$GOOGLE_CLIENT_SECRET_OS" ] && [ ! -z "$GOOGLE_REFRESH_TOKEN" ]; then
+        echo "✅ User OAuth credentials configured (auto-refresh)"
+    else
+        echo "❌ Missing Google Admin credentials"
+        echo "   Provide GOOGLE_SERVICE_ACCOUNT_JSON (+ GOOGLE_ADMIN_EMAIL) or"
+        echo "   GOOGLE_CLIENT_ID_OS, GOOGLE_CLIENT_SECRET_OS, GOOGLE_REFRESH_TOKEN"
+    fi
 fi
 
 # 4. Security Configuration Check

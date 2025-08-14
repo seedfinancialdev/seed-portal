@@ -144,23 +144,24 @@ An enterprise-grade internal employee portal for Seed Financial, featuring sales
 ### Pre-Migration
 - [x] Document current architecture
 - [x] Identify Replit-specific dependencies
-- [ ] Create comprehensive .gitignore
+- [x] Create comprehensive .gitignore
 - [ ] Set up Doppler project
 - [ ] Initialize Supabase project
 
 ### Database Migration
 - [ ] Export PostgreSQL schema from Neon
 - [ ] Import schema to Supabase
-- [ ] Update connection strings
-- [ ] Migrate Drizzle configuration
+- [x] Update connection strings
+- [x] Migrate Drizzle configuration
 - [ ] Test database connectivity
 
 ### Code Updates
-- [ ] Replace DATABASE_URL with Supabase connection
+- [x] Replace DATABASE_URL with Supabase connection
 - [ ] Update Redis configuration for new environment
 - [ ] Remove Replit-specific imports/configs
 - [ ] Update build scripts for Windsurf
 - [ ] Configure Doppler CLI integration
+- [x] Update setup-production.sh to support DIRECT_URL/SUPABASE_DB_URL fallback and SSL check
 
 ### Environment Setup
 - [ ] Transfer secrets to Doppler
@@ -210,6 +211,8 @@ An enterprise-grade internal employee portal for Seed Financial, featuring sales
 4. Keep .gitignore comprehensive
 
 ## Recent Updates
+- **August 14, 2025**: Google Admin: switched to JWT (Domain-Wide Delegation) with subject from `GOOGLE_ADMIN_EMAIL`; aligned `.env.example`; improved setup script checks for service account vs OAuth fallback.
+- **August 14, 2025**: Updated `scripts/setup-production.sh` to support DIRECT_URL/SUPABASE_DB_URL fallback and SSL detection; improved messaging.
 - **August 13, 2025**: Initiated migration from Replit to Windsurf
 - **August 13, 2025**: Commission approve/reject system fully debugged and operational
 - **August 13, 2025**: Fixed infinite re-render loops in commission tracker

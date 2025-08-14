@@ -45,31 +45,31 @@ export class GoogleAdminService {
           console.log('📧 Client email:', serviceAccountKey.client_email);
           console.log('🏢 Project ID:', serviceAccountKey.project_id);
           
-          const { GoogleAuth } = await import('google-auth-library');
-          const auth = new GoogleAuth({
-            credentials: serviceAccountKey,
+          // Use JWT client to enable Domain-Wide Delegation with subject
+          const jwt = new google.auth.JWT({
+            email: serviceAccountKey.client_email,
+            key: serviceAccountKey.private_key,
             scopes: [
               'https://www.googleapis.com/auth/admin.directory.user.readonly',
               'https://www.googleapis.com/auth/admin.directory.group.readonly',
               'https://www.googleapis.com/auth/admin.directory.group.member.readonly'
             ],
-            // Enable domain-wide delegation
-            subject: 'jon@seedfinancial.io' // Admin user to impersonate
+            subject: process.env.GOOGLE_ADMIN_EMAIL || 'jon@seedfinancial.io'
           });
-          
+
           // Test the service account credentials
           console.log('Testing service account credentials...');
-          const authClient = await auth.getClient();
-          await authClient.getAccessToken(); // This will fail if domain-wide delegation isn't set up
+          await jwt.authorize(); // This will fail if domain-wide delegation isn't set up
           
-          this.admin = google.admin({ version: 'directory_v1', auth });
+          this.admin = google.admin({ version: 'directory_v1', auth: jwt });
           this.initialized = true;
           
           console.log('✅ Google Admin API initialized with service account (domain-wide delegation)');
           return;
         } catch (serviceError) {
-          console.error('❌ Service account authentication failed:', serviceError.message);
-          if (serviceError.message?.includes('domain-wide delegation')) {
+          const serr: any = serviceError;
+          console.error('❌ Service account authentication failed:', serr?.message || serr);
+          if (typeof serr?.message === 'string' && serr.message.includes('domain-wide delegation')) {
             console.log('💡 Hint: Ensure domain-wide delegation is enabled in Google Workspace Admin Console');
           }
           console.log('⚠️ Falling back to user credentials...');
