@@ -1,7 +1,6 @@
-import { HubSpotService } from "./hubspot";
+import { getHubSpotService, isHubSpotConfigured } from "./hubspot";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { calculateCommission } from "@shared/commission-calculator";
 
 interface HubSpotUser {
   id: string;
@@ -37,21 +36,21 @@ interface HubSpotDeal {
 }
 
 export class HubSpotCommissionSync {
-  private hubspotService: HubSpotService;
-
-  constructor() {
-    this.hubspotService = new HubSpotService();
-  }
   
   /**
    * Sync sales reps from HubSpot users
    */
   async syncSalesReps(): Promise<void> {
     try {
+      const hubspotService = getHubSpotService();
+      if (!hubspotService || !isHubSpotConfigured()) {
+        console.log('⏭️ HubSpot not configured; skipping sales reps sync');
+        return;
+      }
       console.log('🔄 Syncing sales reps from HubSpot...');
       
       // Get all HubSpot users/owners using the makeRequest method
-      const response = await this.hubspotService.makeRequest('/crm/v3/owners');
+      const response = await hubspotService.makeRequest('/crm/v3/owners');
       
       if (!response || !response.results) {
         throw new Error('Failed to fetch HubSpot owners - no results returned');
@@ -116,12 +115,17 @@ export class HubSpotCommissionSync {
   /**
    * Sync invoices from HubSpot with real line item data
    */
-  async syncInvoices(): Promise<void> {
+  async syncInvoices(): Promise<number> {
     try {
+      const hubspotService = getHubSpotService();
+      if (!hubspotService || !isHubSpotConfigured()) {
+        console.log('⏭️ HubSpot not configured; skipping invoices sync');
+        return 0;
+      }
       console.log('🔄 Syncing invoices from HubSpot...');
       
       // Get invoices from HubSpot with ALL needed data
-      const invoicesResponse = await this.hubspotService.makeRequest(
+      const invoicesResponse = await hubspotService.makeRequest(
         '/crm/v3/objects/invoices?limit=100&properties=hs_createdate,hs_lastmodifieddate,hs_object_id,hs_invoice_amount,hs_invoice_number,hs_invoice_status,hs_deal_id,hs_deal_name,company_name,hs_company_name,recipient_company_name,billing_contact_name&associations=line_items,deals,companies,contacts'
       );
       
@@ -135,7 +139,7 @@ export class HubSpotCommissionSync {
         console.log(`🔗 Invoice associations:`, JSON.stringify(invoice.associations, null, 2));
         
         // Get line items for this invoice
-        const lineItemIds = invoice.associations?.['line items']?.results?.map(li => li.id) || [];
+        const lineItemIds = invoice.associations?.['line items']?.results?.map((li: any) => li.id) || [];
         
         console.log(`🔗 Line item IDs for invoice ${invoice.id}:`, lineItemIds);
         
@@ -174,7 +178,7 @@ export class HubSpotCommissionSync {
         
         for (const lineItemId of lineItemIds) {
           try {
-            const lineItem = await this.hubspotService.makeRequest(
+            const lineItem = await hubspotService.makeRequest(
               `/crm/v3/objects/line_items/${lineItemId}?properties=name,price,quantity,amount`
             );
             
@@ -236,6 +240,7 @@ export class HubSpotCommissionSync {
    * Process an invoice with its line items
    */
   private async processInvoiceWithLineItems(invoice: any, lineItems: any[], totalAmount: number): Promise<void> {
+    const hubspotService = getHubSpotService();
     // Check if invoice already exists in our database
     const existingInvoice = await db.execute(sql`
       SELECT id FROM hubspot_invoices WHERE hubspot_invoice_id = ${invoice.id} LIMIT 1
@@ -251,13 +256,16 @@ export class HubSpotCommissionSync {
         console.log(`🔍 Fetching deal details for ID: ${dealId}`);
         
         try {
-          const dealData = await this.hubspotService.makeRequest(
+          if (!hubspotService) {
+            throw new Error('HubSpot not configured');
+          }
+          const dealData = await hubspotService.makeRequest(
             `/crm/v3/objects/deals/${dealId}?properties=dealname,hubspot_owner_id,hs_deal_stage_probability`
           );
           
           if (dealData.properties.hubspot_owner_id) {
             // Get owner details from HubSpot
-            const ownerData = await this.hubspotService.makeRequest(
+            const ownerData = await hubspotService.makeRequest(
               `/crm/v3/owners/${dealData.properties.hubspot_owner_id}`
             );
             
@@ -290,7 +298,10 @@ export class HubSpotCommissionSync {
         console.log(`🏢 Fetching company details for ID: ${companyId}`);
         
         try {
-          const companyData = await this.hubspotService.makeRequest(
+          if (!hubspotService) {
+            throw new Error('HubSpot not configured');
+          }
+          const companyData = await hubspotService.makeRequest(
             `/crm/v3/objects/companies/${companyId}?properties=name,domain`
           );
           companyName = companyData.properties.name || companyName;

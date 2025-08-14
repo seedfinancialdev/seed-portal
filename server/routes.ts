@@ -9,7 +9,8 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { sendSystemAlert } from "./slack";
-import { hubSpotService } from "./hubspot";
+import { hubSpotService, getHubSpotService, isHubSpotConfigured } from "./hubspot";
+import { Client } from "@hubspot/api-client";
 import { setupAuth, requireAuth } from "./auth";
 import passport from "passport";
 import { registerAdminRoutes } from "./admin-routes";
@@ -18,39 +19,24 @@ import { clientIntelEngine } from "./client-intel";
 import { apiRateLimit, searchRateLimit, enhancementRateLimit } from "./middleware/rate-limiter";
 import { conditionalCsrf, provideCsrfToken } from "./middleware/csrf";
 import multer from "multer";
+import { createClient } from '@supabase/supabase-js';
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import path from "path";
-import { promises as fs } from "fs";
 import express from "express";
 import { cache, CacheTTL, CachePrefix } from "./cache";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { hubspotSync } from "./hubspot-sync";
-import { Client } from '@hubspot/api-client';
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-// Configure multer for file uploads
+// Configure multer for file uploads (memory storage for serverless compatibility)
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: async (req, file, cb) => {
-      const uploadsDir = path.join(process.cwd(), 'uploads', 'profiles');
-      try {
-        await fs.mkdir(uploadsDir, { recursive: true });
-        cb(null, uploadsDir);
-      } catch (error) {
-        cb(error as Error, uploadsDir);
-      }
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-  }),
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -62,6 +48,15 @@ const upload = multer({
     }
   }
 });
+
+// Supabase Storage client (initialized from env)
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+const SUPABASE_BUCKET_PROFILE_PHOTOS = process.env.SUPABASE_BUCKET_PROFILE_PHOTOS || 'profile-photos';
+const SUPABASE_USE_SIGNED_URLS = process.env.SUPABASE_SIGNED_URLS === '1';
+const supabase = (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 // Password utilities
 const scryptAsync = promisify(scrypt);
@@ -126,6 +121,16 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
   app.use(provideCsrfToken);
 
+  // Simple health check endpoint (placed before other /api middleware)
+  // Exempted from CSRF in middleware/csrf.ts and skipped in logger to avoid noise
+  app.get('/api/health', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
   // Debug middleware to track all API requests
   app.use('/api', (req, res, next) => {
     if (req.method === 'POST' && req.url.includes('quotes') && !req.url.includes('check-existing')) {
@@ -153,7 +158,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   app.use('/api', apiRateLimit);
 
   // Serve uploaded files
-  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  // Local-only: serve files from ./uploads when explicitly enabled.
+  // On serverless platforms (e.g., Vercel) this directory is ephemeral and should not be relied upon.
+  if (process.env.SERVE_LOCAL_UPLOADS === '1') {
+    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+  }
 
   // CSRF token endpoint for SPAs
   app.get('/api/csrf-token', (req, res) => {
@@ -2051,12 +2060,53 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.status(400).json({ message: "No photo uploaded" });
       }
 
-      // Generate URL for uploaded file
-      const photoUrl = `/uploads/profiles/${req.file.filename}`;
+      if (!supabase) {
+        console.error('[Upload] Supabase not configured. Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY/ANON_KEY');
+        return res.status(500).json({ message: "Storage not configured" });
+      }
+
+      const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const objectPath = `users/${req.user.id}/${uniqueSuffix}${ext}`;
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from(SUPABASE_BUCKET_PROFILE_PHOTOS)
+        .upload(objectPath, req.file.buffer, {
+          contentType: req.file.mimetype,
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('[Upload] Supabase upload error:', uploadError);
+        return res.status(500).json({ message: "Failed to upload photo" });
+      }
+
+      // Resolve URL
+      let photoUrl: string | null = null;
+      if (SUPABASE_USE_SIGNED_URLS) {
+        const { data: signed, error: signErr } = await supabase
+          .storage
+          .from(SUPABASE_BUCKET_PROFILE_PHOTOS)
+          .createSignedUrl(objectPath, 60 * 60 * 24 * 365); // 1 year
+        if (signErr) {
+          console.warn('[Upload] Signed URL generation failed, falling back to public URL:', signErr);
+        } else {
+          photoUrl = signed?.signedUrl || null;
+        }
+      }
+
+      if (!photoUrl) {
+        const { data: pub } = supabase
+          .storage
+          .from(SUPABASE_BUCKET_PROFILE_PHOTOS)
+          .getPublicUrl(objectPath);
+        photoUrl = pub.publicUrl;
+      }
 
       // Update user profile with new photo URL
       const updatedUser = await storage.updateUserProfile(req.user.id, { profilePhoto: photoUrl });
-      
       // Update the session with the new user data
       req.user = updatedUser;
 
@@ -2925,6 +2975,11 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
         return res.json({ contacts: [] });
       }
 
+      // If HubSpot is not configured, return an empty list gracefully
+      if (!process.env.HUBSPOT_ACCESS_TOKEN) {
+        return res.json({ contacts: [] });
+      }
+
       const { HubSpotService } = await import('./hubspot.js');
       const hubspotService = new HubSpotService();
       
@@ -3406,6 +3461,12 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
       }
 
       console.log('🔍 DEBUG: Fetching pipeline configuration...');
+
+      // If HubSpot is not configured, return an empty list gracefully
+      if (!process.env.HUBSPOT_ACCESS_TOKEN) {
+        console.warn('HubSpot disabled: HUBSPOT_ACCESS_TOKEN not set; returning empty pipeline list.');
+        return res.json([]);
+      }
 
       // Initialize HubSpot client
       const hubspotClient = new Client({
@@ -4197,6 +4258,10 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   async function initializeHubSpotSync() {
     try {
       console.log('🚀 Starting initial HubSpot commission sync...');
+      if (!process.env.HUBSPOT_ACCESS_TOKEN) {
+        console.log('⏭️ Skipping initial HubSpot sync: HUBSPOT_ACCESS_TOKEN not set');
+        return;
+      }
       
       // Check if we already have data
       const existingData = await db.execute(sql`SELECT COUNT(*) as count FROM sales_reps WHERE is_active = true`);

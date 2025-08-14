@@ -21,7 +21,7 @@ export const geocodingService = new GeocodingService();
 // Health check for all services
 export async function checkServicesHealth(): Promise<{
   healthy: boolean;
-  services: Record<string, { status: 'healthy' | 'unhealthy' | 'degraded'; message?: string }>;
+  services: Record<string, ServiceHealthResult>;
 }> {
   const services = {
     crm: await crmService.healthCheck(),
@@ -31,7 +31,8 @@ export async function checkServicesHealth(): Promise<{
     geocoding: await geocodingService.healthCheck(),
   };
 
-  const healthy = Object.values(services).every(service => service.status === 'healthy');
+  // Consider 'degraded' acceptable for overall app health
+  const healthy = Object.values(services).every(service => service.status !== 'unhealthy');
 
   return { healthy, services };
 }

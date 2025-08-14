@@ -1,6 +1,5 @@
 import pino from 'pino';
 import pinoHttp from 'pino-http';
-import { log as viteLog } from './vite';
 
 // Create different logger configurations based on environment
 const isProduction = process.env.NODE_ENV === 'production';
@@ -93,26 +92,17 @@ export const apiLogger = logger.child({ module: 'api' });
 export const redisLogger = logger.child({ module: 'redis' });
 export const hubspotLogger = logger.child({ module: 'hubspot' });
 
-// Utility function to log and also output to Vite dev server
+// Utility functions for consistent logging
 export function logInfo(message: string, data?: any) {
   logger.info(data, message);
-  if (isDevelopment) {
-    viteLog(message);
-  }
 }
 
 export function logError(message: string, error?: any, data?: any) {
   logger.error({ ...data, err: error }, message);
-  if (isDevelopment) {
-    viteLog(`ERROR: ${message}`);
-  }
 }
 
 export function logWarn(message: string, data?: any) {
   logger.warn(data, message);
-  if (isDevelopment) {
-    viteLog(`WARN: ${message}`);
-  }
 }
 
 export function logDebug(message: string, data?: any) {

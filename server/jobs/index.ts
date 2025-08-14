@@ -5,9 +5,16 @@ import { workspaceSyncJob, type WorkspaceSyncJobData } from './workspace-sync';
 let workspaceQueue: Queue | null = null;
 let workspaceWorker: Worker | null = null;
 
+// Background services environment flag
+const BACKGROUND_ENABLED = process.env.ENABLE_BACKGROUND_SERVICES === '1';
+
 // Initialize job system asynchronously
 async function initializeJobSystem() {
   try {
+    if (!BACKGROUND_ENABLED) {
+      console.log('[Jobs] Background services disabled (ENABLE_BACKGROUND_SERVICES != "1"). Skipping job system initialization.');
+      return null;
+    }
     // Wait for Redis to be available
     const redis = await getRedisAsync();
     if (!redis) {
@@ -121,26 +128,30 @@ export async function shutdownJobs() {
 }
 
 // Initialize job system when module loads
-initializeJobSystem().then((result) => {
-  if (result) {
-    const { workspaceWorker: worker } = result;
-    
-    // Set up error handling
-    if (worker) {
-      worker.on('completed', (job) => {
-        console.log(`[Jobs] Workspace sync job ${job.id} completed successfully`);
-      });
+if (BACKGROUND_ENABLED) {
+  initializeJobSystem().then((result) => {
+    if (result) {
+      const { workspaceWorker: worker } = result;
+      
+      // Set up error handling
+      if (worker) {
+        worker.on('completed', (job) => {
+          console.log(`[Jobs] Workspace sync job ${job.id} completed successfully`);
+        });
 
-      worker.on('failed', (job, err) => {
-        console.error(`[Jobs] Workspace sync job ${job?.id} failed:`, err);
-      });
+        worker.on('failed', (job, err) => {
+          console.error(`[Jobs] Workspace sync job ${job?.id} failed:`, err);
+        });
 
-      worker.on('error', (err) => {
-        console.error('[Jobs] Workspace worker error:', err);
-      });
+        worker.on('error', (err) => {
+          console.error('[Jobs] Workspace worker error:', err);
+        });
+      }
+      
+      // Set up cron jobs
+      setupCronJobs().catch(console.error);
     }
-    
-    // Set up cron jobs
-    setupCronJobs().catch(console.error);
-  }
-}).catch(console.error);
+  }).catch(console.error);
+} else {
+  console.log('[Jobs] Module loaded. Background services are disabled; no workers or cron jobs started.');
+}

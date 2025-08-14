@@ -15,6 +15,30 @@ export interface HubSpotContact {
   };
 }
 
+
+// Helper to determine if a valid token is present at runtime
+function hasHubSpotToken(): boolean {
+  const raw = (process.env.HUBSPOT_ACCESS_TOKEN || '').trim();
+  if (!raw) return false;
+  const lower = raw.toLowerCase();
+  return lower !== 'undefined' && lower !== 'null';
+}
+
+let cachedHubSpotServiceInstance: HubSpotService | null = null;
+
+// Prefer this when you need the service at call-time. It will only initialize
+// if a valid token is present and will cache a single instance.
+export function getHubSpotService(): HubSpotService | null {
+  if (!hasHubSpotToken()) return null;
+  if (!cachedHubSpotServiceInstance) {
+    cachedHubSpotServiceInstance = new HubSpotService();
+  }
+  return cachedHubSpotServiceInstance;
+}
+
+export function isHubSpotConfigured(): boolean {
+  return hasHubSpotToken();
+}
 export interface HubSpotDeal {
   id: string;
   properties: {
@@ -27,14 +51,16 @@ export interface HubSpotDeal {
 import { cache, CacheTTL, CachePrefix } from './cache.js';
 
 export class HubSpotService {
-  private accessToken: string;
+  private accessToken?: string;
+  private warnedMissingToken = false;
   private baseUrl = 'https://api.hubapi.com';
 
   constructor() {
-    if (!process.env.HUBSPOT_ACCESS_TOKEN) {
-      throw new Error('HUBSPOT_ACCESS_TOKEN environment variable is required');
+    this.accessToken = process.env.HUBSPOT_ACCESS_TOKEN || undefined;
+    if (!this.accessToken && process.env.NODE_ENV === 'production' && !this.warnedMissingToken) {
+      console.warn('HubSpot disabled: HUBSPOT_ACCESS_TOKEN not set. Features relying on HubSpot will be unavailable.');
+      this.warnedMissingToken = true;
     }
-    this.accessToken = process.env.HUBSPOT_ACCESS_TOKEN;
   }
 
   // Check if a user exists in HubSpot by email (contacts or owners)
@@ -144,7 +170,14 @@ export class HubSpotService {
     }
   }
 
-  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+  async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
+    // Ensure access token is available at call time
+    if (!this.accessToken) {
+      this.accessToken = process.env.HUBSPOT_ACCESS_TOKEN || undefined;
+    }
+    if (!this.accessToken) {
+      throw new Error('HUBSPOT_ACCESS_TOKEN is missing; HubSpot features are disabled');
+    }
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers: {
@@ -3020,7 +3053,6 @@ Generated: ${new Date().toLocaleDateString()}`;
   }
 }
 
-
-
-// Only create service if token is available
-export const hubSpotService = process.env.HUBSPOT_ACCESS_TOKEN ? new HubSpotService() : null;
+// Only create service if token is available (sanitized check). For call-time
+// checks, prefer getHubSpotService() above.
+export const hubSpotService = hasHubSpotToken() ? new HubSpotService() : null;

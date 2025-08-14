@@ -63,6 +63,7 @@ export async function safeDbQuery<T>(
  */
 export async function isDbHealthy(): Promise<boolean> {
   try {
+    if (!pool) return false;
     const client = await pool.connect();
     await client.query('SELECT 1');
     client.release();
@@ -80,6 +81,9 @@ export async function withTransaction<T>(
   operation: (client: any) => Promise<T>,
   operationName: string = 'transaction'
 ): Promise<T> {
+  if (!pool) {
+    throw new Error('Database disabled: missing connection URL');
+  }
   const client = await pool.connect();
   
   try {

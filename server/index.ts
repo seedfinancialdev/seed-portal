@@ -5,8 +5,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import * as Sentry from "@sentry/node";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
-import { checkDatabaseHealth, closeDatabaseConnections } from "./db";
+import { serveStatic } from "./static.js";
+// Lazy-load database module to avoid startup crashes when DB env is missing
+// We'll dynamically import './db' only when needed.
 import { initializeSentry } from "./sentry";
 import { logger, requestLogger } from "./logger";
 import Redis from "ioredis";
@@ -18,6 +19,17 @@ import { applyRedisSessionsAtStartup } from "./apply-redis-sessions-startup";
 redisDebug('Server initialization starting...');
 
 const app = express();
+
+// Helper to normalize header values (string | string[] | undefined -> string | undefined)
+const headerToString = (h: string | string[] | undefined): string | undefined => Array.isArray(h) ? h[0] : h;
+
+// Global flags
+const VERBOSE_HTTP_LOGS = process.env.DEBUG_HTTP === '1' || process.env.VERBOSE_LOGS === '1';
+const BACKGROUND_ENABLED = process.env.ENABLE_BACKGROUND_SERVICES === '1';
+
+// Trust proxy for secure cookies behind proxies (Vercel/Fly)
+const TRUST_PROXY = process.env.TRUST_PROXY ? parseInt(process.env.TRUST_PROXY, 10) || 1 : 1;
+app.set('trust proxy', TRUST_PROXY);
 
 // Initialize Sentry before other middleware
 const sentryInitialized = initializeSentry(app);
@@ -42,14 +54,16 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Allow embedding resources
 }));
 
-// Add CSRF debugging middleware BEFORE CSRF is applied
+// Add CSRF debugging middleware BEFORE CSRF is applied (gated)
 app.use((req, res, next) => {
+  if (!VERBOSE_HTTP_LOGS) return next();
   if (req.originalUrl.startsWith('/api/')) {
+    const csrfHeader = headerToString(req.headers['x-csrf-token']);
     console.log('🔒 [CSRF Debug] BEFORE CSRF middleware:', {
       url: req.originalUrl,
       method: req.method,
       hasCsrfToken: !!req.headers['x-csrf-token'],
-      csrfToken: req.headers['x-csrf-token']?.substring(0, 10) + '...',
+      csrfToken: csrfHeader ? csrfHeader.slice(0, 10) + '...' : undefined,
       contentType: req.headers['content-type'],
       timestamp: new Date().toISOString()
     });
@@ -57,8 +71,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add response header debugging middleware
+// Add response header debugging middleware (gated)
 app.use((req, res, next) => {
+  if (!VERBOSE_HTTP_LOGS) return next();
   if (req.originalUrl.startsWith('/api/')) {
     const originalSend = res.send;
     const originalJson = res.json;
@@ -88,66 +103,80 @@ app.use((req, res, next) => {
   next();
 });
 
-// Enable CORS for production deployments with credentials
+// Enable CORS for deployments with credentials (env-driven allowlist)
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  
-  // Enhanced debugging for CORS
-  if (req.originalUrl.startsWith('/api/')) {
+  const origin = req.headers.origin as string | undefined;
+
+  if (VERBOSE_HTTP_LOGS && req.originalUrl.startsWith('/api/')) {
     console.log('🌐 [CORS Debug] Processing request:', {
       url: req.originalUrl,
       method: req.method,
       origin: origin || 'NO_ORIGIN',
       host: req.headers.host,
-      userAgent: req.headers['user-agent']?.substring(0, 30),
+      userAgent: headerToString(req.headers['user-agent'])?.slice(0, 30),
       referer: req.headers.referer,
       secFetchSite: req.headers['sec-fetch-site'],
       secFetchMode: req.headers['sec-fetch-mode']
     });
   }
-  
-  // Robust production detection using multiple signals
-  const isProduction = process.env.NODE_ENV === 'production' || 
-                      process.env.REPLIT_DEPLOYMENT === '1' ||
-                      (process.env.REPL_ID && !process.env.REPL_SLUG?.includes('workspace'));
-  
-  // Enhanced production CORS for Replit deployments
-  if (isProduction) {
-    // Comprehensive allowed origins for Replit deployments
-    const allowedOrigins = [
-      'https://os.seedfinancial.io',
-      'https://osseedfinancial.io',
-      req.headers.host ? `https://${req.headers.host}` : undefined,
-      // Add potential Replit deployment domains
-      process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',') : []
-    ].flat().filter(Boolean);
-    
-    if (origin && allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      console.log(`[CORS] Allowed origin: ${origin}`);
-    } else if (!origin) {
-      // Same-origin requests (no origin header) - common for Replit deployments
-      const allowedDomain = `https://${req.headers.host}`;
-      res.header('Access-Control-Allow-Origin', allowedDomain);
-      console.log(`[CORS] Same-origin allowed: ${allowedDomain}`);
-    } else {
-      // Log rejected origins for debugging
-      console.warn(`[CORS] Rejected origin: ${origin}, allowed: ${allowedOrigins.join(', ')}`);
-    }
-  } else {
-    // Development: allow all origins
+
+  const envAllowed = (process.env.CORS_ALLOW_ORIGINS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  const derivedAllowed = [
+    process.env.FRONTEND_URL,
+    process.env.DEPLOYED_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
+    'https://os.seedfinancial.io',
+    'https://osseedfinancial.io',
+  ].filter(Boolean) as string[];
+
+  const allowedOrigins = [...envAllowed, ...derivedAllowed];
+
+  // Allow wildcard suffix matching via env flags (secure by default)
+  // - CORS_ALLOW_SUFFIXES: comma-separated list, e.g. ".vercel.app,.fly.dev"
+  // - CORS_ALLOW_VERCEL_WILDCARD=1 to include ".vercel.app"
+  // - CORS_ALLOW_FLY_WILDCARD=1 to include ".fly.dev"
+  const allowedSuffixes = [
+    ...(process.env.CORS_ALLOW_SUFFIXES || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean),
+    ...(process.env.CORS_ALLOW_VERCEL_WILDCARD === '1' ? ['.vercel.app'] : []),
+    ...(process.env.CORS_ALLOW_FLY_WILDCARD === '1' ? ['.fly.dev'] : []),
+  ];
+
+  const originAllowed = (o?: string) => {
+    if (!o) return false;
+    if (allowedOrigins.includes(o)) return true;
+    return allowedSuffixes.some(suf => o.endsWith(suf));
+  };
+
+  if (origin && originAllowed(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    if (VERBOSE_HTTP_LOGS) console.log(`[CORS] Allowed origin: ${origin}`);
+  } else if (!origin && req.headers.host) {
+    // Same-origin requests (no origin header)
+    const allowedDomain = `https://${req.headers.host}`;
+    res.header('Access-Control-Allow-Origin', allowedDomain);
+    if (VERBOSE_HTTP_LOGS) console.log(`[CORS] Same-origin allowed: ${allowedDomain}`);
+  } else if (process.env.NODE_ENV !== 'production') {
+    // Development: allow all origins to ease local dev
     res.header('Access-Control-Allow-Origin', origin || '*');
+  } else if (origin) {
+    if (VERBOSE_HTTP_LOGS) console.warn(`[CORS] Rejected origin: ${origin}, allowed: ${[...allowedOrigins, ...allowedSuffixes.map(s => `*${s}`)].join(', ')}`);
   }
-  
+
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
   res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization,x-csrf-token');
-  
-  // Handle preflight requests
+
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
-  
+
   next();
 });
 
@@ -180,7 +209,7 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      logger.info(logLine);
     }
   });
 
@@ -282,14 +311,14 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     // Add session debugging middleware BEFORE session setup
     app.use((req, res, next) => {
       const originalUrl = req.originalUrl;
-      if (originalUrl.startsWith('/api/')) {
+      if (VERBOSE_HTTP_LOGS && originalUrl.startsWith('/api/')) {
         console.log('🔍 [SessionDebug] BEFORE session middleware:', {
           url: originalUrl,
           method: req.method,
           hasCookie: !!req.headers.cookie,
           cookieSnippet: req.headers.cookie?.substring(0, 50),
           sessionID: req.sessionID || 'NOT_SET',
-          userAgent: req.headers['user-agent']?.substring(0, 30)
+          userAgent: headerToString(req.headers['user-agent'])?.slice(0, 30)
         });
       }
       next();
@@ -300,7 +329,7 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     // Add session debugging middleware AFTER session setup
     app.use((req, res, next) => {
       const originalUrl = req.originalUrl;
-      if (originalUrl.startsWith('/api/')) {
+      if (VERBOSE_HTTP_LOGS && originalUrl.startsWith('/api/')) {
         console.log('🔍 [SessionDebug] AFTER session middleware:', {
           url: originalUrl,
           method: req.method,
@@ -319,9 +348,9 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     console.log('[Server] Session store type:', storeType);
     console.log('[Server] Production mode:', expressSessionConfig.cookie?.secure ? 'ENABLED' : 'DISABLED');
 
-    // Add comprehensive request logging middleware
+    // Add comprehensive request logging middleware (gated)
     app.use((req, res, next) => {
-      if (req.originalUrl.startsWith('/api/')) {
+      if (VERBOSE_HTTP_LOGS && req.originalUrl.startsWith('/api/')) {
         console.log('🎯 [Request Pipeline] Processing API request:', {
           url: req.originalUrl,
           method: req.method,
@@ -329,7 +358,7 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
           sessionID: req.sessionID || 'NO_SESSION_ID',
           hasCookieHeader: !!req.headers.cookie,
           cookieCount: req.headers.cookie ? req.headers.cookie.split(';').length : 0,
-          userAgent: req.headers['user-agent']?.substring(0, 40),
+          userAgent: headerToString(req.headers['user-agent'])?.slice(0, 40),
           contentType: req.headers['content-type']
         });
       }
@@ -339,7 +368,7 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     // Add API route protection middleware BEFORE route registration
     app.use('/api/*', (req, res, next) => {
       // Ensure API routes are always handled by Express, never by static serving
-      console.log('🛡️ API Route Protection - Ensuring Express handles:', req.originalUrl);
+      if (VERBOSE_HTTP_LOGS) console.log('🛡️ API Route Protection - Ensuring Express handles:', req.originalUrl);
       next();
     });
 
@@ -374,14 +403,17 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
 
     // Add explicit 404 handler for unmatched API routes BEFORE static serving
     app.use('/api/*', (req, res) => {
-      console.log('🔴 Unmatched API route hit 404 handler:', req.originalUrl);
+      if (VERBOSE_HTTP_LOGS) console.log('🔴 Unmatched API route hit 404 handler:', req.originalUrl);
       res.status(404).json({ message: 'API endpoint not found', route: req.originalUrl });
     });
 
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
+    if (process.env.NODE_ENV !== 'production') {
+      // Use an eval'd dynamic import so bundlers (esbuild) do not include
+      // the vite module in the production bundle
+      const { setupVite } = await (0, eval)("import('./vite')");
       await setupVite(app, server);
     } else {
       serveStatic(app);
@@ -394,7 +426,13 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
     const port = parseInt(process.env.PORT || '5000', 10);
     
     // Check database health on startup (lightweight check)
-    const isDbHealthy = await checkDatabaseHealth();
+    let isDbHealthy = false;
+    try {
+      const { checkDatabaseHealth } = await import('./db');
+      isDbHealthy = await checkDatabaseHealth();
+    } catch (e: any) {
+      console.warn('[Server] Database module unavailable on startup, continuing without DB:', e?.message || e);
+    }
     if (!isDbHealthy) {
       console.warn('Database health check failed - continuing with degraded functionality');
     }
@@ -405,17 +443,21 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
       host: "0.0.0.0",
       reusePort: true,
     }, () => {
-      log(`serving on port ${port}`);
+      logger.info(`serving on port ${port}`);
       console.log('[Server] 🚀 HTTP server started successfully');
       
-      // Initialize heavy services AFTER server is listening
-      console.log('[Server] Starting background service initialization...');
-      initializeServicesWithTimeout(30000).then(() => {
-        console.log('[Server] ✅ All background services initialized successfully');
-      }).catch((error) => {
-        console.error('[Server] ❌ Background service initialization failed:', error);
-        console.log('[Server] Application will continue with basic functionality');
-      });
+      // Initialize heavy services AFTER server is listening (guarded)
+      if (BACKGROUND_ENABLED) {
+        console.log('[Server] Starting background service initialization...');
+        initializeServicesWithTimeout(30000).then(() => {
+          console.log('[Server] ✅ All background services initialized successfully');
+        }).catch((error) => {
+          console.error('[Server] ❌ Background service initialization failed:', error);
+          console.log('[Server] Application will continue with basic functionality');
+        });
+      } else {
+        console.log('[Server] Background services disabled via ENABLE_BACKGROUND_SERVICES. Skipping initialization.');
+      }
     });
 
   } catch (error) {
@@ -428,13 +470,23 @@ async function initializeServicesWithTimeout(timeoutMs: number = 30000) {
 // Graceful shutdown handlers
 process.on('SIGINT', async () => {
   console.log('Received SIGINT, shutting down gracefully');
-  await closeDatabaseConnections();
+  try {
+    const { closeDatabaseConnections } = await import('./db');
+    await closeDatabaseConnections();
+  } catch (_e) {
+    // DB module not available; nothing to close
+  }
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('Received SIGTERM, shutting down gracefully');
-  await closeDatabaseConnections();
+  try {
+    const { closeDatabaseConnections } = await import('./db');
+    await closeDatabaseConnections();
+  } catch (_e) {
+    // DB module not available; nothing to close
+  }
   process.exit(0);
 });
 

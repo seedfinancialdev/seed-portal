@@ -3,7 +3,22 @@ import { hubSpotService } from "./hubspot";
 import { airtableService } from "./airtable";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let cachedOpenAI: OpenAI | null = null;
+function getOpenAI(): OpenAI | null {
+  // Sanitize env value on each call to avoid capturing stale/invalid values
+  const raw = (process.env.OPENAI_API_KEY || '').trim();
+  const apiKey = raw && raw.toLowerCase() !== 'undefined' && raw.toLowerCase() !== 'null' ? raw : '';
+  if (!apiKey) return null;
+  if (!cachedOpenAI) {
+    try {
+      cachedOpenAI = new OpenAI({ apiKey });
+    } catch (err) {
+      console.error('[ClientIntel] Failed to initialize OpenAI client:', err);
+      cachedOpenAI = null;
+    }
+  }
+  return cachedOpenAI;
+}
 
 interface ProspectProfile {
   email: string;
@@ -28,16 +43,18 @@ interface ClientSignal {
 }
 
 export class ClientIntelligenceEngine {
-  private openai: OpenAI;
   private enhancementLocks: Set<string> = new Set(); // Track ongoing enhancements
 
-  constructor() {
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
+  constructor() {}
   
   // Generate prospect scoring based on HubSpot data
   async scoreProspect(prospectProfile: ProspectProfile): Promise<{ score: number; tier: string; reasoning: string }> {
     try {
+      const ai = getOpenAI();
+      if (!ai) {
+        console.warn('[ClientIntel] OPENAI_API_KEY not set; returning default prospect score');
+        return { score: 0, tier: "C", reasoning: "AI disabled" };
+      }
       const prompt = `
 Analyze this prospect data and provide a lead score (0-10) and tier classification:
 
@@ -61,7 +78,7 @@ Respond in JSON format:
 }
 `;
 
-      const response = await openai.chat.completions.create({
+      const response = await ai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -83,6 +100,11 @@ Respond in JSON format:
   // Generate pre-call snapshot for SDRs
   async generatePreCallSnapshot(prospectProfile: ProspectProfile): Promise<string> {
     try {
+      const ai = getOpenAI();
+      if (!ai) {
+        console.warn('[ClientIntel] OPENAI_API_KEY not set; skipping pre-call snapshot');
+        return "AI features are disabled. Please configure OPENAI_API_KEY.";
+      }
       const prompt = `
 You are Seed Financial's SDR assistant. Create a concise pre-call snapshot (≤120 words) for this prospect:
 
@@ -102,7 +124,7 @@ Include:
 Keep it punchy and actionable for the SDR.
 `;
 
-      const response = await openai.chat.completions.create({
+      const response = await ai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -125,6 +147,11 @@ Keep it punchy and actionable for the SDR.
   // Detect service gaps and upsell opportunities
   async detectServiceGaps(clientData: any): Promise<ClientSignal[]> {
     try {
+      const ai = getOpenAI();
+      if (!ai) {
+        console.warn('[ClientIntel] OPENAI_API_KEY not set; skipping service gap detection');
+        return [];
+      }
       const prompt = `
 Analyze this business for service gaps and opportunities:
 
@@ -157,7 +184,7 @@ Return JSON object with "signals" array:
 Focus on realistic, actionable opportunities for Seed Financial services.
 `;
 
-      const response = await openai.chat.completions.create({
+      const response = await ai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -176,6 +203,11 @@ Focus on realistic, actionable opportunities for Seed Financial services.
   // Extract pain points from client interactions
   async extractPainPoints(clientData: any): Promise<string[]> {
     try {
+      const ai = getOpenAI();
+      if (!ai) {
+        console.warn('[ClientIntel] OPENAI_API_KEY not set; skipping pain point extraction');
+        return ["Unable to analyze pain points (AI disabled)"];
+      }
       const prompt = `
 Analyze this business and identify likely pain points:
 
@@ -200,7 +232,7 @@ Return as JSON object with "painPoints" array:
 Example pain points: "Manual bookkeeping consuming too much time", "Tax compliance uncertainties", "Payroll processing inefficiencies", "Cash flow management challenges"
 `;
 
-      const response = await openai.chat.completions.create({
+      const response = await ai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -219,6 +251,11 @@ Example pain points: "Manual bookkeeping consuming too much time", "Tax complian
   // Calculate risk score based on client behavior and data
   async calculateRiskScore(clientData: any): Promise<number> {
     try {
+      const ai = getOpenAI();
+      if (!ai) {
+        console.warn('[ClientIntel] OPENAI_API_KEY not set; returning default risk score');
+        return 50;
+      }
       const prompt = `
 Calculate a client risk score (0-100) based on this data:
 
@@ -244,7 +281,7 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
 81-100: High risk (churn likely)
 `;
 
-      const response = await openai.chat.completions.create({
+      const response = await ai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -469,7 +506,18 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
         "linkedin_company_page": "likely LinkedIn URL"
       }`;
 
-      const response = await this.openai.chat.completions.create({
+      const ai = getOpenAI();
+      if (!ai) {
+        console.warn('[ClientIntel] OPENAI_API_KEY not set; returning minimal company data');
+        return this.sanitizeCompanyData({
+          name: companyName,
+          domain: this.extractDomainFromCompanyName(companyName),
+          city: contact.properties?.city,
+          state: contact.properties?.state,
+          country: 'US'
+        });
+      }
+      const response = await ai.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -630,7 +678,12 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
         ${missingFields.map(field => `"${field}": "value or null"`).join(',\n        ')}
       }`;
 
-      const response = await this.openai.chat.completions.create({
+      const ai = getOpenAI();
+      if (!ai) {
+        console.warn('[ClientIntel] OPENAI_API_KEY not set; skipping enhancement');
+        return;
+      }
+      const response = await ai.chat.completions.create({
         model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
@@ -691,29 +744,9 @@ Return JSON: {"riskScore": 0-100, "riskFactors": ["factor1", "factor2"]}
   // Helper method to make HubSpot requests
   private async makeHubSpotRequest(endpoint: string, options?: any) {
     if (!hubSpotService) throw new Error('HubSpot service not available');
-    
-    const url = `https://api.hubapi.com${endpoint}`;
-    const headers = {
-      'Authorization': `Bearer ${process.env.HUBSPOT_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json',
-      ...options?.headers
-    };
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`HubSpot API error for ${endpoint}:`, error);
-      throw error;
-    }
+    // Delegate to the centralized HubSpotService which handles token presence,
+    // headers, retries, and response parsing.
+    return hubSpotService.makeRequest(endpoint, options);
   }
 }
 

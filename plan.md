@@ -216,6 +216,40 @@ An enterprise-grade internal employee portal for Seed Financial, featuring sales
 - **August 12, 2025**: Implemented comprehensive bonus tracking system
 - **August 12, 2025**: Fixed Sales Rep Performance API
 
+## HubSpot Refactor Status
+
+### Completed
+- Centralized helpers available in `server/hubspot.ts`: `getHubSpotService()` and `isHubSpotConfigured()`.
+- `server/hubspot-sync.ts` fully refactored to use helpers; removed eager service construction and added guards.
+
+### Remaining Direct Usages (Deferred)
+- `server/routes.ts`:
+  - Token checks: `if (!process.env.HUBSPOT_ACCESS_TOKEN)` at ~2978, ~3465, ~3507, ~4260.
+  - Direct client usage: `new Client(...)` at ~3471, ~3515.
+  - Direct service instantiation: `new HubSpotService()` at ~2983, ~4293, ~4493, ~4622, ~4853.
+  - Impacted endpoints: `/api/debug-pipelines`, `/api/pipeline-projections`, `/api/hubspot/search-contacts`.
+  - Startup sync helper: `initializeHubSpotSync()` token check around 4256–4270.
+- `server/auth.ts`: `setupAuth()` directly instantiates `new HubSpotService()`.
+- `server/hubspot-background-jobs.ts`: uses `cachedToken || process.env.HUBSPOT_ACCESS_TOKEN` (~line 276).
+- `server/hubspot.ts`: exported `hubSpotService` singleton causes eager instantiation (~line 3058).
+
+### Risks/Notes
+- Build may fail due to lingering `new Client(...)` usages in `server/routes.ts` without corresponding import.
+- `HubSpotService` constructor throws when token is missing; direct `new HubSpotService()` breaks degraded mode.
+
+### Decision
+- Proceed without refactoring the remaining usages for now; tasks below are deferred.
+
+### Recommended Next Actions (Deferred)
+- Replace all direct token checks with `isHubSpotConfigured()`.
+- Replace `new Client(...)` and `new HubSpotService()` with `getHubSpotService()` and helper methods.
+- Guard `server/auth.ts` and `server/hubspot-background-jobs.ts` with centralized helpers.
+- Remove exported eager singleton from `server/hubspot.ts` and rely on `getHubSpotService()` only.
+- Fix `server/routes.ts` first to restore build stability and ensure degraded mode.
+
+### Current Goal
+- Continue without HubSpot refactor for now.
+
 ## Known Issues & TODOs
 - [ ] Migrate from Neon to Supabase
 - [ ] Configure Doppler for all environments

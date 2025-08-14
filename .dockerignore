@@ -1,0 +1,23 @@
+.git
+.gitignore
+.DS_Store
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.tmp
+.tmp/**
+.cache
+coverage
+uploads
+.env
+.env.*
+.vscode
+.idea
+.vercel
+.fly
+# Build outputs
+/dist
+/client/dist
+/dist/public

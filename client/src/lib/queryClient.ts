@@ -1,5 +1,9 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Base URL for API requests (for cross-origin frontend/backend)
+const API_BASE = (import.meta as any)?.env?.VITE_API_BASE_URL || '';
+const DEBUG_HTTP = ((import.meta as any)?.env?.VITE_DEBUG_HTTP === '1') || ((import.meta as any)?.env?.VITE_VERBOSE_LOGS === '1');
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     // Clone the response so we can read it without consuming the original
@@ -7,15 +11,17 @@ async function throwIfResNotOk(res: Response) {
     const text = (await clonedRes.text()) || res.statusText;
     
     // ENHANCED DEBUGGING for authentication issues
-    console.error('[ApiRequest] ❌ HTTP Error:', {
-      status: res.status,
-      statusText: res.statusText,
-      url: res.url,
-      text: text,
-      headers: Object.fromEntries(res.headers.entries()),
-      cookiesInResponse: res.headers.get('set-cookie'),
-      timestamp: new Date().toISOString()
-    });
+    if (DEBUG_HTTP) {
+      console.error('[ApiRequest] ❌ HTTP Error:', {
+        status: res.status,
+        statusText: res.statusText,
+        url: res.url,
+        text: text,
+        headers: Object.fromEntries(res.headers.entries()),
+        cookiesInResponse: res.headers.get('set-cookie'),
+        timestamp: new Date().toISOString()
+      });
+    }
     
     throw new Error(`${res.status}: ${text}`);
   }
@@ -75,32 +81,38 @@ export async function apiRequest(
       requestOptions.body = typeof data === 'string' ? data : JSON.stringify(data);
     }
 
-    // CRITICAL: Log frontend request details for debugging
-    console.log('[ApiRequest] 🚀 Frontend request details:', {
-      url,
-      method,
-      hasCredentials: requestOptions.credentials === 'include',
-      headers: requestOptions.headers,
-      cookiesAvailable: document.cookie ? 'YES' : 'HttpOnly-Hidden',
-      cookieSnippet: document.cookie.substring(0, 100) || 'HttpOnly cookies invisible to JS',
-      location: window.location.href,
-      origin: window.location.origin,
-      protocol: window.location.protocol,
-      userAgent: navigator.userAgent.substring(0, 50),
-      timestamp: new Date().toISOString()
-    });
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
 
-    const response = await fetch(url, requestOptions);
+    // CRITICAL: Log frontend request details for debugging
+    if (DEBUG_HTTP) {
+      console.log('[ApiRequest] 🚀 Frontend request details:', {
+        url: fullUrl,
+        method,
+        hasCredentials: requestOptions.credentials === 'include',
+        headers: requestOptions.headers,
+        cookiesAvailable: document.cookie ? 'YES' : 'HttpOnly-Hidden',
+        cookieSnippet: document.cookie.substring(0, 100) || 'HttpOnly cookies invisible to JS',
+        location: window.location.href,
+        origin: window.location.origin,
+        protocol: window.location.protocol,
+        userAgent: navigator.userAgent.substring(0, 50),
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const response = await fetch(fullUrl, requestOptions);
     
     // Log response details for debugging
-    console.log('[ApiRequest] 📥 Response details:', {
-      url,
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      cookiesSet: response.headers.get('set-cookie'),
-      timestamp: new Date().toISOString()
-    });
+    if (DEBUG_HTTP) {
+      console.log('[ApiRequest] 📥 Response details:', {
+        url: fullUrl,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        cookiesSet: response.headers.get('set-cookie'),
+        timestamp: new Date().toISOString()
+      });
+    }
     
     await throwIfResNotOk(response);
     return await response.json();
@@ -122,28 +134,34 @@ export async function apiRequest(
     requestOptions.body = JSON.stringify(data);
   }
 
-  // CRITICAL: Log frontend request details for debugging (new signature)
-  console.log('[ApiRequest] 🚀 Frontend request details (new sig):', {
-    url,
-    method,
-    hasCredentials: requestOptions.credentials === 'include',
-    headers: requestOptions.headers,
-    cookiesAvailable: document.cookie ? 'YES' : 'NO',
-    cookieSnippet: document.cookie.substring(0, 100),
-    timestamp: new Date().toISOString()
-  });
+  const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
 
-  const response = await fetch(url, requestOptions);
+  // CRITICAL: Log frontend request details for debugging (new signature)
+  if (DEBUG_HTTP) {
+    console.log('[ApiRequest] 🚀 Frontend request details (new sig):', {
+      url: fullUrl,
+      method,
+      hasCredentials: requestOptions.credentials === 'include',
+      headers: requestOptions.headers,
+      cookiesAvailable: document.cookie ? 'YES' : 'NO',
+      cookieSnippet: document.cookie.substring(0, 100),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  const response = await fetch(fullUrl, requestOptions);
   
   // Log response details for debugging (new signature)
-  console.log('[ApiRequest] 📥 Response details (new sig):', {
-    url,
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries()),
-    cookiesSet: response.headers.get('set-cookie'),
-    timestamp: new Date().toISOString()
-  });
+  if (DEBUG_HTTP) {
+    console.log('[ApiRequest] 📥 Response details (new sig):', {
+      url: fullUrl,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      cookiesSet: response.headers.get('set-cookie'),
+      timestamp: new Date().toISOString()
+    });
+  }
   
   await throwIfResNotOk(response);
   return await response.json();
@@ -157,18 +175,22 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const url = queryKey.join("/") as string;
     
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url}`;
+
     // CRITICAL: Log query function request details
-    console.log('[QueryFn] 🔍 Query request details:', {
-      url,
-      queryKey,
-      cookiesAvailable: document.cookie ? 'YES' : 'HttpOnly-Hidden',
-      cookieSnippet: document.cookie.substring(0, 100) || 'HttpOnly cookies invisible to JS',
-      timestamp: new Date().toISOString(),
-      location: window.location.href,
-      origin: window.location.origin
-    });
+    if (DEBUG_HTTP) {
+      console.log('[QueryFn] 🔍 Query request details:', {
+        url: fullUrl,
+        queryKey,
+        cookiesAvailable: document.cookie ? 'YES' : 'HttpOnly-Hidden',
+        cookieSnippet: document.cookie.substring(0, 100) || 'HttpOnly cookies invisible to JS',
+        timestamp: new Date().toISOString(),
+        location: window.location.href,
+        origin: window.location.origin
+      });
+    }
     
-    const res = await fetch(url, {
+    const res = await fetch(fullUrl, {
       method: 'GET',
       mode: 'cors',
       cache: 'no-cache', // Prevent caching issues with authentication
@@ -180,14 +202,16 @@ export const getQueryFn: <T>(options: {
     });
 
     // Log query function response details
-    console.log('[QueryFn] 📥 Query response details:', {
-      url,
-      status: res.status,
-      statusText: res.statusText,
-      headers: Object.fromEntries(res.headers.entries()),
-      cookiesSet: res.headers.get('set-cookie'),
-      timestamp: new Date().toISOString()
-    });
+    if (DEBUG_HTTP) {
+      console.log('[QueryFn] 📥 Query response details:', {
+        url: fullUrl,
+        status: res.status,
+        statusText: res.statusText,
+        headers: Object.fromEntries(res.headers.entries()),
+        cookiesSet: res.headers.get('set-cookie'),
+        timestamp: new Date().toISOString()
+      });
+    }
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       console.log('[QueryFn] ⚠️ 401 detected, returning null');

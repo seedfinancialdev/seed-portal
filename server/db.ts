@@ -1,52 +1,64 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
-// Configure Neon for proper WebSocket usage
-neonConfig.webSocketConstructor = ws;
+// Using node-postgres (pg) for DB connectivity. Neon WS client is not used.
 
-// Enable more detailed logging for debugging
-neonConfig.pipelineConnect = false;
-neonConfig.useSecureWebSocket = true;
-
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+// Support Doppler/Supabase fallbacks for connection string (prefer DIRECT_URL for migrations)
+const CONNECTION_URL = process.env.DIRECT_URL || process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+const DB_DISABLED = !CONNECTION_URL;
+if (DB_DISABLED) {
+  console.warn('[DB] Missing database URL (DIRECT_URL / SUPABASE_DB_URL / DATABASE_URL). Database will be DISABLED.');
 }
 
 // Enhanced pool configuration with better error handling
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  max: 3, // Slightly increase pool size for stability
-  min: 1, // Keep minimum connections alive
-  idleTimeoutMillis: 30000, // Increase idle timeout
-  connectionTimeoutMillis: 10000, // Increase connection timeout
-  maxUses: 100, // Limit connection reuse to prevent stale connections
-  allowExitOnIdle: false, // Keep connections alive
-});
+const useSSL = !DB_DISABLED && (process.env.PG_SSL === '1' || /supabase\.co/.test(CONNECTION_URL!));
+export const pool: Pool | null = DB_DISABLED
+  ? null
+  : new Pool({
+      connectionString: CONNECTION_URL!,
+      max: 3,
+      min: 1,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      maxUses: 100,
+      allowExitOnIdle: false,
+      ssl: useSSL ? { rejectUnauthorized: false } : undefined,
+    });
 
 // Add error handling for pool events
-pool.on('error', (err) => {
-  console.error('Database pool error:', err);
-  // Don't throw here - let individual queries handle errors
-});
+if (pool) {
+  pool.on('error', (err) => {
+    console.error('Database pool error:', err);
+    // Don't throw here - let individual queries handle errors
+  });
 
-pool.on('connect', () => {
-  console.log('Database connection established');
-});
+  pool.on('connect', () => {
+    console.log('Database connection established');
+  });
 
-pool.on('remove', () => {
-  console.log('Database connection removed from pool');
-});
+  pool.on('remove', () => {
+    console.log('Database connection removed from pool');
+  });
+}
 
-// Create database instance with enhanced error handling
-export const db = drizzle({ client: pool, schema });
+// Create database instance with enhanced error handling, or a disabled proxy
+function createDisabledDbProxy(): any {
+  const thrower = (..._args: any[]) => {
+    throw new Error('Database disabled: missing connection URL');
+  };
+  // Return a proxy object that throws for any property access (methods become throwing functions)
+  return new Proxy({}, {
+    get: () => thrower,
+  });
+}
+
+export const db: any = DB_DISABLED ? createDisabledDbProxy() : drizzle(pool!, { schema });
 
 // Database health check function
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
+    if (!pool) return false;
     const client = await pool.connect();
     await client.query('SELECT 1');
     client.release();
@@ -60,8 +72,10 @@ export async function checkDatabaseHealth(): Promise<boolean> {
 // Graceful shutdown handler
 export async function closeDatabaseConnections(): Promise<void> {
   try {
-    await pool.end();
-    console.log('Database connections closed gracefully');
+    if (pool) {
+      await pool.end();
+      console.log('Database connections closed gracefully');
+    }
   } catch (error) {
     console.error('Error closing database connections:', error);
   }

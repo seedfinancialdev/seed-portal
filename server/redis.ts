@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { log } from './vite';
+import { redisLogger } from './logger';
 
 console.log('[Redis] Module loading...');
 
@@ -151,15 +151,15 @@ async function createRedisConnections(): Promise<RedisConfig | null> {
     });
 
     sessionRedis.on('connect', () => {
-      log('Session Redis connected');
+      redisLogger.info('Session Redis connected');
     });
 
     cacheRedis.on('connect', () => {
-      log('Cache Redis connected');
+      redisLogger.info('Cache Redis connected');
     });
 
     queueRedis.on('connect', () => {
-      log('Queue Redis connected');
+      redisLogger.info('Queue Redis connected');
     });
 
     console.log('[createRedisConnections] All Redis clients created');

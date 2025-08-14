@@ -72,7 +72,7 @@ export class CRMService {
     
     if (!this.client) {
       return {
-        status: 'unhealthy',
+        status: 'degraded',
         message: 'CRM service not configured - missing HUBSPOT_ACCESS_TOKEN',
         responseTime: Date.now() - startTime
       };
@@ -93,7 +93,7 @@ export class CRMService {
       }
       
       return { 
-        status: 'unhealthy', 
+        status: 'degraded', 
         message: error.message,
         responseTime: Date.now() - startTime
       };
@@ -309,7 +309,7 @@ export class CRMService {
         // Clear all CRM cache
         const keys = await cache.keys('crm:*');
         if (keys.length > 0) {
-          await cache.del(...keys);
+          await cache.del(keys[0], ...keys.slice(1));
           logger.debug('All CRM cache invalidated', { clearedKeys: keys.length });
         }
       }

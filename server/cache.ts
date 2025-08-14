@@ -1,7 +1,6 @@
 import { getRedis } from './redis';
 import { createHash } from 'crypto';
 import { logger } from './logger';
-import { promisify } from 'util';
 
 const cacheLogger = logger.child({ module: 'cache' });
 
@@ -27,6 +26,26 @@ export class CacheService {
     return redis?.cacheRedis;
   }
   private defaultTTL = 300; // 5 minutes default
+  
+  // Helper: fetch configured keyPrefix from ioredis client
+  private getKeyPrefix(): string {
+    const cacheRedis = this.getCacheRedis();
+    return (cacheRedis?.options?.keyPrefix as string) || '';
+  }
+
+  // Helper: ensure the Redis SCAN/KEYS pattern includes the physical key prefix
+  private normalizePattern(pattern: string): string {
+    const prefix = this.getKeyPrefix();
+    if (!prefix) return pattern;
+    return pattern.startsWith(prefix) ? pattern : `${prefix}${pattern}`;
+  }
+
+  // Helper: strip the physical key prefix from returned keys to logical keys
+  private stripPrefixFromKeys(keys: string[]): string[] {
+    const prefix = this.getKeyPrefix();
+    if (!prefix) return keys;
+    return keys.map(k => (k.startsWith(prefix) ? k.slice(prefix.length) : k));
+  }
   
   // Cache metrics tracking
   private stats = {
@@ -98,23 +117,66 @@ export class CacheService {
   /**
    * Delete value from cache
    */
-  async del(pattern: string): Promise<void> {
+  async del(patternOrKey: string, ...rest: string[]): Promise<void> {
     const cacheRedis = this.getCacheRedis();
     if (!cacheRedis) {
       return;
     }
 
     try {
-      // Find all keys matching the pattern
-      const keysAsync = promisify(cacheRedis.keys).bind(cacheRedis);
-      const keys = await keysAsync(`cache:${pattern}*`);
-      if (keys.length > 0) {
-        // Delete the keys directly (with their full key names including prefix)
-        await cacheRedis.delAsync(...keys);
-        cacheLogger.debug({ pattern, count: keys.length }, 'Cache invalidated');
+      // If multiple args provided, treat them as exact logical keys
+      if (rest.length > 0) {
+        const keys = [patternOrKey, ...rest];
+        const normalized = this.stripPrefixFromKeys(keys);
+        if (normalized.length > 0) {
+          await cacheRedis.delAsync(...normalized);
+          cacheLogger.debug({ count: normalized.length }, 'Cache keys deleted');
+        }
+        return;
       }
+
+      const single = patternOrKey;
+      const isPattern = single.includes('*') || single.includes('?');
+      if (isPattern) {
+        const keys = await this.keys(single);
+        if (keys.length > 0) {
+          await cacheRedis.delAsync(...keys);
+          cacheLogger.debug({ pattern: single, count: keys.length }, 'Cache invalidated by pattern');
+        }
+        return;
+      }
+
+      // Exact single key
+      const [key] = this.stripPrefixFromKeys([single]);
+      await cacheRedis.delAsync(key);
+      cacheLogger.debug({ key }, 'Cache key deleted');
     } catch (error) {
-      cacheLogger.error({ error, pattern }, 'Cache delete error');
+      cacheLogger.error({ error, input: [patternOrKey, ...rest] }, 'Cache delete error');
+    }
+  }
+
+  /**
+   * List cache keys matching a logical pattern (without physical prefix)
+   */
+  async keys(pattern: string): Promise<string[]> {
+    const cacheRedis = this.getCacheRedis();
+    if (!cacheRedis) {
+      return [];
+    }
+
+    try {
+      const match = this.normalizePattern(pattern);
+      let cursor = '0';
+      const results: string[] = [];
+      do {
+        const [nextCursor, batch] = await cacheRedis.scan(cursor, 'MATCH', match, 'COUNT', 1000);
+        results.push(...this.stripPrefixFromKeys(batch));
+        cursor = nextCursor;
+      } while (cursor !== '0');
+      return results;
+    } catch (error) {
+      cacheLogger.error({ error, pattern }, 'Cache keys scan error');
+      return [];
     }
   }
 
@@ -162,8 +224,8 @@ export class CacheService {
           memoryUsage = memoryMatch[1].trim();
         }
 
-        // Count cache keys (with prefix)
-        const keys = await cacheRedis.keys('cache:*');
+        // Count cache keys via SCAN to avoid blocking
+        const keys = await this.keys('*');
         totalKeys = keys.length;
       } catch (error) {
         cacheLogger.error({ error }, 'Failed to get cache stats');
@@ -208,9 +270,9 @@ export class CacheService {
     }
 
     try {
-      const keys = await cacheRedis.keys('cache:*');
+      const keys = await this.keys('*');
       if (keys.length > 0) {
-        await cacheRedis.del(...keys);
+        await this.del(keys[0], ...keys.slice(1));
         cacheLogger.info({ count: keys.length }, 'Cache cleared');
       }
     } catch (error) {

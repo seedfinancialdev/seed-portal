@@ -10,6 +10,11 @@ import { logger } from '../logger';
 
 const router = Router();
 
+// Fast liveness endpoint for Fly health checks
+router.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Global health check endpoint
 router.get('/health', async (req, res) => {
   try {

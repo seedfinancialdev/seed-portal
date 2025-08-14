@@ -24,27 +24,38 @@ export interface AIGenerationOptions {
 }
 
 export class AIService {
-  private client: OpenAI;
+  private client: OpenAI | null;
   private readonly CACHE_TTL = {
     ANALYSIS: 60 * 60,    // 1 hour
     GENERATION: 30 * 60,  // 30 minutes
   };
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      logger.error('OPENAI_API_KEY not found in environment variables');
-      throw new Error('AI service configuration missing');
+    // Lazy initialization: do not create the OpenAI client at construction time
+    this.client = null;
+  }
+
+  // Lazily get or create the OpenAI client. Returns null if key missing.
+  private getClient(): OpenAI | null {
+    // Sanitize key: trim whitespace and strip surrounding quotes
+    const raw = process.env.OPENAI_API_KEY;
+    const apiKey = raw?.trim().replace(/^['"]+|['"]+$/g, '') || '';
+    if (!apiKey) return null;
+    if (!this.client) {
+      this.client = new OpenAI({ apiKey });
     }
-    
-    this.client = new OpenAI({ apiKey });
+    return this.client;
   }
 
   async healthCheck(): Promise<ServiceHealthResult> {
     const startTime = Date.now();
     try {
+      const client = this.getClient();
+      if (!client) {
+        return { status: 'degraded', message: 'AI disabled (missing OPENAI_API_KEY)' };
+      }
       // Simple health check - list models
-      await this.client.models.list();
+      await client.models.list();
       return {
         status: 'healthy',
         responseTime: Date.now() - startTime
@@ -57,7 +68,7 @@ export class AIService {
       }
       
       return { 
-        status: 'unhealthy', 
+        status: 'degraded', 
         message: error.message,
         responseTime: Date.now() - startTime
       };
@@ -74,11 +85,15 @@ export class AIService {
     const cacheKey = `ai:analysis:${this.hashData(clientData)}`;
     
     try {
+      const client = this.getClient();
+      if (!client) {
+        throw new Error('AI disabled (missing OPENAI_API_KEY)');
+      }
       // Check cache first
-      const cached = await cache.get(cacheKey);
+      const cached = await cache.get<AIAnalysisResult>(cacheKey);
       if (cached) {
         logger.debug('AI analysis cache hit', { companyName: clientData.companyName });
-        return JSON.parse(cached);
+        return cached;
       }
 
       logger.debug('AI client analysis', { companyName: clientData.companyName });
@@ -98,7 +113,7 @@ Provide:
 
 Format as JSON with fields: insights (array), riskScore (number), recommendations (array), confidence (number)`;
 
-      const response = await this.client.chat.completions.create({
+      const response = await client.chat.completions.create({
         model: 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 1000,
@@ -124,7 +139,7 @@ Format as JSON with fields: insights (array), riskScore (number), recommendation
       }
 
       // Cache the result
-      await cache.set(cacheKey, JSON.stringify(result), this.CACHE_TTL.ANALYSIS);
+      await cache.set<AIAnalysisResult>(cacheKey, result, this.CACHE_TTL.ANALYSIS);
       return result;
     } catch (error: any) {
       logger.error('AI client analysis failed', { companyName: clientData.companyName, error: error.message });
@@ -142,7 +157,7 @@ Format as JSON with fields: insights (array), riskScore (number), recommendation
     
     try {
       // Check cache first
-      const cached = await cache.get(cacheKey);
+      const cached = await cache.get<string>(cacheKey);
       if (cached) {
         logger.debug('AI generation cache hit');
         return cached;
@@ -150,7 +165,11 @@ Format as JSON with fields: insights (array), riskScore (number), recommendation
 
       logger.debug('AI content generation', { promptLength: prompt.length });
 
-      const response = await this.client.chat.completions.create({
+      const client = this.getClient();
+      if (!client) {
+        throw new Error('AI disabled (missing OPENAI_API_KEY)');
+      }
+      const response = await client.chat.completions.create({
         model: options.model || 'gpt-4o',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: options.maxTokens || 2000,
@@ -163,7 +182,7 @@ Format as JSON with fields: insights (array), riskScore (number), recommendation
       }
 
       // Cache the result
-      await cache.set(cacheKey, content, this.CACHE_TTL.GENERATION);
+      await cache.set<string>(cacheKey, content, this.CACHE_TTL.GENERATION);
       return content;
     } catch (error: any) {
       logger.error('AI content generation failed', { error: error.message });
@@ -195,11 +214,8 @@ Format as JSON with fields: insights (array), riskScore (number), recommendation
   async invalidateCache(pattern?: string): Promise<void> {
     try {
       const searchPattern = pattern ? `ai:${pattern}:*` : 'ai:*';
-      const keys = await cache.keys(searchPattern);
-      if (keys.length > 0) {
-        await cache.del(...keys);
-        logger.debug('AI cache invalidated', { pattern, clearedKeys: keys.length });
-      }
+      await cache.del(searchPattern);
+      logger.debug('AI cache invalidated', { pattern });
     } catch (error: any) {
       logger.warn('AI cache invalidation failed', { error: error.message });
     }

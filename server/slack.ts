@@ -3,16 +3,14 @@ import { logger } from './logger';
 
 const slackLogger = logger.child({ module: 'slack' });
 
-// Use Slack Bot Token
-if (!process.env.SLACK_BOT_TOKEN) {
-  throw new Error("SLACK_BOT_TOKEN environment variable must be set");
+// Slack configuration (non-fatal if missing)
+const SLACK_ENABLED = !!process.env.SLACK_BOT_TOKEN && !!process.env.SLACK_PA_CHANNEL_ID;
+
+if (!SLACK_ENABLED) {
+  slackLogger.warn('Slack is disabled: missing SLACK_BOT_TOKEN or SLACK_PA_CHANNEL_ID');
 }
 
-if (!process.env.SLACK_PA_CHANNEL_ID) {
-  throw new Error("SLACK_PA_CHANNEL_ID environment variable must be set");
-}
-
-const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+const slack = SLACK_ENABLED ? new WebClient(process.env.SLACK_BOT_TOKEN as string) : null;
 
 /**
  * Sends a structured message to a Slack channel using the Slack Web API
@@ -28,8 +26,13 @@ export async function sendSlackMessage(
   }
 ): Promise<string | undefined> {
   try {
-    const channel = message.channel || process.env.SLACK_PA_CHANNEL_ID;
-    
+    if (!SLACK_ENABLED || !slack) {
+      slackLogger.warn('Slack not configured, skipping message', { text: message.text });
+      return;
+    }
+
+    const channel = message.channel || (process.env.SLACK_PA_CHANNEL_ID as string);
+
     // Send the message
     const response = await slack.chat.postMessage({
       channel,

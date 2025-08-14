@@ -237,24 +237,26 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
     isProduction
   });
 
-  // Browser-compatible cookie configuration for all environments
+  // Environment-driven cookie configuration for cross-origin compatibility
+  const isCrossSite = process.env.COOKIE_CROSS_SITE === '1';
+  const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
   const cookieConfig = {
-    secure: false, // Always false for better browser compatibility
+    // For cross-site cookies, must be secure + sameSite 'none'
+    secure: isCrossSite ? true : false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: undefined, // Let browser determine domain automatically
+    domain: cookieDomain, // Explicit domain for cross-subdomain when provided
     path: '/', // Explicitly set path to root
-    sameSite: 'lax' as const, // Most browser-compatible setting
+    sameSite: (isCrossSite ? 'none' : 'lax') as const,
   };
 
-  console.log('[SessionConfig] 🍪 UNIVERSAL BROWSER-COMPATIBLE COOKIE CONFIG');
-  
-  // Use 'lax' sameSite for ALL environments - most browser compatible
-  // This works for both same-origin and most cross-origin scenarios
-  cookieConfig.sameSite = 'lax';
-  cookieConfig.secure = false; // Never use secure for maximum compatibility
-  
-  console.log('[SessionConfig] Using lax sameSite for maximum browser compatibility');
+  console.log('[SessionConfig] 🍪 COOKIE CONFIG', {
+    isCrossSite,
+    domain: cookieConfig.domain || 'AUTO',
+    sameSite: cookieConfig.sameSite,
+    secure: cookieConfig.secure,
+  });
 
   const sessionConfig = {
     secret: process.env.SESSION_SECRET || 'dev-only-seed-financial-secret',
