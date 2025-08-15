@@ -28,6 +28,7 @@ import { cache, CacheTTL, CachePrefix } from "./cache";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { hubspotSync } from "./hubspot-sync";
+import quoteRoutes from './quote-routes';
 
 // Helper function to generate 4-digit approval codes
 function generateApprovalCode(): string {
@@ -121,15 +122,8 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
   });
   app.use(provideCsrfToken);
 
-  // Simple health check endpoint (placed before other /api middleware)
-  // Exempted from CSRF in middleware/csrf.ts and skipped in logger to avoid noise
-  app.get('/api/health', (_req, res) => {
-    res.status(200).json({
-      status: 'ok',
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    });
-  });
+  // Legacy /api/health endpoint removed in favor of /api/healthz and /api/readyz
+  // See `server/routes/health.ts` for health checks mounted below.
 
   // Debug middleware to track all API requests
   app.use('/api', (req, res, next) => {
@@ -156,6 +150,9 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
   // Apply rate limiting to all API routes
   app.use('/api', apiRateLimit);
+
+  // Mount enhanced quote routes (document generation, address autocomplete, etc.)
+  app.use('/api', quoteRoutes);
 
   // Serve uploaded files
   // Local-only: serve files from ./uploads when explicitly enabled.
@@ -1660,21 +1657,22 @@ export async function registerRoutes(app: Express, sessionRedis?: Redis | null):
 
       // Check if job is already in progress
       const jobStatusKey = `job:insights:${clientId}`;
-      const existingJobId = await cache.get(jobStatusKey);
-      
-      if (existingJobId) {
-        // Return job status if already processing
-        const { aiInsightsQueue } = await import('./queue.js');
-        const job = await aiInsightsQueue.getJob(existingJobId);
-        
-        if (job && (await job.getState()) === 'active') {
-          return res.json({
-            status: 'processing',
-            progress: job.progress,
-            jobId: existingJobId,
-            message: 'AI insights are being generated. Check back shortly.'
-          });
-        }
+      const existingJobId = await cache.get<string>(jobStatusKey);
+     
+     if (existingJobId) {
+       // Return job status if already processing
+        const { getAIInsightsQueue } = await import('./queue.js');
+        const aiInsightsQueue = getAIInsightsQueue();
+        const job = aiInsightsQueue ? await aiInsightsQueue.getJob(existingJobId) : null;
+       
+       if (job && (await job.getState()) === 'active') {
+         return res.json({
+           status: 'processing',
+           progress: job.progress,
+           jobId: existingJobId,
+           message: 'AI insights are being generated. Check back shortly.'
+         });
+       }
       }
 
       // Get client data from HubSpot first

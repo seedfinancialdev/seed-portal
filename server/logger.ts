@@ -116,7 +116,9 @@ export function requestLogger() {
     autoLogging: {
       ignore(req) {
         // Skip logging for health checks and static assets
-        return req.url === '/api/health' || 
+        return req.url === '/api/healthz' ||
+               req.url === '/api/readyz' ||
+               req.url?.startsWith('/api/readyz') ||
                req.url?.startsWith('/assets/') ||
                req.url?.startsWith('/@vite/') ||
                req.url?.endsWith('.js') ||

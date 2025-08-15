@@ -227,7 +227,7 @@ export default function AdminDashboard() {
 
   // Real-time system health monitoring
   const { data: healthData, isLoading: healthLoading } = useQuery<HealthCheckResponse>({
-    queryKey: ['/api/health'],
+    queryKey: ['/api/readyz'],
     refetchInterval: 60000, // Refresh every 60 seconds
     refetchIntervalInBackground: true,
   });
