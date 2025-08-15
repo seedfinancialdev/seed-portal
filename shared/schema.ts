@@ -70,6 +70,11 @@ export const quotes = pgTable("quotes", {
   hubspotDealId: text("hubspot_deal_id"),
   hubspotQuoteId: text("hubspot_quote_id"),
   hubspotContactVerified: boolean("hubspot_contact_verified").default(false),
+  // Box integration metadata
+  boxFolderId: text("box_folder_id"),
+  boxFolderUrl: text("box_folder_url"),
+  msaFileId: text("msa_file_id"),
+  msaFileUrl: text("msa_file_url"),
   companyName: text("company_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

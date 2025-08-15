@@ -17,7 +17,6 @@ export async function initializeQueue(): Promise<void> {
   try {
     queueRedis = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null, // Required for BullMQ
-      retryDelayOnFailover: 100,
     });
     
     await queueRedis.ping();

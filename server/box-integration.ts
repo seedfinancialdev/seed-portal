@@ -2,18 +2,11 @@
  * Box Integration for Client Folder Management and Document Automation
  */
 
-import BoxSDK from 'box-node-sdk';
 import { logger } from './logger';
-
-// Initialize Box SDK with App Auth (JWT)
-const sdk = BoxSDK.getBasicTokenBox(process.env.BOX_ACCESS_TOKEN);
+import { storageService } from './services';
 
 export class BoxService {
-  private client: any;
-
-  constructor() {
-    this.client = sdk;
-  }
+  constructor() {}
 
   /**
    * Create client folder structure in Box based on template
@@ -23,6 +16,10 @@ export class BoxService {
    */
   async createClientFolder(clientName: string, templateFolderId?: string): Promise<any> {
     try {
+      const health = await storageService.healthCheck();
+      if (health.status === 'unhealthy') {
+        throw new Error(health.message || 'Storage service not configured');
+      }
       // Default template folder ID (to be configured)
       const defaultTemplateId = process.env.BOX_TEMPLATE_FOLDER_ID || '0';
       const sourceId = templateFolderId || defaultTemplateId;
@@ -36,7 +33,7 @@ export class BoxService {
       const parentFolderId = process.env.BOX_CLIENT_FOLDERS_PARENT_ID || '0';
       const sanitizedClientName = this.sanitizeFolderName(clientName);
 
-      const clientFolder = await this.client.folders.create(parentFolderId, sanitizedClientName);
+      const clientFolder = await storageService.createFolder(sanitizedClientName, parentFolderId);
       logger.info('[Box] Client folder created', { folderId: clientFolder.id, name: clientFolder.name });
 
       // Copy template folder structure if specified
@@ -50,8 +47,8 @@ export class BoxService {
         folderName: clientFolder.name,
         webUrl: `https://app.box.com/folder/${clientFolder.id}`
       };
-    } catch (error) {
-      logger.error('[Box] Error creating client folder', error);
+    } catch (error: any) {
+      logger.error('[Box] Error creating client folder', { error: error?.message });
       throw new Error(`Failed to create client folder: ${error.message}`);
     }
   }
@@ -61,23 +58,22 @@ export class BoxService {
    */
   private async copyFolderStructure(sourceId: string, destinationId: string): Promise<void> {
     try {
-      const sourceItems = await this.client.folders.getItems(sourceId);
-      
-      for (const item of sourceItems.entries) {
-        if (item.type === 'folder') {
-          // Copy subfolder
-          const newFolder = await this.client.folders.create(destinationId, item.name);
-          // Recursively copy contents
-          await this.copyFolderStructure(item.id, newFolder.id);
-        } else if (item.type === 'file') {
-          // Copy file
-          await this.client.files.copy(item.id, destinationId);
-        }
+      const { folders, files } = await storageService.getFolderContents(sourceId);
+
+      // First copy files into destination
+      for (const file of files) {
+        await storageService.copyFile(file.id, destinationId);
+      }
+
+      // Then recursively copy subfolders
+      for (const folder of folders) {
+        const newFolder = await storageService.createFolder(folder.name, destinationId);
+        await this.copyFolderStructure(folder.id, newFolder.id);
       }
 
       logger.info('[Box] Template folder structure copied', { sourceId, destinationId });
-    } catch (error) {
-      logger.error('[Box] Error copying folder structure', error);
+    } catch (error: any) {
+      logger.error('[Box] Error copying folder structure', { error: error?.message });
       throw error;
     }
   }
@@ -90,27 +86,27 @@ export class BoxService {
    */
   async uploadMSA(folderId: string, msaBuffer: Buffer, fileName: string): Promise<any> {
     try {
+      const health = await storageService.healthCheck();
+      if (health.status === 'unhealthy') {
+        throw new Error(health.message || 'Storage service not configured');
+      }
       logger.info('[Box] Uploading MSA document', { folderId, fileName });
 
-      const uploadedFile = await this.client.files.uploadFile(
-        folderId,
-        fileName,
-        msaBuffer
-      );
+      const uploadedFile = await storageService.uploadFile(fileName, msaBuffer, folderId);
 
       logger.info('[Box] MSA document uploaded successfully', { 
-        fileId: uploadedFile.entries[0].id,
-        fileName: uploadedFile.entries[0].name 
+        fileId: uploadedFile.id,
+        fileName: uploadedFile.name 
       });
 
       return {
         success: true,
-        fileId: uploadedFile.entries[0].id,
-        fileName: uploadedFile.entries[0].name,
-        webUrl: `https://app.box.com/file/${uploadedFile.entries[0].id}`
+        fileId: uploadedFile.id,
+        fileName: uploadedFile.name,
+        webUrl: `https://app.box.com/file/${uploadedFile.id}`
       };
-    } catch (error) {
-      logger.error('[Box] Error uploading MSA document', error);
+    } catch (error: any) {
+      logger.error('[Box] Error uploading MSA document', { error: error?.message });
       throw new Error(`Failed to upload MSA: ${error.message}`);
     }
   }
@@ -120,70 +116,41 @@ export class BoxService {
    */
   async uploadSOWDocuments(folderId: string, services: string[]): Promise<any[]> {
     try {
+      const health = await storageService.healthCheck();
+      if (health.status === 'unhealthy') {
+        throw new Error(health.message || 'Storage service not configured');
+      }
       const results = [];
 
+      const templates: Record<string, string | undefined> = {
+        'bookkeeping': process.env.BOX_BOOKKEEPING_SOW_TEMPLATE_ID,
+        'taas': process.env.BOX_TAAS_SOW_TEMPLATE_ID,
+        'payroll': process.env.BOX_PAYROLL_SOW_TEMPLATE_ID,
+        'ap_ar_lite': process.env.BOX_APAR_SOW_TEMPLATE_ID,
+        'fpa_lite': process.env.BOX_FPA_SOW_TEMPLATE_ID
+      };
+
       for (const service of services) {
-        const sowTemplate = await this.getSOWTemplate(service);
-        if (sowTemplate) {
-          const result = await this.client.files.uploadFile(
-            folderId,
-            `${service}_SOW.docx`,
-            sowTemplate
-          );
-          results.push({
-            service,
-            fileId: result.entries[0].id,
-            fileName: result.entries[0].name
-          });
+        const templateId = templates[service];
+        if (!templateId) {
+          logger.warn('[Box] No SOW template found for service', { service });
+          continue;
         }
+
+        const copied = await storageService.copyFile(templateId, folderId, `${service}_SOW.docx`);
+        results.push({
+          service,
+          fileId: copied.id,
+          fileName: copied.name
+        });
       }
 
       logger.info('[Box] SOW documents uploaded', { count: results.length, folderId });
       return results;
-    } catch (error) {
-      logger.error('[Box] Error uploading SOW documents', error);
+    } catch (error: any) {
+      logger.error('[Box] Error uploading SOW documents', { error: error?.message });
       throw error;
     }
-  }
-
-  /**
-   * Get SOW template for specific service type
-   */
-  private async getSOWTemplate(service: string): Promise<Buffer | null> {
-    // Template mapping for different service types
-    const templates = {
-      'bookkeeping': process.env.BOX_BOOKKEEPING_SOW_TEMPLATE_ID,
-      'taas': process.env.BOX_TAAS_SOW_TEMPLATE_ID,
-      'payroll': process.env.BOX_PAYROLL_SOW_TEMPLATE_ID,
-      'ap_ar_lite': process.env.BOX_APAR_SOW_TEMPLATE_ID,
-      'fpa_lite': process.env.BOX_FPA_SOW_TEMPLATE_ID
-    };
-
-    const templateId = templates[service as keyof typeof templates];
-    if (!templateId) {
-      logger.warn('[Box] No SOW template found for service', { service });
-      return null;
-    }
-
-    try {
-      const fileStream = await this.client.files.getReadStream(templateId);
-      return this.streamToBuffer(fileStream);
-    } catch (error) {
-      logger.error('[Box] Error reading SOW template', { service, templateId, error });
-      return null;
-    }
-  }
-
-  /**
-   * Convert stream to buffer
-   */
-  private streamToBuffer(stream: any): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-      stream.on('end', () => resolve(Buffer.concat(chunks)));
-      stream.on('error', reject);
-    });
   }
 
   /**
@@ -192,7 +159,7 @@ export class BoxService {
   private sanitizeFolderName(name: string): string {
     // Remove invalid characters and limit length
     return name
-      .replace(/[<>:"/\\|?*]/g, '')
+      .replace(/[<>:\"/\\|?*]/g, '')
       .replace(/\s+/g, ' ')
       .trim()
       .substring(0, 255);

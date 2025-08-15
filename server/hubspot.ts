@@ -544,6 +544,7 @@ export class HubSpotService {
   }
 
   async createQuote(dealId: string, companyName: string, monthlyFee: number, setupFee: number, userEmail: string, firstName: string, lastName: string, includesBookkeeping?: boolean, includesTaas?: boolean, taasMonthlyFee?: number, taasPriorYearsFee?: number, bookkeepingMonthlyFee?: number, bookkeepingSetupFee?: number, quoteData?: any): Promise<{ id: string; title: string } | null> {
+    let quoteBody: any;
     try {
       // Create a proper HubSpot quote using the quotes API
       console.log('Creating HubSpot quote...');
@@ -600,7 +601,7 @@ Services Include:
       const paymentTerms = this.generatePaymentTerms(includesBookkeeping, includesTaas);
       console.log('📋 Payment terms generated:', paymentTerms);
 
-      const quoteBody = {
+      quoteBody = {
         properties: {
           hs_title: quoteName,
           hs_status: 'DRAFT',

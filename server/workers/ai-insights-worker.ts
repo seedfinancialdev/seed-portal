@@ -15,7 +15,6 @@ async function initializeWorkerRedis(): Promise<void> {
   try {
     workerRedis = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null, // Required for BullMQ
-      retryDelayOnFailover: 100,
     });
     
     await workerRedis.ping();
@@ -94,10 +93,18 @@ async function processAIInsights(job: Job<AIInsightsJobData>): Promise<JobResult
     updateQueueMetrics(processingTime, true);
     
     console.error(`[Worker] ❌ AI insights failed for contact ${job.data.contactId}:`, error);
+    const errorType = ((): string => {
+      if (error instanceof Error) return error.name;
+      if (typeof error === 'object' && error !== null) {
+        const ctor = (error as any).constructor;
+        return ctor && typeof ctor.name === 'string' ? ctor.name : 'Unknown';
+      }
+      return 'Unknown';
+    })();
     console.error(`[Worker] ❌ Error details:`, {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      errorType: error.constructor.name,
+      errorType,
       clientData: {
         companyName: job.data.clientData?.companyName,
         industry: job.data.clientData?.industry
@@ -119,8 +126,8 @@ export async function startAIInsightsWorker(): Promise<Worker | null> {
   const worker = new Worker('ai-insights', processAIInsights, {
     connection: workerRedis,
     concurrency: 2, // Process up to 2 jobs concurrently
-    removeOnComplete: 10,
-    removeOnFail: 25,
+    removeOnComplete: { count: 10 },
+    removeOnFail: { count: 25 },
   });
 
   worker.on('completed', (job) => {

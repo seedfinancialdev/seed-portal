@@ -8,6 +8,7 @@
 
 import { Client } from '@hubspot/api-client';
 import { cache } from '../cache';
+import { FilterOperatorEnum } from '@hubspot/api-client/lib/codegen/crm/contacts/models/Filter';
 import { logger } from '../logger';
 import type { ServiceHealthResult } from './index';
 
@@ -110,10 +111,10 @@ export class CRMService {
     
     try {
       // Check cache first
-      const cached = await cache.get(cacheKey);
+      const cached = await cache.get<CRMContact>(cacheKey);
       if (cached) {
         logger.debug('CRM contact cache hit', { email });
-        return JSON.parse(cached);
+        return cached;
       }
 
       logger.debug('CRM contact lookup', { email });
@@ -122,7 +123,7 @@ export class CRMService {
         filterGroups: [{
           filters: [{
             propertyName: 'email',
-            operator: 'EQ',
+            operator: FilterOperatorEnum.Eq,
             value: email
           }]
         }],
@@ -155,7 +156,7 @@ export class CRMService {
         };
 
         // Cache the result
-        await cache.set(cacheKey, JSON.stringify(contact), this.CACHE_TTL.CONTACT);
+        await cache.set<CRMContact>(cacheKey, contact, this.CACHE_TTL.CONTACT);
         return contact;
       }
 
@@ -183,10 +184,10 @@ export class CRMService {
     
     try {
       // Check cache first
-      const cached = await cache.get(cacheKey);
+      const cached = await cache.get<CRMContactSearchResult>(cacheKey);
       if (cached) {
         logger.debug('CRM search cache hit', { query });
-        return JSON.parse(cached);
+        return cached;
       }
 
       logger.debug('CRM contact search', { query, limit });
@@ -196,7 +197,7 @@ export class CRMService {
           filters: [
             {
               propertyName: 'email',
-              operator: 'CONTAINS_TOKEN',
+              operator: FilterOperatorEnum.ContainsToken,
               value: query
             }
           ]
@@ -219,7 +220,7 @@ export class CRMService {
       const result = { contacts, total: response.total || 0 };
       
       // Cache the result
-      await cache.set(cacheKey, JSON.stringify(result), this.CACHE_TTL.SEARCH);
+      await cache.set<CRMContactSearchResult>(cacheKey, result, this.CACHE_TTL.SEARCH);
       return result;
     } catch (error: any) {
       logger.error('CRM contact search failed', { query, error: error.message });

@@ -51,10 +51,10 @@ export class WeatherService {
     
     try {
       // Check cache first
-      const cached = await cache.get(cacheKey);
+      const cached = await cache.get<WeatherData>(cacheKey);
       if (cached) {
         logger.debug('Weather cache hit', { location });
-        return JSON.parse(cached);
+        return cached;
       }
 
       logger.debug('Weather API call', { location, latitude, longitude });
@@ -79,7 +79,7 @@ export class WeatherService {
       };
 
       // Cache the result
-      await cache.set(cacheKey, JSON.stringify(weatherData), this.CACHE_TTL);
+      await cache.set<WeatherData>(cacheKey, weatherData, this.CACHE_TTL);
       return weatherData;
     } catch (error: any) {
       logger.error('Weather lookup failed', { location, error: error.message });

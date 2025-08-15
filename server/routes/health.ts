@@ -15,8 +15,8 @@ router.get('/healthz', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Global health check endpoint
-router.get('/health', async (req, res) => {
+// Readiness endpoint - aggregated health of dependencies
+router.get('/readyz', async (req, res) => {
   try {
     const healthResult = await checkServicesHealth();
     
@@ -49,8 +49,8 @@ router.get('/health', async (req, res) => {
   }
 });
 
-// Individual service health checks
-router.get('/health/:service', async (req, res) => {
+// Individual service readiness checks
+router.get('/readyz/:service', async (req, res) => {
   const { service } = req.params;
   
   try {

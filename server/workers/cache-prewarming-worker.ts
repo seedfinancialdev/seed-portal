@@ -18,7 +18,6 @@ async function initializeWorkerRedis(): Promise<void> {
   try {
     workerRedis = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: null,
-      retryDelayOnFailover: 100,
     });
     
     await workerRedis.ping();

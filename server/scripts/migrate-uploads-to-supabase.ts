@@ -9,6 +9,7 @@ function contentTypeFromExt(ext: string): string {
   switch (ext.toLowerCase()) {
     case '.jpg':
     case '.jpeg':
+    case '.jfif':
       return 'image/jpeg';
     case '.png':
       return 'image/png';

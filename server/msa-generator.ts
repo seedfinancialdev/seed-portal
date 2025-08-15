@@ -59,9 +59,10 @@ export class MSAGenerator {
       });
 
       return buffer;
-    } catch (error) {
-      logger.error('[MSA] Error generating MSA document', error);
-      throw new Error(`Failed to generate MSA: ${error.message}`);
+    } catch (err: unknown) {
+      logger.error('[MSA] Error generating MSA document', err);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      throw new Error(`Failed to generate MSA: ${message}`);
     }
   }
 

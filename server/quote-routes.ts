@@ -55,8 +55,8 @@ router.post('/quotes/:id/generate-documents', requireAuth, async (req, res) => {
       selectedServices,
       contactEmail: quote.contactEmail,
       industry: quote.industry || '',
-      monthlyFee: quote.monthlyFee,
-      setupFee: quote.setupFee
+      monthlyFee: Number(quote.monthlyFee as unknown as string),
+      setupFee: Number(quote.setupFee as unknown as string)
     };
 
     const msaBuffer = await msaGenerator.generateMSA(msaData);
@@ -76,7 +76,8 @@ router.post('/quotes/:id/generate-documents', requireAuth, async (req, res) => {
     );
 
     // Update quote with Box information
-    await storage.updateQuote(quoteId, {
+    await storage.updateQuote({
+      id: quoteId,
       boxFolderId: boxResult.folderId,
       boxFolderUrl: boxResult.webUrl,
       msaFileId: msaUploadResult.fileId,
@@ -97,11 +98,11 @@ router.post('/quotes/:id/generate-documents', requireAuth, async (req, res) => {
       documentsCount: selectedServices.length + 1
     });
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('[Quote] Error generating documents', error);
     res.status(500).json({
       error: 'Failed to generate documents',
-      message: error.message
+      message: (error && error.message) ? error.message : 'Unknown error'
     });
   }
 });
@@ -159,11 +160,11 @@ router.post('/quotes/:id/sync-hubspot', requireAuth, async (req, res) => {
       syncedFields: Object.keys(hubspotData)
     });
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('[Quote] Error syncing to HubSpot', error);
     res.status(500).json({
       error: 'Failed to sync to HubSpot',
-      message: error.message
+      message: (error && error.message) ? error.message : 'Unknown error'
     });
   }
 });

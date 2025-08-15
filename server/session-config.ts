@@ -1,7 +1,14 @@
 import session from "express-session";
-import Redis from "ioredis";
 import RedisStore from "connect-redis";
 import MemoryStore from "memorystore";
+
+// Global augmentations for session store visibility across the app
+declare global {
+  // eslint-disable-next-line no-var
+  var sessionStoreType: string | undefined;
+  // eslint-disable-next-line no-var
+  var sessionStore: any;
+}
 
 // Enhanced Redis session configuration with better error handling
 export async function createSessionConfig(): Promise<session.SessionOptions & { storeType: string }> {
@@ -10,140 +17,95 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
   let sessionStore: any;
   let storeType: string;
   
-  // Try to create Redis store if REDIS_URL is available
+  // Try to create Redis store via central Redis connections if REDIS_URL is available
   if (process.env.REDIS_URL) {
     try {
-      console.log('[SessionConfig] Attempting Redis connection with REDIS_URL:', process.env.REDIS_URL ? 'SET' : 'NOT SET');
-      
-      const redisClient = new Redis(process.env.REDIS_URL, {
-        keyPrefix: '',
-        retryDelayOnFailover: 100,
-        maxRetriesPerRequest: 3,
-        lazyConnect: false, // Connect immediately for better error detection
-        connectTimeout: 15000,
-        commandTimeout: 5000,
-        keepAlive: true,
-        family: 4,
-        enableReadyCheck: true,
-        maxRetriesPerRequest: 3,
-      });
-        
-          // Wait for Redis to be fully ready
-          console.log('[SessionConfig] Waiting for Redis to be ready...');
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Redis connection timeout after 15 seconds'));
-            }, 15000);
-            
-            redisClient.on('ready', () => {
-              clearTimeout(timeout);
-              console.log('[SessionConfig] ✅ Redis ready event received');
-              resolve(true);
-            });
-            
-            redisClient.on('error', (err) => {
-              clearTimeout(timeout);
-              console.error('[SessionConfig] ❌ Redis error during connection:', err);
-              reject(err);
-            });
-          });
-          
-          // Double-check with ping
+      console.log('[SessionConfig] Attempting to use central Redis connections');
+      const { getRedisAsync } = await import('./redis');
+      const connections = await getRedisAsync();
+
+      if (connections?.sessionRedis) {
+        const redisClient = connections.sessionRedis;
+
+        // Best-effort ping for diagnostics (non-fatal)
+        try {
           const pingResult = await redisClient.ping();
           console.log('[SessionConfig] ✅ Redis ping result:', pingResult);
-          
-          // Create Redis store with explicit error handling and debugging
-          sessionStore = new RedisStore({
-            client: redisClient,
-            prefix: 'sess:',
-            ttl: 24 * 60 * 60, // 24 hours
-            disableTouch: false,
-            disableTTL: false,
-            logErrors: true // Enable Redis store error logging
-          });
+        } catch (e: any) {
+          console.warn('[SessionConfig] ⚠️ Redis ping failed, continuing:', e?.message || String(e));
+        }
 
-          // Add session store operation debugging
-          const originalGet = sessionStore.get.bind(sessionStore);
-          const originalSet = sessionStore.set.bind(sessionStore);
-          const originalDestroy = sessionStore.destroy.bind(sessionStore);
+        // Create Redis store with explicit error handling and debugging
+        sessionStore = new RedisStore({
+          client: redisClient as any,
+          prefix: 'sess:',
+          ttl: 24 * 60 * 60, // 24 hours
+          disableTouch: false,
+          disableTTL: false
+        });
 
-          sessionStore.get = function(sid, callback) {
-            console.log('[SessionStore] 🔍 GET operation:', { sid: sid?.substring(0, 10) + '...' });
-            return originalGet(sid, (err, session) => {
-              console.log('[SessionStore] 🔍 GET result:', { 
-                sid: sid?.substring(0, 10) + '...', 
-                hasSession: !!session, 
-                error: err?.message,
-                sessionKeys: session ? Object.keys(session) : []
-              });
-              callback(err, session);
-            });
-          };
+        // Add session store operation debugging
+        const originalGet = sessionStore.get.bind(sessionStore);
+        const originalSet = sessionStore.set.bind(sessionStore);
+        const originalDestroy = sessionStore.destroy.bind(sessionStore);
 
-          sessionStore.set = function(sid, session, callback) {
-            console.log('[SessionStore] 🔍 SET operation:', { 
+        sessionStore.get = function(sid: string, callback: (err: any, session?: session.SessionData | null) => void) {
+          console.log('[SessionStore] 🔍 GET operation:', { sid: sid?.substring(0, 10) + '...' });
+          return originalGet(sid, (err: any, session: session.SessionData | null) => {
+            console.log('[SessionStore] 🔍 GET result:', { 
               sid: sid?.substring(0, 10) + '...', 
-              sessionKeys: Object.keys(session || {}),
-              hasPassport: !!(session as any)?.passport
+              hasSession: !!session, 
+              error: err?.message,
+              sessionKeys: session ? Object.keys(session) : []
             });
-            return originalSet(sid, session, (err) => {
-              console.log('[SessionStore] 🔍 SET result:', { 
-                sid: sid?.substring(0, 10) + '...', 
-                error: err?.message,
-                success: !err
-              });
-              callback && callback(err);
-            });
-          };
+            callback(err, session);
+          });
+        };
 
-          sessionStore.destroy = function(sid, callback) {
-            console.log('[SessionStore] 🔍 DESTROY operation:', { sid: sid?.substring(0, 10) + '...' });
-            return originalDestroy(sid, (err) => {
-              console.log('[SessionStore] 🔍 DESTROY result:', { 
-                sid: sid?.substring(0, 10) + '...', 
-                error: err?.message,
-                success: !err
-              });
-              callback && callback(err);
+        sessionStore.set = function(sid: string, sessionData: session.SessionData, callback?: (err?: any) => void) {
+          console.log('[SessionStore] 🔍 SET operation:', { 
+            sid: sid?.substring(0, 10) + '...', 
+            sessionKeys: Object.keys((sessionData as any) || {}),
+            hasPassport: !!(sessionData as any)?.passport
+          });
+          return originalSet(sid, sessionData, (err: any) => {
+            console.log('[SessionStore] 🔍 SET result:', { 
+              sid: sid?.substring(0, 10) + '...', 
+              error: err?.message,
+              success: !err
             });
-          };
-          
-          // Verify the store was created correctly
-          const storeName = sessionStore.constructor.name;
-          console.log('[SessionConfig] ✅ Redis session store created successfully');
-          console.log('[SessionConfig] Store constructor name:', storeName);
-          console.log('[SessionConfig] Store type check:', sessionStore instanceof RedisStore);
-          
-          storeType = 'RedisStore';
-          
-          // Test store functionality
-          try {
-            await new Promise((resolve, reject) => {
-              sessionStore.set('test-session-key', { test: true }, (err: any) => {
-                if (err) {
-                  console.warn('[SessionConfig] ⚠️ Redis store test failed:', err);
-                  reject(err);
-                } else {
-                  console.log('[SessionConfig] ✅ Redis store test successful');
-                  // Clean up test data
-                  sessionStore.destroy('test-session-key', () => {});
-                  resolve(true);
-                }
-              });
+            callback && callback(err);
+          });
+        };
+
+        sessionStore.destroy = function(sid: string, callback: (err?: any) => void) {
+          console.log('[SessionStore] 🔍 DESTROY operation:', { sid: sid?.substring(0, 10) + '...' });
+          return originalDestroy(sid, (err: any) => {
+            console.log('[SessionStore] 🔍 DESTROY result:', { 
+              sid: sid?.substring(0, 10) + '...', 
+              error: err?.message,
+              success: !err
             });
-          } catch (storeTestError) {
-            console.warn('[SessionConfig] ⚠️ Redis store test failed, but continuing:', storeTestError);
-            // Continue with Redis store even if test fails
-          }
-          
+            callback && callback(err);
+          });
+        };
+
+        console.log('[SessionConfig] ✅ Redis session store created successfully');
+        storeType = 'RedisStore';
+      } else {
+        console.warn('[SessionConfig] Central Redis connections unavailable - will fall back to MemoryStore');
+        sessionStore = null;
+        storeType = 'RedisUnavailable';
+      }
     } catch (error) {
-      console.error('[SessionConfig] ❌ Redis connection/setup failed:', {
-        message: error.message,
-        code: error.code,
-        stack: error.stack?.split('\n').slice(0, 3).join('\n')
+      const e = error as any;
+      console.error('[SessionConfig] ❌ Redis setup via central connections failed:', {
+        message: e?.message || String(e),
+        code: e?.code,
+        stack: typeof e?.stack === 'string' ? e.stack.split('\n').slice(0, 3).join('\n') : undefined
       });
       sessionStore = null;
-      storeType = `RedisFailure: ${error.message}`;
+      storeType = `RedisFailure: ${e?.message || String(e)}`;
     }
   } else {
     console.log('[SessionConfig] No REDIS_URL provided - using memory store');
@@ -166,9 +128,9 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
     const originalMemSet = sessionStore.set.bind(sessionStore);
     const originalMemDestroy = sessionStore.destroy.bind(sessionStore);
 
-    sessionStore.get = function(sid, callback) {
+    sessionStore.get = function(sid: string, callback: (err: any, session?: session.SessionData | null) => void) {
       console.log('[MemoryStore] 🔍 GET operation:', { sid: sid?.substring(0, 10) + '...' });
-      return originalMemGet(sid, (err, session) => {
+      return originalMemGet(sid, (err: any, session: session.SessionData | null) => {
         console.log('[MemoryStore] 🔍 GET result:', { 
           sid: sid?.substring(0, 10) + '...', 
           hasSession: !!session, 
@@ -180,14 +142,14 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
       });
     };
 
-    sessionStore.set = function(sid, session, callback) {
+    sessionStore.set = function(sid: string, sessionData: session.SessionData, callback?: (err?: any) => void) {
       console.log('[MemoryStore] 🔍 SET operation:', { 
         sid: sid?.substring(0, 10) + '...', 
-        sessionKeys: Object.keys(session || {}),
-        hasPassport: !!(session as any)?.passport,
-        passportUser: (session as any)?.passport?.user
+        sessionKeys: Object.keys((sessionData as any) || {}),
+        hasPassport: !!(sessionData as any)?.passport,
+        passportUser: (sessionData as any)?.passport?.user
       });
-      return originalMemSet(sid, session, (err) => {
+      return originalMemSet(sid, sessionData, (err: any) => {
         console.log('[MemoryStore] 🔍 SET result:', { 
           sid: sid?.substring(0, 10) + '...', 
           error: err?.message,
@@ -197,9 +159,9 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
       });
     };
 
-    sessionStore.destroy = function(sid, callback) {
+    sessionStore.destroy = function(sid: string, callback: (err?: any) => void) {
       console.log('[MemoryStore] 🔍 DESTROY operation:', { sid: sid?.substring(0, 10) + '...' });
-      return originalMemDestroy(sid, (err) => {
+      return originalMemDestroy(sid, (err: any) => {
         console.log('[MemoryStore] 🔍 DESTROY result:', { 
           sid: sid?.substring(0, 10) + '...', 
           error: err?.message,
@@ -220,19 +182,13 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
   console.log('[SessionConfig] Final session store type:', storeType);
   
   // Store the type globally for access by health checks
-  global.sessionStoreType = storeType;
-  global.sessionStore = sessionStore;
+  globalThis.sessionStoreType = storeType;
+  globalThis.sessionStore = sessionStore;
   
-  // Enhanced production detection for Replit deployments
-  const isProduction = process.env.NODE_ENV === 'production' || 
-                      process.env.REPLIT_DEPLOYMENT === '1' ||
-                      (process.env.REPL_ID && process.env.REPL_SLUG && !process.env.REPL_SLUG.includes('workspace'));
-  
+  // Simple production detection
+  const isProduction = process.env.NODE_ENV === 'production';
   console.log('[SessionConfig] Production detection:', {
     NODE_ENV: process.env.NODE_ENV || 'NOT SET',
-    REPLIT_DEPLOYMENT: process.env.REPLIT_DEPLOYMENT || 'NOT SET',
-    REPL_ID: process.env.REPL_ID ? 'EXISTS' : 'NOT SET',
-    REPL_SLUG: process.env.REPL_SLUG || 'NOT SET',
     PORT: process.env.PORT || 'NOT SET',
     isProduction
   });
@@ -241,14 +197,14 @@ export async function createSessionConfig(): Promise<session.SessionOptions & { 
   const isCrossSite = process.env.COOKIE_CROSS_SITE === '1';
   const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
-  const cookieConfig = {
+  const cookieConfig: session.CookieOptions = {
     // For cross-site cookies, must be secure + sameSite 'none'
     secure: isCrossSite ? true : false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     domain: cookieDomain, // Explicit domain for cross-subdomain when provided
     path: '/', // Explicitly set path to root
-    sameSite: (isCrossSite ? 'none' : 'lax') as const,
+    sameSite: (isCrossSite ? 'none' : 'lax'),
   };
 
   console.log('[SessionConfig] 🍪 COOKIE CONFIG', {

@@ -61,10 +61,10 @@ export class GeocodingService {
     
     try {
       // Check cache first
-      const cached = await cache.get(cacheKey);
+      const cached = await cache.get<GeocodingResult[]>(cacheKey);
       if (cached) {
         logger.debug('Geocoding search cache hit', { query });
-        return JSON.parse(cached);
+        return cached;
       }
 
       logger.debug('Geocoding search', { query, limit });
@@ -95,7 +95,7 @@ export class GeocodingService {
       }));
 
       // Cache the result
-      await cache.set(cacheKey, JSON.stringify(results), this.CACHE_TTL);
+      await cache.set<GeocodingResult[]>(cacheKey, results, this.CACHE_TTL);
       return results;
     } catch (error: any) {
       logger.error('Geocoding search failed', { query, error: error.message });
@@ -108,10 +108,10 @@ export class GeocodingService {
     
     try {
       // Check cache first
-      const cached = await cache.get(cacheKey);
+      const cached = await cache.get<GeocodingResult>(cacheKey);
       if (cached) {
         logger.debug('Reverse geocoding cache hit', { latitude, longitude });
-        return JSON.parse(cached);
+        return cached;
       }
 
       logger.debug('Reverse geocoding', { latitude, longitude });
@@ -146,7 +146,7 @@ export class GeocodingService {
       };
 
       // Cache the result
-      await cache.set(cacheKey, JSON.stringify(result), this.CACHE_TTL);
+      await cache.set<GeocodingResult>(cacheKey, result, this.CACHE_TTL);
       return result;
     } catch (error: any) {
       logger.error('Reverse geocoding failed', { latitude, longitude, error: error.message });
